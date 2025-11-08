@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SaveIt - Your Saved Pages</title>
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="logo">
+          <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+          </svg>
+          SaveIt
+        </h1>
+        <span class="stats" id="stats">Loading...</span>
+      </div>
+
+      <div class="header-controls">
+        <div class="search-box">
+          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <input
+            type="text"
+            id="search"
+            class="search-input"
+            placeholder="Search saved pages..."
+            autocomplete="off"
+          >
+          <button id="clear-search" class="clear-search" title="Clear search" style="display: none;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <select id="sort" class="sort-select" title="Sort order">
+          <option value="newest">Newest first</option>
+          <option value="oldest">Oldest first</option>
+        </select>
+
+        <select id="filter-category" class="filter-select" title="Filter by category">
+          <option value="">All categories</option>
+          <option value="news">News</option>
+          <option value="blog">Blog</option>
+          <option value="code">Code</option>
+          <option value="docs">Docs</option>
+          <option value="academic">Academic</option>
+          <option value="video">Video</option>
+          <option value="food">Food</option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <div id="content" class="content">
+      <!-- Cards will be rendered here by newtab.js -->
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="footer-content">
+      <p>SaveIt - Save pages, rediscover knowledge</p>
+      <div class="footer-links">
+        <a href="#" id="about-link">About</a>
+        <span class="separator">•</span>
+        <span id="mode-indicator">
+          <span id="mode-label">Development Mode</span>
+        </span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Load scripts in dependency order -->
+  <script src="config.js"></script>
+  <script src="mock-data.js"></script>
+  <script src="api.js"></script>
+  <script src="components.js"></script>
+  <script src="newtab.js"></script>
+</body>
+</html>

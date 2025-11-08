@@ -1,0 +1,36 @@
+{
+  "manifest_version": 2,
+  "name": "SaveIt",
+  "version": "0.5.0",
+  "description": "Save web pages and rediscover them with AI-powered metadata and search",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "saveit@airteam.com.au",
+      "update_url": "https://raw.githubusercontent.com/airteamaus/saveit/main/updates.json"
+    }
+  },
+  "permissions": [
+    "activeTab",
+    "notifications",
+    "identity",
+    "storage",
+    "https://*.cloudfunctions.net/*",
+    "https://*.run.app/*",
+    "https://www.googleapis.com/oauth2/*",
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["config.js", "background.js"]
+  },
+  "browser_action": {
+    "default_icon": {
+      "48": "icon.png"
+    }
+  },
+  "chrome_url_overrides": {
+    "newtab": "newtab.html"
+  },
+  "icons": {
+    "48": "icon.png"
+  }
+}
