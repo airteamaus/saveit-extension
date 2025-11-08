@@ -1,0 +1,12 @@
+{
+  "addons": {
+    "saveit@airteam.com.au": {
+      "updates": [
+        {
+          "version": "0.5.3",
+          "update_link": "https://github.com/airteamaus/saveit-extension/releases/download/v0.5.3/saveit-0.5.3.xpi"
+        }
+      ]
+    }
+  }
+}
