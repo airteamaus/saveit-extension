@@ -1,15 +1,12 @@
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
 
-// Function to clear cached user info (logout)
 window.logout = async function() {
   await browser.storage.local.remove(['userId', 'userEmail', 'userName']);
   console.log('Logged out - user info cleared');
 };
 
-// Get user info via OAuth (cached after first auth)
 async function getUserInfo() {
-  // Check cache first
   const stored = await browser.storage.local.get(['userId', 'userEmail', 'userName']);
 
   if (stored.userId && stored.userEmail && stored.userName) {
@@ -23,7 +20,6 @@ async function getUserInfo() {
 
   console.log('Getting user info via OAuth...');
 
-  // Simple OAuth flow to get user identity
   const redirectURL = browser.identity.getRedirectURL();
 
   console.log('========================================');
@@ -59,7 +55,6 @@ async function getUserInfo() {
       url: authURL
     });
 
-    // Extract access token
     const params = new URLSearchParams(responseURL.split('#')[1]);
     const accessToken = params.get('access_token');
 
@@ -67,7 +62,6 @@ async function getUserInfo() {
       throw new Error('No access token received');
     }
 
-    // Get user info from Google
     const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
       headers: { 'Authorization': `Bearer ${accessToken}` }
     });
@@ -78,7 +72,7 @@ async function getUserInfo() {
 
     const userInfo = await userInfoResponse.json();
 
-    // Cache user info (id is the opaque user_id from Google)
+    // Cache user info permanently (id is the opaque user_id from Google)
     await browser.storage.local.set({
       userId: userInfo.id,
       userEmail: userInfo.email,
@@ -100,15 +94,12 @@ async function getUserInfo() {
   }
 }
 
-// Listen for clicks on the browser action icon
 browser.browserAction.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');
 
   try {
-    // Get user info (cached after first time)
     const userInfo = await getUserInfo();
 
-    // Prepare the page data
     const pageData = {
       url: tab.url,
       title: tab.title,
@@ -120,7 +111,6 @@ browser.browserAction.onClicked.addListener(async (tab) => {
 
     console.log('Sending to Cloud Function:', pageData);
 
-    // Send to Cloud Function
     const response = await fetch(CONFIG.cloudFunctionUrl, {
       method: 'POST',
       headers: {
@@ -136,7 +126,6 @@ browser.browserAction.onClicked.addListener(async (tab) => {
 
     console.log('Page saved successfully!');
 
-    // Show success notification
     browser.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',

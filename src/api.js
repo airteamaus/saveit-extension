@@ -132,7 +132,6 @@ const API = {
   filterMockData(data, options) {
     let filtered = [...data];
 
-    // Apply search filter
     if (options.search) {
       const query = options.search.toLowerCase();
       filtered = filtered.filter(item =>
@@ -143,14 +142,12 @@ const API = {
       );
     }
 
-    // Apply sorting
     if (options.sort === 'newest') {
       filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
     } else if (options.sort === 'oldest') {
       filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     }
 
-    // Apply pagination
     const offset = options.offset || 0;
     const limit = options.limit || 50;
     return filtered.slice(offset, offset + limit);
@@ -184,7 +181,6 @@ const API = {
         throw error;
       }
     } else {
-      // Mock delete
       console.log('🗑️  Mock delete:', id);
       const index = MOCK_DATA.findIndex(p => p.id === id);
       if (index !== -1) {
@@ -231,7 +227,6 @@ const API = {
         throw error;
       }
     } else {
-      // Mock update
       console.log('✏️  Mock update:', id, updates);
       const page = MOCK_DATA.find(p => p.id === id);
       if (page) {

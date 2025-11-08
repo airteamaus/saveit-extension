@@ -137,7 +137,6 @@ class SaveItDashboard {
       return;
     }
 
-    // Clear and render cards
     container.innerHTML = '';
     this.pages.forEach(page => {
       const card = Components.savedPageCard(page);
@@ -240,13 +239,11 @@ class SaveItDashboard {
     try {
       await API.deletePage(id);
 
-      // Remove from local state
       this.allPages = this.allPages.filter(p => p.id !== id);
       this.applyClientFilters();
       this.updateStats();
       this.render();
 
-      // Show success feedback
       this.showToast('Page deleted successfully');
     } catch (error) {
       console.error('Failed to delete page:', error);
@@ -275,7 +272,6 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
    * Show toast notification
    */
   showToast(message) {
-    // Simple implementation - could be enhanced with a nicer UI
     const toast = document.createElement('div');
     toast.style.cssText = `
       position: fixed;
@@ -307,7 +303,6 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
   }
 }
 
-// Initialize dashboard when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     window.dashboard = new SaveItDashboard();
@@ -318,7 +313,6 @@ if (document.readyState === 'loading') {
   window.dashboard.init();
 }
 
-// Add toast animations to document
 if (!document.getElementById('toast-styles')) {
   const style = document.createElement('style');
   style.id = 'toast-styles';
