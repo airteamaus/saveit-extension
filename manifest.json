@@ -6,7 +6,13 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "saveit@airteam.com.au",
-      "update_url": "https://raw.githubusercontent.com/airteamaus/saveit/main/updates.json"
+      "data_collection_permissions": {
+        "required": [
+          "authenticationInfo",
+          "bookmarksInfo",
+          "websiteActivity"
+        ]
+      }
     }
   },
   "permissions": [
