@@ -1,0 +1,81 @@
+name: Release Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build and sign extension
+        env:
+          AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
+          AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+        run: |
+          npx web-ext sign \
+            --source-dir=. \
+            --channel=unlisted \
+            --api-key="$AMO_JWT_ISSUER" \
+            --api-secret="$AMO_JWT_SECRET"
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Find and rename signed XPI
+        id: find_xpi
+        run: |
+          XPI_PATH=$(find web-ext-artifacts -name "*.xpi" -type f | head -n 1)
+          XPI_NAME="saveit-${{ steps.get_version.outputs.VERSION }}.xpi"
+          mv "$XPI_PATH" "$XPI_NAME"
+          echo "XPI_NAME=$XPI_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ${{ steps.find_xpi.outputs.XPI_NAME }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update updates.json
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          REPO="${{ github.repository }}"
+
+          cat > updates.json << EOF
+          {
+            "addons": {
+              "saveit@airteam.com.au": {
+                "updates": [
+                  {
+                    "version": "$VERSION",
+                    "update_link": "https://github.com/$REPO/releases/download/v$VERSION/saveit-$VERSION.xpi"
+                  }
+                ]
+              }
+            }
+          }
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates.json
+          git commit -m "Update updates.json for v$VERSION [skip ci]"
+          git push origin HEAD:main
