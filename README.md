@@ -1,62 +1,49 @@
 # SaveIt Browser Extension
 
-Firefox extension for saving pages to BigQuery via Cloud Function.
+Firefox extension for saving web pages to BigQuery with an intelligent dashboard.
 
-## Files
+## Quick Start
 
-- `manifest.json` - Extension metadata and permissions
-- `config.js` - Configuration (Cloud Function URL, OAuth Client ID)
-- `background.js` - Main extension logic
-- `icon.png` - Extension icon (48x48px)
+```bash
+# Install dependencies
+npm install
 
-## Setup
+# Lint extension
+just lint
 
-1. Update `config.js` with your Cloud Function URL and OAuth Client ID
-2. Load in Firefox: `about:debugging` → Load Temporary Add-on → Select `manifest.json`
+# Run in Firefox Developer Edition
+just run
 
-## Configuration
-
-```javascript
-const CONFIG = {
-  cloudFunctionUrl: 'YOUR_CLOUD_FUNCTION_URL',
-  oauthClientId: 'YOUR_OAUTH_CLIENT_ID'
-};
+# Preview dashboard standalone
+just preview
 ```
 
-## How It Works
+## Documentation
 
-1. User clicks extension icon
-2. First time: OAuth popup to get user email/name (cached permanently)
-3. Extension POSTs page data to Cloud Function
-4. Cloud Function writes to BigQuery
-5. User sees success notification
+- [CLAUDE.md](docs/CLAUDE.md) - Development guide for Claude Code
+- [DASHBOARD-README.md](docs/DASHBOARD-README.md) - Dashboard development details
+- [Full README](docs/README.md) - Complete installation and usage guide
 
-## Development
+## Directory Structure
 
-### Debug
-
-Browser Console: `Cmd+Shift+J`
-
-### View Cached User Info
-
-```javascript
-browser.storage.local.get(['userEmail', 'userName'])
 ```
+saveit-extension/
+├── src/                  # Extension source code
+│   ├── background.js     # Save button & OAuth logic
+│   ├── newtab.html/js/css # Dashboard UI
+│   ├── api.js           # API abstraction layer
+│   ├── components.js    # UI component builders
+│   ├── config.js        # Cloud Function URLs
+│   ├── mock-data.js     # Test data for standalone mode
+│   └── icon.png         # Extension icon
+├── scripts/             # Build and utility scripts
+│   ├── bump-version.js  # Version management
+│   ├── build-and-sign.sh # Build & sign for release
+│   ├── install-dev.sh   # Install for testing
+│   └── run-extension.sh # Run temporarily
+├── docs/                # Documentation
+├── .github/workflows/   # GitHub Actions (auto-release)
+├── manifest.json        # Extension metadata
+└── justfile            # Task runner commands
 
-### Logout
-
-```javascript
-logout()
-```
-
-## Permissions
-
-- `activeTab` - Read current page URL/title
-- `notifications` - Show save confirmations
-- `identity` - OAuth authentication
-- `storage` - Cache user info
-- Network access to Cloud Function and Google OAuth
-
-## Dependencies
-
-None! Pure browser APIs only.
+Run `just` to see all available commands.

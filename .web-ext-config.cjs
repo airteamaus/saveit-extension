@@ -1,19 +1,17 @@
 module.exports = {
   // Ignore files that shouldn't be included in the build
   ignoreFiles: [
-    '*.sh',
-    'build-and-sign.sh',
-    'install-dev.sh',
-    'run-extension.sh',
-    'CLAUDE.md',
-    'DASHBOARD-README.md',
-    'README.md',
+    'scripts/**',
+    'docs/**',
+    '*.md',
     'package.json',
     'package-lock.json',
-    '.web-ext-config.js',
+    '.web-ext-config.cjs',
     '.gitignore',
     '.git',
-    'node_modules'
+    'node_modules',
+    'justfile',
+    '.github'
   ],
 
   // Build configuration
