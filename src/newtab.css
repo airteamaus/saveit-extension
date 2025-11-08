@@ -44,6 +44,53 @@
   --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
 }
 
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0f172a;
+    --color-surface: #1e293b;
+    --color-border: #334155;
+    --color-text: #f1f5f9;
+    --color-text-light: #cbd5e1;
+    --color-text-lighter: #94a3b8;
+
+    /* Shadows need to be darker/more prominent */
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.5), 0 4px 6px -4px rgb(0 0 0 / 0.4);
+  }
+
+  /* Dark mode specific overrides */
+  .card-notes {
+    background: #1e293b;
+    border-left-color: #f59e0b;
+    color: #94a3b8;
+  }
+
+  .search-input:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  }
+
+  .search-input::placeholder {
+    color: var(--color-text-lighter);
+    opacity: 1;
+  }
+
+  .sort-select:focus,
+  .filter-select:focus {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  }
+
+  .clear-search:hover {
+    background: var(--color-border);
+  }
+
+  .tag {
+    background: #334155;
+    color: var(--color-text-light);
+  }
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--color-bg);
@@ -130,6 +177,8 @@ body {
   font-size: 14px;
   width: 300px;
   transition: all 0.2s;
+  background: var(--color-surface);
+  color: var(--color-text);
 }
 
 .search-input:focus {
@@ -165,6 +214,7 @@ body {
   border-radius: var(--radius-md);
   font-size: 14px;
   background: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.2s;
 }
