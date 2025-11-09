@@ -36,20 +36,22 @@ const Components = {
           <p class="row-summary">${this.escapeHtml(this.truncate(page.description, 200))}</p>
         ` : '')}
 
-        ${metaItems.length > 0 ? `
-          <div class="row-meta">
-            ${metaItems.join(' • ')}
-          </div>
-        ` : ''}
+        <div class="row-footer">
+          ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
+            <div class="row-tags">
+              ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
+              ${page.manual_tags && page.manual_tags.length > 0 ?
+                page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
+              : ''}
+            </div>
+          ` : '<div class="row-tags"></div>'}
 
-        ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
-          <div class="row-tags">
-            ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
-            ${page.manual_tags && page.manual_tags.length > 0 ?
-              page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
-            : ''}
-          </div>
-        ` : ''}
+          ${metaItems.length > 0 ? `
+            <div class="row-meta">
+              ${metaItems.join(' • ')}
+            </div>
+          ` : ''}
+        </div>
 
         ${page.user_notes ? `
           <div class="row-notes">
