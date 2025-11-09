@@ -637,12 +637,12 @@ select:focus-visible {
 /* Dark Mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --color-bg: #0f172a;
-    --color-surface: #1e293b;
-    --color-border: #334155;
-    --color-text: #f1f5f9;
-    --color-text-light: #cbd5e1;
-    --color-text-lighter: #94a3b8;
+    --color-bg: #0a0a0a;
+    --color-surface: #1a1a1a;
+    --color-border: #2a2a2a;
+    --color-text: #e5e5e5;
+    --color-text-light: #a3a3a3;
+    --color-text-lighter: #737373;
 
     /* Shadows need to be darker/more prominent */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.3);
@@ -653,9 +653,9 @@ select:focus-visible {
   /* Dark mode specific overrides */
   .card-notes,
   .row-notes {
-    background: #1e293b;
+    background: #1a1a1a;
     border-left-color: #f59e0b;
-    color: #94a3b8;
+    color: #a3a3a3;
   }
 
   .search-input:focus {
@@ -677,7 +677,7 @@ select:focus-visible {
   }
 
   .tag {
-    background: #334155;
+    background: #2a2a2a;
     color: var(--color-text-light);
   }
 }
