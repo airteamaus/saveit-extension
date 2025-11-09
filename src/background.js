@@ -21,26 +21,6 @@ async function getUserInfo() {
   console.log('Getting user info via OAuth...');
 
   const redirectURL = browser.identity.getRedirectURL();
-
-  console.log('========================================');
-  console.log('OAUTH DEBUG INFO:');
-  console.log('');
-  console.log('Client ID:', CONFIG.oauthClientId);
-  console.log('Redirect URL:', redirectURL);
-  console.log('Redirect URL length:', redirectURL.length);
-  console.log('Has trailing slash:', redirectURL.endsWith('/'));
-  console.log('');
-  console.log('VERIFY IN GOOGLE CLOUD CONSOLE:');
-  console.log(`https://console.cloud.google.com/apis/credentials/oauthclient/${CONFIG.oauthClientId}?project=bookmarking-477502`);
-  console.log('');
-  console.log('The redirect URI must match EXACTLY:');
-  console.log(redirectURL);
-  console.log('');
-  console.log('Full auth URL being used:');
-  const testAuthURL = `https://accounts.google.com/o/oauth2/auth?client_id=${CONFIG.oauthClientId}&response_type=token&redirect_uri=${encodeURIComponent(redirectURL)}&scope=${encodeURIComponent('openid email profile')}`;
-  console.log(testAuthURL);
-  console.log('========================================');
-
   const scopes = 'openid email profile';
 
   const authURL = `https://accounts.google.com/o/oauth2/auth?` +
@@ -88,8 +68,8 @@ async function getUserInfo() {
 
   } catch (error) {
     console.error('OAuth error:', error);
-    console.error('OAuth failed with redirect URL:', redirectURL);
-    console.error('Make sure this exact URL is in Google Cloud Console OAuth credentials');
+    console.error('Redirect URL:', redirectURL);
+    console.error('Verify redirect URI in Google Cloud Console OAuth credentials matches exactly');
     throw error;
   }
 }

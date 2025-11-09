@@ -77,29 +77,11 @@ const API = {
         const userId = await this.getUserId();
         if (!userId) {
           console.warn('No user ID found - using default user (click extension icon to authenticate)');
-          // Use default user_id instead of returning empty
-          const params = new URLSearchParams({
-            action: 'getSavedPages',
-            user_id: 'mock-user-123',
-            limit: options.limit || 50,
-            offset: options.offset || 0,
-            search: options.search || '',
-            sort: options.sort || 'newest'
-          });
-
-          const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`);
-
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-          return data.pages || data;
         }
 
         const params = new URLSearchParams({
           action: 'getSavedPages',
-          user_id: userId,
+          user_id: userId || 'mock-user-123',
           limit: options.limit || 50,
           offset: options.offset || 0,
           search: options.search || '',
@@ -113,7 +95,7 @@ const API = {
         }
 
         const data = await response.json();
-        return data.pages || data; // Handle different response formats
+        return data.pages || data;
       } catch (error) {
         console.error('Failed to fetch saved pages:', error);
         throw error;

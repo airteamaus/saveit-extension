@@ -8,7 +8,7 @@ The dashboard works **standalone** without needing to load it as a browser exten
 
 ```bash
 # Just open the HTML file in any browser
-open extension/newtab.html
+open src/newtab.html
 
 # Or in Chrome/Firefox
 # File → Open File → select newtab.html
@@ -50,7 +50,7 @@ Check the footer - it shows the current mode:
 ### File Structure
 
 ```
-extension/
+src/
 ├── newtab.html       ← Main dashboard page
 ├── newtab.css        ← Styles (modern card grid)
 ├── newtab.js         ← Dashboard logic (search, filter, sort)
@@ -65,7 +65,7 @@ extension/
 **Change card styles:**
 ```bash
 # Edit newtab.css, refresh browser
-vim extension/newtab.css
+vim src/newtab.css
 ```
 
 **Add a new filter:**
@@ -78,7 +78,7 @@ vim extension/newtab.css
 **Modify card layout:**
 ```bash
 # Edit Components.savedPageCard() in components.js
-vim extension/components.js
+vim src/components.js
 ```
 
 ---
@@ -91,7 +91,7 @@ When you're ready to test with real data:
 
 1. Open `about:debugging`
 2. Click "This Firefox" → "Load Temporary Add-on"
-3. Select `extension/manifest.json`
+3. Select `manifest.json` from the extension root
 4. Open new tab → see dashboard
 
 **Note:** You'll need to update `manifest.json` to include the newtab override:
@@ -112,7 +112,7 @@ When you're ready to test with real data:
 1. Open `chrome://extensions`
 2. Enable "Developer mode"
 3. Click "Load unpacked"
-4. Select `extension/` folder
+4. Select the extension root folder
 5. Open new tab → see dashboard
 
 ---
