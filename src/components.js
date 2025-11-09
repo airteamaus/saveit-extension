@@ -13,17 +13,11 @@ const Components = {
     card.dataset.id = page.id;
 
     card.innerHTML = `
-      ${page.thumbnail ? `
-        <div class="card-thumbnail">
-          <img src="${page.thumbnail}"
-               alt="${this.escapeHtml(page.title)}"
-               loading="lazy"
-               onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22300%22%3E%3Crect fill=%22%23f0f0f0%22 width=%22400%22 height=%22300%22/%3E%3Ctext fill=%22%23999%22 x=%2250%25%22 y=%2250%25%22 text-anchor=%22middle%22 dy=%22.3em%22 font-family=%22sans-serif%22 font-size=%2216%22%3ENo image%3C/text%3E%3C/svg%3E'">
-        </div>
-      ` : ''}
-
       <div class="card-content">
-        <h3 class="card-title">${this.escapeHtml(page.title)}</h3>
+        <h3 class="card-title">
+          ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
+          <span>${this.escapeHtml(page.title)}</span>
+        </h3>
 
         ${page.description ? `
           <p class="card-description">${this.escapeHtml(this.truncate(page.description, 150))}</p>
