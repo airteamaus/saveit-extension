@@ -321,6 +321,8 @@ body {
   justify-content: space-between;
   gap: var(--spacing-md);
   flex-wrap: wrap;
+  padding-top: 4px;
+  padding-bottom: 4px;
 }
 
 .row-tags {
