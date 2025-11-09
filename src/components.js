@@ -3,76 +3,56 @@
 
 const Components = {
   /**
-   * Create a saved page card element
+   * Create a saved page row element
    * @param {Object} page - Page data
-   * @returns {HTMLElement} Card element
+   * @returns {HTMLElement} Row element
    */
   savedPageCard(page) {
-    const card = document.createElement('article');
-    card.className = 'saved-page-card';
-    card.dataset.id = page.id;
+    const row = document.createElement('div');
+    row.className = 'saved-page-card';
+    row.dataset.id = page.id;
+    row.dataset.url = page.url;
 
-    card.innerHTML = `
-      <div class="card-content">
-        <h3 class="card-title">
+    // Build metadata line with bullet separators
+    const metaItems = [];
+    if (page.author) metaItems.push(this.escapeHtml(page.author));
+    if (page.published_date) {
+      const pubDate = new Date(page.published_date);
+      metaItems.push(pubDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }));
+    }
+    if (page.domain) metaItems.push(this.escapeHtml(page.domain));
+    if (page.reading_time_minutes) metaItems.push(`${page.reading_time_minutes} min read`);
+
+    row.innerHTML = `
+      <div class="row-content">
+        <div class="row-header">
           ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
-          <span>${this.escapeHtml(page.title)}</span>
-        </h3>
-
-        ${page.description ? `
-          <p class="card-description">${this.escapeHtml(this.truncate(page.description, 150))}</p>
-        ` : ''}
-
-        <div class="card-meta">
-          <span class="meta-item domain" title="${page.domain}">
-            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-            </svg>
-            ${this.escapeHtml(page.domain)}
-          </span>
-
-          ${page.reading_time_minutes ? `
-            <span class="meta-item reading-time" title="Estimated reading time">
-              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              ${page.reading_time_minutes} min
-            </span>
-          ` : ''}
-
-          <span class="meta-item date" title="${new Date(page.timestamp).toLocaleString()}">
-            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-              <line x1="16" y1="2" x2="16" y2="6"></line>
-              <line x1="8" y1="2" x2="8" y2="6"></line>
-              <line x1="3" y1="10" x2="21" y2="10"></line>
-            </svg>
-            ${this.formatDate(page.timestamp)}
-          </span>
-
-          ${page.author ? `
-            <span class="meta-item author" title="Author">
-              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              ${this.escapeHtml(page.author)}
-            </span>
-          ` : ''}
+          <h3 class="row-title">${this.escapeHtml(page.title)}</h3>
         </div>
 
-        ${page.manual_tags && page.manual_tags.length > 0 ? `
-          <div class="card-tags">
-            ${page.manual_tags.map(tag =>
-              `<span class="tag">${this.escapeHtml(tag)}</span>`
-            ).join('')}
+        ${page.ai_summary_brief ? `
+          <p class="row-summary">${this.escapeHtml(page.ai_summary_brief)}</p>
+        ` : (page.description ? `
+          <p class="row-summary">${this.escapeHtml(this.truncate(page.description, 200))}</p>
+        ` : '')}
+
+        ${metaItems.length > 0 ? `
+          <div class="row-meta">
+            ${metaItems.join(' • ')}
+          </div>
+        ` : ''}
+
+        ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
+          <div class="row-tags">
+            ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
+            ${page.manual_tags && page.manual_tags.length > 0 ?
+              page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
+            : ''}
           </div>
         ` : ''}
 
         ${page.user_notes ? `
-          <div class="card-notes">
+          <div class="row-notes">
             <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
@@ -84,11 +64,6 @@ const Components = {
 
       <div class="card-actions">
         <button class="btn btn-primary btn-open" data-url="${this.escapeHtml(page.url)}" title="Open page">
-          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
-            <polyline points="15 3 21 3 21 9"></polyline>
-            <line x1="10" y1="14" x2="21" y2="3"></line>
-          </svg>
           Open
         </button>
         <button class="btn btn-secondary btn-delete" data-id="${page.id}" title="Delete page">
@@ -101,7 +76,7 @@ const Components = {
       </div>
     `;
 
-    return card;
+    return row;
   },
 
   /**
