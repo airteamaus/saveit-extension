@@ -62,18 +62,12 @@ const Components = {
         ` : ''}
       </div>
 
-      <div class="card-actions">
-        <button class="btn btn-primary btn-open" data-url="${this.escapeHtml(page.url)}" title="Open page">
-          Open
-        </button>
-        <button class="btn btn-secondary btn-delete" data-id="${page.id}" title="Delete page">
-          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="3 6 5 6 21 6"></polyline>
-            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-          </svg>
-          Delete
-        </button>
-      </div>
+      <button class="btn-delete" data-id="${page.id}" title="Delete page">
+        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="3 6 5 6 21 6"></polyline>
+          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+        </svg>
+      </button>
     `;
 
     return row;

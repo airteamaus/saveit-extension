@@ -179,16 +179,20 @@ class SaveItDashboard {
 
     // Card actions (event delegation)
     document.getElementById('content').addEventListener('click', (e) => {
-      // Open button
-      if (e.target.closest('.btn-open')) {
-        const url = e.target.closest('.btn-open').dataset.url;
-        this.openPage(url);
+      // Delete button - handle first and stop propagation
+      const deleteBtn = e.target.closest('.btn-delete');
+      if (deleteBtn) {
+        e.stopPropagation();
+        const id = deleteBtn.dataset.id;
+        this.deletePage(id);
+        return;
       }
 
-      // Delete button
-      if (e.target.closest('.btn-delete')) {
-        const id = e.target.closest('.btn-delete').dataset.id;
-        this.deletePage(id);
+      // Row click - open URL in new tab
+      const row = e.target.closest('.saved-page-card');
+      if (row) {
+        const url = row.dataset.url;
+        this.openPage(url);
       }
     });
 
