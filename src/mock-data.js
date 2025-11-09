@@ -17,7 +17,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: 'Want to plan a trip like this someday',
-    manual_tags: ['travel', 'motorcycles', 'himalayas']
+    manual_tags: ['travel', 'motorcycles', 'himalayas'],
+    ai_summary_brief: 'A first-person account of an extreme motorcycle expedition through high-altitude Himalayan passes, exploring remote territories and documenting the challenges of high-altitude riding.',
+    dewey_primary_label: 'Geography, history, related disciplines',
+    ai_enriched_at: { value: '2024-01-20T15:00:00Z' }
   },
   {
     id: '2',
@@ -34,7 +37,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['technology', 'climate']
+    manual_tags: ['technology', 'climate'],
+    ai_summary_brief: null,
+    dewey_primary_label: null,
+    ai_enriched_at: null
   },
   {
     id: '3',
@@ -51,7 +57,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['javascript', 'opensource']
+    manual_tags: ['javascript', 'opensource'],
+    ai_summary_brief: 'A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.',
+    dewey_primary_label: 'Computer programming, programs, data',
+    ai_enriched_at: { value: '2024-01-19T11:30:00Z' }
   },
   {
     id: '4',
@@ -68,7 +77,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['design', 'minimalism']
+    manual_tags: ['design', 'minimalism'],
+    ai_summary_brief: null,
+    dewey_primary_label: null,
+    ai_enriched_at: null
   },
   {
     id: '5',
@@ -85,7 +97,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: 'Important for understanding CoT',
-    manual_tags: ['ai', 'research', 'llm']
+    manual_tags: ['ai', 'research', 'llm'],
+    ai_summary_brief: 'An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.',
+    dewey_primary_label: 'Computer programming, programs, data',
+    ai_enriched_at: { value: '2024-01-18T22:20:00Z' }
   },
   {
     id: '6',
@@ -102,7 +117,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['cooking', 'bread']
+    manual_tags: ['cooking', 'bread'],
+    ai_summary_brief: 'A comprehensive guide to baking artisan sourdough bread at home, covering fermentation science, starter maintenance, and techniques for achieving professional-quality crust and crumb.',
+    dewey_primary_label: 'Home & family management',
+    ai_enriched_at: { value: '2024-01-18T19:45:00Z' }
   },
   {
     id: '7',
@@ -119,7 +137,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['react', 'performance']
+    manual_tags: ['react', 'performance'],
+    ai_summary_brief: null,
+    dewey_primary_label: null,
+    ai_enriched_at: null
   },
   {
     id: '8',
@@ -136,7 +157,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: 'Mind-bending stuff',
-    manual_tags: ['philosophy', 'physics']
+    manual_tags: ['philosophy', 'physics'],
+    ai_summary_brief: 'A philosophical examination of temporal ontology, contrasting presentist and eternalist perspectives on time while exploring implications from modern physics and special relativity.',
+    dewey_primary_label: 'Philosophy',
+    ai_enriched_at: { value: '2024-01-17T21:15:00Z' }
   },
   {
     id: '9',
@@ -153,7 +177,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['typescript', 'tutorial']
+    manual_tags: ['typescript', 'tutorial'],
+    ai_summary_brief: null,
+    dewey_primary_label: null,
+    ai_enriched_at: null
   },
   {
     id: '10',
@@ -170,7 +197,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['apple', 'vr', 'review']
+    manual_tags: ['apple', 'vr', 'review'],
+    ai_summary_brief: 'A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.',
+    dewey_primary_label: 'Computer science, information, works',
+    ai_enriched_at: { value: '2024-01-15T20:45:00Z' }
   },
   {
     id: '11',
@@ -187,7 +217,10 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: 'Re-read annually',
-    manual_tags: ['career', 'philosophy']
+    manual_tags: ['career', 'philosophy'],
+    ai_summary_brief: null,
+    dewey_primary_label: null,
+    ai_enriched_at: null
   },
   {
     id: '12',
@@ -204,6 +237,9 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_name: 'Rich',
     user_notes: null,
-    manual_tags: ['ai', 'documentation']
+    manual_tags: ['ai', 'documentation'],
+    ai_summary_brief: 'Official API documentation for integrating Claude AI assistant into applications, including setup instructions, code examples, and best practices for implementation.',
+    dewey_primary_label: 'Computer programming, programs, data',
+    ai_enriched_at: { value: '2024-01-13T16:50:00Z' }
   }
 ];
