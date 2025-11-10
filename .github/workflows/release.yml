@@ -59,6 +59,11 @@ jobs:
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           REPO="${{ github.repository }}"
 
+          # Fetch and checkout main to avoid detached HEAD issues
+          git fetch origin main
+          git checkout main
+          git pull origin main
+
           cat > updates.json << EOF
           {
             "addons": {
@@ -78,4 +83,4 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add updates.json
           git commit -m "Update updates.json for v$VERSION [skip ci]"
-          git push origin HEAD:main
+          git push origin main
