@@ -20,7 +20,7 @@ const MOCK_DATA = [
     manual_tags: ['travel', 'motorcycles', 'himalayas'],
     ai_summary_brief: 'A first-person account of an extreme motorcycle expedition through high-altitude Himalayan passes, exploring remote territories and documenting the challenges of high-altitude riding.',
     dewey_primary_label: 'Geography, history, related disciplines',
-    ai_enriched_at: { value: '2024-01-20T15:00:00Z' }
+    ai_enriched_at: '2024-01-20T15:00:00Z'
   },
   {
     id: '2',
@@ -60,7 +60,7 @@ const MOCK_DATA = [
     manual_tags: ['javascript', 'opensource'],
     ai_summary_brief: 'A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.',
     dewey_primary_label: 'Computer programming, programs, data',
-    ai_enriched_at: { value: '2024-01-19T11:30:00Z' }
+    ai_enriched_at: '2024-01-19T11:30:00Z'
   },
   {
     id: '4',
@@ -100,7 +100,7 @@ const MOCK_DATA = [
     manual_tags: ['ai', 'research', 'llm'],
     ai_summary_brief: 'An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.',
     dewey_primary_label: 'Computer programming, programs, data',
-    ai_enriched_at: { value: '2024-01-18T22:20:00Z' }
+    ai_enriched_at: '2024-01-18T22:20:00Z'
   },
   {
     id: '6',
@@ -120,7 +120,7 @@ const MOCK_DATA = [
     manual_tags: ['cooking', 'bread'],
     ai_summary_brief: 'A comprehensive guide to baking artisan sourdough bread at home, covering fermentation science, starter maintenance, and techniques for achieving professional-quality crust and crumb.',
     dewey_primary_label: 'Home & family management',
-    ai_enriched_at: { value: '2024-01-18T19:45:00Z' }
+    ai_enriched_at: '2024-01-18T19:45:00Z'
   },
   {
     id: '7',
@@ -160,7 +160,7 @@ const MOCK_DATA = [
     manual_tags: ['philosophy', 'physics'],
     ai_summary_brief: 'A philosophical examination of temporal ontology, contrasting presentist and eternalist perspectives on time while exploring implications from modern physics and special relativity.',
     dewey_primary_label: 'Philosophy',
-    ai_enriched_at: { value: '2024-01-17T21:15:00Z' }
+    ai_enriched_at: '2024-01-17T21:15:00Z'
   },
   {
     id: '9',
@@ -200,7 +200,7 @@ const MOCK_DATA = [
     manual_tags: ['apple', 'vr', 'review'],
     ai_summary_brief: 'A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.',
     dewey_primary_label: 'Computer science, information, works',
-    ai_enriched_at: { value: '2024-01-15T20:45:00Z' }
+    ai_enriched_at: '2024-01-15T20:45:00Z'
   },
   {
     id: '11',
@@ -240,6 +240,6 @@ const MOCK_DATA = [
     manual_tags: ['ai', 'documentation'],
     ai_summary_brief: 'Official API documentation for integrating Claude AI assistant into applications, including setup instructions, code examples, and best practices for implementation.',
     dewey_primary_label: 'Computer programming, programs, data',
-    ai_enriched_at: { value: '2024-01-13T16:50:00Z' }
+    ai_enriched_at: '2024-01-13T16:50:00Z'
   }
 ];
