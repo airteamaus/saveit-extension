@@ -518,6 +518,11 @@ body {
   transition: opacity 0.2s;
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 13px;
+  background: rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  color: var(--color-text-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
 }
 
 .saved-page-card:hover .btn-delete {
