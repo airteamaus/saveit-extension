@@ -1,10 +1,60 @@
 // components.js - Reusable UI component builders
 // Simple template functions for rendering dashboard elements
 
+/**
+ * Page data shape (matches BigQuery things table schema)
+ * @typedef {Object} Page
+ *
+ * REQUIRED FIELDS:
+ * @property {string} id - Unique identifier (UUID)
+ * @property {string} thing_type - Type of saved item (currently always 'bookmark')
+ * @property {string} user_email - User's email address
+ *
+ * OPTIONAL CORE FIELDS:
+ * @property {string} [url] - Full URL of saved page
+ * @property {string} [title] - Page title
+ * @property {string} [thumbnail] - Thumbnail image URL
+ * @property {string} [description] - Meta description or extracted content summary
+ * @property {string} [domain] - Domain name (e.g., 'example.com')
+ * @property {number} [reading_time_minutes] - Estimated reading time in minutes
+ * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP)
+ * @property {string} [user_notes] - User's personal notes about the page
+ * @property {string[]} [manual_tags] - User-added tags (REPEATED field in BigQuery)
+ *
+ * INTERNAL FIELDS (not displayed in UI):
+ * @property {boolean} [deleted] - Soft delete flag (default: false)
+ * @property {string} [deleted_at] - ISO timestamp when deleted (TIMESTAMP)
+ * @property {string} [updated_at] - ISO timestamp of last update (TIMESTAMP)
+ * @property {string} [user_id] - OAuth user ID (Google sub claim)
+ * @property {string} [content_ref] - GCS reference to full-text markdown (format: gs://bucket/hash.md)
+ *
+ * AI ENRICHMENT FIELDS (populated by cloud-function-enrich):
+ * @property {string} [ai_summary_brief] - 1-2 sentence AI-generated summary
+ * @property {string} [ai_summary_extended] - Longer AI-generated summary (not currently displayed)
+ * @property {string} [dewey_primary] - Dewey Decimal Classification code (e.g., '900')
+ * @property {string} [dewey_primary_label] - Human-readable Dewey category (e.g., 'Geography, history, related disciplines')
+ * @property {string} [ai_enriched_at] - ISO timestamp when AI enrichment completed (TIMESTAMP)
+ *
+ * LEGACY FIELDS (from mock data, not in schema):
+ * @property {string} [author] - Article author (from OpenGraph meta tags)
+ * @property {string} [published_date] - ISO timestamp of article publication (TIMESTAMP)
+ *
+ * NOTE: All TIMESTAMP fields from BigQuery are serialized as ISO 8601 strings
+ * NOTE: UI prioritizes ai_summary_brief over description for display
+ */
+
 const Components = {
   /**
    * Create a saved page row element (returns HTML string)
-   * @param {Object} page - Page data
+   *
+   * Renders a single page item with:
+   * - Header: favicon + title
+   * - Summary: AI brief summary (preferred) or description
+   * - Footer: tags (AI-generated and manual) + metadata
+   * - Notes: user's personal notes (if present)
+   * - Delete button: hover-activated trash icon
+   *
+   * @param {Page} page - Page data object
    * @returns {string} HTML string
    */
   savedPageCard(page) {
