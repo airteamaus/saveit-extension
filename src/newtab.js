@@ -71,17 +71,10 @@ class SaveItDashboard {
   }
 
   /**
-   * Apply client-side filters (search and category)
+   * Apply client-side search filter
    */
   applyClientFilters() {
     let filtered = [...this.allPages];
-
-    // Apply category filter
-    if (this.currentFilter.category) {
-      filtered = filtered.filter(page =>
-        page.domain_category === this.currentFilter.category
-      );
-    }
 
     // Apply search filter (already done server-side for extension mode)
     // But we do it client-side too for instant feedback
@@ -120,7 +113,7 @@ class SaveItDashboard {
     const container = document.getElementById('content');
 
     if (this.pages.length === 0) {
-      if (this.currentFilter.search || this.currentFilter.category) {
+      if (this.currentFilter.search) {
         container.innerHTML = `
           <div class="empty-state">
             <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -128,7 +121,7 @@ class SaveItDashboard {
               <path d="m21 21-4.35-4.35"></path>
             </svg>
             <h2>No matching pages</h2>
-            <p>Try adjusting your search or filters</p>
+            <p>Try adjusting your search</p>
           </div>
         `;
       } else {
@@ -166,12 +159,6 @@ class SaveItDashboard {
     document.getElementById('sort').addEventListener('change', (e) => {
       this.currentFilter.sort = e.target.value;
       this.handleSortChange();
-    });
-
-    // Category filter
-    document.getElementById('filter-category').addEventListener('change', (e) => {
-      this.currentFilter.category = e.target.value;
-      this.handleFilterChange();
     });
 
     // Card actions (event delegation)
