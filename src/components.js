@@ -31,8 +31,9 @@
  * AI ENRICHMENT FIELDS (populated by cloud-function-enrich):
  * @property {string} [ai_summary_brief] - 1-2 sentence AI-generated summary
  * @property {string} [ai_summary_extended] - Longer AI-generated summary (not currently displayed)
- * @property {string} [dewey_primary] - Dewey Decimal Classification code (e.g., '900')
- * @property {string} [dewey_primary_label] - Human-readable Dewey category (e.g., 'Geography, history, related disciplines')
+ * @property {Array<{type: string, label: string, confidence: number, embedding: number[]}>} [classifications] - Multi-level AI classifications (general/domain/topic)
+ * @property {string} [dewey_primary] - DEPRECATED - Dewey Decimal Classification code (e.g., '900')
+ * @property {string} [dewey_primary_label] - DEPRECATED - Human-readable Dewey category (e.g., 'Geography, history, related disciplines')
  * @property {string} [ai_enriched_at] - ISO timestamp when AI enrichment completed (TIMESTAMP)
  *
  * LEGACY FIELDS (from mock data, not in schema):
@@ -44,6 +45,32 @@
  */
 
 const Components = {
+  /**
+   * Render classification tags with type-specific styling
+   * Supports both new multi-level classifications and legacy dewey_primary
+   *
+   * @param {Page} page - Page data object
+   * @returns {string} HTML string of classification tags
+   */
+  renderClassifications(page) {
+    // Use new classifications if available
+    if (page.classifications && page.classifications.length > 0) {
+      return page.classifications
+        .map(c => {
+          const typeClass = `tag-${c.type}`; // tag-general, tag-domain, tag-topic
+          return `<span class="tag ai-tag ${typeClass}" data-type="${this.escapeHtml(c.type)}" data-label="${this.escapeHtml(c.label)}" title="AI-generated ${c.type} (confidence: ${Math.round(c.confidence * 100)}%)">${this.escapeHtml(c.label)}</span>`;
+        })
+        .join('');
+    }
+
+    // Fallback to old dewey_primary_label for backwards compatibility
+    if (page.dewey_primary_label) {
+      return `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>`;
+    }
+
+    return '';
+  },
+
   /**
    * Create a saved page row element (returns HTML string)
    *
@@ -83,9 +110,9 @@ const Components = {
           ` : '')}
 
           <div class="row-footer">
-            ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
+            ${(page.classifications && page.classifications.length > 0) || page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0) ? `
               <div class="row-tags">
-                ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
+                ${this.renderClassifications(page)}
                 ${page.manual_tags && page.manual_tags.length > 0 ?
                   page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
                 : ''}

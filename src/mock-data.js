@@ -18,6 +18,11 @@ const MOCK_DATA = [
     user_notes: 'Want to plan a trip like this someday',
     manual_tags: ['travel', 'motorcycles', 'himalayas'],
     ai_summary_brief: 'A first-person account of an extreme motorcycle expedition through high-altitude Himalayan passes, exploring remote territories and documenting the challenges of high-altitude riding.',
+    classifications: [
+      { type: 'general', label: 'Geography', confidence: 0.90 },
+      { type: 'domain', label: 'Adventure Travel', confidence: 0.85 },
+      { type: 'topic', label: 'Motorcycle Touring', confidence: 0.88 }
+    ],
     dewey_primary_label: 'Geography, history, related disciplines',
     ai_enriched_at: '2024-01-20T15:00:00Z'
   },
@@ -56,6 +61,11 @@ const MOCK_DATA = [
     user_notes: null,
     manual_tags: ['javascript', 'opensource'],
     ai_summary_brief: 'A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.',
+    classifications: [
+      { type: 'general', label: 'Computer Science', confidence: 0.95 },
+      { type: 'domain', label: 'Web Development', confidence: 0.90 },
+      { type: 'domain', label: 'Software Engineering', confidence: 0.85 }
+    ],
     dewey_primary_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-19T11:30:00Z'
   },
@@ -94,6 +104,12 @@ const MOCK_DATA = [
     user_notes: 'Important for understanding CoT',
     manual_tags: ['ai', 'research', 'llm'],
     ai_summary_brief: 'An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.',
+    classifications: [
+      { type: 'general', label: 'Computer Science', confidence: 0.95 },
+      { type: 'domain', label: 'Artificial Intelligence', confidence: 0.92 },
+      { type: 'topic', label: 'Chain-of-Thought Prompting', confidence: 0.88 },
+      { type: 'topic', label: 'Large Language Models', confidence: 0.90 }
+    ],
     dewey_primary_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-18T22:20:00Z'
   },

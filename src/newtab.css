@@ -416,6 +416,58 @@ body {
   background: rgba(37, 99, 235, 0.1);
   color: var(--color-primary);
   border: 1px solid rgba(37, 99, 235, 0.2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tag.ai-tag:hover {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+/* Multi-level classification tags - visual hierarchy
+   General (broad field): Subtle gray, small font - foundation categories
+   Domain (subfield): Blue, medium weight - most prominent, primary classification
+   Topic (specific): Purple, italic - detailed concepts */
+
+/* General tags - subtle, foundational */
+.tag.tag-general {
+  background: var(--color-bg);
+  color: var(--color-text-light);
+  border: 1px solid var(--color-border);
+  font-size: 10px;
+  font-weight: 400;
+}
+
+.tag.tag-general:hover {
+  background: var(--color-border);
+  color: var(--color-text);
+}
+
+/* Domain tags - most prominent */
+.tag.tag-domain {
+  background: rgba(37, 99, 235, 0.1);
+  color: var(--color-primary);
+  border: 1px solid rgba(37, 99, 235, 0.2);
+  font-weight: 600;
+}
+
+.tag.tag-domain:hover {
+  background: rgba(37, 99, 235, 0.2);
+  border-color: rgba(37, 99, 235, 0.4);
+}
+
+/* Topic tags - specific details */
+.tag.tag-topic {
+  background: rgba(147, 51, 234, 0.1);
+  color: #9333ea;
+  border: 1px solid rgba(147, 51, 234, 0.2);
+  font-style: italic;
+}
+
+.tag.tag-topic:hover {
+  background: rgba(147, 51, 234, 0.2);
+  border-color: rgba(147, 51, 234, 0.4);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -423,6 +475,44 @@ body {
     background: rgba(37, 99, 235, 0.15);
     color: #60a5fa;
     border-color: rgba(37, 99, 235, 0.3);
+  }
+
+  .tag.ai-tag:hover {
+    background: rgba(37, 99, 235, 0.25);
+    border-color: rgba(37, 99, 235, 0.5);
+  }
+
+  .tag.tag-general {
+    background: #2a2a2a;
+    color: var(--color-text-light);
+    border-color: #3a3a3a;
+  }
+
+  .tag.tag-general:hover {
+    background: #3a3a3a;
+    color: var(--color-text);
+  }
+
+  .tag.tag-domain {
+    background: rgba(37, 99, 235, 0.15);
+    color: #60a5fa;
+    border-color: rgba(37, 99, 235, 0.3);
+  }
+
+  .tag.tag-domain:hover {
+    background: rgba(37, 99, 235, 0.25);
+    border-color: rgba(37, 99, 235, 0.5);
+  }
+
+  .tag.tag-topic {
+    background: rgba(147, 51, 234, 0.15);
+    color: #c084fc;
+    border-color: rgba(147, 51, 234, 0.3);
+  }
+
+  .tag.tag-topic:hover {
+    background: rgba(147, 51, 234, 0.25);
+    border-color: rgba(147, 51, 234, 0.5);
   }
 }
 
