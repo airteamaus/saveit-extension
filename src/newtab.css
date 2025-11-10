@@ -354,6 +354,11 @@ body {
   white-space: nowrap;
 }
 
+.meta-item:not(:first-child)::before {
+  content: ' • ';
+  margin: 0 var(--spacing-xs);
+}
+
 /* Tags */
 .tag {
   display: inline-flex;

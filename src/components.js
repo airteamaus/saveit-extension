@@ -44,7 +44,7 @@ const Components = {
 
             ${metaItems.length > 0 ? `
               <div class="row-meta">
-                ${metaItems.join(' • ')}
+                ${metaItems.map(item => `<span class="meta-item">${item}</span>`).join('')}
               </div>
             ` : ''}
           </div>
