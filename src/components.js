@@ -90,7 +90,7 @@ const Components = {
                   page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
                 : ''}
               </div>
-            ` : '<div class="row-tags"></div>'}
+            ` : ''}
 
             ${metaItems.length > 0 ? `
               <div class="row-meta">
