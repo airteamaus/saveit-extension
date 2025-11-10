@@ -26,6 +26,9 @@ class SaveItDashboard {
     await this.loadPages();
     this.setupEventListeners();
     this.render();
+
+    // Refresh in background if we showed cached data
+    this.refreshInBackground();
   }
 
   /**
@@ -69,6 +72,38 @@ class SaveItDashboard {
     } catch (error) {
       console.error('Failed to load pages:', error);
       this.showError(error);
+    }
+  }
+
+  /**
+   * Refresh data in background (after showing cached data)
+   */
+  async refreshInBackground() {
+    if (!API.isExtension) return;
+
+    try {
+      // Wait a bit to avoid competing with initial render
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log('Refreshing data in background...');
+      const freshPages = await API.getSavedPages({
+        ...this.currentFilter,
+        skipCache: true
+      });
+
+      // Only update if data changed
+      if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
+        console.log('Data updated, re-rendering');
+        this.allPages = freshPages;
+        this.applyClientFilters();
+        this.updateStats();
+        this.render();
+      } else {
+        console.log('No changes detected');
+      }
+    } catch (error) {
+      console.error('Background refresh failed:', error);
+      // Don't show error to user - they already have cached data
     }
   }
 
