@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Semantic Search</title>
+</head>
+<body>
+  <h1>Testing Semantic Search Mock</h1>
+  <div id="output"></div>
+
+  <script src="src/mock-data.js"></script>
+  <script src="src/config.js"></script>
+  <script src="src/api.js"></script>
+  <script>
+    async function testSearch() {
+      const output = document.getElementById('output');
+
+      try {
+        // Test searching for "Computer Science"
+        console.log('Testing search for "Computer Science"...');
+        const results = await API.searchByTag('Computer Science');
+
+        console.log('Results:', results);
+
+        output.innerHTML = `
+          <h2>Search Results for "Computer Science"</h2>
+          <p>Exact matches: ${results.exact_matches.length}</p>
+          <p>Similar matches: ${results.similar_matches.length}</p>
+          <p>Related matches: ${results.related_matches.length}</p>
+          <pre>${JSON.stringify(results, null, 2)}</pre>
+        `;
+      } catch (error) {
+        output.innerHTML = `<p style="color: red;">Error: ${error.message}</p>`;
+        console.error(error);
+      }
+    }
+
+    testSearch();
+  </script>
+</body>
+</html>
