@@ -111,7 +111,7 @@ try {
   process.exit(1);
 }
 
-// Success message
+// Ask if user wants to push immediately
 console.log(`
 ✓ Version bumped to ${newVersion}
 
@@ -124,4 +124,7 @@ GitHub Actions will automatically:
 - Sign with Mozilla
 - Create a GitHub Release with signed XPI
 - Update updates.json for auto-updates
+
+Tip: The pre-push hook will prevent pushing mismatched version tags.
+     Always use 'just bump' instead of manually creating tags.
 `);

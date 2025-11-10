@@ -45,3 +45,11 @@ clean:
 # Install dependencies
 install-deps:
     npm install
+
+# Setup git hooks (prevents pushing mismatched version tags)
+setup-hooks:
+    @echo "Installing git hooks..."
+    @cp scripts/git-hooks/pre-push .git/hooks/pre-push
+    @chmod +x .git/hooks/pre-push
+    @echo "✓ Pre-push hook installed"
+    @echo "  Prevents pushing version tags that don't match manifest.json"

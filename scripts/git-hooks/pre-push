@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Pre-push hook to validate version tags match manifest.json
+# Prevents pushing v* tags that don't match the manifest version
+
+while read local_ref local_sha remote_ref remote_sha; do
+    # Check if we're pushing a version tag (v*.*.*)
+    if [[ "$local_ref" =~ refs/tags/v([0-9]+\.[0-9]+\.[0-9]+)$ ]]; then
+        tag_version="${BASH_REMATCH[1]}"
+
+        # Read version from manifest.json
+        manifest_version=$(node -p "require('./manifest.json').version")
+
+        if [ "$tag_version" != "$manifest_version" ]; then
+            echo "ERROR: Tag version (v${tag_version}) doesn't match manifest.json version (${manifest_version})"
+            echo ""
+            echo "To fix this:"
+            echo "  1. Delete the incorrect tag: git tag -d v${tag_version}"
+            echo "  2. Use the bump script: just bump [patch|minor|major]"
+            echo "  3. Push again: git push origin main --tags"
+            echo ""
+            exit 1
+        fi
+
+        echo "✓ Tag v${tag_version} matches manifest.json version"
+    fi
+done
+
+exit 0
