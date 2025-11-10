@@ -21,6 +21,7 @@ class SaveItDashboard {
    * Initialize the dashboard
    */
   async init() {
+    this.initTheme();
     this.showLoading();
     this.updateModeIndicator();
     await this.loadPages();
@@ -29,6 +30,42 @@ class SaveItDashboard {
 
     // Refresh in background if we showed cached data
     this.refreshInBackground();
+  }
+
+  /**
+   * Initialize theme from localStorage
+   */
+  initTheme() {
+    const savedTheme = localStorage.getItem('theme-preference') || 'auto';
+    this.applyTheme(savedTheme);
+    this.updateThemeButtons(savedTheme);
+  }
+
+  /**
+   * Apply theme to document
+   */
+  applyTheme(theme) {
+    const html = document.documentElement;
+    if (theme === 'auto') {
+      html.removeAttribute('data-theme');
+    } else {
+      html.setAttribute('data-theme', theme);
+    }
+  }
+
+  /**
+   * Update theme button active states
+   */
+  updateThemeButtons(activeTheme) {
+    document.querySelectorAll('.theme-option').forEach(btn => {
+      if (btn.dataset.theme === activeTheme) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-checked', 'true');
+      } else {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-checked', 'false');
+      }
+    });
   }
 
   /**
@@ -206,10 +243,14 @@ class SaveItDashboard {
       this.handleFilterChange();
     });
 
-    // Sort select
-    document.getElementById('sort').addEventListener('change', (e) => {
-      this.currentFilter.sort = e.target.value;
-      this.handleSortChange();
+    // Theme toggle buttons
+    document.querySelectorAll('.theme-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const theme = btn.dataset.theme;
+        localStorage.setItem('theme-preference', theme);
+        this.applyTheme(theme);
+        this.updateThemeButtons(theme);
+      });
     });
 
     // Card actions (event delegation)
@@ -263,19 +304,6 @@ class SaveItDashboard {
   handleFilterChange() {
     this.applyClientFilters();
     this.updateStats();
-    this.render();
-  }
-
-  /**
-   * Handle sort changes (requires re-sorting)
-   */
-  handleSortChange() {
-    if (this.currentFilter.sort === 'newest') {
-      this.allPages.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-    } else if (this.currentFilter.sort === 'oldest') {
-      this.allPages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-    }
-    this.applyClientFilters();
     this.render();
   }
 
