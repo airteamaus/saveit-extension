@@ -72,7 +72,7 @@ const API = {
    */
   async getSavedPages(options = {}) {
     if (this.isExtension) {
-      // Production: Call real Cloud Function
+      // Production: Call real Cloud Function with GET method
       try {
         const userId = await this.getUserId();
         if (!userId) {
@@ -80,7 +80,6 @@ const API = {
         }
 
         const params = new URLSearchParams({
-          action: 'getSavedPages',
           user_id: userId || 'mock-user-123',
           limit: options.limit || 50,
           offset: options.offset || 0,
@@ -88,7 +87,9 @@ const API = {
           sort: options.sort || 'newest'
         });
 
-        const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`);
+        const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+          method: 'GET'
+        });
 
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -148,8 +149,13 @@ const API = {
           throw new Error('No user ID found');
         }
 
+        const params = new URLSearchParams({
+          id: id,
+          user_id: userId
+        });
+
         const response = await fetch(
-          `${CONFIG.cloudFunctionUrl}/deletePage?id=${id}&user_id=${userId}`,
+          `${CONFIG.cloudFunctionUrl}?${params}`,
           { method: 'DELETE' }
         );
 

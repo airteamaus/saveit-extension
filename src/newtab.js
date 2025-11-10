@@ -247,7 +247,7 @@ class SaveItDashboard {
     const message = `SaveIt Dashboard
 
 Mode: ${mode}
-Version: 0.5.0 (MVP)
+Version: 0.10.0
 
 SaveIt helps you save and rediscover web pages with AI-powered metadata and intelligent discovery.
 
