@@ -202,7 +202,7 @@ body {
 .logo {
   font-size: 24px;
   font-weight: 700;
-  color: white;
+  color: var(--color-primary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
