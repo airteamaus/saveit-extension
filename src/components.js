@@ -3,16 +3,11 @@
 
 const Components = {
   /**
-   * Create a saved page row element
+   * Create a saved page row element (returns HTML string)
    * @param {Object} page - Page data
-   * @returns {HTMLElement} Row element
+   * @returns {string} HTML string
    */
   savedPageCard(page) {
-    const row = document.createElement('div');
-    row.className = 'saved-page-card';
-    row.dataset.id = page.id;
-    row.dataset.url = page.url;
-
     // Build metadata line with bullet separators
     const metaItems = [];
     if (page.author) metaItems.push(this.escapeHtml(page.author));
@@ -23,56 +18,56 @@ const Components = {
     if (page.domain) metaItems.push(this.escapeHtml(page.domain));
     if (page.reading_time_minutes) metaItems.push(`${page.reading_time_minutes} min read`);
 
-    row.innerHTML = `
-      <div class="row-content">
-        <div class="row-header">
-          ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
-          <h3 class="row-title">${this.escapeHtml(page.title)}</h3>
-        </div>
+    return `
+      <div class="saved-page-card" data-id="${page.id}" data-url="${this.escapeHtml(page.url)}">
+        <div class="row-content">
+          <div class="row-header">
+            ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
+            <h3 class="row-title">${this.escapeHtml(page.title)}</h3>
+          </div>
 
-        ${page.ai_summary_brief ? `
-          <p class="row-summary">${this.escapeHtml(page.ai_summary_brief)}</p>
-        ` : (page.description ? `
-          <p class="row-summary">${this.escapeHtml(this.truncate(page.description, 200))}</p>
-        ` : '')}
+          ${page.ai_summary_brief ? `
+            <p class="row-summary">${this.escapeHtml(page.ai_summary_brief)}</p>
+          ` : (page.description ? `
+            <p class="row-summary">${this.escapeHtml(this.truncate(page.description, 200))}</p>
+          ` : '')}
 
-        <div class="row-footer">
-          ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
-            <div class="row-tags">
-              ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
-              ${page.manual_tags && page.manual_tags.length > 0 ?
-                page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
-              : ''}
-            </div>
-          ` : '<div class="row-tags"></div>'}
+          <div class="row-footer">
+            ${(page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0)) ? `
+              <div class="row-tags">
+                ${page.dewey_primary_label ? `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>` : ''}
+                ${page.manual_tags && page.manual_tags.length > 0 ?
+                  page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
+                : ''}
+              </div>
+            ` : '<div class="row-tags"></div>'}
 
-          ${metaItems.length > 0 ? `
-            <div class="row-meta">
-              ${metaItems.join(' • ')}
+            ${metaItems.length > 0 ? `
+              <div class="row-meta">
+                ${metaItems.join(' • ')}
+              </div>
+            ` : ''}
+          </div>
+
+          ${page.user_notes ? `
+            <div class="row-notes">
+              <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+              </svg>
+              ${this.escapeHtml(page.user_notes)}
             </div>
           ` : ''}
         </div>
 
-        ${page.user_notes ? `
-          <div class="row-notes">
-            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-            </svg>
-            ${this.escapeHtml(page.user_notes)}
-          </div>
-        ` : ''}
+        <button class="btn-delete" data-id="${page.id}" title="Delete page">
+          <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </button>
       </div>
-
-      <button class="btn-delete" data-id="${page.id}" title="Delete page">
-        <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <polyline points="3 6 5 6 21 6"></polyline>
-          <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-        </svg>
-      </button>
     `;
-
-    return row;
   },
 
   /**

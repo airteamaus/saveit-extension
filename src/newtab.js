@@ -137,11 +137,8 @@ class SaveItDashboard {
       return;
     }
 
-    container.innerHTML = '';
-    this.pages.forEach(page => {
-      const card = Components.savedPageCard(page);
-      container.appendChild(card);
-    });
+    const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
+    container.innerHTML = cardsHtml;
   }
 
   /**
