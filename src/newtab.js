@@ -76,16 +76,30 @@ class SaveItDashboard {
   applyClientFilters() {
     let filtered = [...this.allPages];
 
-    // Apply search filter (already done server-side for extension mode)
-    // But we do it client-side too for instant feedback
+    // Apply search filter across all content and metadata fields
     if (this.currentFilter.search) {
       const query = this.currentFilter.search.toLowerCase();
-      filtered = filtered.filter(page =>
-        page.title.toLowerCase().includes(query) ||
-        page.url.toLowerCase().includes(query) ||
-        (page.description && page.description.toLowerCase().includes(query)) ||
-        (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query)))
-      );
+      filtered = filtered.filter(page => {
+        // Core content fields
+        if (page.title && page.title.toLowerCase().includes(query)) return true;
+        if (page.url && page.url.toLowerCase().includes(query)) return true;
+        if (page.description && page.description.toLowerCase().includes(query)) return true;
+        if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
+
+        // AI-generated fields
+        if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
+        if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
+        if (page.dewey_primary_label && page.dewey_primary_label.toLowerCase().includes(query)) return true;
+
+        // Tags (both manual and AI)
+        if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
+
+        // Metadata fields
+        if (page.domain && page.domain.toLowerCase().includes(query)) return true;
+        if (page.author && page.author.toLowerCase().includes(query)) return true;
+
+        return false;
+      });
     }
 
     this.pages = filtered;
@@ -224,6 +238,15 @@ class SaveItDashboard {
       return;
     }
 
+    // Find the row element and add transition class
+    const row = document.querySelector(`.saved-page-card[data-id="${id}"]`);
+    if (row) {
+      row.classList.add('deleting');
+
+      // Wait for transition to complete before removing from DOM
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+
     try {
       await API.deletePage(id);
 
@@ -235,6 +258,12 @@ class SaveItDashboard {
       this.showToast('Page deleted successfully');
     } catch (error) {
       console.error('Failed to delete page:', error);
+
+      // Remove transition class on error to restore row
+      if (row) {
+        row.classList.remove('deleting');
+      }
+
       alert('Failed to delete page. Please try again.');
     }
   }
