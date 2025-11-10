@@ -264,7 +264,7 @@ body {
   gap: 0;
 }
 
-/* Saved Page Row (formerly card) */
+/* Saved Page Row */
 .saved-page-card {
   background: var(--color-surface);
   border-bottom: 1px solid var(--color-border);
