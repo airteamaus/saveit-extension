@@ -100,8 +100,18 @@ browser.browserAction.onClicked.addListener(async (tab) => {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP ${response.status}`);
+      let errorMessage = `HTTP ${response.status}`;
+
+      try {
+        const errorData = await response.json();
+        // Backend returns {error: "message"} for validation errors
+        errorMessage = errorData.error || errorData.message || errorMessage;
+      } catch (jsonError) {
+        // If response isn't JSON, use status text
+        errorMessage = response.statusText || errorMessage;
+      }
+
+      throw new Error(errorMessage);
     }
 
     console.log('Page saved successfully!');
@@ -110,16 +120,29 @@ browser.browserAction.onClicked.addListener(async (tab) => {
       type: 'basic',
       iconUrl: 'icon.png',
       title: 'SaveIt',
-      message: 'Page saved to BigQuery!'
+      message: 'Page saved!'
     });
 
   } catch (error) {
     console.error('Error saving page:', error);
+
+    // Show user-friendly error message
+    let userMessage = error.message;
+
+    // Make common errors more user-friendly
+    if (userMessage.includes('Invalid URL')) {
+      userMessage = "Sorry, can't save this page. " +
+        (userMessage.includes('example.com') ? 'Example domains are not supported.' :
+         userMessage.includes('localhost') ? 'Local URLs cannot be saved.' :
+         userMessage.includes('protocol') ? 'Only http/https URLs can be saved.' :
+         userMessage);
+    }
+
     browser.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
-      title: 'SaveIt Error',
-      message: 'Failed to save: ' + error.message
+      title: 'SaveIt - Error',
+      message: userMessage
     });
   }
 });
