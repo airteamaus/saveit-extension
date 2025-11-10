@@ -13,6 +13,8 @@ class SaveItDashboard {
       limit: 100 // Load more for client-side filtering
     };
     this.debounceTimer = null;
+    this.discoveryMode = false; // Track if we're in discovery view
+    this.currentDiscoveryLabel = null; // Store current discovery query
   }
 
   /**
@@ -177,7 +179,26 @@ class SaveItDashboard {
 
     // Card actions (event delegation)
     document.getElementById('content').addEventListener('click', (e) => {
-      // Delete button - handle first and stop propagation
+      // Back button - return to main view from discovery
+      const backBtn = e.target.closest('#back-to-main');
+      if (backBtn) {
+        e.stopPropagation();
+        this.exitDiscoveryMode();
+        return;
+      }
+
+      // Tag click - trigger semantic discovery
+      const tagElement = e.target.closest('.ai-tag');
+      if (tagElement) {
+        e.stopPropagation();
+        const label = tagElement.dataset.label;
+        if (label) {
+          this.discoverByTag(label);
+        }
+        return;
+      }
+
+      // Delete button - handle and stop propagation
       const deleteBtn = e.target.closest('.btn-delete');
       if (deleteBtn) {
         e.stopPropagation();
@@ -317,6 +338,42 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
   debounce(func, wait) {
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(func, wait);
+  }
+
+  /**
+   * Enter discovery mode - search for pages by tag similarity
+   */
+  async discoverByTag(label) {
+    this.discoveryMode = true;
+    this.currentDiscoveryLabel = label;
+
+    // Show loading state
+    this.showLoading();
+
+    try {
+      const results = await API.searchByTag(label);
+      this.renderDiscoveryResults(results, label);
+    } catch (error) {
+      console.error('Failed to search by tag:', error);
+      this.showError(error);
+    }
+  }
+
+  /**
+   * Render discovery results
+   */
+  renderDiscoveryResults(results, queryLabel) {
+    const container = document.getElementById('content');
+    container.innerHTML = Components.discoveryResults(results, queryLabel);
+  }
+
+  /**
+   * Exit discovery mode and return to main view
+   */
+  exitDiscoveryMode() {
+    this.discoveryMode = false;
+    this.currentDiscoveryLabel = null;
+    this.render();
   }
 }
 

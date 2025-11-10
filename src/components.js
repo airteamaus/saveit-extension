@@ -246,5 +246,121 @@ const Components = {
       day: 'numeric',
       year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
     });
+  },
+
+  /**
+   * Render semantic search discovery results view
+   * @param {Object} results - Search results with exact_matches, similar_matches, related_matches
+   * @param {string} queryLabel - The tag label that was searched
+   * @returns {string} HTML string
+   */
+  discoveryResults(results, queryLabel) {
+    const totalResults = (results.exact_matches?.length || 0) +
+                         (results.similar_matches?.length || 0) +
+                         (results.related_matches?.length || 0);
+
+    if (totalResults === 0) {
+      return `
+        <div class="discovery-view">
+          <div class="discovery-header">
+            <button class="btn-back" id="back-to-main" title="Back to all pages">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 18 9 12 15 6"></polyline>
+              </svg>
+            </button>
+            <div class="discovery-title">
+              <h2>Discovery: <span class="highlight">${this.escapeHtml(queryLabel)}</span></h2>
+              <p class="discovery-subtitle">No related pages found</p>
+            </div>
+          </div>
+          <div class="empty-state">
+            <svg class="empty-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <h3>No related pages</h3>
+            <p>Try clicking a different tag to discover related content</p>
+          </div>
+        </div>
+      `;
+    }
+
+    let html = `
+      <div class="discovery-view">
+        <div class="discovery-header">
+          <button class="btn-back" id="back-to-main" title="Back to all pages">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+          <div class="discovery-title">
+            <h2>Discovery: <span class="highlight">${this.escapeHtml(queryLabel)}</span></h2>
+            <p class="discovery-subtitle">${totalResults} related ${totalResults === 1 ? 'page' : 'pages'}</p>
+          </div>
+        </div>
+    `;
+
+    // Exact matches tier
+    if (results.exact_matches && results.exact_matches.length > 0) {
+      html += `
+        <div class="discovery-tier">
+          <h3 class="tier-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Exact Matches
+            <span class="tier-count">${results.exact_matches.length}</span>
+          </h3>
+          <div class="tier-results">
+            ${results.exact_matches.map(page => this.savedPageCard(page)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Similar matches tier
+    if (results.similar_matches && results.similar_matches.length > 0) {
+      html += `
+        <div class="discovery-tier">
+          <h3 class="tier-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+            Similar Tags
+            <span class="tier-count">${results.similar_matches.length}</span>
+          </h3>
+          <div class="tier-results">
+            ${results.similar_matches.map(page => this.savedPageCard(page)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    // Related matches tier
+    if (results.related_matches && results.related_matches.length > 0) {
+      html += `
+        <div class="discovery-tier">
+          <h3 class="tier-title">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 18a5 5 0 0 0-10 0"></path>
+              <line x1="12" y1="9" x2="12" y2="2"></line>
+              <line x1="4.22" y1="10.22" x2="5.64" y2="11.64"></line>
+              <line x1="1" y1="18" x2="3" y2="18"></line>
+              <line x1="21" y1="18" x2="23" y2="18"></line>
+              <line x1="18.36" y1="11.64" x2="19.78" y2="10.22"></line>
+            </svg>
+            Related Content
+            <span class="tier-count">${results.related_matches.length}</span>
+          </h3>
+          <div class="tier-results">
+            ${results.related_matches.map(page => this.savedPageCard(page)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    html += '</div>';
+    return html;
   }
 };

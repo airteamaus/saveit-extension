@@ -223,5 +223,88 @@ const API = {
       }
       throw new Error('Page not found');
     }
+  },
+
+  /**
+   * Search for things by tag using semantic similarity
+   * @param {string} label - Tag label to search for
+   * @returns {Promise<Object>} Search results with grouped tiers (exact, similar, related)
+   */
+  async searchByTag(label) {
+    if (this.isExtension) {
+      try {
+        const userId = await this.getUserId();
+        if (!userId) {
+          throw new Error('No user ID found');
+        }
+
+        const params = new URLSearchParams({
+          label: label,
+          user_id: userId
+        });
+
+        const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+          method: 'GET'
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        return data;
+      } catch (error) {
+        console.error('Failed to search by tag:', error);
+        throw error;
+      }
+    } else {
+      // Development: Mock semantic search with simple filtering
+      console.log('🔍 Mock semantic search for:', label);
+      const results = {
+        query_label: label,
+        exact_matches: [],
+        similar_matches: [],
+        related_matches: []
+      };
+
+      // Simple mock: find pages with matching or similar tags
+      MOCK_DATA.forEach(page => {
+        const pageTags = [];
+        if (page.classifications) {
+          pageTags.push(...page.classifications.map(c => c.label));
+        }
+        if (page.dewey_primary_label) {
+          pageTags.push(page.dewey_primary_label);
+        }
+        if (page.manual_tags) {
+          pageTags.push(...page.manual_tags);
+        }
+
+        // Check for exact or similar matches
+        const lowerLabel = label.toLowerCase();
+        const hasExactMatch = pageTags.some(tag => tag.toLowerCase() === lowerLabel);
+        const hasSimilarMatch = pageTags.some(tag =>
+          tag.toLowerCase().includes(lowerLabel) || lowerLabel.includes(tag.toLowerCase())
+        );
+
+        if (hasExactMatch) {
+          results.exact_matches.push({
+            ...page,
+            similarity_score: 1.0,
+            matching_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
+          });
+        } else if (hasSimilarMatch) {
+          results.similar_matches.push({
+            ...page,
+            similarity_score: 0.85,
+            matching_label: pageTags.find(t =>
+              t.toLowerCase().includes(lowerLabel) || lowerLabel.includes(t.toLowerCase())
+            )
+          });
+        }
+      });
+
+      return results;
+    }
   }
 };
