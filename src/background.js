@@ -116,6 +116,14 @@ browser.browserAction.onClicked.addListener(async (tab) => {
 
     console.log('Page saved successfully!');
 
+    // Invalidate cache so dashboard shows fresh data
+    try {
+      await browser.storage.local.remove('savedPages_cache');
+      console.log('Cache invalidated after save');
+    } catch (cacheError) {
+      console.error('Failed to invalidate cache:', cacheError);
+    }
+
     browser.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',

@@ -11,6 +11,12 @@ const API = {
   },
 
   /**
+   * Cache configuration
+   */
+  CACHE_KEY: 'savedPages_cache',
+  CACHE_MAX_AGE_MS: 5 * 60 * 1000, // 5 minutes
+
+  /**
    * Get the current user's ID (from extension storage or mock)
    */
   async getUserId() {
@@ -62,16 +68,86 @@ const API = {
   },
 
   /**
+   * Get cached pages from browser storage
+   * @private
+   */
+  async getCachedPages() {
+    if (!this.isExtension) return null;
+
+    try {
+      const result = await browser.storage.local.get(this.CACHE_KEY);
+      const cached = result[this.CACHE_KEY];
+
+      if (!cached) return null;
+
+      const age = Date.now() - cached.timestamp;
+      if (age > this.CACHE_MAX_AGE_MS) {
+        console.log('Cache expired, fetching fresh data');
+        return null;
+      }
+
+      console.log(`Using cached data (${Math.round(age / 1000)}s old)`);
+      return cached.pages;
+    } catch (error) {
+      console.error('Failed to read cache:', error);
+      return null;
+    }
+  },
+
+  /**
+   * Store pages in browser storage cache
+   * @private
+   */
+  async setCachedPages(pages) {
+    if (!this.isExtension) return;
+
+    try {
+      await browser.storage.local.set({
+        [this.CACHE_KEY]: {
+          pages: pages,
+          timestamp: Date.now()
+        }
+      });
+      console.log('Cached pages updated');
+    } catch (error) {
+      console.error('Failed to write cache:', error);
+    }
+  },
+
+  /**
+   * Invalidate the cache (call after delete, update operations)
+   */
+  async invalidateCache() {
+    if (!this.isExtension) return;
+
+    try {
+      await browser.storage.local.remove(this.CACHE_KEY);
+      console.log('Cache invalidated');
+    } catch (error) {
+      console.error('Failed to invalidate cache:', error);
+    }
+  },
+
+  /**
    * Fetch saved pages with optional filters
    * @param {Object} options - Filter options
    * @param {string} options.search - Search query
    * @param {string} options.sort - Sort order ('newest' or 'oldest')
    * @param {number} options.limit - Max results
    * @param {number} options.offset - Pagination offset
+   * @param {boolean} options.skipCache - Force fresh fetch, skip cache
    * @returns {Promise<Array>} Array of saved pages
    */
   async getSavedPages(options = {}) {
     if (this.isExtension) {
+      // Try cache first (unless explicitly skipped)
+      if (!options.skipCache) {
+        const cached = await this.getCachedPages();
+        if (cached) {
+          return cached;
+        }
+      }
+
       // Production: Call real Cloud Function with GET method
       try {
         const userId = await this.getUserId();
@@ -96,7 +172,12 @@ const API = {
         }
 
         const data = await response.json();
-        return data.pages || data;
+        const pages = data.pages || data;
+
+        // Cache the result
+        await this.setCachedPages(pages);
+
+        return pages;
       } catch (error) {
         console.error('Failed to fetch saved pages:', error);
         throw error;
@@ -162,6 +243,9 @@ const API = {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
+
+        // Invalidate cache after successful delete
+        await this.invalidateCache();
 
         return await response.json();
       } catch (error) {
