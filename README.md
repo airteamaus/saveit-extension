@@ -8,6 +8,9 @@ Firefox extension for saving web pages to BigQuery with an intelligent dashboard
 # Install dependencies
 npm install
 
+# Setup git hooks (one-time, prevents version tag errors)
+just setup-hooks
+
 # Lint extension
 just lint
 
@@ -18,11 +21,30 @@ just run
 just preview
 ```
 
+## Releasing
+
+```bash
+# Bump version (updates manifest.json, commits, creates tag)
+just bump patch     # 0.9.0 → 0.9.1 (bug fixes)
+just bump minor     # 0.9.0 → 0.10.0 (new features)
+just bump major     # 0.9.0 → 1.0.0 (breaking changes)
+
+# Push to GitHub (triggers automated build & release)
+git push origin main --tags
+
+# GitHub Actions will automatically:
+# - Build and sign extension with Mozilla
+# - Create GitHub Release with signed XPI
+# - Update updates.json for auto-updates
+```
+
+**Important:** Always use `just bump` to create version tags. The pre-push hook (installed with `just setup-hooks`) prevents pushing tags that don't match the manifest.json version.
+
 ## Documentation
 
-- [CLAUDE.md](docs/CLAUDE.md) - Development guide for Claude Code
-- [DASHBOARD-README.md](docs/DASHBOARD-README.md) - Dashboard development details
-- [Full README](docs/README.md) - Complete installation and usage guide
+- [CLAUDE.md](CLAUDE.md) - Extension development guide for Claude Code
+- [docs/README.md](docs/README.md) - Complete installation and usage guide
+- [Backend docs](../saveit-backend/docs/) - Architecture and backend development
 
 ## Directory Structure
 
@@ -38,6 +60,7 @@ saveit-extension/
 │   └── icon.png         # Extension icon
 ├── scripts/             # Build and utility scripts
 │   ├── bump-version.js  # Version management
+│   ├── git-hooks/       # Git hooks for validation
 │   ├── build-and-sign.sh # Build & sign for release
 │   ├── install-dev.sh   # Install for testing
 │   └── run-extension.sh # Run temporarily

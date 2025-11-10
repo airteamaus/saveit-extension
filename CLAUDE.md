@@ -15,7 +15,7 @@ Key directories:
 - `docs/` - User-facing documentation
 - `.github/workflows/` - Automated XPI build & release
 
-See also: [docs/README.md](docs/README.md), [docs/DASHBOARD-README.md](docs/DASHBOARD-README.md)
+See also: [docs/README.md](docs/README.md), [Backend CLAUDE.md](../saveit-backend/CLAUDE.md)
 
 ## Implementation Workflow
 
@@ -199,14 +199,30 @@ just install                    # Or: ./scripts/install-dev.sh
 
 **Releasing:**
 ```bash
-just bump patch                 # Updates manifest.json, commits, creates tag
-git push origin main --tags     # Triggers GitHub Action
+# IMPORTANT: Always use 'just bump' - never manually create version tags!
+
+# First time setup (installs git pre-push hook):
+just setup-hooks                # Validates tags match manifest.json
+
+# Bump version (updates manifest.json, commits, creates tag):
+just bump patch                 # 0.9.0 → 0.9.1 (bug fixes)
+just bump minor                 # 0.9.0 → 0.10.0 (new features)
+just bump major                 # 0.9.0 → 1.0.0 (breaking changes)
+
+# Push to trigger release:
+git push origin main --tags     # Pre-push hook validates version matches
 
 # GitHub Actions will:
 # - Build and sign extension with Mozilla (using AMO_JWT secrets)
 # - Create GitHub Release with signed XPI
 # - Update updates.json for auto-updates
 ```
+
+**Version Management:**
+- Pre-push hook prevents pushing tags that don't match manifest.json version
+- Always use `just bump [patch|minor|major]` instead of manual `git tag`
+- Hook installed with `just setup-hooks` (required on new machine/clone)
+- Hook blocks push with helpful error message if versions mismatch
 
 ## Configuration
 
