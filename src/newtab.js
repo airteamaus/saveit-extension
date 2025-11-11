@@ -25,40 +25,65 @@ class SaveItDashboard {
    * Initialize the dashboard
    */
   async init() {
+    console.log('[init] START');
     this.initTheme();
     this.showLoading();
     this.updateModeIndicator();
     this.updateVersionIndicator();
 
     // Wait for Firebase to be ready in extension mode
+    let initialAuthResolved = false;
     if (API.isExtension && window.firebaseReady) {
+      console.log('[init] Waiting for Firebase...');
       await window.firebaseReady;
+      console.log('[init] Firebase ready');
 
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
-        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-          console.log('Auth state changed:', user ? user.email : 'signed out');
-          this.updateSignInButton(user ? {
-            email: user.email,
-            name: user.displayName
-          } : null);
+        console.log('[init] Setting up auth listener...');
+        // Wait for initial auth state before loading pages
+        await new Promise((resolve) => {
+          const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
+            console.log('Auth state changed:', user ? user.email : 'signed out');
+            this.updateSignInButton(user ? {
+              email: user.email,
+              name: user.displayName
+            } : null);
 
-          // Reload pages when auth state changes
-          if (user) {
-            await this.loadPages();
-            this.render();
-          } else {
-            this.showSignInPrompt();
-          }
+            // First time: resolve to continue init
+            if (!initialAuthResolved) {
+              console.log('[init] Initial auth resolved:', user ? 'authenticated' : 'not authenticated');
+              initialAuthResolved = true;
+              resolve();
+              // Don't reload pages yet, let the normal flow handle it
+            } else {
+              // Subsequent auth changes: reload pages
+              console.log('[init] Subsequent auth change - reloading pages');
+              if (user) {
+                await this.loadPages();
+                this.render();
+              } else {
+                this.showSignInPrompt();
+              }
+            }
+          });
         });
       }
     }
 
+    console.log('[init] Loading pages...');
     await this.loadPages();
+
+    console.log('[init] Setting up event listeners...');
     this.setupEventListeners();
+
+    console.log('[init] Rendering...');
     this.render();
 
     // Refresh in background if we showed cached data
+    console.log('[init] Starting background refresh...');
     this.refreshInBackground();
+
+    console.log('[init] COMPLETE');
   }
 
   /**
@@ -164,9 +189,20 @@ class SaveItDashboard {
    */
   async loadPages() {
     try {
+      console.log('[loadPages] START - fetching pages...');
       this.allPages = await API.getSavedPages(this.currentFilter);
+      console.log('[loadPages] RECEIVED data:', {
+        allPages_length: this.allPages.length,
+        first_item: this.allPages[0] ? { id: this.allPages[0].id, title: this.allPages[0].title } : null
+      });
+
       this.applyClientFilters();
+      console.log('[loadPages] AFTER filters:', {
+        pages_length: this.pages.length
+      });
+
       this.updateStats();
+      console.log('[loadPages] COMPLETE');
     } catch (error) {
       console.error('Failed to load pages:', error);
 
@@ -222,6 +258,11 @@ class SaveItDashboard {
    * Apply client-side search filter
    */
   applyClientFilters() {
+    console.log('[applyClientFilters] START:', {
+      allPages_length: this.allPages.length,
+      search_query: this.currentFilter.search || '(none)'
+    });
+
     let filtered = [...this.allPages];
 
     // Apply search filter across all content and metadata fields
@@ -251,6 +292,9 @@ class SaveItDashboard {
     }
 
     this.pages = filtered;
+    console.log('[applyClientFilters] END:', {
+      filtered_length: this.pages.length
+    });
   }
 
   /**
@@ -272,10 +316,19 @@ class SaveItDashboard {
    * Render pages to DOM
    */
   render() {
+    console.log('[render] START:', {
+      pages_length: this.pages.length,
+      has_search: !!this.currentFilter.search,
+      is_extension: API.isExtension
+    });
+
     const container = document.getElementById('content');
 
     if (this.pages.length === 0) {
+      console.log('[render] ZERO pages - determining empty state...');
+
       if (this.currentFilter.search) {
+        console.log('[render] Showing "no matching pages" (search active)');
         container.innerHTML = `
           <div class="empty-state">
             <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -290,21 +343,28 @@ class SaveItDashboard {
         // Check if user is authenticated before showing empty state
         if (API.isExtension) {
           const user = this.getCurrentUser();
+          console.log('[render] Extension mode - user:', user ? user.email : 'null');
+
           if (user) {
+            console.log('[render] Showing "no saved pages yet" (authenticated)');
             container.innerHTML = Components.emptyState();
           } else {
+            console.log('[render] Showing sign-in prompt (not authenticated)');
             container.innerHTML = Components.signInState();
           }
         } else {
           // In standalone mode, always show empty state (mock data)
+          console.log('[render] Standalone mode - showing empty state');
           container.innerHTML = Components.emptyState();
         }
       }
       return;
     }
 
+    console.log('[render] Rendering', this.pages.length, 'cards');
     const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
     container.innerHTML = cardsHtml;
+    console.log('[render] COMPLETE');
   }
 
   /**
@@ -645,6 +705,9 @@ if (document.readyState === 'loading') {
   window.dashboard = new SaveItDashboard();
   window.dashboard.init();
 }
+
+// Expose API for debugging in console
+window.API = API;
 
 if (!document.getElementById('toast-styles')) {
   const style = document.createElement('style');

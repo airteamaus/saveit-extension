@@ -57,18 +57,24 @@ const API = {
       const result = await browser.storage.local.get(this.CACHE_KEY);
       const cached = result[this.CACHE_KEY];
 
-      if (!cached) return null;
-
-      const age = Date.now() - cached.timestamp;
-      if (age > this.CACHE_MAX_AGE_MS) {
-        console.log('Cache expired, fetching fresh data');
+      if (!cached) {
+        console.log('[getCachedPages] No cache found');
         return null;
       }
 
-      console.log(`Using cached data (${Math.round(age / 1000)}s old)`);
+      const age = Date.now() - cached.timestamp;
+      if (age > this.CACHE_MAX_AGE_MS) {
+        console.log('[getCachedPages] Cache expired, fetching fresh data');
+        return null;
+      }
+
+      console.log(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
+        pages_count: cached.pages ? cached.pages.length : 0,
+        first_item: cached.pages?.[0] ? { id: cached.pages[0].id, title: cached.pages[0].title } : null
+      });
       return cached.pages;
     } catch (error) {
-      console.error('Failed to read cache:', error);
+      console.error('[getCachedPages] Failed to read cache:', error);
       return null;
     }
   },
@@ -101,9 +107,23 @@ const API = {
 
     try {
       await browser.storage.local.remove(this.CACHE_KEY);
-      console.log('Cache invalidated');
+      console.log('[invalidateCache] Cache invalidated');
     } catch (error) {
-      console.error('Failed to invalidate cache:', error);
+      console.error('[invalidateCache] Failed to invalidate cache:', error);
+    }
+  },
+
+  /**
+   * Clear all cached data (for debugging)
+   */
+  async clearAllCache() {
+    if (!this.isExtension) return;
+
+    try {
+      await browser.storage.local.clear();
+      console.log('[clearAllCache] All cache cleared');
+    } catch (error) {
+      console.error('[clearAllCache] Failed to clear cache:', error);
     }
   },
 
@@ -118,17 +138,26 @@ const API = {
    * @returns {Promise<Array>} Array of saved pages
    */
   async getSavedPages(options = {}) {
+    console.log('[getSavedPages] START:', {
+      isExtension: this.isExtension,
+      skipCache: options.skipCache || false
+    });
+
     if (this.isExtension) {
       // Try cache first (unless explicitly skipped)
       if (!options.skipCache) {
         const cached = await this.getCachedPages();
         if (cached) {
+          console.log('[getSavedPages] Returning cached data:', {
+            count: cached.length
+          });
           return cached;
         }
       }
 
       // Production: Call real Cloud Function with GET method
       try {
+        console.log('[getSavedPages] Fetching from Cloud Function...');
         const idToken = await this.getIdToken();
 
         const params = new URLSearchParams({
@@ -145,24 +174,42 @@ const API = {
           }
         });
 
+        console.log('[getSavedPages] HTTP response:', {
+          status: response.status,
+          statusText: response.statusText,
+          ok: response.ok
+        });
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
+        console.log('[getSavedPages] Raw JSON response:', data);
+
         const pages = data.pages || data;
+
+        console.log('[getSavedPages] Parsed pages:', {
+          count: pages.length,
+          first_item: pages[0] ? { id: pages[0].id, title: pages[0].title } : null,
+          data_structure: {
+            has_pages_property: 'pages' in data,
+            is_array: Array.isArray(data),
+            data_keys: Object.keys(data)
+          }
+        });
 
         // Cache the result
         await this.setCachedPages(pages);
 
         return pages;
       } catch (error) {
-        console.error('Failed to fetch saved pages:', error);
+        console.error('[getSavedPages] Failed to fetch saved pages:', error);
         throw error;
       }
     } else {
       // Development: Use mock data
-      console.log('📦 Using mock data (standalone mode)');
+      console.log('[getSavedPages] Using mock data (standalone mode)');
       return this.filterMockData(MOCK_DATA, options);
     }
   },
