@@ -10,6 +10,8 @@ let firebaseAuth = null;
 if (typeof browser !== 'undefined' && browser.storage) {
   import('./firebase-auth.js').then(module => {
     firebaseAuth = module;
+  }).catch(err => {
+    console.error('Failed to load firebase-auth:', err);
   });
 }
 
@@ -36,6 +38,7 @@ class SaveItDashboard {
     this.initTheme();
     this.showLoading();
     this.updateModeIndicator();
+    this.updateVersionIndicator();
 
     // Setup auth state listener for extension mode
     if (API.isExtension && firebaseAuth) {
@@ -99,6 +102,23 @@ class SaveItDashboard {
     } else {
       modeLabel.textContent = 'Development Mode (using mock data)';
       modeLabel.style.color = '#f59e0b';
+    }
+  }
+
+  /**
+   * Update version indicator in footer
+   */
+  updateVersionIndicator() {
+    const versionNumber = document.getElementById('version-number');
+    if (!versionNumber) return;
+
+    if (API.isExtension && typeof browser !== 'undefined' && browser.runtime) {
+      // Extension mode: read from manifest
+      const manifest = browser.runtime.getManifest();
+      versionNumber.textContent = manifest.version;
+    } else {
+      // Standalone mode: use hardcoded version (matches manifest.json)
+      versionNumber.textContent = '0.12.0';
     }
   }
 
@@ -246,7 +266,16 @@ class SaveItDashboard {
           </div>
         `;
       } else {
-        container.innerHTML = Components.emptyState();
+        // Check if user is authenticated before showing empty state
+        const isAuthenticated = API.isExtension && firebaseAuth?.getCurrentUser ?
+          firebaseAuth.getCurrentUser() !== null :
+          !API.isExtension; // In standalone mode, always show empty state (mock data)
+
+        if (isAuthenticated) {
+          container.innerHTML = Components.emptyState();
+        } else {
+          container.innerHTML = Components.signInState();
+        }
       }
       return;
     }
