@@ -5,6 +5,14 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
+// Import Firebase auth functions for extension mode
+let firebaseAuth = null;
+if (typeof browser !== 'undefined' && browser.storage) {
+  import('./firebase-auth.js').then(module => {
+    firebaseAuth = module;
+  });
+}
+
 class SaveItDashboard {
   constructor() {
     this.pages = [];
@@ -28,6 +36,14 @@ class SaveItDashboard {
     this.initTheme();
     this.showLoading();
     this.updateModeIndicator();
+
+    // Setup auth state listener for extension mode
+    if (API.isExtension && firebaseAuth) {
+      firebaseAuth.onAuthChange((user) => {
+        this.updateSignInButton(user);
+      });
+    }
+
     await this.loadPages();
     this.setupEventListeners();
     this.render();
@@ -112,7 +128,20 @@ class SaveItDashboard {
       this.updateStats();
     } catch (error) {
       console.error('Failed to load pages:', error);
-      this.showError(error);
+
+      // Check if error is authentication-related
+      const isAuthError = error.message && (
+        error.message.includes('401') ||
+        error.message.includes('Unauthorized') ||
+        error.message.includes('Authentication failed') ||
+        error.message.includes('Sign-in failed')
+      );
+
+      if (isAuthError) {
+        this.showSignInPrompt();
+      } else {
+        this.showError(error);
+      }
     }
   }
 
@@ -227,9 +256,129 @@ class SaveItDashboard {
   }
 
   /**
+   * Show sign-in prompt
+   */
+  showSignInPrompt() {
+    const content = document.getElementById('content');
+    content.innerHTML = Components.signInState();
+  }
+
+  /**
+   * Update sign-in button visibility based on auth state
+   */
+  updateSignInButton(user) {
+    const signInBtn = document.getElementById('sign-in-btn');
+    const userProfile = document.getElementById('user-profile');
+
+    if (!signInBtn || !userProfile) return;
+
+    if (user) {
+      // User is signed in - hide sign-in button, show profile
+      signInBtn.style.display = 'none';
+      userProfile.style.display = 'block';
+
+      // Update user info
+      const userName = document.getElementById('user-name');
+      const userEmail = document.getElementById('user-email');
+
+      if (userName && user.displayName) {
+        userName.textContent = user.displayName.split(' ')[0]; // First name only
+      }
+      if (userEmail && user.email) {
+        userEmail.textContent = user.email;
+      }
+    } else {
+      // User is signed out - show sign-in button, hide profile
+      signInBtn.style.display = 'flex';
+      userProfile.style.display = 'none';
+    }
+  }
+
+  /**
+   * Handle sign-in button click
+   */
+  async handleSignIn() {
+    if (!firebaseAuth) {
+      console.error('Firebase auth not available');
+      return;
+    }
+
+    try {
+      this.showLoading();
+      await firebaseAuth.getFirebaseToken();
+      // Auth state change will trigger reload via onAuthChange callback
+      await this.loadPages();
+      this.render();
+    } catch (error) {
+      console.error('Sign-in failed:', error);
+      this.showError(error);
+    }
+  }
+
+  /**
+   * Handle sign-out button click
+   */
+  async handleSignOut() {
+    if (!firebaseAuth) {
+      console.error('Firebase auth not available');
+      return;
+    }
+
+    try {
+      await firebaseAuth.signOut();
+      // Auth state change will trigger UI update via onAuthChange callback
+      this.showSignInPrompt();
+    } catch (error) {
+      console.error('Sign-out failed:', error);
+      alert('Failed to sign out. Please try again.');
+    }
+  }
+
+  /**
+   * Toggle user profile dropdown
+   */
+  toggleUserDropdown() {
+    const dropdown = document.getElementById('user-dropdown');
+    if (!dropdown) return;
+
+    const isVisible = dropdown.style.display === 'block';
+    dropdown.style.display = isVisible ? 'none' : 'block';
+  }
+
+  /**
    * Setup all event listeners
    */
   setupEventListeners() {
+    // Sign-in button
+    const signInBtn = document.getElementById('sign-in-btn');
+    if (signInBtn) {
+      signInBtn.addEventListener('click', () => this.handleSignIn());
+    }
+
+    // User profile button (toggle dropdown)
+    const userProfileBtn = document.getElementById('user-profile-btn');
+    if (userProfileBtn) {
+      userProfileBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.toggleUserDropdown();
+      });
+    }
+
+    // Sign-out button
+    const signOutBtn = document.getElementById('sign-out-btn');
+    if (signOutBtn) {
+      signOutBtn.addEventListener('click', () => this.handleSignOut());
+    }
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      const dropdown = document.getElementById('user-dropdown');
+      const userProfile = document.getElementById('user-profile');
+      if (dropdown && userProfile && !userProfile.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
     // Search input
     const searchInput = document.getElementById('search');
     const clearSearch = document.getElementById('clear-search');
