@@ -25,7 +25,6 @@ class SaveItDashboard {
    * Initialize the dashboard
    */
   async init() {
-    console.log('[init] START');
     this.initTheme();
     this.showLoading();
     this.updateModeIndicator();
@@ -34,16 +33,12 @@ class SaveItDashboard {
     // Wait for Firebase to be ready in extension mode
     let initialAuthResolved = false;
     if (API.isExtension && window.firebaseReady) {
-      console.log('[init] Waiting for Firebase...');
       await window.firebaseReady;
-      console.log('[init] Firebase ready');
 
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
-        console.log('[init] Setting up auth listener...');
         // Wait for initial auth state before loading pages
         await new Promise((resolve) => {
-          const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-            console.log('Auth state changed:', user ? user.email : 'signed out');
+          window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
             this.updateSignInButton(user ? {
               email: user.email,
               name: user.displayName
@@ -51,13 +46,10 @@ class SaveItDashboard {
 
             // First time: resolve to continue init
             if (!initialAuthResolved) {
-              console.log('[init] Initial auth resolved:', user ? 'authenticated' : 'not authenticated');
               initialAuthResolved = true;
               resolve();
-              // Don't reload pages yet, let the normal flow handle it
             } else {
               // Subsequent auth changes: reload pages
-              console.log('[init] Subsequent auth change - reloading pages');
               if (user) {
                 await this.loadPages();
                 this.render();
@@ -70,20 +62,10 @@ class SaveItDashboard {
       }
     }
 
-    console.log('[init] Loading pages...');
     await this.loadPages();
-
-    console.log('[init] Setting up event listeners...');
     this.setupEventListeners();
-
-    console.log('[init] Rendering...');
     this.render();
-
-    // Refresh in background if we showed cached data
-    console.log('[init] Starting background refresh...');
     this.refreshInBackground();
-
-    console.log('[init] COMPLETE');
   }
 
   /**
@@ -101,18 +83,12 @@ class SaveItDashboard {
     };
   }
 
-  /**
-   * Initialize theme from localStorage
-   */
   initTheme() {
     const savedTheme = localStorage.getItem('theme-preference') || 'auto';
     this.applyTheme(savedTheme);
     this.updateThemeButtons(savedTheme);
   }
 
-  /**
-   * Apply theme to document
-   */
   applyTheme(theme) {
     const html = document.documentElement;
     if (theme === 'auto') {
@@ -122,9 +98,6 @@ class SaveItDashboard {
     }
   }
 
-  /**
-   * Update theme button active states
-   */
   updateThemeButtons(activeTheme) {
     document.querySelectorAll('.theme-option').forEach(btn => {
       if (btn.dataset.theme === activeTheme) {
@@ -153,32 +126,20 @@ class SaveItDashboard {
 
   /**
    * Update version indicator in footer
+   * Only shows version in extension mode where manifest is available
    */
   updateVersionIndicator() {
     const versionNumber = document.getElementById('version-number');
-    if (!versionNumber) return;
-
-    if (API.isExtension && typeof browser !== 'undefined' && browser.runtime) {
-      // Extension mode: read from manifest
-      const manifest = browser.runtime.getManifest();
-      versionNumber.textContent = manifest.version;
-    } else {
-      // Standalone mode: use hardcoded version (matches manifest.json)
-      versionNumber.textContent = '0.12.0';
+    if (versionNumber && browser?.runtime) {
+      versionNumber.textContent = browser.runtime.getManifest().version;
     }
   }
 
-  /**
-   * Show loading state
-   */
   showLoading() {
     const content = document.getElementById('content');
     content.innerHTML = Components.loadingState();
   }
 
-  /**
-   * Show error state
-   */
   showError(error) {
     const content = document.getElementById('content');
     content.innerHTML = Components.errorState(error);
@@ -189,20 +150,9 @@ class SaveItDashboard {
    */
   async loadPages() {
     try {
-      console.log('[loadPages] START - fetching pages...');
       this.allPages = await API.getSavedPages(this.currentFilter);
-      console.log('[loadPages] RECEIVED data:', {
-        allPages_length: this.allPages.length,
-        first_item: this.allPages[0] ? { id: this.allPages[0].id, title: this.allPages[0].title } : null
-      });
-
       this.applyClientFilters();
-      console.log('[loadPages] AFTER filters:', {
-        pages_length: this.pages.length
-      });
-
       this.updateStats();
-      console.log('[loadPages] COMPLETE');
     } catch (error) {
       console.error('Failed to load pages:', error);
 
@@ -232,7 +182,6 @@ class SaveItDashboard {
       // Wait a bit to avoid competing with initial render
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      console.log('Refreshing data in background...');
       const freshPages = await API.getSavedPages({
         ...this.currentFilter,
         skipCache: true
@@ -240,13 +189,10 @@ class SaveItDashboard {
 
       // Only update if data changed
       if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
-        console.log('Data updated, re-rendering');
         this.allPages = freshPages;
         this.applyClientFilters();
         this.updateStats();
         this.render();
-      } else {
-        console.log('No changes detected');
       }
     } catch (error) {
       console.error('Background refresh failed:', error);
@@ -258,11 +204,6 @@ class SaveItDashboard {
    * Apply client-side search filter
    */
   applyClientFilters() {
-    console.log('[applyClientFilters] START:', {
-      allPages_length: this.allPages.length,
-      search_query: this.currentFilter.search || '(none)'
-    });
-
     let filtered = [...this.allPages];
 
     // Apply search filter across all content and metadata fields
@@ -292,9 +233,6 @@ class SaveItDashboard {
     }
 
     this.pages = filtered;
-    console.log('[applyClientFilters] END:', {
-      filtered_length: this.pages.length
-    });
   }
 
   /**
@@ -316,19 +254,10 @@ class SaveItDashboard {
    * Render pages to DOM
    */
   render() {
-    console.log('[render] START:', {
-      pages_length: this.pages.length,
-      has_search: !!this.currentFilter.search,
-      is_extension: API.isExtension
-    });
-
     const container = document.getElementById('content');
 
     if (this.pages.length === 0) {
-      console.log('[render] ZERO pages - determining empty state...');
-
       if (this.currentFilter.search) {
-        console.log('[render] Showing "no matching pages" (search active)');
         container.innerHTML = `
           <div class="empty-state">
             <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -343,28 +272,22 @@ class SaveItDashboard {
         // Check if user is authenticated before showing empty state
         if (API.isExtension) {
           const user = this.getCurrentUser();
-          console.log('[render] Extension mode - user:', user ? user.email : 'null');
 
           if (user) {
-            console.log('[render] Showing "no saved pages yet" (authenticated)');
             container.innerHTML = Components.emptyState();
           } else {
-            console.log('[render] Showing sign-in prompt (not authenticated)');
             container.innerHTML = Components.signInState();
           }
         } else {
           // In standalone mode, always show empty state (mock data)
-          console.log('[render] Standalone mode - showing empty state');
           container.innerHTML = Components.emptyState();
         }
       }
       return;
     }
 
-    console.log('[render] Rendering', this.pages.length, 'cards');
     const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
     container.innerHTML = cardsHtml;
-    console.log('[render] COMPLETE');
   }
 
   /**
@@ -613,10 +536,11 @@ class SaveItDashboard {
    */
   showAbout() {
     const mode = API.isExtension ? 'Extension' : 'Development';
+    const version = browser?.runtime ? browser.runtime.getManifest().version : 'standalone';
     const message = `SaveIt Dashboard
 
 Mode: ${mode}
-Version: 0.10.0
+Version: ${version}
 
 SaveIt helps you save and rediscover web pages with AI-powered metadata and intelligent discovery.
 
@@ -680,10 +604,52 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
 
   /**
    * Render discovery results
+   * Combines all result tiers into flat list and renders like home view
    */
   renderDiscoveryResults(results, queryLabel) {
+    // Flatten all tiers into single array
+    const allResults = [
+      ...(results.exact_matches || []),
+      ...(results.similar_matches || []),
+      ...(results.related_matches || [])
+    ];
+
+    const totalResults = allResults.length;
     const container = document.getElementById('content');
-    container.innerHTML = Components.discoveryResults(results, queryLabel);
+
+    // Render header
+    const header = `
+      <div class="discovery-header">
+        <button class="btn-back" id="back-to-main" title="Back to all pages">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+        <div class="discovery-title">
+          <h2>Discovery: <span class="highlight">${Components.escapeHtml(queryLabel)}</span></h2>
+          <p class="discovery-subtitle">${totalResults} related ${totalResults === 1 ? 'page' : 'pages'}</p>
+        </div>
+      </div>
+    `;
+
+    if (totalResults === 0) {
+      container.innerHTML = header + `
+        <div class="empty-state">
+          <svg class="empty-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.35-4.35"></path>
+          </svg>
+          <h3>No related pages</h3>
+          <p>Try clicking a different tag to discover related content</p>
+        </div>
+      `;
+    } else {
+      // Render cards using same format as home view
+      const cardsHtml = allResults
+        .map(match => Components.savedPageCard(match.thing_data))
+        .join('');
+      container.innerHTML = header + cardsHtml;
+    }
   }
 
   /**
@@ -696,14 +662,36 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', () => {
+async function initDashboard() {
+  try {
     window.dashboard = new SaveItDashboard();
-    window.dashboard.init();
-  });
+    await window.dashboard.init();
+  } catch (error) {
+    console.error('Fatal error during dashboard initialization:', error);
+
+    // Show user-friendly error message
+    const content = document.getElementById('content');
+    if (content) {
+      content.innerHTML = `
+        <div class="error-state">
+          <svg class="error-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+          <h2>Failed to initialize dashboard</h2>
+          <p>${error.message || 'An unexpected error occurred'}</p>
+          <button class="btn btn-primary" onclick="location.reload()">Reload</button>
+        </div>
+      `;
+    }
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDashboard);
 } else {
-  window.dashboard = new SaveItDashboard();
-  window.dashboard.init();
+  initDashboard();
 }
 
 // Expose API for debugging in console

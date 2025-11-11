@@ -17,7 +17,7 @@ npx web-ext build --overwrite-dest
 echo ""
 echo "✅ Extension built successfully!"
 echo ""
-echo "📍 Location: extension/web-ext-artifacts/"
+echo "📍 Location: web-ext-artifacts/"
 echo ""
 echo "To install:"
 echo "1. Open Firefox"

@@ -31,7 +31,6 @@ onAuthStateChanged(auth, (user) => {
  * Returns Firebase user and ID token
  */
 async function signInWithFirebase() {
-  // Check if already signed in
   if (auth.currentUser) {
     const idToken = await getIdToken(auth.currentUser);
     return {
@@ -40,7 +39,6 @@ async function signInWithFirebase() {
     };
   }
 
-  // Trigger browser.identity OAuth flow
   console.log('Launching OAuth flow...');
   const redirectURL = browser.identity.getRedirectURL();
 
@@ -113,7 +111,7 @@ browser.action.onClicked.addListener(async (tab) => {
     const pageData = {
       url: tab.url,
       title: tab.title,
-      timestamp: new Date().toISOString()
+      saved_at: new Date().toISOString()
     };
 
     console.log('Sending to Cloud Function:', pageData);
@@ -128,15 +126,8 @@ browser.action.onClicked.addListener(async (tab) => {
     });
 
     if (!response.ok) {
-      let errorMessage = `HTTP ${response.status}`;
-
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.error || errorData.message || errorMessage;
-      } catch (jsonError) {
-        errorMessage = response.statusText || errorMessage;
-      }
-
+      const errorData = await response.json().catch(() => null);
+      const errorMessage = errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
       throw new Error(errorMessage);
     }
 

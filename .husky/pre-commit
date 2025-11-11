@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-commit checks..."
+
+# Run linter
+echo "  → Linting..."
+npm run lint || {
+  echo "❌ Linting failed. Run 'npm run lint:fix' to fix issues."
+  exit 1
+}
+
+# Validate manifest
+echo "  → Validating manifest..."
+npx web-ext lint --source-dir=. --ignore-files="node_modules/**" --ignore-files="scripts/**" --ignore-files="tests/**" --ignore-files="coverage/**" || {
+  echo "❌ Manifest validation failed (warnings OK for now)."
+  # Don't fail on warnings - web-ext lint has many false positives
+  true
+}
+
+# Run tests
+echo "  → Running tests..."
+npm test || {
+  echo "❌ Tests failed. Fix tests before committing."
+  exit 1
+}
+
+# Check for console.log in production code (warning only)
+if git diff --cached --name-only | grep -E '\.(js)$' | xargs grep -n "console\.log" 2>/dev/null | grep -v "console.error" | grep -v "test\.js" | grep -v "mock-data\.js"; then
+  echo "⚠️  Warning: console.log statements found. Consider removing for production."
+fi
+
+echo "✅ Pre-commit checks passed!"
