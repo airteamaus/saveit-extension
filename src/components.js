@@ -312,7 +312,7 @@ const Components = {
             <span class="tier-count">${results.exact_matches.length}</span>
           </h3>
           <div class="tier-results">
-            ${results.exact_matches.map(page => this.savedPageCard(page)).join('')}
+            ${results.exact_matches.map(match => this.savedPageCard(match.thing_data)).join('')}
           </div>
         </div>
       `;
@@ -331,7 +331,7 @@ const Components = {
             <span class="tier-count">${results.similar_matches.length}</span>
           </h3>
           <div class="tier-results">
-            ${results.similar_matches.map(page => this.savedPageCard(page)).join('')}
+            ${results.similar_matches.map(match => this.savedPageCard(match.thing_data)).join('')}
           </div>
         </div>
       `;
@@ -354,7 +354,7 @@ const Components = {
             <span class="tier-count">${results.related_matches.length}</span>
           </h3>
           <div class="tier-results">
-            ${results.related_matches.map(page => this.savedPageCard(page)).join('')}
+            ${results.related_matches.map(match => this.savedPageCard(match.thing_data)).join('')}
           </div>
         </div>
       `;
