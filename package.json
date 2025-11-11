@@ -1,6 +1,6 @@
 {
   "name": "extension",
-  "version": "0.7.2",
+  "version": "0.7.3",
   "description": "Firefox extension for saving pages to BigQuery via Cloud Function.",
   "main": "api.js",
   "scripts": {
