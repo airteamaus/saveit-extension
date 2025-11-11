@@ -4,12 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>new tab</title>
-  <!-- Cache-busting: CSS reloads when manifest version changes -->
-  <script>
-    const version = typeof browser !== 'undefined' && browser.runtime ?
-      browser.runtime.getManifest().version : Date.now();
-    document.write(`<link rel="stylesheet" href="newtab.css?v=${version}">`);
-  </script>
+  <link rel="stylesheet" href="newtab.css">
 </head>
 <body>
   <header class="header">
@@ -133,16 +128,10 @@
   </footer>
 
   <!-- Load scripts in dependency order -->
-  <!-- Cache-busting: Scripts reload when manifest version changes -->
-  <script>
-    const version = typeof browser !== 'undefined' && browser.runtime ?
-      browser.runtime.getManifest().version : Date.now();
-    const scripts = ['config.js', 'mock-data.js', 'api.js', 'components.js', 'newtab.js'];
-    scripts.forEach(src => {
-      const script = document.createElement('script');
-      script.src = `${src}?v=${version}`;
-      document.write(script.outerHTML);
-    });
-  </script>
+  <script src="config.js"></script>
+  <script src="mock-data.js"></script>
+  <script src="api.js"></script>
+  <script src="components.js"></script>
+  <script src="newtab.js"></script>
 </body>
 </html>
