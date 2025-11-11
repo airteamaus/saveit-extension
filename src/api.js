@@ -393,15 +393,15 @@ const API = {
 
         if (hasExactMatch) {
           results.exact_matches.push({
-            ...page,
-            similarity_score: 1.0,
-            matching_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
+            thing_data: page,
+            similarity: 1.0,
+            matched_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
           });
         } else if (hasSimilarMatch) {
           results.similar_matches.push({
-            ...page,
-            similarity_score: 0.85,
-            matching_label: pageTags.find(t =>
+            thing_data: page,
+            similarity: 0.85,
+            matched_label: pageTags.find(t =>
               t.toLowerCase().includes(lowerLabel) || lowerLabel.includes(t.toLowerCase())
             )
           });
