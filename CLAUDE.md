@@ -167,6 +167,157 @@ Mode is auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 
 See backend's [docs/VISION.md](../saveit-backend/docs/VISION.md) for detailed architecture.
 
+## Testing & Quality Assurance
+
+**CRITICAL: This project has comprehensive QA infrastructure. Always write and run tests!**
+
+### Quick Testing Commands
+
+```bash
+# Run tests (ALWAYS do this before committing)
+just test               # Unit + integration tests (fast, <1s)
+just test-watch         # Watch mode - auto-reruns on changes
+just test-coverage      # Coverage report (70% minimum enforced)
+just test-e2e           # End-to-end tests in Firefox (~30s)
+just test-e2e-ui        # E2E tests in interactive UI mode
+
+# Quality checks
+just check              # All checks: lint + test + build + validate
+just ci-check           # Simulate GitHub Actions locally
+just pre-deploy         # Full pre-deployment checklist (use before releases)
+```
+
+### When to Write Tests
+
+**ALWAYS write tests when:**
+1. Fixing a bug (test should fail before fix, pass after)
+2. Adding new functions or components
+3. Changing business logic
+4. Modifying API contracts
+
+**Test Coverage Requirements:**
+- Lines: 70% minimum
+- Functions: 70% minimum
+- Branches: 65% minimum
+- **CI will fail** if coverage drops below thresholds
+
+### Test Structure
+
+```
+tests/
+├── unit/               # Fast, isolated function tests
+│   ├── api.test.js     # API module (12 tests)
+│   └── components.test.js  # Components module (15 tests)
+├── integration/        # Components working together
+│   └── dashboard.test.js   # Dashboard flows (13 tests)
+└── e2e/               # Full user workflows in real browser
+    └── standalone.spec.js  # 10 scenarios covering core features
+```
+
+### Schema Validation
+
+**Use Zod validators for all API responses:**
+
+```javascript
+import { validatePages, validateSearchResponse } from './validators.js';
+
+// Validate API response (filters out invalid entries)
+const pages = await API.getSavedPages();
+const validPages = validatePages(pages);  // Removes malformed data
+
+// Throws on invalid schema
+const searchResults = validateSearchResponse(data);
+```
+
+**Why:** Catches backend schema changes immediately, prevents runtime errors from malformed data.
+
+### Error Reporting
+
+**Use structured error reporting:**
+
+```javascript
+import { reportError } from './error-reporter.js';
+
+try {
+  await riskyOperation();
+} catch (error) {
+  reportError(error, {
+    context: 'user_action',
+    user: getCurrentUser(),
+    action: 'save_page'
+  });
+  showUserFriendlyMessage(error);
+}
+```
+
+**Environments:**
+- Development: Logs to console only
+- Staging (beta versions): Sends to Slack/error tracker
+- Production: Sends to monitoring service (ready for Sentry integration)
+
+### Git Hooks (Automatic Quality Gates)
+
+**Pre-commit:** (runs automatically on `git commit`)
+- ✓ ESLint + web-ext lint
+- ✓ Unit + integration tests
+- ⚠️ Warns about console.log statements
+
+**Pre-push:** (runs automatically on `git push`)
+- ✓ Version validation (tags must match manifest.json)
+- ✓ Quick test suite
+
+**Bypass (NOT recommended):**
+```bash
+git commit --no-verify  # Skip hooks (use sparingly!)
+```
+
+### CI/CD Pipeline
+
+**GitHub Actions runs on every PR/push:**
+1. Lint & validate manifests
+2. Unit + integration tests with coverage
+3. Build verification
+4. E2E tests in Firefox
+5. Security audit (npm audit)
+
+**Status:** Must pass before merging to main
+
+### Environment-Specific Configuration
+
+Config auto-detects environment from extension version:
+
+```javascript
+// Development (file:// protocol or localhost)
+- Uses mock data
+- Debug logging enabled
+- Error reporting disabled
+
+// Staging (version contains 'beta', e.g., v0.14.0-beta.1)
+- Real backend: https://saveit-staging-xxx.run.app
+- Error reporting to Slack
+- Debug logging enabled
+
+// Production (normal releases, e.g., v0.14.0)
+- Real backend: https://saveit-xxx-uc.a.run.app
+- Error reporting to monitoring service
+- Debug logging disabled
+```
+
+**Deploy to staging:**
+```bash
+just deploy-staging 0.14.0  # Creates v0.14.0-beta.1
+# Test for 24-48 hours with real backend
+# If stable, promote to production:
+just bump minor
+git push origin main --tags
+```
+
+### Documentation
+
+- **Full testing guide:** `docs/TESTING.md`
+- **QA infrastructure:** `docs/QA-INFRASTRUCTURE.md`
+- **Quick start:** `QA-SETUP-COMPLETE.md`
+
 ## Quick Reference
 
 **Task runner:**
@@ -176,7 +327,9 @@ just preview        # Open standalone dashboard
 just run            # Run in Firefox with auto-reload
 just install        # Install persistently in Firefox
 just lint           # Lint extension
-just check          # Run all checks (lint + validate)
+just test           # Run unit + integration tests
+just check          # Run all checks (lint + test + validate + build)
+just pre-deploy     # Full pre-deployment checklist
 just bump patch     # Bump version and create git tag
 ```
 

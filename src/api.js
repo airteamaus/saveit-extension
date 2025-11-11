@@ -2,6 +2,7 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
+/* eslint-disable-next-line no-unused-vars */
 const API = {
   /**
    * Detect if we're running inside the browser extension or as standalone HTML
@@ -15,6 +16,20 @@ const API = {
    */
   CACHE_KEY: 'savedPages_cache',
   CACHE_MAX_AGE_MS: 5 * 60 * 1000, // 5 minutes
+
+  /**
+   * Parse error response from HTTP fetch
+   * Attempts to extract error message from JSON response, falls back to status text
+   * @private
+   */
+  async parseErrorResponse(response) {
+    try {
+      const data = await response.json();
+      return data.error || data.message || `HTTP ${response.status}`;
+    } catch {
+      return response.statusText || `HTTP ${response.status}`;
+    }
+  },
 
   /**
    * Get Firebase ID token for API authorization
@@ -181,7 +196,8 @@ const API = {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorMessage = await this.parseErrorResponse(response);
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -232,9 +248,9 @@ const API = {
     }
 
     if (options.sort === 'newest') {
-      filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      filtered.sort((a, b) => new Date(b.saved_at || b.timestamp) - new Date(a.saved_at || a.timestamp));
     } else if (options.sort === 'oldest') {
-      filtered.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      filtered.sort((a, b) => new Date(a.saved_at || a.timestamp) - new Date(b.saved_at || b.timestamp));
     }
 
     const offset = options.offset || 0;
@@ -265,7 +281,8 @@ const API = {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorMessage = await this.parseErrorResponse(response);
+          throw new Error(errorMessage);
         }
 
         // Invalidate cache after successful delete
@@ -313,7 +330,8 @@ const API = {
         );
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorMessage = await this.parseErrorResponse(response);
+          throw new Error(errorMessage);
         }
 
         return await response.json();
@@ -352,7 +370,8 @@ const API = {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const errorMessage = await this.parseErrorResponse(response);
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();

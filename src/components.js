@@ -17,7 +17,8 @@
  * @property {string} [description] - Meta description or extracted content summary
  * @property {string} [domain] - Domain name (e.g., 'example.com')
  * @property {number} [reading_time_minutes] - Estimated reading time in minutes
- * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP)
+ * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP) - backend uses this field
+ * @property {string} [timestamp] - Legacy alias for saved_at - supported for backwards compatibility
  * @property {string} [user_notes] - User's personal notes about the page
  * @property {string[]} [manual_tags] - User-added tags (REPEATED field in BigQuery)
  *
@@ -32,8 +33,8 @@
  * @property {string} [ai_summary_brief] - 1-2 sentence AI-generated summary
  * @property {string} [ai_summary_extended] - Longer AI-generated summary (not currently displayed)
  * @property {Array<{type: string, label: string, confidence: number, embedding: number[]}>} [classifications] - Multi-level AI classifications (general/domain/topic)
- * @property {string} [dewey_primary] - DEPRECATED - Dewey Decimal Classification code (e.g., '900')
- * @property {string} [dewey_primary_label] - DEPRECATED - Human-readable Dewey category (e.g., 'Geography, history, related disciplines')
+ * @property {string} [dewey_primary] - Legacy Dewey Decimal Classification code (e.g., '900') - supported for backwards compatibility
+ * @property {string} [dewey_primary_label] - Legacy Dewey category (e.g., 'Geography, history, related disciplines') - supported for backwards compatibility, used as fallback when classifications not available
  * @property {string} [ai_enriched_at] - ISO timestamp when AI enrichment completed (TIMESTAMP)
  *
  * LEGACY FIELDS (from mock data, not in schema):
@@ -44,6 +45,7 @@
  * NOTE: UI prioritizes ai_summary_brief over description for display
  */
 
+/* eslint-disable-next-line no-unused-vars */
 const Components = {
   /**
    * Render classification tags with type-specific styling
@@ -236,35 +238,6 @@ const Components = {
   truncate(text, maxLength) {
     if (!text || text.length <= maxLength) return text;
     return text.substring(0, maxLength).trim() + '...';
-  },
-
-  /**
-   * Format timestamp as human-readable date
-   * @param {string} timestamp - ISO timestamp
-   * @returns {string} Formatted date
-   */
-  formatDate(timestamp) {
-    const date = new Date(timestamp);
-    const now = new Date();
-    const diffMs = now - date;
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-    if (diffMinutes < 1) return 'Just now';
-    if (diffMinutes < 60) return `${diffMinutes}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-
-    // For older dates, show actual date
-    return date.toLocaleDateString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-    });
   },
 
   /**

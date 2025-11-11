@@ -17,6 +17,51 @@ watch-firebase:
 lint:
     npx web-ext lint
 
+# Lint JavaScript with ESLint
+lint-js:
+    npm run lint
+
+# Lint and auto-fix issues
+lint-fix:
+    npm run lint:fix
+
+# Run unit and integration tests
+test:
+    npm test
+
+# Run tests in watch mode
+test-watch:
+    npm run test:watch
+
+# Run tests with coverage report
+test-coverage:
+    npm run test:coverage
+
+# Run E2E tests
+test-e2e:
+    npm run test:e2e
+
+# Run E2E tests in UI mode (interactive)
+test-e2e-ui:
+    npm run test:e2e:ui
+
+# Run all checks (lint, tests, build, validate)
+check: lint-js lint test validate test-build test-csp
+
+# CI check - simulate GitHub Actions locally
+ci-check:
+    @echo "Running CI checks locally..."
+    @just lint-js
+    @just lint
+    @just test
+    @just test-coverage
+    @just build
+    @echo "✅ All CI checks passed!"
+
+# Pre-deployment checklist (comprehensive)
+pre-deploy:
+    ./scripts/pre-deploy-check.sh
+
 # Run the extension in Firefox Developer Edition (auto-builds Firebase first)
 run:
     @just build-firebase
@@ -28,7 +73,7 @@ install:
 
 # Build and sign the extension (requires AMO_JWT credentials)
 build:
-    ./scripts/build-and-sign.sh
+    npm run build
 
 # Bump version (patch/minor/major) and create git tag
 bump version="patch":
@@ -40,8 +85,7 @@ preview:
 
 # Validate manifest.json
 validate:
-    @echo "Validating manifest.json..."
-    @cat manifest.json | python3 -m json.tool > /dev/null && echo "✓ manifest.json is valid JSON"
+    npm run validate
 
 # Test that Firebase bundles build successfully
 test-build:
@@ -53,26 +97,39 @@ test-build:
 test-csp:
     @./scripts/test-csp.sh
 
-# Run all checks (lint + validate + test build + CSP)
-check: lint validate test-build test-csp
-
 # Clean build artifacts
 clean:
     rm -rf web-ext-artifacts/
+    rm -rf coverage/
+    rm -rf playwright-report/
+    rm -rf test-results/
     rm -f *.xpi
 
 # Install dependencies
 install-deps:
     npm install
 
-# Setup git hooks (prevents pushing mismatched version tags)
+# Setup git hooks (husky)
 setup-hooks:
-    @echo "Installing git hooks..."
-    @cp scripts/git-hooks/pre-push .git/hooks/pre-push
-    @chmod +x .git/hooks/pre-push
-    @echo "✓ Pre-push hook installed"
-    @echo "  Prevents pushing version tags that don't match manifest.json"
+    npm run prepare
 
 # Clear Firefox extension cache (requires Firefox to be closed)
 clear-cache:
     ./scripts/clear-firefox-cache.sh
+
+# Deploy to staging (beta version)
+deploy-staging version:
+    @echo "Deploying v{{version}}-beta.1 to staging..."
+    npm version {{version}}-beta.1
+    git push origin main --tags
+    @echo "✅ Staging deployment triggered!"
+    @echo "Monitor: https://github.com/your-repo/actions"
+
+# Promote staging to production
+deploy-prod:
+    @echo "Promoting to production..."
+    @./scripts/pre-deploy-check.sh
+    @echo ""
+    @echo "If checks passed, bump version and push:"
+    @echo "  just bump [patch|minor|major]"
+    @echo "  git push origin main --tags"

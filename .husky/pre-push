@@ -1,0 +1,43 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push checks..."
+
+# Extract version from manifest.json
+MANIFEST_VERSION=$(jq -r '.version' manifest.json)
+
+# Check if pushing a tag
+TAGS=$(git rev-parse --verify --quiet "$1" 2>/dev/null)
+if [ -n "$TAGS" ]; then
+  # Pushing tags - validate version match
+  for tag in $(git tag --points-at HEAD); do
+    TAG_VERSION=$(echo "$tag" | sed 's/^v//')
+
+    if [ "$TAG_VERSION" != "$MANIFEST_VERSION" ]; then
+      echo "❌ Version mismatch!"
+      echo "   Tag version: v$TAG_VERSION"
+      echo "   Manifest version: $MANIFEST_VERSION"
+      echo ""
+      echo "   Use 'just bump [patch|minor|major]' to ensure versions match."
+      exit 1
+    fi
+  done
+
+  echo "✅ Tag version matches manifest.json"
+fi
+
+# Run tests with coverage
+echo "  → Running tests with coverage..."
+npm run test:coverage || {
+  echo "❌ Tests or coverage failed. Fix before pushing."
+  exit 1
+}
+
+# Verify build works
+echo "  → Verifying build..."
+node scripts/bundle-firebase.js && npx web-ext build --overwrite-dest > /dev/null 2>&1 || {
+  echo "❌ Build failed. Fix before pushing."
+  exit 1
+}
+
+echo "✅ Pre-push checks passed!"

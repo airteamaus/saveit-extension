@@ -2,9 +2,13 @@
 // Bundle Firebase SDK for use in browser extension
 // Creates two bundles: one for background.js (service worker), one for dashboard
 
-const esbuild = require('esbuild');
-const fs = require('fs');
-const path = require('path');
+import esbuild from 'esbuild';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SRC_DIR = path.join(__dirname, '..', 'src');
 const BUNDLE_DIR = path.join(SRC_DIR, 'bundles');
@@ -109,8 +113,4 @@ async function build() {
 }
 
 // Run if called directly
-if (require.main === module) {
-  build();
-}
-
-module.exports = { build };
+build();
