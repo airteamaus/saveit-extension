@@ -1,5 +1,5 @@
 {
-  "manifest_version": 2,
+  "manifest_version": 3,
   "name": "SaveIt",
   "version": "0.11.7",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
@@ -11,20 +11,20 @@
   "permissions": [
     "activeTab",
     "notifications",
-    "identity",
-    "storage",
+    "storage"
+  ],
+  "host_permissions": [
     "https://*.cloudfunctions.net/*",
     "https://*.run.app/*",
-    "https://www.googleapis.com/oauth2/*",
+    "https://www.googleapis.com/*",
+    "https://*.firebaseapp.com/*",
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "src/config.js",
-      "src/background.js"
-    ]
+    "scripts": ["src/background.js"],
+    "type": "module"
   },
-  "browser_action": {
+  "action": {
     "default_icon": {
       "48": "src/icon.png"
     }

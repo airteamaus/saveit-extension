@@ -2,6 +2,15 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
+// Import Firebase auth for token generation (only in extension mode)
+let getFirebaseToken = null;
+if (typeof browser !== 'undefined' && browser.storage) {
+  // Dynamic import for extension mode only
+  import('./firebase-auth.js').then(module => {
+    getFirebaseToken = module.getFirebaseToken;
+  });
+}
+
 const API = {
   /**
    * Detect if we're running inside the browser extension or as standalone HTML
@@ -150,13 +159,11 @@ const API = {
 
       // Production: Call real Cloud Function with GET method
       try {
-        const userId = await this.getUserId();
-        if (!userId) {
-          console.warn('No user ID found - using default user (click extension icon to authenticate)');
-        }
+        // Get Firebase ID token for authentication
+        const token = await getFirebaseToken();
 
         const params = new URLSearchParams({
-          user_id: userId || 'mock-user-123',
+          // Note: user_id NOT sent - backend extracts from Firebase token
           limit: options.limit || 50,
           offset: options.offset || 0,
           search: options.search || '',
@@ -164,7 +171,10 @@ const API = {
         });
 
         const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-          method: 'GET'
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
         if (!response.ok) {
@@ -225,19 +235,22 @@ const API = {
   async deletePage(id) {
     if (this.isExtension) {
       try {
-        const userId = await this.getUserId();
-        if (!userId) {
-          throw new Error('No user ID found');
-        }
+        // Get Firebase ID token for authentication
+        const token = await getFirebaseToken();
 
         const params = new URLSearchParams({
-          id: id,
-          user_id: userId
+          id: id
+          // Note: user_id NOT sent - backend extracts from Firebase token
         });
 
         const response = await fetch(
           `${CONFIG.cloudFunctionUrl}?${params}`,
-          { method: 'DELETE' }
+          {
+            method: 'DELETE',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          }
         );
 
         if (!response.ok) {
@@ -271,19 +284,20 @@ const API = {
   async updatePage(id, updates) {
     if (this.isExtension) {
       try {
-        const userId = await this.getUserId();
-        if (!userId) {
-          throw new Error('No user ID found');
-        }
+        // Get Firebase ID token for authentication
+        const token = await getFirebaseToken();
 
         const response = await fetch(
           `${CONFIG.cloudFunctionUrl}/updatePage`,
           {
             method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
             body: JSON.stringify({
               id,
-              user_id: userId,
+              // Note: user_id NOT sent - backend extracts from Firebase token
               ...updates
             })
           }
@@ -317,18 +331,19 @@ const API = {
   async searchByTag(label) {
     if (this.isExtension) {
       try {
-        const userId = await this.getUserId();
-        if (!userId) {
-          throw new Error('No user ID found');
-        }
+        // Get Firebase ID token for authentication
+        const token = await getFirebaseToken();
 
         const params = new URLSearchParams({
-          label: label,
-          user_id: userId
+          label: label
+          // Note: user_id NOT sent - backend extracts from Firebase token
         });
 
         const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-          method: 'GET'
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
         if (!response.ok) {

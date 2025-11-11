@@ -1,92 +1,30 @@
+// background.js - Service worker for SaveIt extension (manifest v3)
+import { CONFIG } from './config.js';
+import { getFirebaseToken, signOut as firebaseSignOut } from './firebase-auth.js';
+
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
 
-window.logout = async function() {
-  await browser.storage.local.remove(['userId', 'userEmail', 'userName']);
-  console.log('Logged out - user info cleared');
+// Export logout function for debugging
+globalThis.logout = async function() {
+  await firebaseSignOut();
+  console.log('Logged out - user signed out of Firebase');
 };
 
-async function getUserInfo() {
-  const stored = await browser.storage.local.get(['userId', 'userEmail', 'userName']);
-
-  if (stored.userId && stored.userEmail && stored.userName) {
-    console.log('Using cached user info:', stored.userName);
-    return {
-      id: stored.userId,
-      email: stored.userEmail,
-      name: stored.userName
-    };
-  }
-
-  console.log('Getting user info via OAuth...');
-
-  const redirectURL = browser.identity.getRedirectURL();
-  const scopes = 'openid email profile';
-
-  const authURL = `https://accounts.google.com/o/oauth2/auth?` +
-    `client_id=${CONFIG.oauthClientId}` +
-    `&response_type=token` +
-    `&redirect_uri=${encodeURIComponent(redirectURL)}` +
-    `&scope=${encodeURIComponent(scopes)}`;
-
-  try {
-    const responseURL = await browser.identity.launchWebAuthFlow({
-      interactive: true,
-      url: authURL
-    });
-
-    const params = new URLSearchParams(responseURL.split('#')[1]);
-    const accessToken = params.get('access_token');
-
-    if (!accessToken) {
-      throw new Error('No access token received');
-    }
-
-    const userInfoResponse = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { 'Authorization': `Bearer ${accessToken}` }
-    });
-
-    if (!userInfoResponse.ok) {
-      throw new Error('Failed to get user info');
-    }
-
-    const userInfo = await userInfoResponse.json();
-
-    // Cache user info permanently (id is the opaque user_id from Google)
-    await browser.storage.local.set({
-      userId: userInfo.id,
-      userEmail: userInfo.email,
-      userName: userInfo.name
-    });
-
-    console.log('User authenticated:', userInfo.name, 'ID:', userInfo.id);
-    return {
-      id: userInfo.id,
-      email: userInfo.email,
-      name: userInfo.name
-    };
-
-  } catch (error) {
-    console.error('OAuth error:', error);
-    console.error('Redirect URL:', redirectURL);
-    console.error('Verify redirect URI in Google Cloud Console OAuth credentials matches exactly');
-    throw error;
-  }
-}
-
-browser.browserAction.onClicked.addListener(async (tab) => {
+// Handle extension icon clicks
+browser.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');
 
   try {
-    const userInfo = await getUserInfo();
+    // Get Firebase ID token (prompts OAuth if not signed in)
+    const token = await getFirebaseToken();
+    console.log('Got Firebase token');
 
     const pageData = {
       url: tab.url,
       title: tab.title,
-      timestamp: new Date().toISOString(),
-      user_id: userInfo.id,
-      user_email: userInfo.email,
-      user_name: userInfo.name
+      timestamp: new Date().toISOString()
+      // Note: user_id is NOT sent - backend extracts from Firebase token
     };
 
     console.log('Sending to Cloud Function:', pageData);
@@ -94,7 +32,8 @@ browser.browserAction.onClicked.addListener(async (tab) => {
     const response = await fetch(CONFIG.cloudFunctionUrl, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
       },
       body: JSON.stringify(pageData)
     });
@@ -144,6 +83,8 @@ browser.browserAction.onClicked.addListener(async (tab) => {
          userMessage.includes('localhost') ? 'Local URLs cannot be saved.' :
          userMessage.includes('protocol') ? 'Only http/https URLs can be saved.' :
          userMessage);
+    } else if (userMessage.includes('Sign-in failed') || userMessage.includes('Unauthorized')) {
+      userMessage = 'Authentication failed. Please try again or check your Google account.';
     }
 
     browser.notifications.create({

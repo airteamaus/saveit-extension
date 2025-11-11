@@ -13,5 +13,8 @@
   "devDependencies": {
     "jsdom": "^25.0.0",
     "web-ext": "^9.1.0"
+  },
+  "dependencies": {
+    "firebase": "^12.5.0"
   }
 }
