@@ -86,6 +86,21 @@ globalThis.logout = async function() {
   console.log('Logged out from Firebase');
 };
 
+// Handle messages from dashboard (e.g., sign-in button)
+browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'signIn') {
+    signInWithFirebase()
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch((error) => {
+        console.error('Sign-in failed:', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true; // Keep channel open for async response
+  }
+});
+
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');

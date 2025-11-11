@@ -20,15 +20,26 @@ const API = {
    * Get Firebase ID token for API authorization
    */
   async getIdToken() {
-    if (this.isExtension && window.firebaseAuth) {
+    if (this.isExtension) {
+      // Wait for Firebase to be ready
+      if (window.firebaseReady) {
+        await window.firebaseReady;
+      }
+
+      if (!window.firebaseAuth) {
+        throw new Error('Firebase not initialized');
+      }
+
       const user = window.firebaseAuth.currentUser;
       if (!user) {
         throw new Error('No user signed in');
       }
 
-      // Import getIdToken from the bundle
-      const { getIdToken } = await import('./bundles/firebase-dashboard.js');
-      return await getIdToken(user);
+      if (!window.firebaseGetIdToken) {
+        throw new Error('getIdToken not available');
+      }
+
+      return await window.firebaseGetIdToken(user);
     }
     // Standalone mode: no token needed
     return null;

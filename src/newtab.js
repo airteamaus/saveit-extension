@@ -30,15 +30,27 @@ class SaveItDashboard {
     this.updateModeIndicator();
     this.updateVersionIndicator();
 
-    // Set up Firebase auth state listener for extension mode
-    if (API.isExtension && window.firebaseAuth) {
-      window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-        console.log('Auth state changed:', user ? user.email : 'signed out');
-        this.updateSignInButton(user ? {
-          email: user.email,
-          name: user.displayName
-        } : null);
-      });
+    // Wait for Firebase to be ready in extension mode
+    if (API.isExtension && window.firebaseReady) {
+      await window.firebaseReady;
+
+      if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
+        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
+          console.log('Auth state changed:', user ? user.email : 'signed out');
+          this.updateSignInButton(user ? {
+            email: user.email,
+            name: user.displayName
+          } : null);
+
+          // Reload pages when auth state changes
+          if (user) {
+            await this.loadPages();
+            this.render();
+          } else {
+            this.showSignInPrompt();
+          }
+        });
+      }
     }
 
     await this.loadPages();
@@ -336,10 +348,17 @@ class SaveItDashboard {
 
   /**
    * Handle sign-in button click
-   * In this architecture, OAuth happens when user clicks extension icon to save a page
+   * Triggers Firebase OAuth without requiring a page save
    */
   async handleSignIn() {
-    alert('To sign in, click the SaveIt extension icon in your toolbar while viewing any web page.\n\nThis will trigger Google OAuth and save that page.');
+    try {
+      // Send message to background script to trigger sign-in
+      await browser.runtime.sendMessage({ action: 'signIn' });
+      // Auth state listener will handle UI updates
+    } catch (error) {
+      console.error('Sign-in failed:', error);
+      alert('Failed to sign in. Please try again.');
+    }
   }
 
   /**

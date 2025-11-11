@@ -68,6 +68,7 @@ import { initializeApp } from 'firebase/app';
 import {
   getAuth,
   onAuthStateChanged,
+  getIdToken,
   signOut
 } from '@firebase/auth/web-extension';
 
@@ -75,6 +76,7 @@ export {
   initializeApp,
   getAuth,
   onAuthStateChanged,
+  getIdToken,
   signOut
 };
 `;
