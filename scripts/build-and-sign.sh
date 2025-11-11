@@ -5,8 +5,11 @@ set -e
 echo "🔨 Building and signing SaveIt extension..."
 echo ""
 
+# Build Firebase bundles first (they're gitignored)
+echo "🔥 Building Firebase bundles..."
+node scripts/bundle-firebase.js
+
 # Build the extension (create .zip)
-cd extension
 echo "📦 Creating extension package..."
 npx web-ext build --overwrite-dest
 
