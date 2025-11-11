@@ -53,3 +53,7 @@ setup-hooks:
     @chmod +x .git/hooks/pre-push
     @echo "✓ Pre-push hook installed"
     @echo "  Prevents pushing version tags that don't match manifest.json"
+
+# Clear Firefox extension cache (requires Firefox to be closed)
+clear-cache:
+    ./scripts/clear-firefox-cache.sh
