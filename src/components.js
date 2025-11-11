@@ -177,6 +177,24 @@ const Components = {
   },
 
   /**
+   * Create sign-in state (unauthenticated)
+   * @returns {string} HTML string
+   */
+  signInState() {
+    return `
+      <div class="empty-state">
+        <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        <h2>Sign in to view your saved pages</h2>
+        <p>Click the SaveIt extension icon while browsing any page to sign in with Google and start saving!</p>
+      </div>
+    `;
+  },
+
+  /**
    * Create error state
    * @param {Error} error - Error object
    * @returns {string} HTML string
