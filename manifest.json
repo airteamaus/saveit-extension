@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SaveIt",
-  "version": "0.12.2",
+  "version": "0.13.0",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
   "browser_specific_settings": {
     "gecko": {
@@ -11,7 +11,8 @@
   "permissions": [
     "activeTab",
     "notifications",
-    "storage"
+    "storage",
+    "identity"
   ],
   "host_permissions": [
     "https://*.cloudfunctions.net/*",
