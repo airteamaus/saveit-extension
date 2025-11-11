@@ -11,7 +11,10 @@ module.exports = {
     '.git',
     'node_modules',
     'justfile',
-    '.github'
+    '.github',
+    'firefox-dev-profile/**',
+    'test/**',
+    'test-*.html'
   ],
 
   // Build configuration

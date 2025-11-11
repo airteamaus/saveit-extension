@@ -1,5 +1,9 @@
 // newtab.js - Main dashboard logic
 // Handles page loading, filtering, and user interactions
+//
+// Security Note: This file uses innerHTML for rendering UI components.
+// All user-provided data is sanitized via Components.escapeHtml() which uses
+// textContent to prevent XSS attacks. See components.js:204 for implementation.
 
 class SaveItDashboard {
   constructor() {

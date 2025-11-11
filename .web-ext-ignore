@@ -1,0 +1,12 @@
+# Development profile directory (contains Firefox media plugins)
+firefox-dev-profile/
+
+# Test files
+test/
+test-*.html
+
+# Development files
+*.test.js
+.git/
+.gitignore
+node_modules/
