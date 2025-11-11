@@ -188,7 +188,7 @@ just preview                    # Or: open src/newtab.html
 # Refresh browser (Cmd+R)
 
 # Extension mode (for OAuth, real data testing)
-just run                        # Or: ./scripts/run-extension.sh
+just run                        # Or: ./scripts/run-extension.sh (RECOMMENDED - no caching issues)
 just install                    # Or: ./scripts/install-dev.sh
 
 # Manual load:
@@ -196,6 +196,12 @@ just install                    # Or: ./scripts/install-dev.sh
 # 2. Click "This Firefox" → "Load Temporary Add-on"
 # 3. Select manifest.json
 ```
+
+**Cache-Busting:**
+Firefox aggressively caches extension files even after reinstall. Solutions:
+- **Recommended**: Use `just run` (web-ext loads files directly from disk)
+- **Automatic**: HTML/CSS/JS files use version-based cache-busting (`?v=0.12.1`)
+- **Manual**: After `just bump patch`, reload extension in about:debugging to get fresh files
 
 **Releasing:**
 ```bash
