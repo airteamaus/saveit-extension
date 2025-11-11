@@ -1,14 +1,89 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
-import { getFirebaseToken, signOut as firebaseSignOut } from './firebase-auth.js';
+import {
+  initializeApp,
+  getAuth,
+  signInWithCredential,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  getIdToken,
+  signOut
+} from './bundles/firebase-background.js';
 
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
 
+// Initialize Firebase
+const app = initializeApp(CONFIG.firebase);
+const auth = getAuth(app);
+
+// Monitor auth state changes
+onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log('Firebase user signed in:', user.email);
+  } else {
+    console.log('Firebase user signed out');
+  }
+});
+
+/**
+ * Sign in with Firebase using browser.identity OAuth flow
+ * Returns Firebase user and ID token
+ */
+async function signInWithFirebase() {
+  // Check if already signed in
+  if (auth.currentUser) {
+    const idToken = await getIdToken(auth.currentUser);
+    return {
+      user: auth.currentUser,
+      idToken
+    };
+  }
+
+  // Trigger browser.identity OAuth flow
+  console.log('Launching OAuth flow...');
+  const redirectURL = browser.identity.getRedirectURL();
+
+  const authURL = new URL('https://accounts.google.com/o/oauth2/auth');
+  authURL.searchParams.set('client_id', CONFIG.oauthClientId);
+  authURL.searchParams.set('response_type', 'token id_token');
+  authURL.searchParams.set('redirect_uri', redirectURL);
+  authURL.searchParams.set('scope', 'openid email profile');
+
+  const responseURL = await browser.identity.launchWebAuthFlow({
+    interactive: true,
+    url: authURL.href
+  });
+
+  // Extract tokens from redirect URL
+  const urlParams = new URL(responseURL).hash.substring(1);
+  const params = new URLSearchParams(urlParams);
+  const accessToken = params.get('access_token');
+  const idToken = params.get('id_token');
+
+  if (!accessToken) {
+    throw new Error('No access token received from OAuth');
+  }
+
+  // Create Firebase credential from Google OAuth token
+  const credential = GoogleAuthProvider.credential(idToken, accessToken);
+
+  // Sign in to Firebase
+  const userCredential = await signInWithCredential(auth, credential);
+  const firebaseIdToken = await getIdToken(userCredential.user);
+
+  console.log('Firebase sign-in successful:', userCredential.user.email);
+
+  return {
+    user: userCredential.user,
+    idToken: firebaseIdToken
+  };
+}
+
 // Export logout function for debugging
 globalThis.logout = async function() {
-  await firebaseSignOut();
-  console.log('Logged out - user signed out of Firebase');
+  await signOut(auth);
+  console.log('Logged out from Firebase');
 };
 
 // Handle extension icon clicks
@@ -16,15 +91,14 @@ browser.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');
 
   try {
-    // Get Firebase ID token (prompts OAuth if not signed in)
-    const token = await getFirebaseToken();
-    console.log('Got Firebase token');
+    // Sign in with Firebase (prompts OAuth if not signed in)
+    const { user, idToken } = await signInWithFirebase();
+    console.log('Got Firebase user:', user.email);
 
     const pageData = {
       url: tab.url,
       title: tab.title,
       timestamp: new Date().toISOString()
-      // Note: user_id is NOT sent - backend extracts from Firebase token
     };
 
     console.log('Sending to Cloud Function:', pageData);
@@ -33,7 +107,7 @@ browser.action.onClicked.addListener(async (tab) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
+        'Authorization': `Bearer ${idToken}`
       },
       body: JSON.stringify(pageData)
     });
@@ -43,10 +117,8 @@ browser.action.onClicked.addListener(async (tab) => {
 
       try {
         const errorData = await response.json();
-        // Backend returns {error: "message"} for validation errors
         errorMessage = errorData.error || errorData.message || errorMessage;
       } catch (jsonError) {
-        // If response isn't JSON, use status text
         errorMessage = response.statusText || errorMessage;
       }
 

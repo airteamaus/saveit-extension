@@ -5,12 +5,21 @@
 default:
     @just --list
 
+# Build Firebase bundles
+build-firebase:
+    @node scripts/bundle-firebase.js
+
+# Watch and rebuild Firebase bundles on changes
+watch-firebase:
+    @node scripts/watch-firebase.js
+
 # Lint the extension with web-ext
 lint:
     npx web-ext lint
 
-# Run the extension in Firefox Developer Edition
+# Run the extension in Firefox Developer Edition (auto-builds Firebase first)
 run:
+    @just build-firebase
     ./scripts/run-extension.sh
 
 # Install in Firefox Developer Edition for persistent testing
@@ -34,8 +43,18 @@ validate:
     @echo "Validating manifest.json..."
     @cat manifest.json | python3 -m json.tool > /dev/null && echo "✓ manifest.json is valid JSON"
 
-# Run all checks (lint + validate)
-check: lint validate
+# Test that Firebase bundles build successfully
+test-build:
+    @echo "Testing Firebase bundle build..."
+    @just build-firebase
+    @echo "✓ Firebase bundles build successfully"
+
+# Test for CSP violations in HTML files
+test-csp:
+    @./scripts/test-csp.sh
+
+# Run all checks (lint + validate + test build + CSP)
+check: lint validate test-build test-csp
 
 # Clean build artifacts
 clean:

@@ -2,15 +2,6 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
-// Import Firebase auth for token generation (only in extension mode)
-let getFirebaseToken = null;
-if (typeof browser !== 'undefined' && browser.storage) {
-  // Dynamic import for extension mode only
-  import('./firebase-auth.js').then(module => {
-    getFirebaseToken = module.getFirebaseToken;
-  });
-}
-
 const API = {
   /**
    * Detect if we're running inside the browser extension or as standalone HTML
@@ -26,55 +17,23 @@ const API = {
   CACHE_MAX_AGE_MS: 5 * 60 * 1000, // 5 minutes
 
   /**
-   * Get the current user's ID (from extension storage or mock)
+   * Get Firebase ID token for API authorization
    */
-  async getUserId() {
-    if (this.isExtension) {
-      try {
-        const data = await browser.storage.local.get(['userId']);
-        return data.userId || null;
-      } catch (error) {
-        console.error('Failed to get user ID:', error);
-        return null;
+  async getIdToken() {
+    if (this.isExtension && window.firebaseAuth) {
+      const user = window.firebaseAuth.currentUser;
+      if (!user) {
+        throw new Error('No user signed in');
       }
+
+      // Import getIdToken from the bundle
+      const { getIdToken } = await import('./bundles/firebase-dashboard.js');
+      return await getIdToken(user);
     }
-    // Standalone mode: use mock user
-    return 'mock-user-123';
+    // Standalone mode: no token needed
+    return null;
   },
 
-  /**
-   * Get the current user's email (from extension storage or mock)
-   */
-  async getUserEmail() {
-    if (this.isExtension) {
-      try {
-        const data = await browser.storage.local.get(['userEmail']);
-        return data.userEmail || null;
-      } catch (error) {
-        console.error('Failed to get user email:', error);
-        return null;
-      }
-    }
-    // Standalone mode: use mock user
-    return 'rich@airteam.com.au';
-  },
-
-  /**
-   * Get the current user's name (from extension storage or mock)
-   */
-  async getUserName() {
-    if (this.isExtension) {
-      try {
-        const data = await browser.storage.local.get(['userName']);
-        return data.userName || null;
-      } catch (error) {
-        console.error('Failed to get user name:', error);
-        return null;
-      }
-    }
-    // Standalone mode: use mock user
-    return 'Rich';
-  },
 
   /**
    * Get cached pages from browser storage
@@ -159,11 +118,9 @@ const API = {
 
       // Production: Call real Cloud Function with GET method
       try {
-        // Get Firebase ID token for authentication
-        const token = await getFirebaseToken();
+        const idToken = await this.getIdToken();
 
         const params = new URLSearchParams({
-          // Note: user_id NOT sent - backend extracts from Firebase token
           limit: options.limit || 50,
           offset: options.offset || 0,
           search: options.search || '',
@@ -173,7 +130,7 @@ const API = {
         const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${idToken}`
           }
         });
 
@@ -235,20 +192,16 @@ const API = {
   async deletePage(id) {
     if (this.isExtension) {
       try {
-        // Get Firebase ID token for authentication
-        const token = await getFirebaseToken();
+        const idToken = await this.getIdToken();
 
-        const params = new URLSearchParams({
-          id: id
-          // Note: user_id NOT sent - backend extracts from Firebase token
-        });
+        const params = new URLSearchParams({ id });
 
         const response = await fetch(
           `${CONFIG.cloudFunctionUrl}?${params}`,
           {
             method: 'DELETE',
             headers: {
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${idToken}`
             }
           }
         );
@@ -284,8 +237,7 @@ const API = {
   async updatePage(id, updates) {
     if (this.isExtension) {
       try {
-        // Get Firebase ID token for authentication
-        const token = await getFirebaseToken();
+        const idToken = await this.getIdToken();
 
         const response = await fetch(
           `${CONFIG.cloudFunctionUrl}/updatePage`,
@@ -293,11 +245,10 @@ const API = {
             method: 'PATCH',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${token}`
+              'Authorization': `Bearer ${idToken}`
             },
             body: JSON.stringify({
               id,
-              // Note: user_id NOT sent - backend extracts from Firebase token
               ...updates
             })
           }
@@ -331,18 +282,14 @@ const API = {
   async searchByTag(label) {
     if (this.isExtension) {
       try {
-        // Get Firebase ID token for authentication
-        const token = await getFirebaseToken();
+        const idToken = await this.getIdToken();
 
-        const params = new URLSearchParams({
-          label: label
-          // Note: user_id NOT sent - backend extracts from Firebase token
-        });
+        const params = new URLSearchParams({ label });
 
         const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
           method: 'GET',
           headers: {
-            'Authorization': `Bearer ${token}`
+            'Authorization': `Bearer ${idToken}`
           }
         });
 

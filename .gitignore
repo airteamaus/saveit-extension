@@ -10,6 +10,7 @@ package-lock.json
 
 # Extension build artifacts
 web-ext-artifacts/
+src/bundles/
 
 # Environment files
 .env

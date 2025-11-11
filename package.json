@@ -11,6 +11,8 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
+    "chokidar": "^4.0.3",
+    "esbuild": "^0.27.0",
     "jsdom": "^25.0.0",
     "web-ext": "^9.1.0"
   },

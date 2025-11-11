@@ -878,6 +878,11 @@ html[data-theme="dark"] .tag.tag-topic:hover {
   max-width: 400px;
 }
 
+.empty-state p.secondary-text {
+  margin-top: 8px;
+  opacity: 0.8;
+}
+
 /* Loading Spinner */
 .spinner {
   width: 48px;

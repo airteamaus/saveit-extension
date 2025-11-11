@@ -5,16 +5,6 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-// Import Firebase auth functions for extension mode
-let firebaseAuth = null;
-if (typeof browser !== 'undefined' && browser.storage) {
-  import('./firebase-auth.js').then(module => {
-    firebaseAuth = module;
-  }).catch(err => {
-    console.error('Failed to load firebase-auth:', err);
-  });
-}
-
 class SaveItDashboard {
   constructor() {
     this.pages = [];
@@ -40,10 +30,14 @@ class SaveItDashboard {
     this.updateModeIndicator();
     this.updateVersionIndicator();
 
-    // Setup auth state listener for extension mode
-    if (API.isExtension && firebaseAuth) {
-      firebaseAuth.onAuthChange((user) => {
-        this.updateSignInButton(user);
+    // Set up Firebase auth state listener for extension mode
+    if (API.isExtension && window.firebaseAuth) {
+      window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        console.log('Auth state changed:', user ? user.email : 'signed out');
+        this.updateSignInButton(user ? {
+          email: user.email,
+          name: user.displayName
+        } : null);
       });
     }
 
@@ -53,6 +47,21 @@ class SaveItDashboard {
 
     // Refresh in background if we showed cached data
     this.refreshInBackground();
+  }
+
+  /**
+   * Get current Firebase user
+   */
+  getCurrentUser() {
+    if (!API.isExtension || !window.firebaseAuth) return null;
+
+    const user = window.firebaseAuth.currentUser;
+    if (!user) return null;
+
+    return {
+      email: user.email,
+      name: user.displayName
+    };
   }
 
   /**
@@ -267,14 +276,16 @@ class SaveItDashboard {
         `;
       } else {
         // Check if user is authenticated before showing empty state
-        const isAuthenticated = API.isExtension && firebaseAuth?.getCurrentUser ?
-          firebaseAuth.getCurrentUser() !== null :
-          !API.isExtension; // In standalone mode, always show empty state (mock data)
-
-        if (isAuthenticated) {
-          container.innerHTML = Components.emptyState();
+        if (API.isExtension) {
+          const user = this.getCurrentUser();
+          if (user) {
+            container.innerHTML = Components.emptyState();
+          } else {
+            container.innerHTML = Components.signInState();
+          }
         } else {
-          container.innerHTML = Components.signInState();
+          // In standalone mode, always show empty state (mock data)
+          container.innerHTML = Components.emptyState();
         }
       }
       return;
@@ -310,8 +321,8 @@ class SaveItDashboard {
       const userName = document.getElementById('user-name');
       const userEmail = document.getElementById('user-email');
 
-      if (userName && user.displayName) {
-        userName.textContent = user.displayName.split(' ')[0]; // First name only
+      if (userName && user.name) {
+        userName.textContent = user.name.split(' ')[0]; // First name only
       }
       if (userEmail && user.email) {
         userEmail.textContent = user.email;
@@ -325,38 +336,22 @@ class SaveItDashboard {
 
   /**
    * Handle sign-in button click
+   * In this architecture, OAuth happens when user clicks extension icon to save a page
    */
   async handleSignIn() {
-    if (!firebaseAuth) {
-      console.error('Firebase auth not available');
-      return;
-    }
-
-    try {
-      this.showLoading();
-      await firebaseAuth.getFirebaseToken();
-      // Auth state change will trigger reload via onAuthChange callback
-      await this.loadPages();
-      this.render();
-    } catch (error) {
-      console.error('Sign-in failed:', error);
-      this.showError(error);
-    }
+    alert('To sign in, click the SaveIt extension icon in your toolbar while viewing any web page.\n\nThis will trigger Google OAuth and save that page.');
   }
 
   /**
    * Handle sign-out button click
    */
   async handleSignOut() {
-    if (!firebaseAuth) {
-      console.error('Firebase auth not available');
-      return;
-    }
-
     try {
-      await firebaseAuth.signOut();
-      // Auth state change will trigger UI update via onAuthChange callback
-      this.showSignInPrompt();
+      if (window.firebaseAuth && window.firebaseSignOut) {
+        await window.firebaseSignOut(window.firebaseAuth);
+        this.updateSignInButton(null);
+        this.showSignInPrompt();
+      }
     } catch (error) {
       console.error('Sign-out failed:', error);
       alert('Failed to sign out. Please try again.');

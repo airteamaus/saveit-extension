@@ -189,7 +189,8 @@ const Components = {
           <line x1="15" y1="12" x2="3" y2="12"></line>
         </svg>
         <h2>Sign in to view your saved pages</h2>
-        <p>Click the SaveIt extension icon while browsing any page to sign in with Google and start saving!</p>
+        <p>Click the "Sign In" button above to authenticate with Google.</p>
+        <p class="secondary-text">Once signed in, click the SaveIt extension icon while browsing to save pages.</p>
       </div>
     `;
   },
