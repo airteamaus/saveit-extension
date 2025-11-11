@@ -199,9 +199,9 @@ just install                    # Or: ./scripts/install-dev.sh
 
 **Cache-Busting:**
 Firefox aggressively caches extension files even after reinstall. Solutions:
-- **Recommended**: Use `just run` (web-ext loads files directly from disk)
-- **Automatic**: HTML/CSS/JS files use version-based cache-busting (`?v=0.12.1`)
-- **Manual**: After `just bump patch`, reload extension in about:debugging to get fresh files
+- **Recommended**: Use `just run` for active development (web-ext loads files directly from disk, auto-reloads on changes)
+- **When using regular Firefox profile**: Run `just clear-cache` after closing Firefox, then reload extension in about:debugging
+- **Note**: Version bumps (`just bump patch`) help but may not always clear cache immediately
 
 **Releasing:**
 ```bash
