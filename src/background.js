@@ -47,6 +47,7 @@ async function signInWithFirebase() {
   authURL.searchParams.set('response_type', 'token id_token');
   authURL.searchParams.set('redirect_uri', redirectURL);
   authURL.searchParams.set('scope', 'openid email profile');
+  authURL.searchParams.set('prompt', 'select_account');
 
   const responseURL = await browser.identity.launchWebAuthFlow({
     interactive: true,

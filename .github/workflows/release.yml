@@ -21,6 +21,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Add build date to manifest
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          # Add build_date field to manifest.json using jq
+          jq --arg date "$BUILD_DATE" '. + {build_date: $date}' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+          echo "Added build_date: $BUILD_DATE"
+
       - name: Build Firebase bundles
         run: node scripts/bundle-firebase.js
 

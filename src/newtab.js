@@ -132,8 +132,17 @@ class SaveItDashboard {
    */
   updateVersionIndicator() {
     const versionNumber = document.getElementById('version-number');
+    const buildDate = document.getElementById('build-date');
+
     if (versionNumber && browser?.runtime) {
-      versionNumber.textContent = browser.runtime.getManifest().version;
+      const manifest = browser.runtime.getManifest();
+      versionNumber.textContent = manifest.version;
+
+      // Show build date if available (added during release process)
+      if (buildDate && manifest.build_date) {
+        const date = new Date(manifest.build_date);
+        buildDate.textContent = `(${date.toLocaleDateString()})`;
+      }
     }
   }
 
