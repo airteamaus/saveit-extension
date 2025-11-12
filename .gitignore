@@ -16,6 +16,9 @@ src/bundles/
 .env
 .env.local
 
+# Extension private key (DO NOT COMMIT)
+key.pem
+
 # Logs
 *.log
 npm-debug.log*
