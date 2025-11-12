@@ -22,7 +22,7 @@ const sharedConfig = {
   bundle: true,
   format: 'esm',
   platform: 'browser',
-  target: 'firefox115', // Firefox ESR
+  target: ['firefox115', 'chrome120'], // Firefox ESR + Chrome 120+
   sourcemap: false,
   minify: true,
   treeShaking: true,
