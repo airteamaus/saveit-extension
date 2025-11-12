@@ -23,6 +23,7 @@
   ],
   "background": {
     "scripts": [
+      "src/bundles/browser-polyfill.min.js",
       "src/background.js"
     ],
     "type": "module"

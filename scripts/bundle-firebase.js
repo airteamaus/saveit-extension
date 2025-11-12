@@ -98,6 +98,21 @@ export {
   console.log('✅ Built firebase-dashboard.js');
 }
 
+async function copyPolyfill() {
+  const polyfillSource = path.join(
+    __dirname,
+    '..',
+    'node_modules',
+    'webextension-polyfill',
+    'dist',
+    'browser-polyfill.min.js'
+  );
+  const polyfillDest = path.join(BUNDLE_DIR, 'browser-polyfill.min.js');
+
+  fs.copyFileSync(polyfillSource, polyfillDest);
+  console.log('✅ Copied browser-polyfill.min.js');
+}
+
 async function build() {
   try {
     console.log('🔨 Building Firebase bundles...');
@@ -105,6 +120,7 @@ async function build() {
       buildBackgroundBundle(),
       buildDashboardBundle()
     ]);
+    copyPolyfill();
     console.log('✅ All bundles built successfully!');
   } catch (error) {
     console.error('❌ Build failed:', error);
