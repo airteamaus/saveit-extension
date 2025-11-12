@@ -24,7 +24,11 @@ jobs:
       - name: Build Firebase bundles
         run: node scripts/bundle-firebase.js
 
-      - name: Build and sign extension
+      - name: Build Chrome extension (unsigned zip)
+        run: |
+          npx web-ext build --overwrite-dest
+
+      - name: Build and sign Firefox extension
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
@@ -47,13 +51,34 @@ jobs:
           mv "$XPI_PATH" "$XPI_NAME"
           echo "XPI_NAME=$XPI_NAME" >> $GITHUB_OUTPUT
 
+      - name: Find and rename Chrome ZIP
+        id: find_zip
+        run: |
+          ZIP_PATH=$(find web-ext-artifacts -name "*.zip" -type f | head -n 1)
+          ZIP_NAME="saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
+          mv "$ZIP_PATH" "$ZIP_NAME"
+          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ steps.find_xpi.outputs.XPI_NAME }}
+          files: |
+            ${{ steps.find_xpi.outputs.XPI_NAME }}
+            ${{ steps.find_zip.outputs.ZIP_NAME }}
           generate_release_notes: true
           draft: false
           prerelease: false
+          body: |
+            ## Installation
+
+            **Firefox:** Download `saveit-${{ steps.get_version.outputs.VERSION }}.xpi` (signed)
+
+            **Chrome/Brave/Edge:** Download `saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip` (unsigned, for beta testing)
+            1. Extract the zip file
+            2. Open `chrome://extensions`
+            3. Enable "Developer mode"
+            4. Click "Load unpacked"
+            5. Select the extracted folder
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

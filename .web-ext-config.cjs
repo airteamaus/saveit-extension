@@ -1,31 +1,50 @@
+// web-ext configuration
+// https://extensionworkshop.com/documentation/develop/web-ext-command-reference/
+
 module.exports = {
-  // Ignore files that shouldn't be included in the build
+  build: {
+    overwriteDest: true,
+  },
   ignoreFiles: [
+    // Test files
+    'tests/**',
+    '**/*.test.js',
+    'vitest.config.js',
+    'playwright.config.js',
+
+    // Coverage reports
+    'coverage/**',
+
+    // Development files
+    'firefox-dev-profile/**',
     'scripts/**',
     'docs/**',
-    '*.md',
+    '.github/**',
+
+    // Config files
+    'eslint.config.js',
+    '.web-ext-config.js',
+    'justfile',
+
+    // Git files
+    '.git/**',
+    '.gitignore',
+
+    // Node files
+    'node_modules/**',
     'package.json',
     'package-lock.json',
-    '.web-ext-config.cjs',
-    '.gitignore',
-    '.git',
-    'node_modules',
-    'justfile',
-    '.github',
-    'firefox-dev-profile/**',
-    'test/**',
-    'test-*.html'
+
+    // Private key (should never be packaged)
+    'key.pem',
+
+    // Build artifacts
+    'web-ext-artifacts/**',
+
+    // Misc
+    '.DS_Store',
+    '*.log',
+    '.env*',
+    'updates.json',
   ],
-
-  // Build configuration
-  build: {
-    overwriteDest: true
-  },
-
-  // Linter configuration
-  lint: {
-    // We properly escape all user content with escapeHtml()
-    // These warnings are false positives
-    warningsAsErrors: false
-  }
 };
