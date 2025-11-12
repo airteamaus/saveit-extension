@@ -71,9 +71,24 @@ run:
 install:
     ./scripts/install-dev.sh
 
-# Build and sign the extension (requires AMO_JWT credentials)
+# Build extension for Firefox (requires AMO_JWT credentials)
 build:
     npm run build
+
+# Build extension for Chrome (universal build works for both browsers)
+build-chrome:
+    @just build-firebase
+    npx web-ext build --overwrite-dest
+
+# Build for both Firefox and Chrome
+build-all:
+    @just build
+    @just build-chrome
+
+# Run extension in Chrome for testing
+run-chrome:
+    @just build-firebase
+    npx web-ext run --target chromium
 
 # Bump version (patch/minor/major) and create git tag
 bump version="patch":
