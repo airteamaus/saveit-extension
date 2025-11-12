@@ -41,7 +41,27 @@ See also: [docs/README.md](docs/README.md), [Backend CLAUDE.md](../saveit-backen
 
 ## Architectural Principles
 
-**No backwards compatibility or legacy shims.** Preserve external APIs; break them only with explicit, tested migrations.
+**Backwards Compatibility Policy:**
+
+We do NOT maintain backwards compatibility except through explicit versioning.
+
+**What this means:**
+- ❌ No deprecated fields that "stick around for compatibility"
+- ❌ No fallback logic for "old format" vs "new format" in validators
+- ❌ No dual field names in response handling
+- ❌ No code paths like "try new API, fall back to old API"
+- ✅ Extension version matches expected backend API version
+- ✅ Use explicit API versioning (`/v1/`, `/v2/`) when breaking changes are needed
+- ✅ Update validators when backend schema changes (requires coordinated deployment)
+
+**Rationale:** Supporting multiple code paths for backwards compatibility adds complexity, makes testing harder, and creates technical debt. Instead, version explicitly and require matched backend/extension versions.
+
+**Deployment coordination:** Backend and extension versions must stay synchronized. Breaking changes require:
+1. Backend deploys new API version (e.g., `/v2/save`)
+2. Extension updates to call new version
+3. Old API version (`/v1/save`) can be removed after all users update
+
+**During development (pre-1.0):** We may keep deprecated fields for 1-2 weeks during coordinated deployments, then remove immediately.
 
 **KISS & YAGNI:**
 - Start with the simplest solution that works

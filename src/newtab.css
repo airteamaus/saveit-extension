@@ -452,6 +452,64 @@ body {
   padding: 0;
 }
 
+/* Tag Bar - Navigation bar for hierarchical tag browsing */
+.tag-bar {
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--spacing-sm) var(--spacing-lg);
+}
+
+.tag-bar-header {
+  margin-bottom: var(--spacing-sm);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.tag-bar-header .btn-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--color-text-light);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+}
+
+.tag-bar-header .btn-back:hover {
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+.tag-bar-header .breadcrumb {
+  font-size: 14px;
+  color: var(--color-text);
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.tag-bar-header .separator {
+  color: var(--color-text-lighter);
+  font-weight: 300;
+  margin: 0 var(--spacing-xs);
+}
+
+.tag-bar-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  padding: 0;
+  margin: 0;
+}
+
 .content {
   /* Grid layout (deprecated - replaced with row-based list) */
   /* display: grid;
@@ -636,16 +694,17 @@ body {
 
 /* General tags - subtle, foundational */
 .tag.tag-general {
-  background: var(--color-bg);
-  color: var(--color-text-light);
-  border: 1px solid var(--color-border);
+  background: rgba(34, 197, 94, 0.1);
+  color: #16a34a;
+  border: 1px solid rgba(34, 197, 94, 0.2);
   font-size: 10px;
   font-weight: 400;
 }
 
 .tag.tag-general:hover {
-  background: var(--color-border);
-  color: var(--color-text);
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #15803d;
 }
 
 /* Domain tags - most prominent */
@@ -686,14 +745,15 @@ html[data-theme="dark"] .tag.ai-tag:hover {
 }
 
 html[data-theme="dark"] .tag.tag-general {
-  background: #2a2a2a;
-  color: var(--color-text-light);
-  border-color: #3a3a3a;
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border-color: rgba(34, 197, 94, 0.3);
 }
 
 html[data-theme="dark"] .tag.tag-general:hover {
-  background: #3a3a3a;
-  color: var(--color-text);
+  background: rgba(34, 197, 94, 0.25);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #22c55e;
 }
 
 html[data-theme="dark"] .tag.tag-domain {
@@ -731,14 +791,15 @@ html[data-theme="dark"] .tag.tag-topic:hover {
   }
 
   html:not([data-theme="light"]) .tag.tag-general {
-    background: #2a2a2a;
-    color: var(--color-text-light);
-    border-color: #3a3a3a;
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+    border-color: rgba(34, 197, 94, 0.3);
   }
 
   html:not([data-theme="light"]) .tag.tag-general:hover {
-    background: #3a3a3a;
-    color: var(--color-text);
+    background: rgba(34, 197, 94, 0.25);
+    border-color: rgba(34, 197, 94, 0.5);
+    color: #22c55e;
   }
 
   html:not([data-theme="light"]) .tag.tag-domain {

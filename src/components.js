@@ -241,6 +241,79 @@ const Components = {
   },
 
   /**
+   * Render tag bar for navigation
+   * @param {Array<{type: string, label: string}>} tags - Array of tags to display
+   * @param {Object} [context] - Optional context for breadcrumb display
+   * @returns {string} HTML string (inner content only, without wrapper)
+   */
+  tagBar(tags, context = null) {
+    // If no tags and no context, return empty
+    if ((!tags || tags.length === 0) && !context) {
+      return '';
+    }
+
+    let headerHtml = '';
+
+    // Build breadcrumb header for discovery views and main dashboard
+    if (context) {
+      const breadcrumbs = [];
+      let showBackButton = true;
+
+      if (context.type === 'all') {
+        // Main dashboard: "All" only, no back button
+        breadcrumbs.push('All');
+        showBackButton = false;
+      } else if (context.type === 'topic' && context.grandparentLabel) {
+        // Topic level: "All › General › Domain › Topic"
+        breadcrumbs.push('All');
+        breadcrumbs.push(this.escapeHtml(context.grandparentLabel));
+        breadcrumbs.push(this.escapeHtml(context.parentLabel));
+        breadcrumbs.push(this.escapeHtml(context.label));
+      } else if (context.type === 'domain' && context.parentLabel) {
+        // Domain level: "All › General › Domain"
+        breadcrumbs.push('All');
+        breadcrumbs.push(this.escapeHtml(context.parentLabel));
+        breadcrumbs.push(this.escapeHtml(context.label));
+      } else if (context.type === 'general') {
+        // General level: "All › General"
+        breadcrumbs.push('All');
+        breadcrumbs.push(this.escapeHtml(context.label));
+      }
+
+      if (breadcrumbs.length > 0) {
+        const backButtonHtml = showBackButton ? `
+          <button class="btn-back" id="back-to-main" title="Back to all pages">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+          </button>
+        ` : '';
+
+        headerHtml = `
+          <div class="tag-bar-header">
+            ${backButtonHtml}
+            <span class="breadcrumb">${breadcrumbs.join(' <span class="separator">›</span> ')}</span>
+          </div>
+        `;
+      }
+    }
+
+    const tagsHtml = tags
+      .map(tag => {
+        const typeClass = tag.type ? `tag-${tag.type}` : '';
+        return `<button class="tag ai-tag ${typeClass}" data-type="${this.escapeHtml(tag.type || '')}" data-label="${this.escapeHtml(tag.label)}">${this.escapeHtml(tag.label)}</button>`;
+      })
+      .join('');
+
+    return `
+      ${headerHtml}
+      <div class="tag-bar-tags">
+        ${tagsHtml}
+      </div>
+    `;
+  },
+
+  /**
    * Render semantic search discovery results view
    * @param {Object} results - Search results with exact_matches, similar_matches, related_matches
    * @param {string} queryLabel - The tag label that was searched
