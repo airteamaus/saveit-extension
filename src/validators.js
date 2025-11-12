@@ -63,8 +63,14 @@ export const PageSchema = z.object({
  */
 export const GetPagesResponseSchema = z.object({
   pages: z.array(PageSchema),
+  // Legacy fields (deprecated)
   total: z.number().int().nonnegative().optional(),
-  hasMore: z.boolean().optional()
+  hasMore: z.boolean().optional(),
+  // New pagination fields
+  pagination: z.object({
+    nextCursor: z.string().nullable(),
+    hasNextPage: z.boolean()
+  }).optional()
 });
 
 export const SearchResultSchema = z.object({
