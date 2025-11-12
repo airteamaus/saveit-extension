@@ -1,7 +1,6 @@
 // mock-data.js - Sample saved pages for development/testing
 // This data is only used when running newtab.html standalone (not in extension mode)
 
-/* eslint-disable-next-line no-unused-vars */
 const MOCK_DATA = [
   {
     id: '1',
