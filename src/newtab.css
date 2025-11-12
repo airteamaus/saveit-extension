@@ -496,6 +496,16 @@ body {
   gap: var(--spacing-xs);
 }
 
+.tag-bar-header .breadcrumb a {
+  color: var(--color-text);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.tag-bar-header .breadcrumb a:hover {
+  text-decoration: underline;
+}
+
 .tag-bar-header .separator {
   color: var(--color-text-lighter);
   font-weight: 300;

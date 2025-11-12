@@ -438,6 +438,28 @@ class SaveItDashboard {
       });
     }
 
+    // Add click handlers for breadcrumb links
+    tagBarContainer.querySelectorAll('.breadcrumb a').forEach(link => {
+      link.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const action = link.dataset.action;
+        const label = link.dataset.label;
+        const parent = link.dataset.parent;
+        const grandparent = link.dataset.grandparent;
+
+        if (action === 'show-all') {
+          this.exitDiscoveryMode();
+        } else if (action === 'filter-general' && label) {
+          this.discoverByTag(label, 'general');
+        } else if (action === 'filter-domain' && label && parent) {
+          this.discoverByTag(label, 'domain');
+        } else if (action === 'filter-topic' && label && parent && grandparent) {
+          this.discoverByTag(label, 'topic');
+        }
+      });
+    });
+
     // Add click handlers for tag bar tags
     tagBarContainer.querySelectorAll('.tag.ai-tag').forEach(tagElement => {
       tagElement.addEventListener('click', (e) => {
