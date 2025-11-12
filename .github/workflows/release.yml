@@ -26,6 +26,8 @@ jobs:
 
       - name: Build Chrome extension (unsigned zip)
         run: |
+          # Build creates universal package that works for both Firefox and Chrome
+          # Chrome will use service_worker, Firefox will use scripts array
           npx web-ext build --overwrite-dest
 
       - name: Build and sign Firefox extension
@@ -69,16 +71,35 @@ jobs:
           draft: false
           prerelease: false
           body: |
-            ## Installation
+            ## 📦 Downloads
 
-            **Firefox:** Download `saveit-${{ steps.get_version.outputs.VERSION }}.xpi` (signed)
+            ### 🦊 Firefox (Recommended - Auto-updates enabled)
+            **Download:** `saveit-${{ steps.get_version.outputs.VERSION }}.xpi` ✅ Signed by Mozilla
 
-            **Chrome/Brave/Edge:** Download `saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip` (unsigned, for beta testing)
-            1. Extract the zip file
-            2. Open `chrome://extensions`
-            3. Enable "Developer mode"
-            4. Click "Load unpacked"
-            5. Select the extracted folder
+            **Installation:**
+            1. Click the `.xpi` file to download
+            2. Firefox will prompt to install
+            3. Click "Add" to confirm
+            4. Extension will auto-update when new versions are released
+
+            ---
+
+            ### 🌐 Chrome / Brave / Edge (Developer Mode - Manual updates)
+            **Download:** `saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip` ⚠️ Unsigned (for testing/sideloading)
+
+            **Installation:**
+            1. Download and **extract** the `.zip` file
+            2. Open your browser's extensions page:
+               - Chrome: `chrome://extensions`
+               - Brave: `brave://extensions`
+               - Edge: `edge://extensions`
+            3. Enable **"Developer mode"** (toggle in top right)
+            4. Click **"Load unpacked"**
+            5. Select the **extracted folder** (the folder containing `manifest.json`)
+
+            **Note:** Chrome builds are unsigned and require developer mode. You'll need to manually download and install new versions when they're released.
+
+            ---
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
