@@ -19,6 +19,8 @@ class SaveItDashboard {
     this.debounceTimer = null;
     this.discoveryMode = false; // Track if we're in discovery view
     this.currentDiscoveryLabel = null; // Store current discovery query
+    this.currentDiscoveryType = null; // Store classification type (general/domain/topic)
+    this.currentDiscoveryContext = null; // Store parent context for breadcrumbs
   }
 
   /**
@@ -251,9 +253,211 @@ class SaveItDashboard {
   }
 
   /**
+   * Extract unique general-level tags from all pages
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractGeneralTags() {
+    const tagMap = new Map();
+
+    this.pages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        page.classifications.forEach(c => {
+          if (c.type === 'general' && c.label) {
+            tagMap.set(c.label, { type: 'general', label: c.label });
+          }
+        });
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract sibling tags based on current discovery context
+   * Uses allPages to ensure we search across all data, not just filtered results
+   * @param {string} currentType - Current classification type (general/domain/topic)
+   * @param {string} currentLabel - Current tag label
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractSiblingTags(currentType, currentLabel) {
+    const tagMap = new Map();
+    const searchPages = this.allPages.length > 0 ? this.allPages : this.pages;
+
+    if (currentType === 'general') {
+      // For general level, show all domain tags within this general category
+      searchPages.forEach(page => {
+        if (page.classifications) {
+          const pageGeneral = page.classifications.find(c => c.type === 'general');
+          if (pageGeneral && pageGeneral.label === currentLabel) {
+            const domainTags = page.classifications.filter(c => c.type === 'domain');
+            domainTags.forEach(tag => {
+              tagMap.set(tag.label, { type: 'domain', label: tag.label });
+            });
+          }
+        }
+      });
+    } else if (currentType === 'domain') {
+      // Find the general parent of this domain
+      let generalParent = null;
+      for (const page of searchPages) {
+        if (page.classifications) {
+          const domainTag = page.classifications.find(c => c.type === 'domain' && c.label === currentLabel);
+          if (domainTag) {
+            generalParent = page.classifications.find(c => c.type === 'general');
+            break;
+          }
+        }
+      }
+
+      // Extract all domain tags that share the same general parent
+      if (generalParent) {
+        searchPages.forEach(page => {
+          if (page.classifications) {
+            const pageGeneral = page.classifications.find(c => c.type === 'general');
+            if (pageGeneral && pageGeneral.label === generalParent.label) {
+              const domainTags = page.classifications.filter(c => c.type === 'domain');
+              domainTags.forEach(tag => {
+                if (tag.label !== currentLabel) { // Exclude current tag
+                  tagMap.set(tag.label, { type: 'domain', label: tag.label });
+                }
+              });
+            }
+          }
+        });
+      }
+    } else if (currentType === 'topic') {
+      // Find the domain parent of this topic
+      let domainParent = null;
+      for (const page of searchPages) {
+        if (page.classifications) {
+          const topicTag = page.classifications.find(c => c.type === 'topic' && c.label === currentLabel);
+          if (topicTag) {
+            domainParent = page.classifications.find(c => c.type === 'domain');
+            break;
+          }
+        }
+      }
+
+      // Extract all topic tags that share the same domain parent
+      if (domainParent) {
+        searchPages.forEach(page => {
+          if (page.classifications) {
+            const pageDomain = page.classifications.find(c => c.type === 'domain');
+            if (pageDomain && pageDomain.label === domainParent.label) {
+              const topicTags = page.classifications.filter(c => c.type === 'topic');
+              topicTags.forEach(tag => {
+                if (tag.label !== currentLabel) { // Exclude current tag
+                  tagMap.set(tag.label, { type: 'topic', label: tag.label });
+                }
+              });
+            }
+          }
+        });
+      }
+    }
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Build breadcrumb context for a given classification
+   * Uses allPages to ensure we search across all data
+   * @param {string} type - Classification type (general/domain/topic)
+   * @param {string} label - Classification label
+   * @returns {Object|null} Context object with hierarchy info
+   */
+  buildBreadcrumbContext(type, label) {
+    const searchPages = this.allPages.length > 0 ? this.allPages : this.pages;
+
+    // Find a page that has this classification
+    for (const page of searchPages) {
+      if (!page.classifications) continue;
+
+      const targetTag = page.classifications.find(c => c.type === type && c.label === label);
+      if (!targetTag) continue;
+
+      if (type === 'general') {
+        return {
+          type: 'general',
+          label: label
+        };
+      } else if (type === 'domain') {
+        const generalTag = page.classifications.find(c => c.type === 'general');
+        return {
+          type: 'domain',
+          label: label,
+          parentLabel: generalTag ? generalTag.label : null
+        };
+      } else if (type === 'topic') {
+        const domainTag = page.classifications.find(c => c.type === 'domain');
+        const generalTag = page.classifications.find(c => c.type === 'general');
+        return {
+          type: 'topic',
+          label: label,
+          parentLabel: domainTag ? domainTag.label : null,
+          grandparentLabel: generalTag ? generalTag.label : null
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Render tag bar
+   */
+  renderTagBar() {
+    const tagBarContainer = document.getElementById('tag-bar');
+    if (!tagBarContainer) {
+      console.warn('Tag bar container not found');
+      return;
+    }
+
+    let tags = [];
+    let context = null;
+
+    if (this.discoveryMode && this.currentDiscoveryType && this.currentDiscoveryLabel) {
+      // Discovery mode - show sibling tags and breadcrumb
+      tags = this.extractSiblingTags(this.currentDiscoveryType, this.currentDiscoveryLabel);
+      context = this.currentDiscoveryContext;
+    } else {
+      // Main dashboard - show general-level tags with "All" breadcrumb
+      tags = this.extractGeneralTags();
+      context = { type: 'all', label: 'All' };
+    }
+
+    const html = Components.tagBar(tags, context);
+    tagBarContainer.innerHTML = html;
+
+    // Add click handler for back button
+    const backBtn = tagBarContainer.querySelector('#back-to-main');
+    if (backBtn) {
+      backBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this.exitDiscoveryMode();
+      });
+    }
+
+    // Add click handlers for tag bar tags
+    tagBarContainer.querySelectorAll('.tag.ai-tag').forEach(tagElement => {
+      tagElement.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const label = tagElement.dataset.label;
+        const type = tagElement.dataset.type;
+        if (label && type) {
+          this.discoverByTag(label, type);
+        }
+      });
+    });
+  }
+
+  /**
    * Render pages to DOM
    */
   render() {
+    // Render tag bar first
+    this.renderTagBar();
+
     const container = document.getElementById('content');
 
     if (this.pages.length === 0) {
@@ -447,8 +651,9 @@ class SaveItDashboard {
       if (tagElement) {
         e.stopPropagation();
         const label = tagElement.dataset.label;
-        if (label) {
-          this.discoverByTag(label);
+        const type = tagElement.dataset.type;
+        if (label && type) {
+          this.discoverByTag(label, type);
         }
         return;
       }
@@ -585,10 +790,16 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
 
   /**
    * Enter discovery mode - search for pages by tag similarity
+   * @param {string} label - Tag label to search for
+   * @param {string} type - Classification type (general/domain/topic)
    */
-  async discoverByTag(label) {
+  async discoverByTag(label, type) {
     this.discoveryMode = true;
     this.currentDiscoveryLabel = label;
+    this.currentDiscoveryType = type;
+
+    // Build breadcrumb context for this classification
+    this.currentDiscoveryContext = this.buildBreadcrumbContext(type, label);
 
     // Show loading state
     this.showLoading();
@@ -606,7 +817,7 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
    * Render discovery results
    * Combines all result tiers into flat list and renders like home view
    */
-  renderDiscoveryResults(results, queryLabel) {
+  renderDiscoveryResults(results, _queryLabel) {
     // Flatten all tiers into single array
     const allResults = [
       ...(results.exact_matches || []),
@@ -614,26 +825,14 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
       ...(results.related_matches || [])
     ];
 
+    // Store results as pages for tag extraction
+    this.pages = allResults.map(match => match.thing_data);
+
     const totalResults = allResults.length;
     const container = document.getElementById('content');
 
-    // Render header
-    const header = `
-      <div class="discovery-header">
-        <button class="btn-back" id="back-to-main" title="Back to all pages">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="15 18 9 12 15 6"></polyline>
-          </svg>
-        </button>
-        <div class="discovery-title">
-          <h2>Discovery: <span class="highlight">${Components.escapeHtml(queryLabel)}</span></h2>
-          <p class="discovery-subtitle">${totalResults} related ${totalResults === 1 ? 'page' : 'pages'}</p>
-        </div>
-      </div>
-    `;
-
     if (totalResults === 0) {
-      container.innerHTML = header + `
+      container.innerHTML = `
         <div class="empty-state">
           <svg class="empty-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="11" cy="11" r="8"></circle>
@@ -648,8 +847,11 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
       const cardsHtml = allResults
         .map(match => Components.savedPageCard(match.thing_data))
         .join('');
-      container.innerHTML = header + cardsHtml;
+      container.innerHTML = cardsHtml;
     }
+
+    // Render tag bar after updating pages
+    this.renderTagBar();
   }
 
   /**
@@ -658,6 +860,13 @@ ${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. 
   exitDiscoveryMode() {
     this.discoveryMode = false;
     this.currentDiscoveryLabel = null;
+    this.currentDiscoveryType = null;
+    this.currentDiscoveryContext = null;
+
+    // Restore original pages from allPages
+    this.pages = this.allPages.slice();
+    this.applyClientFilters();
+
     this.render();
   }
 }
