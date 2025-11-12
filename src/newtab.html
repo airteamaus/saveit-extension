@@ -128,6 +128,8 @@
   </footer>
 
   <!-- Load scripts in dependency order -->
+  <!-- Polyfill must load first to provide browser.* API in Chrome/Brave -->
+  <script src="bundles/browser-polyfill.min.js"></script>
   <script type="module" src="config-loader.js"></script>
   <script type="module" src="firebase-init-dashboard.js"></script>
   <script src="mock-data.js"></script>
