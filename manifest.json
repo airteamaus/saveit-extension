@@ -26,6 +26,7 @@
       "src/bundles/browser-polyfill.min.js",
       "src/background.js"
     ],
+    "service_worker": "src/bundles/background-bundle.js",
     "type": "module"
   },
   "action": {
