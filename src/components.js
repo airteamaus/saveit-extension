@@ -260,23 +260,19 @@ const Components = {
       let showBackButton = true;
 
       if (context.type === 'all') {
-        // Main dashboard: "All" only, no back button
-        breadcrumbs.push('<a href="#" data-action="show-all">All</a>');
+        // Main dashboard: no breadcrumb, no back button
         showBackButton = false;
       } else if (context.type === 'topic' && context.grandparentLabel) {
-        // Topic level: "All › General › Domain › Topic"
-        breadcrumbs.push('<a href="#" data-action="show-all">All</a>');
+        // Topic level: "General › Domain › Topic"
         breadcrumbs.push(`<a href="#" data-action="filter-general" data-label="${this.escapeHtml(context.grandparentLabel)}">${this.escapeHtml(context.grandparentLabel)}</a>`);
         breadcrumbs.push(`<a href="#" data-action="filter-domain" data-label="${this.escapeHtml(context.parentLabel)}" data-parent="${this.escapeHtml(context.grandparentLabel)}">${this.escapeHtml(context.parentLabel)}</a>`);
         breadcrumbs.push(`<a href="#" data-action="filter-topic" data-label="${this.escapeHtml(context.label)}" data-parent="${this.escapeHtml(context.parentLabel)}" data-grandparent="${this.escapeHtml(context.grandparentLabel)}">${this.escapeHtml(context.label)}</a>`);
       } else if (context.type === 'domain' && context.parentLabel) {
-        // Domain level: "All › General › Domain"
-        breadcrumbs.push('<a href="#" data-action="show-all">All</a>');
+        // Domain level: "General › Domain"
         breadcrumbs.push(`<a href="#" data-action="filter-general" data-label="${this.escapeHtml(context.parentLabel)}">${this.escapeHtml(context.parentLabel)}</a>`);
         breadcrumbs.push(`<a href="#" data-action="filter-domain" data-label="${this.escapeHtml(context.label)}" data-parent="${this.escapeHtml(context.parentLabel)}">${this.escapeHtml(context.label)}</a>`);
       } else if (context.type === 'general') {
-        // General level: "All › General"
-        breadcrumbs.push('<a href="#" data-action="show-all">All</a>');
+        // General level: just "General"
         breadcrumbs.push(`<a href="#" data-action="filter-general" data-label="${this.escapeHtml(context.label)}">${this.escapeHtml(context.label)}</a>`);
       }
 
