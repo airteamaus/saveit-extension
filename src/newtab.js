@@ -14,13 +14,19 @@ class SaveItDashboard {
       sort: 'newest',
       category: '',
       offset: 0,
-      limit: 100 // Load more for client-side filtering
+      limit: 50 // Pages per batch for infinite scroll
     };
     this.debounceTimer = null;
     this.discoveryMode = false; // Track if we're in discovery view
     this.currentDiscoveryLabel = null; // Store current discovery query
     this.currentDiscoveryType = null; // Store classification type (general/domain/topic)
     this.currentDiscoveryContext = null; // Store parent context for breadcrumbs
+
+    // Infinite scroll state
+    this.isLoadingMore = false;
+    this.hasMorePages = true;
+    this.nextCursor = null;
+    this.scrollObserver = null;
   }
 
   /**
@@ -161,7 +167,18 @@ class SaveItDashboard {
    */
   async loadPages() {
     try {
-      this.allPages = await API.getSavedPages(this.currentFilter);
+      const response = await API.getSavedPages(this.currentFilter);
+
+      // Handle response structure (pages array or object with pagination)
+      if (Array.isArray(response)) {
+        this.allPages = response;
+        this.hasMorePages = response.length >= this.currentFilter.limit;
+      } else {
+        this.allPages = response.pages || [];
+        this.hasMorePages = response.pagination?.hasNextPage || false;
+        this.nextCursor = response.pagination?.nextCursor || null;
+      }
+
       this.applyClientFilters();
       this.updateStats();
     } catch (error) {
@@ -711,6 +728,9 @@ class SaveItDashboard {
       e.preventDefault();
       this.showAbout();
     });
+
+    // Setup infinite scroll observer
+    this.setupInfiniteScroll();
   }
 
   /**
@@ -720,6 +740,103 @@ class SaveItDashboard {
     this.applyClientFilters();
     this.updateStats();
     this.render();
+  }
+
+  /**
+   * Setup infinite scroll using Intersection Observer
+   */
+  setupInfiniteScroll() {
+    // Create sentinel element to observe
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    sentinel.style.height = '1px';
+    document.getElementById('content').appendChild(sentinel);
+
+    // Create observer
+    this.scrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && this.hasMorePages && !this.isLoadingMore) {
+          this.loadMorePages();
+        }
+      },
+      {
+        root: null, // viewport
+        rootMargin: '200px', // Trigger 200px before reaching sentinel
+        threshold: 0
+      }
+    );
+
+    this.scrollObserver.observe(sentinel);
+  }
+
+  /**
+   * Load more pages (infinite scroll)
+   */
+  async loadMorePages() {
+    if (this.isLoadingMore || !this.hasMorePages) return;
+
+    this.isLoadingMore = true;
+    this.showLoadingIndicator();
+
+    try {
+      // Update offset for next batch
+      this.currentFilter.offset += this.currentFilter.limit;
+
+      const response = await API.getSavedPages(this.currentFilter);
+
+      // Handle response structure (pages array or object with pagination)
+      let newPages = [];
+      if (Array.isArray(response)) {
+        newPages = response;
+        this.hasMorePages = response.length >= this.currentFilter.limit;
+      } else {
+        newPages = response.pages || [];
+        this.hasMorePages = response.pagination?.hasNextPage || false;
+        this.nextCursor = response.pagination?.nextCursor || null;
+      }
+
+      // Append new pages to existing
+      this.allPages = [...this.allPages, ...newPages];
+      this.applyClientFilters();
+      this.updateStats();
+      this.render();
+
+    } catch (error) {
+      console.error('Failed to load more pages:', error);
+      this.showError(error);
+    } finally {
+      this.isLoadingMore = false;
+      this.hideLoadingIndicator();
+    }
+  }
+
+  /**
+   * Show loading indicator for infinite scroll
+   */
+  showLoadingIndicator() {
+    let indicator = document.getElementById('loading-indicator');
+    if (!indicator) {
+      indicator = document.createElement('div');
+      indicator.id = 'loading-indicator';
+      indicator.className = 'loading-indicator';
+      indicator.innerHTML = `
+        <div class="loading-spinner"></div>
+        <span>Loading more pages...</span>
+      `;
+      document.getElementById('content').appendChild(indicator);
+    }
+    indicator.style.display = 'flex';
+  }
+
+  /**
+   * Hide loading indicator
+   */
+  hideLoadingIndicator() {
+    const indicator = document.getElementById('loading-indicator');
+    if (indicator) {
+      indicator.style.display = 'none';
+    }
   }
 
   /**

@@ -236,3 +236,21 @@ const MOCK_DATA = [
     ai_enriched_at: '2024-01-13T16:50:00Z'
   }
 ];
+
+// Extend mock data for infinite scroll testing (duplicate items with new IDs)
+// This gives us enough items to test pagination
+if (typeof window !== 'undefined' && !window.MOCK_DATA_EXTENDED) {
+  const extended = [];
+  for (let i = 0; i < 10; i++) {
+    MOCK_DATA.forEach((item, index) => {
+      extended.push({
+        ...item,
+        id: `${item.id}-copy-${i}-${index}`,
+        title: `[Copy ${i + 1}] ${item.title}`,
+        timestamp: new Date(Date.now() - (i * 86400000) - (index * 3600000)).toISOString()
+      });
+    });
+  }
+  MOCK_DATA.push(...extended);
+  window.MOCK_DATA_EXTENDED = true;
+}
