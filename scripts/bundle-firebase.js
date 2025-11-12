@@ -98,6 +98,31 @@ export {
   console.log('✅ Built firebase-dashboard.js');
 }
 
+async function bundleBackgroundScript() {
+  // Read polyfill to prepend to bundle
+  const polyfillPath = path.join(
+    __dirname,
+    '..',
+    'node_modules',
+    'webextension-polyfill',
+    'dist',
+    'browser-polyfill.min.js'
+  );
+  const polyfillContent = fs.readFileSync(polyfillPath, 'utf8');
+
+  // Bundle background.js with all imports + polyfill prepended
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: [path.join(SRC_DIR, 'background.js')],
+    outfile: path.join(BUNDLE_DIR, 'background-bundle.js'),
+    banner: {
+      js: polyfillContent
+    },
+  });
+
+  console.log('✅ Built background-bundle.js (with polyfill)');
+}
+
 async function copyPolyfill() {
   const polyfillSource = path.join(
     __dirname,
@@ -118,7 +143,8 @@ async function build() {
     console.log('🔨 Building Firebase bundles...');
     await Promise.all([
       buildBackgroundBundle(),
-      buildDashboardBundle()
+      buildDashboardBundle(),
+      bundleBackgroundScript()
     ]);
     copyPolyfill();
     console.log('✅ All bundles built successfully!');
