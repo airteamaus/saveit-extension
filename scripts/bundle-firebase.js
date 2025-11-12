@@ -141,11 +141,13 @@ async function copyPolyfill() {
 async function build() {
   try {
     console.log('🔨 Building Firebase bundles...');
+    // Build Firebase bundles first (background.js depends on these)
     await Promise.all([
       buildBackgroundBundle(),
       buildDashboardBundle(),
-      bundleBackgroundScript()
     ]);
+    // Then bundle background.js (which imports from firebase-background.js)
+    await bundleBackgroundScript();
     copyPolyfill();
     console.log('✅ All bundles built successfully!');
   } catch (error) {
