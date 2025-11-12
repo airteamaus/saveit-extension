@@ -1,5 +1,11 @@
 echo "🔍 Running pre-push checks..."
 
+# Skip pre-push checks in CI environments
+if [ -n "$CI" ]; then
+  echo "⏭️  Skipping pre-push checks in CI environment"
+  exit 0
+fi
+
 # Extract version from manifest.json
 MANIFEST_VERSION=$(jq -r '.version' manifest.json)
 
