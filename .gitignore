@@ -6,7 +6,6 @@ firefox-dev-profile/
 
 # Node modules
 node_modules/
-package-lock.json
 
 # Extension build artifacts
 web-ext-artifacts/
