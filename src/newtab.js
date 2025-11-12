@@ -890,14 +890,17 @@ class SaveItDashboard {
   showAbout() {
     const mode = API.isExtension ? 'Extension' : 'Development';
     const version = browser?.runtime ? browser.runtime.getManifest().version : 'standalone';
-    const message = `SaveIt Dashboard
+    const message = `SaveIt
 
-Mode: ${mode}
-Version: ${version}
+The web is infinite, but human attention is not.
 
-SaveIt helps you save and rediscover web pages with AI-powered metadata and intelligent discovery.
+Every page you save represents a moment of curiosity—a thread worth pulling. SaveIt helps you rediscover those moments by understanding what each page is really about, not just what you called it.
 
-${!API.isExtension ? '\n⚠️  Currently viewing mock data in standalone mode. Load as browser extension to see your real saved pages.' : ''}`;
+Traditional bookmarks are write-only. You save them with good intentions, then never see them again. SaveIt is different: AI-powered classification reveals unexpected connections between your saved pages, helping you stumble upon the right thing at the right time.
+
+Think of it as a garden for your ideas. Not everything needs a folder. Some of the best discoveries happen when you let things grow and see what naturally connects.
+
+Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently viewing mock data. Load as browser extension to see your saved pages.' : ''}`;
 
     alert(message);
   }
