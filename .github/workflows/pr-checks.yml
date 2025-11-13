@@ -24,6 +24,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build bundles
+        run: node scripts/bundle-firebase.js
+
       - name: Run ESLint
         run: npm run lint
 
