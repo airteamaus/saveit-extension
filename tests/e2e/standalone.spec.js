@@ -183,8 +183,8 @@ test.describe('Standalone Mode', () => {
     await expect(header).toBeVisible();
     await expect(header).toContainText('Discovery:');
 
-    // Check back button exists
-    const backButton = page.locator('#back-to-main');
+    // Check back button exists (be specific to avoid duplicate ID issue)
+    const backButton = page.locator('.discovery-header #back-to-main');
     await expect(backButton).toBeVisible();
   });
 
