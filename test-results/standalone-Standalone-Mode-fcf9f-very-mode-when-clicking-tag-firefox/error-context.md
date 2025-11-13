@@ -1,0 +1,631 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "SaveIt" [level=1] [ref=e5]:
+          - img [ref=e6]
+          - text: SaveIt
+        - generic [ref=e8]: 50 pages saved
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - img
+          - textbox "Search saved pages..." [ref=e11]
+        - radiogroup "Theme selection" [ref=e12]:
+          - button "Auto theme" [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+            - text: Auto
+          - button "Light theme" [ref=e17] [cursor=pointer]:
+            - img [ref=e18]
+            - text: Light
+          - button "Dark theme" [ref=e28] [cursor=pointer]:
+            - img [ref=e29]
+            - text: Dark
+  - main [ref=e31]:
+    - generic [ref=e32]:
+      - generic [ref=e33]:
+        - button "Back to all pages" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+        - link "Computer Science" [ref=e38] [cursor=pointer]:
+          - /url: "#"
+      - generic [ref=e39]:
+        - button "Artificial Intelligence" [ref=e40] [cursor=pointer]
+        - button "Software Engineering" [ref=e41] [cursor=pointer]
+        - button "Web Development" [ref=e42] [cursor=pointer]
+    - generic [ref=e43]:
+      - generic [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]:
+          - 'heading "awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e47]'
+          - paragraph [ref=e48]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e49]:
+            - generic [ref=e50]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e51]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e52]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e53]': Software Engineering
+              - generic [ref=e54]: javascript
+              - generic [ref=e55]: opensource
+            - button "Delete page" [ref=e56]:
+              - img [ref=e57]
+        - generic [ref=e60]:
+          - generic [ref=e61]: github.com
+          - generic [ref=e62]: • 5 min read
+      - generic [ref=e63] [cursor=pointer]:
+        - generic [ref=e64]:
+          - heading "Advances in Large Language Model Reasoning" [level=3] [ref=e66]
+          - paragraph [ref=e67]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e68]:
+            - generic [ref=e69]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e70]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e71]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e72]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e73]': Large Language Models
+              - generic [ref=e74]: ai
+              - generic [ref=e75]: research
+              - generic [ref=e76]: llm
+            - button "Delete page" [ref=e77]:
+              - img [ref=e78]
+        - generic [ref=e81]:
+          - generic [ref=e82]: Research Team
+          - generic [ref=e83]: • Jan 16, 2024
+          - generic [ref=e84]: • arxiv.org
+          - generic [ref=e85]: • 45 min read
+      - generic [ref=e86] [cursor=pointer]:
+        - generic [ref=e87]:
+          - 'heading "[Copy 1] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e89]'
+          - paragraph [ref=e90]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e91]:
+            - generic [ref=e92]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e93]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e94]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e95]': Software Engineering
+              - generic [ref=e96]: javascript
+              - generic [ref=e97]: opensource
+            - button "Delete page" [ref=e98]:
+              - img [ref=e99]
+        - generic [ref=e102]:
+          - generic [ref=e103]: github.com
+          - generic [ref=e104]: • 5 min read
+      - generic [ref=e105] [cursor=pointer]:
+        - generic [ref=e106]:
+          - heading "[Copy 1] Advances in Large Language Model Reasoning" [level=3] [ref=e108]
+          - paragraph [ref=e109]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e110]:
+            - generic [ref=e111]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e112]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e113]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e114]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e115]': Large Language Models
+              - generic [ref=e116]: ai
+              - generic [ref=e117]: research
+              - generic [ref=e118]: llm
+            - button "Delete page" [ref=e119]:
+              - img [ref=e120]
+        - generic [ref=e123]:
+          - generic [ref=e124]: Research Team
+          - generic [ref=e125]: • Jan 16, 2024
+          - generic [ref=e126]: • arxiv.org
+          - generic [ref=e127]: • 45 min read
+      - generic [ref=e128] [cursor=pointer]:
+        - generic [ref=e129]:
+          - 'heading "[Copy 2] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e131]'
+          - paragraph [ref=e132]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e135]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e136]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e137]': Software Engineering
+              - generic [ref=e138]: javascript
+              - generic [ref=e139]: opensource
+            - button "Delete page" [ref=e140]:
+              - img [ref=e141]
+        - generic [ref=e144]:
+          - generic [ref=e145]: github.com
+          - generic [ref=e146]: • 5 min read
+      - generic [ref=e147] [cursor=pointer]:
+        - generic [ref=e148]:
+          - heading "[Copy 2] Advances in Large Language Model Reasoning" [level=3] [ref=e150]
+          - paragraph [ref=e151]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e152]:
+            - generic [ref=e153]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e154]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e155]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e156]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e157]': Large Language Models
+              - generic [ref=e158]: ai
+              - generic [ref=e159]: research
+              - generic [ref=e160]: llm
+            - button "Delete page" [ref=e161]:
+              - img [ref=e162]
+        - generic [ref=e165]:
+          - generic [ref=e166]: Research Team
+          - generic [ref=e167]: • Jan 16, 2024
+          - generic [ref=e168]: • arxiv.org
+          - generic [ref=e169]: • 45 min read
+      - generic [ref=e170] [cursor=pointer]:
+        - generic [ref=e171]:
+          - 'heading "[Copy 3] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e173]'
+          - paragraph [ref=e174]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e175]:
+            - generic [ref=e176]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e177]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e178]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e179]': Software Engineering
+              - generic [ref=e180]: javascript
+              - generic [ref=e181]: opensource
+            - button "Delete page" [ref=e182]:
+              - img [ref=e183]
+        - generic [ref=e186]:
+          - generic [ref=e187]: github.com
+          - generic [ref=e188]: • 5 min read
+      - generic [ref=e189] [cursor=pointer]:
+        - generic [ref=e190]:
+          - heading "[Copy 3] Advances in Large Language Model Reasoning" [level=3] [ref=e192]
+          - paragraph [ref=e193]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e194]:
+            - generic [ref=e195]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e196]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e197]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e198]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e199]': Large Language Models
+              - generic [ref=e200]: ai
+              - generic [ref=e201]: research
+              - generic [ref=e202]: llm
+            - button "Delete page" [ref=e203]:
+              - img [ref=e204]
+        - generic [ref=e207]:
+          - generic [ref=e208]: Research Team
+          - generic [ref=e209]: • Jan 16, 2024
+          - generic [ref=e210]: • arxiv.org
+          - generic [ref=e211]: • 45 min read
+      - generic [ref=e212] [cursor=pointer]:
+        - generic [ref=e213]:
+          - 'heading "[Copy 4] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e215]'
+          - paragraph [ref=e216]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e217]:
+            - generic [ref=e218]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e219]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e220]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e221]': Software Engineering
+              - generic [ref=e222]: javascript
+              - generic [ref=e223]: opensource
+            - button "Delete page" [ref=e224]:
+              - img [ref=e225]
+        - generic [ref=e228]:
+          - generic [ref=e229]: github.com
+          - generic [ref=e230]: • 5 min read
+      - generic [ref=e231] [cursor=pointer]:
+        - generic [ref=e232]:
+          - heading "[Copy 4] Advances in Large Language Model Reasoning" [level=3] [ref=e234]
+          - paragraph [ref=e235]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e236]:
+            - generic [ref=e237]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e238]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e239]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e240]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e241]': Large Language Models
+              - generic [ref=e242]: ai
+              - generic [ref=e243]: research
+              - generic [ref=e244]: llm
+            - button "Delete page" [ref=e245]:
+              - img [ref=e246]
+        - generic [ref=e249]:
+          - generic [ref=e250]: Research Team
+          - generic [ref=e251]: • Jan 16, 2024
+          - generic [ref=e252]: • arxiv.org
+          - generic [ref=e253]: • 45 min read
+      - generic [ref=e254] [cursor=pointer]:
+        - generic [ref=e255]:
+          - 'heading "[Copy 5] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e257]'
+          - paragraph [ref=e258]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e259]:
+            - generic [ref=e260]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e261]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e262]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e263]': Software Engineering
+              - generic [ref=e264]: javascript
+              - generic [ref=e265]: opensource
+            - button "Delete page" [ref=e266]:
+              - img [ref=e267]
+        - generic [ref=e270]:
+          - generic [ref=e271]: github.com
+          - generic [ref=e272]: • 5 min read
+      - generic [ref=e273] [cursor=pointer]:
+        - generic [ref=e274]:
+          - heading "[Copy 5] Advances in Large Language Model Reasoning" [level=3] [ref=e276]
+          - paragraph [ref=e277]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e278]:
+            - generic [ref=e279]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e280]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e281]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e282]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e283]': Large Language Models
+              - generic [ref=e284]: ai
+              - generic [ref=e285]: research
+              - generic [ref=e286]: llm
+            - button "Delete page" [ref=e287]:
+              - img [ref=e288]
+        - generic [ref=e291]:
+          - generic [ref=e292]: Research Team
+          - generic [ref=e293]: • Jan 16, 2024
+          - generic [ref=e294]: • arxiv.org
+          - generic [ref=e295]: • 45 min read
+      - generic [ref=e296] [cursor=pointer]:
+        - generic [ref=e297]:
+          - 'heading "[Copy 6] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e299]'
+          - paragraph [ref=e300]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e301]:
+            - generic [ref=e302]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e303]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e304]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e305]': Software Engineering
+              - generic [ref=e306]: javascript
+              - generic [ref=e307]: opensource
+            - button "Delete page" [ref=e308]:
+              - img [ref=e309]
+        - generic [ref=e312]:
+          - generic [ref=e313]: github.com
+          - generic [ref=e314]: • 5 min read
+      - generic [ref=e315] [cursor=pointer]:
+        - generic [ref=e316]:
+          - heading "[Copy 6] Advances in Large Language Model Reasoning" [level=3] [ref=e318]
+          - paragraph [ref=e319]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e320]:
+            - generic [ref=e321]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e322]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e323]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e324]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e325]': Large Language Models
+              - generic [ref=e326]: ai
+              - generic [ref=e327]: research
+              - generic [ref=e328]: llm
+            - button "Delete page" [ref=e329]:
+              - img [ref=e330]
+        - generic [ref=e333]:
+          - generic [ref=e334]: Research Team
+          - generic [ref=e335]: • Jan 16, 2024
+          - generic [ref=e336]: • arxiv.org
+          - generic [ref=e337]: • 45 min read
+      - generic [ref=e338] [cursor=pointer]:
+        - generic [ref=e339]:
+          - 'heading "[Copy 7] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e341]'
+          - paragraph [ref=e342]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e343]:
+            - generic [ref=e344]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e345]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e346]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e347]': Software Engineering
+              - generic [ref=e348]: javascript
+              - generic [ref=e349]: opensource
+            - button "Delete page" [ref=e350]:
+              - img [ref=e351]
+        - generic [ref=e354]:
+          - generic [ref=e355]: github.com
+          - generic [ref=e356]: • 5 min read
+      - generic [ref=e357] [cursor=pointer]:
+        - generic [ref=e358]:
+          - heading "[Copy 7] Advances in Large Language Model Reasoning" [level=3] [ref=e360]
+          - paragraph [ref=e361]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e362]:
+            - generic [ref=e363]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e364]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e365]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e366]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e367]': Large Language Models
+              - generic [ref=e368]: ai
+              - generic [ref=e369]: research
+              - generic [ref=e370]: llm
+            - button "Delete page" [ref=e371]:
+              - img [ref=e372]
+        - generic [ref=e375]:
+          - generic [ref=e376]: Research Team
+          - generic [ref=e377]: • Jan 16, 2024
+          - generic [ref=e378]: • arxiv.org
+          - generic [ref=e379]: • 45 min read
+      - generic [ref=e380] [cursor=pointer]:
+        - generic [ref=e381]:
+          - 'heading "[Copy 8] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e383]'
+          - paragraph [ref=e384]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e385]:
+            - generic [ref=e386]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e387]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e388]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e389]': Software Engineering
+              - generic [ref=e390]: javascript
+              - generic [ref=e391]: opensource
+            - button "Delete page" [ref=e392]:
+              - img [ref=e393]
+        - generic [ref=e396]:
+          - generic [ref=e397]: github.com
+          - generic [ref=e398]: • 5 min read
+      - generic [ref=e399] [cursor=pointer]:
+        - generic [ref=e400]:
+          - heading "[Copy 8] Advances in Large Language Model Reasoning" [level=3] [ref=e402]
+          - paragraph [ref=e403]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e404]:
+            - generic [ref=e405]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e406]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e407]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e408]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e409]': Large Language Models
+              - generic [ref=e410]: ai
+              - generic [ref=e411]: research
+              - generic [ref=e412]: llm
+            - button "Delete page" [ref=e413]:
+              - img [ref=e414]
+        - generic [ref=e417]:
+          - generic [ref=e418]: Research Team
+          - generic [ref=e419]: • Jan 16, 2024
+          - generic [ref=e420]: • arxiv.org
+          - generic [ref=e421]: • 45 min read
+      - generic [ref=e422] [cursor=pointer]:
+        - generic [ref=e423]:
+          - 'heading "[Copy 9] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e425]'
+          - paragraph [ref=e426]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e427]:
+            - generic [ref=e428]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e429]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e430]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e431]': Software Engineering
+              - generic [ref=e432]: javascript
+              - generic [ref=e433]: opensource
+            - button "Delete page" [ref=e434]:
+              - img [ref=e435]
+        - generic [ref=e438]:
+          - generic [ref=e439]: github.com
+          - generic [ref=e440]: • 5 min read
+      - generic [ref=e441] [cursor=pointer]:
+        - generic [ref=e442]:
+          - heading "[Copy 9] Advances in Large Language Model Reasoning" [level=3] [ref=e444]
+          - paragraph [ref=e445]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e446]:
+            - generic [ref=e447]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e448]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e449]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e450]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e451]': Large Language Models
+              - generic [ref=e452]: ai
+              - generic [ref=e453]: research
+              - generic [ref=e454]: llm
+            - button "Delete page" [ref=e455]:
+              - img [ref=e456]
+        - generic [ref=e459]:
+          - generic [ref=e460]: Research Team
+          - generic [ref=e461]: • Jan 16, 2024
+          - generic [ref=e462]: • arxiv.org
+          - generic [ref=e463]: • 45 min read
+      - generic [ref=e464] [cursor=pointer]:
+        - generic [ref=e465]:
+          - 'heading "[Copy 10] awesome/project: A revolutionary new JavaScript framework" [level=3] [ref=e467]'
+          - paragraph [ref=e468]: A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.
+          - generic [ref=e469]:
+            - generic [ref=e470]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e471]': Computer Science
+              - 'generic "AI-generated domain (confidence: 90%)" [ref=e472]': Web Development
+              - 'generic "AI-generated domain (confidence: 85%)" [ref=e473]': Software Engineering
+              - generic [ref=e474]: javascript
+              - generic [ref=e475]: opensource
+            - button "Delete page" [ref=e476]:
+              - img [ref=e477]
+        - generic [ref=e480]:
+          - generic [ref=e481]: github.com
+          - generic [ref=e482]: • 5 min read
+      - generic [ref=e483] [cursor=pointer]:
+        - generic [ref=e484]:
+          - heading "[Copy 10] Advances in Large Language Model Reasoning" [level=3] [ref=e486]
+          - paragraph [ref=e487]: An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.
+          - generic [ref=e488]:
+            - generic [ref=e489]:
+              - 'generic "AI-generated general (confidence: 95%)" [ref=e490]': Computer Science
+              - 'generic "AI-generated domain (confidence: 92%)" [ref=e491]': Artificial Intelligence
+              - 'generic "AI-generated topic (confidence: 88%)" [ref=e492]': Chain-of-Thought Prompting
+              - 'generic "AI-generated topic (confidence: 90%)" [ref=e493]': Large Language Models
+              - generic [ref=e494]: ai
+              - generic [ref=e495]: research
+              - generic [ref=e496]: llm
+            - button "Delete page" [ref=e497]:
+              - img [ref=e498]
+        - generic [ref=e501]:
+          - generic [ref=e502]: Research Team
+          - generic [ref=e503]: • Jan 16, 2024
+          - generic [ref=e504]: • arxiv.org
+          - generic [ref=e505]: • 45 min read
+      - generic [ref=e506] [cursor=pointer]:
+        - generic [ref=e507]:
+          - 'heading "Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e509]'
+          - paragraph [ref=e510]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e511]:
+            - generic [ref=e512]:
+              - generic "AI-generated classification" [ref=e513]: Computer science, information, works
+              - generic [ref=e514]: apple
+              - generic [ref=e515]: vr
+              - generic [ref=e516]: review
+            - button "Delete page" [ref=e517]:
+              - img [ref=e518]
+        - generic [ref=e521]:
+          - generic [ref=e522]: Tech Reviewer
+          - generic [ref=e523]: • Jan 15, 2024
+          - generic [ref=e524]: • theverge.com
+          - generic [ref=e525]: • 18 min read
+      - generic [ref=e526] [cursor=pointer]:
+        - generic [ref=e527]:
+          - 'heading "[Copy 1] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e529]'
+          - paragraph [ref=e530]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e531]:
+            - generic [ref=e532]:
+              - generic "AI-generated classification" [ref=e533]: Computer science, information, works
+              - generic [ref=e534]: apple
+              - generic [ref=e535]: vr
+              - generic [ref=e536]: review
+            - button "Delete page" [ref=e537]:
+              - img [ref=e538]
+        - generic [ref=e541]:
+          - generic [ref=e542]: Tech Reviewer
+          - generic [ref=e543]: • Jan 15, 2024
+          - generic [ref=e544]: • theverge.com
+          - generic [ref=e545]: • 18 min read
+      - generic [ref=e546] [cursor=pointer]:
+        - generic [ref=e547]:
+          - 'heading "[Copy 2] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e549]'
+          - paragraph [ref=e550]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e551]:
+            - generic [ref=e552]:
+              - generic "AI-generated classification" [ref=e553]: Computer science, information, works
+              - generic [ref=e554]: apple
+              - generic [ref=e555]: vr
+              - generic [ref=e556]: review
+            - button "Delete page" [ref=e557]:
+              - img [ref=e558]
+        - generic [ref=e561]:
+          - generic [ref=e562]: Tech Reviewer
+          - generic [ref=e563]: • Jan 15, 2024
+          - generic [ref=e564]: • theverge.com
+          - generic [ref=e565]: • 18 min read
+      - generic [ref=e566] [cursor=pointer]:
+        - generic [ref=e567]:
+          - 'heading "[Copy 3] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e569]'
+          - paragraph [ref=e570]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e571]:
+            - generic [ref=e572]:
+              - generic "AI-generated classification" [ref=e573]: Computer science, information, works
+              - generic [ref=e574]: apple
+              - generic [ref=e575]: vr
+              - generic [ref=e576]: review
+            - button "Delete page" [ref=e577]:
+              - img [ref=e578]
+        - generic [ref=e581]:
+          - generic [ref=e582]: Tech Reviewer
+          - generic [ref=e583]: • Jan 15, 2024
+          - generic [ref=e584]: • theverge.com
+          - generic [ref=e585]: • 18 min read
+      - generic [ref=e586] [cursor=pointer]:
+        - generic [ref=e587]:
+          - 'heading "[Copy 4] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e589]'
+          - paragraph [ref=e590]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e591]:
+            - generic [ref=e592]:
+              - generic "AI-generated classification" [ref=e593]: Computer science, information, works
+              - generic [ref=e594]: apple
+              - generic [ref=e595]: vr
+              - generic [ref=e596]: review
+            - button "Delete page" [ref=e597]:
+              - img [ref=e598]
+        - generic [ref=e601]:
+          - generic [ref=e602]: Tech Reviewer
+          - generic [ref=e603]: • Jan 15, 2024
+          - generic [ref=e604]: • theverge.com
+          - generic [ref=e605]: • 18 min read
+      - generic [ref=e606] [cursor=pointer]:
+        - generic [ref=e607]:
+          - 'heading "[Copy 5] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e609]'
+          - paragraph [ref=e610]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e611]:
+            - generic [ref=e612]:
+              - generic "AI-generated classification" [ref=e613]: Computer science, information, works
+              - generic [ref=e614]: apple
+              - generic [ref=e615]: vr
+              - generic [ref=e616]: review
+            - button "Delete page" [ref=e617]:
+              - img [ref=e618]
+        - generic [ref=e621]:
+          - generic [ref=e622]: Tech Reviewer
+          - generic [ref=e623]: • Jan 15, 2024
+          - generic [ref=e624]: • theverge.com
+          - generic [ref=e625]: • 18 min read
+      - generic [ref=e626] [cursor=pointer]:
+        - generic [ref=e627]:
+          - 'heading "[Copy 6] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e629]'
+          - paragraph [ref=e630]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e631]:
+            - generic [ref=e632]:
+              - generic "AI-generated classification" [ref=e633]: Computer science, information, works
+              - generic [ref=e634]: apple
+              - generic [ref=e635]: vr
+              - generic [ref=e636]: review
+            - button "Delete page" [ref=e637]:
+              - img [ref=e638]
+        - generic [ref=e641]:
+          - generic [ref=e642]: Tech Reviewer
+          - generic [ref=e643]: • Jan 15, 2024
+          - generic [ref=e644]: • theverge.com
+          - generic [ref=e645]: • 18 min read
+      - generic [ref=e646] [cursor=pointer]:
+        - generic [ref=e647]:
+          - 'heading "[Copy 7] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e649]'
+          - paragraph [ref=e650]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e651]:
+            - generic [ref=e652]:
+              - generic "AI-generated classification" [ref=e653]: Computer science, information, works
+              - generic [ref=e654]: apple
+              - generic [ref=e655]: vr
+              - generic [ref=e656]: review
+            - button "Delete page" [ref=e657]:
+              - img [ref=e658]
+        - generic [ref=e661]:
+          - generic [ref=e662]: Tech Reviewer
+          - generic [ref=e663]: • Jan 15, 2024
+          - generic [ref=e664]: • theverge.com
+          - generic [ref=e665]: • 18 min read
+      - generic [ref=e666] [cursor=pointer]:
+        - generic [ref=e667]:
+          - 'heading "[Copy 8] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e669]'
+          - paragraph [ref=e670]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e671]:
+            - generic [ref=e672]:
+              - generic "AI-generated classification" [ref=e673]: Computer science, information, works
+              - generic [ref=e674]: apple
+              - generic [ref=e675]: vr
+              - generic [ref=e676]: review
+            - button "Delete page" [ref=e677]:
+              - img [ref=e678]
+        - generic [ref=e681]:
+          - generic [ref=e682]: Tech Reviewer
+          - generic [ref=e683]: • Jan 15, 2024
+          - generic [ref=e684]: • theverge.com
+          - generic [ref=e685]: • 18 min read
+      - generic [ref=e686] [cursor=pointer]:
+        - generic [ref=e687]:
+          - 'heading "[Copy 9] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e689]'
+          - paragraph [ref=e690]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e691]:
+            - generic [ref=e692]:
+              - generic "AI-generated classification" [ref=e693]: Computer science, information, works
+              - generic [ref=e694]: apple
+              - generic [ref=e695]: vr
+              - generic [ref=e696]: review
+            - button "Delete page" [ref=e697]:
+              - img [ref=e698]
+        - generic [ref=e701]:
+          - generic [ref=e702]: Tech Reviewer
+          - generic [ref=e703]: • Jan 15, 2024
+          - generic [ref=e704]: • theverge.com
+          - generic [ref=e705]: • 18 min read
+      - generic [ref=e706] [cursor=pointer]:
+        - generic [ref=e707]:
+          - 'heading "[Copy 10] Apple Vision Pro Review: The Future is Here (Sort Of)" [level=3] [ref=e709]'
+          - paragraph [ref=e710]: A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.
+          - generic [ref=e711]:
+            - generic [ref=e712]:
+              - generic "AI-generated classification" [ref=e713]: Computer science, information, works
+              - generic [ref=e714]: apple
+              - generic [ref=e715]: vr
+              - generic [ref=e716]: review
+            - button "Delete page" [ref=e717]:
+              - img [ref=e718]
+        - generic [ref=e721]:
+          - generic [ref=e722]: Tech Reviewer
+          - generic [ref=e723]: • Jan 15, 2024
+          - generic [ref=e724]: • theverge.com
+          - generic [ref=e725]: • 18 min read
+  - contentinfo [ref=e726]:
+    - generic [ref=e727]:
+      - paragraph [ref=e728]: SaveIt
+      - generic [ref=e729]:
+        - link "About" [ref=e730] [cursor=pointer]:
+          - /url: "#"
+        - generic [ref=e731]: •
+        - generic [ref=e733]: Development Mode (using mock data)
+        - generic [ref=e734]: •
+        - generic [ref=e735]: v...
+```

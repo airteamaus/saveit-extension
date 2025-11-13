@@ -700,8 +700,12 @@ class SaveItDashboard {
         e.stopPropagation();
         const label = tagElement.dataset.label;
         const type = tagElement.dataset.type;
+        console.log('[Tag Click] label:', label, 'type:', type);
         if (label && type) {
+          console.log('[Tag Click] Calling discoverByTag');
           this.discoverByTag(label, type);
+        } else {
+          console.warn('[Tag Click] Missing label or type, not triggering discovery');
         }
         return;
       }
@@ -947,6 +951,7 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    * @param {string} type - Classification type (general/domain/topic)
    */
   async discoverByTag(label, type) {
+    console.log('[discoverByTag] Starting discovery for:', label, type);
     this.discoveryMode = true;
     this.currentDiscoveryLabel = label;
     this.currentDiscoveryType = type;
@@ -958,10 +963,13 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
     this.showLoading();
 
     try {
+      console.log('[discoverByTag] Calling API.searchByTag');
       const results = await API.searchByTag(label);
+      console.log('[discoverByTag] Got results, rendering:', results);
       this.renderDiscoveryResults(results, label);
+      console.log('[discoverByTag] Discovery complete');
     } catch (error) {
-      console.error('Failed to search by tag:', error);
+      console.error('[discoverByTag] Failed to search by tag:', error);
       this.showError(error);
     }
   }
