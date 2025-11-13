@@ -140,7 +140,7 @@ class SaveItDashboard {
     const versionNumber = document.getElementById('version-number');
     const buildDate = document.getElementById('build-date');
 
-    if (versionNumber && browser?.runtime) {
+    if (versionNumber && typeof browser !== 'undefined' && browser.runtime) {
       const manifest = browser.runtime.getManifest();
       versionNumber.textContent = manifest.version;
 
@@ -889,7 +889,7 @@ class SaveItDashboard {
    */
   showAbout() {
     const mode = API.isExtension ? 'Extension' : 'Development';
-    const version = browser?.runtime ? browser.runtime.getManifest().version : 'standalone';
+    const version = typeof browser !== 'undefined' && browser.runtime ? browser.runtime.getManifest().version : 'standalone';
     const message = `SaveIt
 
 SaveIt uses AI to read and semantically index the subject of each page based on its content. This lets you recall saved pages through similarity of subject matter, as opposed to having to remember the domain name, title, or URL.
