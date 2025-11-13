@@ -1028,8 +1028,14 @@ async function initDashboard() {
   try {
     window.dashboard = new SaveItDashboard();
     await window.dashboard.init();
+
+    // Signal that dashboard is fully initialized (for E2E tests)
+    window.dashboardReady = true;
+    console.log('[Dashboard] Initialization complete');
   } catch (error) {
-    console.error('Fatal error during dashboard initialization:', error);
+    console.error('Fatal error during dashboard initialization:', error.message || error);
+    console.error('Stack trace:', error.stack);
+    window.dashboardReady = false;
 
     // Show user-friendly error message
     const content = document.getElementById('content');

@@ -1,0 +1,42 @@
+# Page snapshot
+
+```yaml
+- generic [active] [ref=e1]:
+  - banner [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "SaveIt" [level=1] [ref=e5]:
+          - img [ref=e6]
+          - text: SaveIt
+        - generic [ref=e8]: Loading...
+      - generic [ref=e9]:
+        - generic [ref=e10]:
+          - img
+          - textbox "Search saved pages..." [ref=e11]
+        - radiogroup "Theme selection" [ref=e12]:
+          - button "Auto theme" [ref=e13] [cursor=pointer]:
+            - img [ref=e14]
+            - text: Auto
+          - button "Light theme" [ref=e17] [cursor=pointer]:
+            - img [ref=e18]
+            - text: Light
+          - button "Dark theme" [ref=e28] [cursor=pointer]:
+            - img [ref=e29]
+            - text: Dark
+  - main [ref=e31]:
+    - generic [ref=e34]:
+      - img [ref=e35]
+      - heading "Failed to initialize dashboard" [level=2] [ref=e39]
+      - paragraph [ref=e40]: browser is not defined
+      - button "Reload" [ref=e41] [cursor=pointer]
+  - contentinfo [ref=e42]:
+    - generic [ref=e43]:
+      - paragraph [ref=e44]: SaveIt
+      - generic [ref=e45]:
+        - link "About" [ref=e46] [cursor=pointer]:
+          - /url: "#"
+        - generic [ref=e47]: •
+        - generic [ref=e49]: Development Mode (using mock data)
+        - generic [ref=e50]: •
+        - generic [ref=e51]: v...
+```

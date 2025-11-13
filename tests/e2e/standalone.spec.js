@@ -7,9 +7,46 @@ const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
+    // Set up console logging to debug loading issues
+    page.on('console', msg => {
+      const type = msg.type();
+      const text = msg.text();
+      console.log(`[BROWSER ${type.toUpperCase()}]`, text);
+    });
+
+    page.on('pageerror', err => {
+      console.error('[PAGE ERROR]', err.message);
+      console.error(err.stack);
+    });
+
     // Load standalone dashboard
     await page.goto(`file://${newtabPath}`);
     await page.waitForLoadState('networkidle');
+
+    // Wait for dashboard to fully initialize (critical for headless mode)
+    try {
+      await page.waitForFunction(() => window.dashboardReady === true, { timeout: 10000 });
+      console.log('[TEST] Dashboard ready signal received');
+    } catch (error) {
+      console.error('[TEST] Dashboard initialization timeout');
+
+      // Check if scripts loaded and mock data is available
+      const debugInfo = await page.evaluate(() => {
+        return {
+          hasBrowser: typeof browser !== 'undefined',
+          hasMockData: typeof MOCK_DATA !== 'undefined',
+          mockDataLength: typeof MOCK_DATA !== 'undefined' ? MOCK_DATA.length : 0,
+          hasAPI: typeof API !== 'undefined',
+          isExtension: typeof API !== 'undefined' ? API.isExtension : null,
+          hasComponents: typeof Components !== 'undefined',
+          hasSaveItDashboard: typeof SaveItDashboard !== 'undefined',
+          dashboardReady: window.dashboardReady,
+          dashboard: typeof window.dashboard !== 'undefined'
+        };
+      });
+      console.log('[DEBUG INFO]', debugInfo);
+      throw error;
+    }
   });
 
   test('should display mock data', async ({ page }) => {
