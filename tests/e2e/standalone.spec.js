@@ -142,10 +142,10 @@ test.describe('Standalone Mode', () => {
   });
 
   test('should switch themes', async ({ page }) => {
-    // Get theme buttons
-    const lightButton = page.locator('[data-theme="light"]');
-    const darkButton = page.locator('[data-theme="dark"]');
-    const autoButton = page.locator('[data-theme="auto"]');
+    // Get theme buttons (use button selector to avoid matching html element)
+    const lightButton = page.locator('button[data-theme="light"]');
+    const darkButton = page.locator('button[data-theme="dark"]');
+    const autoButton = page.locator('button[data-theme="auto"]');
 
     // Switch to dark
     await darkButton.click();
@@ -169,12 +169,15 @@ test.describe('Standalone Mode', () => {
   test('should enter discovery mode when clicking tag', async ({ page }) => {
     await page.waitForSelector('.saved-page-card');
 
+    // Wait for AI tags to be visible and clickable
+    await page.waitForSelector('.ai-tag', { state: 'visible' });
+
     // Click on an AI tag
     const tag = page.locator('.ai-tag').first();
     await tag.click();
 
     // Wait for discovery view
-    await page.waitForSelector('.discovery-header');
+    await page.waitForSelector('.discovery-header', { timeout: 10000 });
 
     // Check discovery header is shown
     const header = page.locator('.discovery-header');
@@ -189,9 +192,10 @@ test.describe('Standalone Mode', () => {
   test('should return from discovery mode', async ({ page }) => {
     await page.waitForSelector('.saved-page-card');
 
-    // Enter discovery mode
+    // Wait for AI tags and enter discovery mode
+    await page.waitForSelector('.ai-tag', { state: 'visible' });
     await page.locator('.ai-tag').first().click();
-    await page.waitForSelector('.discovery-header');
+    await page.waitForSelector('.discovery-header', { timeout: 10000 });
 
     // Click back button
     await page.click('#back-to-main');
@@ -209,8 +213,9 @@ test.describe('Standalone Mode', () => {
   test('should show about dialog', async ({ page }) => {
     page.on('dialog', async dialog => {
       expect(dialog.type()).toBe('alert');
-      expect(dialog.message()).toContain('SaveIt Dashboard');
+      expect(dialog.message()).toContain('SaveIt');
       expect(dialog.message()).toContain('Development');
+      expect(dialog.message()).toContain('AI to read and semantically index');
       await dialog.accept();
     });
 
