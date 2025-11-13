@@ -172,9 +172,8 @@ test.describe('Standalone Mode', () => {
     // Wait for AI tags to be visible and clickable
     await page.waitForSelector('.ai-tag', { state: 'visible' });
 
-    // Click on an AI tag
-    const tag = page.locator('.ai-tag').first();
-    await tag.click();
+    // Click on an AI tag using page.click for better event propagation
+    await page.click('.ai-tag');
 
     // Wait for discovery view
     await page.waitForSelector('.discovery-header', { timeout: 10000 });
@@ -194,7 +193,7 @@ test.describe('Standalone Mode', () => {
 
     // Wait for AI tags and enter discovery mode
     await page.waitForSelector('.ai-tag', { state: 'visible' });
-    await page.locator('.ai-tag').first().click();
+    await page.click('.ai-tag');
     await page.waitForSelector('.discovery-header', { timeout: 10000 });
 
     // Click back button
