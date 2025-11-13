@@ -2,15 +2,15 @@
 
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
-Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Built for Firefox with intelligent semantic search.
+Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features an intelligent dashboard with semantic search and hierarchical topic navigation.
 
 ## For Testers
 
 ### Firefox Installation
 
-Install from GitHub Release (Signed)**
+**Install from GitHub Release (Signed)**
 1. Go to [Releases](https://github.com/airteamaus/saveit-extension/releases)
-2. Download the latest `.xpi` file
+2. Download the latest `.xpi` file (current: v0.16.1)
 3. Open Firefox and go to `about:addons`
 4. Click the gear icon ⚙️ → "Install Add-on From File..."
 5. Select the downloaded `.xpi` file
@@ -29,8 +29,9 @@ Install from GitHub Release (Signed)**
 
 1. **Sign in**: Click the SaveIt button in your toolbar and sign in with Google
 2. **Save pages**: Click the SaveIt button on any page to save it
-3. **View dashboard**: Click "New Tab" or set SaveIt as your new tab page
+3. **View dashboard**: Open a new tab - SaveIt automatically replaces your new tab page
 4. **Search & discover**: Use semantic search to find related content by topic
+5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
 
 ### Known Limitations (Beta)
 

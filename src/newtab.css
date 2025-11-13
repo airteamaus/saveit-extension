@@ -543,16 +543,16 @@ body {
    │   │   ├── .favicon              Domain favicon (20x20 image)
    │   │   └── .row-title            Page title (h3, truncated)
    │   ├── .row-summary              AI summary or description (optional)
-   │   ├── .row-footer               Tags + metadata (flex horizontal)
+   │   ├── .row-footer               Tags + delete button (flex horizontal)
    │   │   ├── .row-tags             Container for tag badges
    │   │   │   ├── .tag              Individual tag badge
    │   │   │   └── .ai-tag           AI-generated Dewey tag (distinct styling)
-   │   │   └── .row-meta             Reading time, author, date, domain
-   │   │       └── .meta-item        Individual metadata item (bullet separator via ::before)
+   │   │   └── .btn-delete           Delete button (hover-visible)
+   │   │       └── .icon             Trash icon (SVG)
    │   └── .row-notes                User notes (optional, icon + text)
    │       └── .icon                 Note icon (SVG)
-   └── .btn-delete                   Delete button (absolute positioned, hover-visible)
-       └── .icon                     Trash icon (SVG)
+   └── .row-meta                     Reading time, author, date, domain (absolute positioned, top-right)
+       └── .meta-item                Individual metadata item (bullet separator via ::before)
 
    Naming convention: row-* classes
    - Previously used card-* naming (legacy from card grid layout)
@@ -650,12 +650,14 @@ body {
 }
 
 .row-meta {
+  position: absolute;
+  top: var(--spacing-md);
+  right: var(--spacing-lg);
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   font-size: 12px;
   color: var(--color-text-lighter);
-  flex: 0 0 auto;
   white-space: nowrap;
 }
 
@@ -890,12 +892,7 @@ html[data-theme="dark"] .tag.tag-topic:hover {
 }
 
 .btn-delete {
-  /* Delete button in row layout - aligned to top right, same vertical plane as favicon/title */
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-lg);
-  opacity: 0;
-  transition: opacity 0.2s;
+  /* Delete button in footer - right side */
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 13px;
   background: transparent;
@@ -903,6 +900,9 @@ html[data-theme="dark"] .tag.tag-topic:hover {
   color: var(--color-text-light);
   border-radius: var(--radius-sm);
   cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s;
+  flex-shrink: 0;
 }
 
 .saved-page-card:hover .btn-delete {
@@ -1049,6 +1049,12 @@ html[data-theme="dark"] .tag.tag-topic:hover {
     transform: none;
     opacity: 1;
     margin-top: var(--spacing-sm);
+  }
+
+  .row-meta {
+    position: static;
+    margin-top: var(--spacing-sm);
+    justify-content: flex-start;
   }
 
   .footer-content {
