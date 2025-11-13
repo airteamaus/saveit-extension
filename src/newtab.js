@@ -976,10 +976,10 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
 
   /**
    * Render discovery results
-   * Combines all result tiers into flat list and renders like home view
+   * Uses Components.discoveryResults to render the full discovery view with header
    */
-  renderDiscoveryResults(results, _queryLabel) {
-    // Flatten all tiers into single array
+  renderDiscoveryResults(results, queryLabel) {
+    // Flatten all tiers into single array for tag extraction
     const allResults = [
       ...(results.exact_matches || []),
       ...(results.similar_matches || []),
@@ -989,27 +989,9 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
     // Store results as pages for tag extraction
     this.pages = allResults.map(match => match.thing_data);
 
-    const totalResults = allResults.length;
+    // Use Components.discoveryResults to render full discovery view
     const container = document.getElementById('content');
-
-    if (totalResults === 0) {
-      container.innerHTML = `
-        <div class="empty-state">
-          <svg class="empty-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
-          </svg>
-          <h3>No related pages</h3>
-          <p>Try clicking a different tag to discover related content</p>
-        </div>
-      `;
-    } else {
-      // Render cards using same format as home view
-      const cardsHtml = allResults
-        .map(match => Components.savedPageCard(match.thing_data))
-        .join('');
-      container.innerHTML = cardsHtml;
-    }
+    container.innerHTML = Components.discoveryResults(results, queryLabel);
 
     // Render tag bar after updating pages
     this.renderTagBar();
