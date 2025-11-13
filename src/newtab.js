@@ -892,13 +892,15 @@ class SaveItDashboard {
     const version = browser?.runtime ? browser.runtime.getManifest().version : 'standalone';
     const message = `SaveIt
 
-The web is infinite, but human attention is not.
+SaveIt uses AI to read and semantically index the subject of each page based on its content. This lets you recall saved pages through similarity of subject matter, as opposed to having to remember the domain name, title, or URL.
 
-Every page you save represents a moment of curiosity—a thread worth pulling. SaveIt helps you rediscover those moments by understanding what each page is really about, not just what you called it.
+When you save a page, the extension:
+• Extracts and analyzes the page content
+• Generates a semantic classification of the subject matter
+• Creates vector embeddings for similarity search
+• Provides AI-generated summaries
 
-Traditional bookmarks are write-only. You save them with good intentions, then never see them again. SaveIt is different: AI-powered classification reveals unexpected connections between your saved pages, helping you stumble upon the right thing at the right time.
-
-Think of it as a garden for your ideas. Not everything needs a folder. Some of the best discoveries happen when you let things grow and see what naturally connects.
+You can then discover related pages by browsing through automatically-generated topic hierarchies, or by searching for pages similar to a given topic—even if you never explicitly tagged them.
 
 Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently viewing mock data. Load as browser extension to see your saved pages.' : ''}`;
 
