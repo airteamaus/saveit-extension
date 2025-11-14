@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.17.0] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **brave:** add Chrome API support in dashboard sign-in handler (3d9b4b5)
+
 ## [0.16.9] - 2025-11-14
 
 ### 🐛 Bug Fixes
@@ -92,11 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - remove top-level 'All' breadcrumb from navigation (7ddde66)
-
-## [0.16.0] - 2025-11-12
-
-### ✨ Features
-
 - add infinite scroll for saved pages dashboard (16c9f5b)
 - add account picker on sign-in and build date display (ba2cbbe)
 - make breadcrumbs clickable and fix husky hooks (d449d78)
