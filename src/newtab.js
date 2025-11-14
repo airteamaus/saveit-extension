@@ -38,6 +38,9 @@ class SaveItDashboard {
     this.updateModeIndicator();
     this.updateVersionIndicator();
 
+    // Clean up legacy cache (migration for v0.13.5+)
+    await API.cleanupLegacyCache();
+
     // Wait for Firebase to be ready in extension mode
     let initialAuthResolved = false;
     if (API.isExtension && window.firebaseReady) {
@@ -57,7 +60,11 @@ class SaveItDashboard {
               initialAuthResolved = true;
               resolve();
             } else {
-              // Subsequent auth changes: reload pages
+              // Subsequent auth changes: clear cache and reload
+              // IMPORTANT: Clear cache to prevent showing previous user's data
+              console.log('[auth state changed] Clearing cache for user switch');
+              await API.invalidateCache();
+
               if (user) {
                 await this.loadPages();
                 this.render();
