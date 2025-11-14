@@ -1,11 +1,26 @@
 // Firebase initialization wrapper for dashboard (newtab.html)
 // Makes Firebase available globally to non-module scripts
 
+/**
+ * Check if running in extension mode (works with both Firefox and Chrome APIs)
+ */
+function isExtension() {
+  // Firefox native or polyfilled browser API
+  if (typeof browser !== 'undefined' && browser.runtime) {
+    return true;
+  }
+  // Chrome/Brave/Edge native API (before polyfill loads)
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+    return true;
+  }
+  return false;
+}
+
 // Promise that resolves when Firebase is ready
 window.firebaseReady = (async () => {
   try {
     // Only load Firebase in extension mode
-    if (typeof browser !== 'undefined' && window.CONFIG?.firebase) {
+    if (isExtension() && window.CONFIG?.firebase) {
       const firebaseExports = await import('./bundles/firebase-dashboard.js');
       const app = firebaseExports.initializeApp(window.CONFIG.firebase);
       const auth = firebaseExports.initializeAuth(app, {
