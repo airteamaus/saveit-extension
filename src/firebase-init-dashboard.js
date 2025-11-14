@@ -8,7 +8,9 @@ window.firebaseReady = (async () => {
     if (typeof browser !== 'undefined' && window.CONFIG?.firebase) {
       const firebaseExports = await import('./bundles/firebase-dashboard.js');
       const app = firebaseExports.initializeApp(window.CONFIG.firebase);
-      const auth = firebaseExports.getAuth(app);
+      const auth = firebaseExports.initializeAuth(app, {
+        persistence: firebaseExports.indexedDBLocalPersistence
+      });
 
       // Make Firebase available globally
       window.firebaseApp = app;

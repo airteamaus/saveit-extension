@@ -2,7 +2,8 @@
 import { CONFIG } from './config.js';
 import {
   initializeApp,
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
   signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -13,17 +14,27 @@ import {
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
 
-// Initialize Firebase
+// Initialize Firebase with IndexedDB persistence for service worker
 const app = initializeApp(CONFIG.firebase);
-const auth = getAuth(app);
+const auth = initializeAuth(app, {
+  persistence: indexedDBLocalPersistence
+});
 
-// Monitor auth state changes
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log('Firebase user signed in:', user.email);
-  } else {
-    console.log('Firebase user signed out');
-  }
+// Track when auth state is ready (loaded from IndexedDB)
+let authReady = false;
+const authReadyPromise = new Promise((resolve) => {
+  onAuthStateChanged(auth, (user) => {
+    if (!authReady) {
+      authReady = true;
+      console.log('Firebase auth state loaded from IndexedDB:', user ? user.email : 'not signed in');
+      resolve();
+    }
+    if (user) {
+      console.log('Firebase user signed in:', user.email);
+    } else {
+      console.log('Firebase user signed out');
+    }
+  });
 });
 
 /**
@@ -31,7 +42,11 @@ onAuthStateChanged(auth, (user) => {
  * Returns Firebase user and ID token
  */
 async function signInWithFirebase() {
+  // Wait for auth to load from IndexedDB before checking currentUser
+  await authReadyPromise;
+
   if (auth.currentUser) {
+    console.log('User already signed in, reusing auth');
     const idToken = await getIdToken(auth.currentUser);
     return {
       user: auth.currentUser,
