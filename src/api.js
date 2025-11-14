@@ -14,8 +14,29 @@ const API = {
   /**
    * Cache configuration
    */
-  CACHE_KEY: 'savedPages_cache',
+  CACHE_KEY_PREFIX: 'savedPages_cache',
   CACHE_MAX_AGE_MS: 5 * 60 * 1000, // 5 minutes
+
+  /**
+   * Get cache key for current user
+   * Includes user_id to prevent cross-user data leakage
+   * @private
+   */
+  getCacheKey(userId) {
+    return `${this.CACHE_KEY_PREFIX}_${userId}`;
+  },
+
+  /**
+   * Get current Firebase user ID
+   * @private
+   */
+  getCurrentUserId() {
+    if (!this.isExtension || !window.firebaseAuth) {
+      return null;
+    }
+    const user = window.firebaseAuth.currentUser;
+    return user ? user.uid : null;
+  },
 
   /**
    * Parse error response from HTTP fetch
@@ -63,17 +84,35 @@ const API = {
 
   /**
    * Get cached pages from browser storage
+   * Cache is isolated per user to prevent cross-user data leakage
    * @private
    */
   async getCachedPages() {
     if (!this.isExtension) return null;
 
     try {
-      const result = await browser.storage.local.get(this.CACHE_KEY);
-      const cached = result[this.CACHE_KEY];
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        console.log('[getCachedPages] No user logged in, skipping cache');
+        return null;
+      }
+
+      const cacheKey = this.getCacheKey(userId);
+      const result = await browser.storage.local.get(cacheKey);
+      const cached = result[cacheKey];
 
       if (!cached) {
-        console.log('[getCachedPages] No cache found');
+        console.log('[getCachedPages] No cache found for user:', userId);
+        return null;
+      }
+
+      // Validate that cached data belongs to current user (extra safety)
+      if (cached.userId && cached.userId !== userId) {
+        console.warn('[getCachedPages] Cache user_id mismatch! Clearing invalid cache.', {
+          cached_user: cached.userId,
+          current_user: userId
+        });
+        await browser.storage.local.remove(cacheKey);
         return null;
       }
 
@@ -84,6 +123,7 @@ const API = {
       }
 
       console.log(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
+        user_id: userId,
         pages_count: cached.pages ? cached.pages.length : 0,
         first_item: cached.pages?.[0] ? { id: cached.pages[0].id, title: cached.pages[0].title } : null
       });
@@ -96,33 +136,50 @@ const API = {
 
   /**
    * Store pages in browser storage cache
+   * Cache is isolated per user to prevent cross-user data leakage
    * @private
    */
   async setCachedPages(pages) {
     if (!this.isExtension) return;
 
     try {
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        console.log('[setCachedPages] No user logged in, skipping cache write');
+        return;
+      }
+
+      const cacheKey = this.getCacheKey(userId);
       await browser.storage.local.set({
-        [this.CACHE_KEY]: {
+        [cacheKey]: {
+          userId: userId, // Store user_id for validation
           pages: pages,
           timestamp: Date.now()
         }
       });
-      console.log('Cached pages updated');
+      console.log('[setCachedPages] Cache updated for user:', userId);
     } catch (error) {
-      console.error('Failed to write cache:', error);
+      console.error('[setCachedPages] Failed to write cache:', error);
     }
   },
 
   /**
    * Invalidate the cache (call after delete, update operations)
+   * Clears cache for current user only
    */
   async invalidateCache() {
     if (!this.isExtension) return;
 
     try {
-      await browser.storage.local.remove(this.CACHE_KEY);
-      console.log('[invalidateCache] Cache invalidated');
+      const userId = this.getCurrentUserId();
+      if (!userId) {
+        console.log('[invalidateCache] No user logged in');
+        return;
+      }
+
+      const cacheKey = this.getCacheKey(userId);
+      await browser.storage.local.remove(cacheKey);
+      console.log('[invalidateCache] Cache invalidated for user:', userId);
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
     }
@@ -139,6 +196,24 @@ const API = {
       console.log('[clearAllCache] All cache cleared');
     } catch (error) {
       console.error('[clearAllCache] Failed to clear cache:', error);
+    }
+  },
+
+  /**
+   * Clean up legacy cache (migration helper)
+   * Removes old global cache key that wasn't user-isolated
+   * Called once on extension upgrade to v0.13.5+
+   */
+  async cleanupLegacyCache() {
+    if (!this.isExtension) return;
+
+    try {
+      // Remove old global cache key
+      const legacyKey = 'savedPages_cache';
+      await browser.storage.local.remove(legacyKey);
+      console.log('[cleanupLegacyCache] Removed legacy global cache');
+    } catch (error) {
+      console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
     }
   },
 
