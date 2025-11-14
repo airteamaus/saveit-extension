@@ -5,6 +5,22 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.7] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **chrome:** support Chrome API before polyfill loads (ecb04b3)
+- **security:** isolate browser cache by user_id to prevent data leakage (35c1e40)
+- **ui:** unify discovery and home page layouts, improve metadata visibility (92dcdf2)
+
+## [0.16.6] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **security:** isolate browser cache by user_id to prevent data leakage (64bfb04)
+- **ui:** unify discovery and home page layouts, improve metadata visibility (5e246b6)
+- **ci:** fetch full git history for release notes generation (000df26)
+
 ## [0.16.5] - 2025-11-14
 
 ### ✨ Features
@@ -85,18 +101,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.15.0] - 2025-11-12
 
-No notable changes.
-
-## [0.14.8] - 2025-11-12
-
 ### ✨ Features
 
 - make breadcrumbs clickable and fix husky hooks (d449d78)
-
-## [0.14.7] - 2025-11-12
-
-### ✨ Features
-
 - add tag bar component with breadcrumb navigation (fced774)
 - **ci:** add Chrome extension build to release workflow (017fdfd)
 - **chrome:** add persistent extension ID for OAuth (8433d67)
