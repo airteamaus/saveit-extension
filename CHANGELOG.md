@@ -5,6 +5,17 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.1] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **dashboard:** preserve scroll sentinel in all innerHTML paths (1e527e3)
+- **dashboard:** preserve scroll sentinel when updating content (b76ad23)
+
+### ♻️ Refactoring
+
+- **dashboard:** implement similarity-based tag filtering with single code path (6d89ce6)
+
 ## [0.20.0] - 2025-11-14
 
 ### ♻️ Refactoring
@@ -62,17 +73,6 @@ No notable changes.
 ### ✨ Features
 
 - **release:** add automated release notes generation from conventional commits (0163310)
-
-### 🐛 Bug Fixes
-
-- **ci:** fetch full git history for release notes generation (d934ef7)
-- **auth:** resolve authentication persistence bug requiring repeated sign-ins (800aa6e)
-
-## [0.16.4] - 2025-11-14
-
-### ✨ Features
-
-- **release:** add automated release notes generation from conventional commits (61d9b30)
 - **ui:** swap metadata and delete button positions (05a9ed6)
 - improve About dialog with thoughtful messaging (c425a34)
 - remove top-level 'All' breadcrumb from navigation (7ddde66)
@@ -108,7 +108,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **auth:** resolve authentication persistence bug requiring repeated sign-ins (ddec1a3)
+- **ci:** fetch full git history for release notes generation (d934ef7)
+- **auth:** resolve authentication persistence bug requiring repeated sign-ins (800aa6e)
 - **e2e:** resolve duplicate #back-to-main ID selector ambiguity (1119b31)
 - **e2e:** use Components.discoveryResults() to render discovery header (7a46230)
 - **e2e:** use page.click() instead of locator().click() for better event propagation (7f9f38b)
