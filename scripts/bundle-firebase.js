@@ -33,7 +33,8 @@ async function buildBackgroundBundle() {
 // Firebase bundle for background.js (service worker)
 import { initializeApp } from 'firebase/app';
 import {
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
   signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -43,7 +44,8 @@ import {
 
 export {
   initializeApp,
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
   signInWithCredential,
   GoogleAuthProvider,
   onAuthStateChanged,
@@ -70,7 +72,8 @@ async function buildDashboardBundle() {
 // Firebase bundle for dashboard (newtab.html)
 import { initializeApp } from 'firebase/app';
 import {
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
   onAuthStateChanged,
   getIdToken,
   signOut
@@ -78,7 +81,8 @@ import {
 
 export {
   initializeApp,
-  getAuth,
+  initializeAuth,
+  indexedDBLocalPersistence,
   onAuthStateChanged,
   getIdToken,
   signOut
