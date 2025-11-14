@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.8] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **brave:** support Brave/Chrome API in Firebase and config initialization (392eca0)
+- **chrome:** support Chrome API before polyfill loads (4a4b627)
+
 ## [0.16.7] - 2025-11-14
 
 ### 🐛 Bug Fixes
@@ -94,15 +101,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - add account picker on sign-in and build date display (ba2cbbe)
-
-### 🐛 Bug Fixes
-
-- skip pre-push hook checks in CI environment (8ab4074)
-
-## [0.15.0] - 2025-11-12
-
-### ✨ Features
-
 - make breadcrumbs clickable and fix husky hooks (d449d78)
 - add tag bar component with breadcrumb navigation (fced774)
 - **ci:** add Chrome extension build to release workflow (017fdfd)
@@ -133,6 +131,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- skip pre-push hook checks in CI environment (8ab4074)
 - ensure Firebase bundles are built before bundling background.js (6ea35c4)
 - update dependencies to resolve security vulnerabilities (20e18ee)
 - add package-lock.json to version control for CI/CD (423c440)
