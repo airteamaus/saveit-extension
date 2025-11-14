@@ -216,6 +216,18 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  user-select: none;
+}
+
+.logo:hover {
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.logo:active {
+  transform: translateY(0);
 }
 
 .logo-icon {
@@ -530,6 +542,13 @@ body {
   margin: 0;
 }
 
+.tag-bar-tags.tag-bar-l2,
+.tag-bar-tags.tag-bar-l3 {
+  margin-top: var(--spacing-sm);
+  padding-top: var(--spacing-sm);
+  border-top: 1px solid var(--color-border);
+}
+
 .content {
   /* Grid layout (deprecated - replaced with row-based list) */
   /* display: grid;
@@ -733,6 +752,13 @@ body {
   color: #15803d;
 }
 
+.tag.tag-general.active {
+  background: rgba(34, 197, 94, 0.25);
+  border: 2px solid #16a34a;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+}
+
 /* Domain tags - most prominent */
 .tag.tag-domain {
   background: rgba(37, 99, 235, 0.1);
@@ -746,6 +772,13 @@ body {
   border-color: rgba(37, 99, 235, 0.4);
 }
 
+.tag.tag-domain.active {
+  background: rgba(37, 99, 235, 0.25);
+  border: 2px solid var(--color-primary);
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+}
+
 /* Topic tags - specific details */
 .tag.tag-topic {
   background: rgba(147, 51, 234, 0.1);
@@ -757,6 +790,13 @@ body {
 .tag.tag-topic:hover {
   background: rgba(147, 51, 234, 0.2);
   border-color: rgba(147, 51, 234, 0.4);
+}
+
+.tag.tag-topic.active {
+  background: rgba(147, 51, 234, 0.25);
+  border: 2px solid #9333ea;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.2);
 }
 
 html[data-theme="dark"] .tag.ai-tag {
@@ -782,6 +822,13 @@ html[data-theme="dark"] .tag.tag-general:hover {
   color: #22c55e;
 }
 
+html[data-theme="dark"] .tag.tag-general.active {
+  background: rgba(34, 197, 94, 0.3);
+  border: 2px solid #4ade80;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+}
+
 html[data-theme="dark"] .tag.tag-domain {
   background: rgba(37, 99, 235, 0.15);
   color: #60a5fa;
@@ -793,6 +840,13 @@ html[data-theme="dark"] .tag.tag-domain:hover {
   border-color: rgba(37, 99, 235, 0.5);
 }
 
+html[data-theme="dark"] .tag.tag-domain.active {
+  background: rgba(37, 99, 235, 0.3);
+  border: 2px solid #60a5fa;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+}
+
 html[data-theme="dark"] .tag.tag-topic {
   background: rgba(147, 51, 234, 0.15);
   color: #c084fc;
@@ -802,6 +856,13 @@ html[data-theme="dark"] .tag.tag-topic {
 html[data-theme="dark"] .tag.tag-topic:hover {
   background: rgba(147, 51, 234, 0.25);
   border-color: rgba(147, 51, 234, 0.5);
+}
+
+html[data-theme="dark"] .tag.tag-topic.active {
+  background: rgba(147, 51, 234, 0.3);
+  border: 2px solid #c084fc;
+  font-weight: 700;
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -828,6 +889,13 @@ html[data-theme="dark"] .tag.tag-topic:hover {
     color: #22c55e;
   }
 
+  html:not([data-theme="light"]) .tag.tag-general.active {
+    background: rgba(34, 197, 94, 0.3);
+    border: 2px solid #4ade80;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+  }
+
   html:not([data-theme="light"]) .tag.tag-domain {
     background: rgba(37, 99, 235, 0.15);
     color: #60a5fa;
@@ -839,6 +907,13 @@ html[data-theme="dark"] .tag.tag-topic:hover {
     border-color: rgba(37, 99, 235, 0.5);
   }
 
+  html:not([data-theme="light"]) .tag.tag-domain.active {
+    background: rgba(37, 99, 235, 0.3);
+    border: 2px solid #60a5fa;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.3);
+  }
+
   html:not([data-theme="light"]) .tag.tag-topic {
     background: rgba(147, 51, 234, 0.15);
     color: #c084fc;
@@ -848,6 +923,13 @@ html[data-theme="dark"] .tag.tag-topic:hover {
   html:not([data-theme="light"]) .tag.tag-topic:hover {
     background: rgba(147, 51, 234, 0.25);
     border-color: rgba(147, 51, 234, 0.5);
+  }
+
+  html:not([data-theme="light"]) .tag.tag-topic.active {
+    background: rgba(147, 51, 234, 0.3);
+    border: 2px solid #c084fc;
+    font-weight: 700;
+    box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3);
   }
 }
 

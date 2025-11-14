@@ -17,8 +17,7 @@
  * @property {string} [description] - Meta description or extracted content summary
  * @property {string} [domain] - Domain name (e.g., 'example.com')
  * @property {number} [reading_time_minutes] - Estimated reading time in minutes
- * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP) - backend uses this field
- * @property {string} [timestamp] - Legacy alias for saved_at - supported for backwards compatibility
+ * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP)
  * @property {string} [user_notes] - User's personal notes about the page
  * @property {string[]} [manual_tags] - User-added tags (REPEATED field in BigQuery)
  *
@@ -33,8 +32,7 @@
  * @property {string} [ai_summary_brief] - 1-2 sentence AI-generated summary
  * @property {string} [ai_summary_extended] - Longer AI-generated summary (not currently displayed)
  * @property {Array<{type: string, label: string, confidence: number, embedding: number[]}>} [classifications] - Multi-level AI classifications (general/domain/topic)
- * @property {string} [dewey_primary] - Legacy Dewey Decimal Classification code (e.g., '900') - supported for backwards compatibility
- * @property {string} [dewey_primary_label] - Legacy Dewey category (e.g., 'Geography, history, related disciplines') - supported for backwards compatibility, used as fallback when classifications not available
+ * @property {string} [primary_classification_label] - Primary classification label extracted from classifications array
  * @property {string} [ai_enriched_at] - ISO timestamp when AI enrichment completed (TIMESTAMP)
  *
  * LEGACY FIELDS (from mock data, not in schema):
@@ -49,7 +47,7 @@
 const Components = {
   /**
    * Render classification tags with type-specific styling
-   * Supports both new multi-level classifications and legacy dewey_primary
+   * Supports multi-level classifications and primary_classification_label fallback
    *
    * @param {Page} page - Page data object
    * @returns {string} HTML string of classification tags
@@ -65,9 +63,9 @@ const Components = {
         .join('');
     }
 
-    // Fallback to old dewey_primary_label for backwards compatibility
-    if (page.dewey_primary_label) {
-      return `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.dewey_primary_label)}</span>`;
+    // Fallback to primary_classification_label if no full classifications
+    if (page.primary_classification_label) {
+      return `<span class="tag ai-tag" title="AI-generated classification">${this.escapeHtml(page.primary_classification_label)}</span>`;
     }
 
     return '';
@@ -112,7 +110,7 @@ const Components = {
           ` : '')}
 
           <div class="row-footer">
-            ${(page.classifications && page.classifications.length > 0) || page.dewey_primary_label || (page.manual_tags && page.manual_tags.length > 0) ? `
+            ${(page.classifications && page.classifications.length > 0) || page.primary_classification_label || (page.manual_tags && page.manual_tags.length > 0) ? `
               <div class="row-tags">
                 ${this.renderClassifications(page)}
                 ${page.manual_tags && page.manual_tags.length > 0 ?

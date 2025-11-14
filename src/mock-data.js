@@ -11,7 +11,7 @@ const MOCK_DATA = [
     domain: 'example.com',
     author: 'Jane Adventure',
     published_date: '2024-01-15T10:00:00Z',
-    timestamp: '2024-01-20T14:30:00Z',
+    saved_at: '2024-01-20T14:30:00Z',
     reading_time_minutes: 8,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
@@ -22,7 +22,7 @@ const MOCK_DATA = [
       { type: 'domain', label: 'Adventure Travel', confidence: 0.85 },
       { type: 'topic', label: 'Motorcycle Touring', confidence: 0.88 }
     ],
-    dewey_primary_label: 'Geography, history, related disciplines',
+    primary_classification_label: 'Geography, history, related disciplines',
     ai_enriched_at: '2024-01-20T15:00:00Z'
   },
   {
@@ -34,13 +34,13 @@ const MOCK_DATA = [
     domain: 'nytimes.com',
     author: 'Tech Reporter',
     published_date: '2024-01-18T09:00:00Z',
-    timestamp: '2024-01-20T16:45:00Z',
+    saved_at: '2024-01-20T16:45:00Z',
     reading_time_minutes: 12,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['technology', 'climate'],
     ai_summary_brief: null,
-    dewey_primary_label: null,
+    primary_classification_label: null,
     ai_enriched_at: null
   },
   {
@@ -52,7 +52,7 @@ const MOCK_DATA = [
     domain: 'github.com',
     author: null,
     published_date: null,
-    timestamp: '2024-01-19T11:20:00Z',
+    saved_at: '2024-01-19T11:20:00Z',
     reading_time_minutes: 5,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
@@ -63,7 +63,7 @@ const MOCK_DATA = [
       { type: 'domain', label: 'Web Development', confidence: 0.90 },
       { type: 'domain', label: 'Software Engineering', confidence: 0.85 }
     ],
-    dewey_primary_label: 'Computer programming, programs, data',
+    primary_classification_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-19T11:30:00Z'
   },
   {
@@ -75,13 +75,13 @@ const MOCK_DATA = [
     domain: 'medium.com',
     author: 'Design Thinker',
     published_date: '2024-01-17T14:30:00Z',
-    timestamp: '2024-01-19T09:15:00Z',
+    saved_at: '2024-01-19T09:15:00Z',
     reading_time_minutes: 6,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['design', 'minimalism'],
     ai_summary_brief: null,
-    dewey_primary_label: null,
+    primary_classification_label: null,
     ai_enriched_at: null
   },
   {
@@ -93,7 +93,7 @@ const MOCK_DATA = [
     domain: 'arxiv.org',
     author: 'Research Team',
     published_date: '2024-01-16T00:00:00Z',
-    timestamp: '2024-01-18T22:10:00Z',
+    saved_at: '2024-01-18T22:10:00Z',
     reading_time_minutes: 45,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
@@ -105,7 +105,7 @@ const MOCK_DATA = [
       { type: 'topic', label: 'Chain-of-Thought Prompting', confidence: 0.88 },
       { type: 'topic', label: 'Large Language Models', confidence: 0.90 }
     ],
-    dewey_primary_label: 'Computer programming, programs, data',
+    primary_classification_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-18T22:20:00Z'
   },
   {
@@ -117,13 +117,13 @@ const MOCK_DATA = [
     domain: 'cooking.nytimes.com',
     author: 'Chef Name',
     published_date: '2024-01-10T08:00:00Z',
-    timestamp: '2024-01-18T19:30:00Z',
+    saved_at: '2024-01-18T19:30:00Z',
     reading_time_minutes: 15,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['cooking', 'bread'],
     ai_summary_brief: 'A comprehensive guide to baking artisan sourdough bread at home, covering fermentation science, starter maintenance, and techniques for achieving professional-quality crust and crumb.',
-    dewey_primary_label: 'Home & family management',
+    primary_classification_label: 'Home & family management',
     ai_enriched_at: '2024-01-18T19:45:00Z'
   },
   {
@@ -135,13 +135,13 @@ const MOCK_DATA = [
     domain: 'stackoverflow.com',
     author: null,
     published_date: null,
-    timestamp: '2024-01-17T15:45:00Z',
+    saved_at: '2024-01-17T15:45:00Z',
     reading_time_minutes: 10,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['react', 'performance'],
     ai_summary_brief: null,
-    dewey_primary_label: null,
+    primary_classification_label: null,
     ai_enriched_at: null
   },
   {
@@ -153,13 +153,13 @@ const MOCK_DATA = [
     domain: 'aeon.co',
     author: 'Philosophy Writer',
     published_date: '2024-01-12T10:00:00Z',
-    timestamp: '2024-01-17T21:00:00Z',
+    saved_at: '2024-01-17T21:00:00Z',
     reading_time_minutes: 20,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['philosophy', 'physics'],
     ai_summary_brief: 'A philosophical examination of temporal ontology, contrasting presentist and eternalist perspectives on time while exploring implications from modern physics and special relativity.',
-    dewey_primary_label: 'Philosophy',
+    primary_classification_label: 'Philosophy',
     ai_enriched_at: '2024-01-17T21:15:00Z'
   },
   {
@@ -171,13 +171,13 @@ const MOCK_DATA = [
     domain: 'youtube.com',
     author: 'Code Instructor',
     published_date: '2024-01-14T12:00:00Z',
-    timestamp: '2024-01-16T18:20:00Z',
+    saved_at: '2024-01-16T18:20:00Z',
     reading_time_minutes: 35,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['typescript', 'tutorial'],
     ai_summary_brief: null,
-    dewey_primary_label: null,
+    primary_classification_label: null,
     ai_enriched_at: null
   },
   {
@@ -189,13 +189,13 @@ const MOCK_DATA = [
     domain: 'theverge.com',
     author: 'Tech Reviewer',
     published_date: '2024-01-15T06:00:00Z',
-    timestamp: '2024-01-15T20:30:00Z',
+    saved_at: '2024-01-15T20:30:00Z',
     reading_time_minutes: 18,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['apple', 'vr', 'review'],
     ai_summary_brief: 'A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.',
-    dewey_primary_label: 'Computer science, information, works',
+    primary_classification_label: 'Computer science, information, works',
     ai_enriched_at: '2024-01-15T20:45:00Z'
   },
   {
@@ -207,13 +207,13 @@ const MOCK_DATA = [
     domain: 'paulgraham.com',
     author: 'Paul Graham',
     published_date: '2024-01-08T00:00:00Z',
-    timestamp: '2024-01-14T10:15:00Z',
+    saved_at: '2024-01-14T10:15:00Z',
     reading_time_minutes: 30,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['career', 'philosophy'],
     ai_summary_brief: null,
-    dewey_primary_label: null,
+    primary_classification_label: null,
     ai_enriched_at: null
   },
   {
@@ -225,13 +225,13 @@ const MOCK_DATA = [
     domain: 'docs.anthropic.com',
     author: null,
     published_date: null,
-    timestamp: '2024-01-13T16:40:00Z',
+    saved_at: '2024-01-13T16:40:00Z',
     reading_time_minutes: 12,
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['ai', 'documentation'],
     ai_summary_brief: 'Official API documentation for integrating Claude AI assistant into applications, including setup instructions, code examples, and best practices for implementation.',
-    dewey_primary_label: 'Computer programming, programs, data',
+    primary_classification_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-13T16:50:00Z'
   }
 ];
@@ -246,7 +246,7 @@ if (typeof window !== 'undefined' && !window.MOCK_DATA_EXTENDED) {
         ...item,
         id: `${item.id}-copy-${i}-${index}`,
         title: `[Copy ${i + 1}] ${item.title}`,
-        timestamp: new Date(Date.now() - (i * 86400000) - (index * 3600000)).toISOString()
+        saved_at: new Date(Date.now() - (i * 86400000) - (index * 3600000)).toISOString()
       });
     });
   }

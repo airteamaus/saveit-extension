@@ -100,6 +100,26 @@ globalThis.logout = async function() {
   console.log('Logged out from Firebase');
 };
 
+/**
+ * Show visual feedback on the extension icon
+ * @param {string} type - 'success' or 'error'
+ * @param {number} duration - How long to show the badge (ms)
+ */
+async function showBadgeFeedback(type, duration = 2000) {
+  if (type === 'success') {
+    await browser.action.setBadgeText({ text: '✓' });
+    await browser.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+  } else if (type === 'error') {
+    await browser.action.setBadgeText({ text: '✗' });
+    await browser.action.setBadgeBackgroundColor({ color: '#F44336' });
+  }
+
+  // Clear badge after duration
+  setTimeout(async () => {
+    await browser.action.setBadgeText({ text: '' });
+  }, duration);
+}
+
 // Handle messages from dashboard (e.g., sign-in button)
 browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'signIn') {
@@ -118,6 +138,10 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle extension icon clicks
 browser.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');
+
+  // Show immediate feedback that click was registered
+  await browser.action.setBadgeText({ text: '...' });
+  await browser.action.setBadgeBackgroundColor({ color: '#64748b' });
 
   try {
     // Sign in with Firebase (prompts OAuth if not signed in)
@@ -157,6 +181,9 @@ browser.action.onClicked.addListener(async (tab) => {
       console.error('Failed to invalidate cache:', cacheError);
     }
 
+    // Show success feedback on icon (always visible)
+    await showBadgeFeedback('success', 2000);
+
     browser.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
@@ -166,6 +193,9 @@ browser.action.onClicked.addListener(async (tab) => {
 
   } catch (error) {
     console.error('Error saving page:', error);
+
+    // Show error feedback on icon (always visible)
+    await showBadgeFeedback('error', 3000);
 
     // Show user-friendly error message
     let userMessage = error.message;

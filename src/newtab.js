@@ -36,6 +36,11 @@ class SaveItDashboard {
     this.currentDiscoveryType = null; // Store classification type (general/domain/topic)
     this.currentDiscoveryContext = null; // Store parent context for breadcrumbs
 
+    // Hierarchical tag selection state
+    this.selectedL1 = null; // Currently selected L1 (general) tag
+    this.selectedL2 = null; // Currently selected L2 (domain) tag
+    this.selectedL3 = null; // Currently selected L3 (topic) tag
+
     // Infinite scroll state
     this.isLoadingMore = false;
     this.hasMorePages = true;
@@ -201,8 +206,7 @@ class SaveItDashboard {
         this.nextCursor = response.pagination?.nextCursor || null;
       }
 
-      this.applyClientFilters();
-      this.updateStats();
+      this.filterBySelectedTags();
     } catch (error) {
       console.error('Failed to load pages:', error);
 
@@ -240,9 +244,7 @@ class SaveItDashboard {
       // Only update if data changed
       if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
         this.allPages = freshPages;
-        this.applyClientFilters();
-        this.updateStats();
-        this.render();
+        this.filterBySelectedTags();
       }
     } catch (error) {
       console.error('Background refresh failed:', error);
@@ -269,7 +271,7 @@ class SaveItDashboard {
         // AI-generated fields
         if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
         if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
-        if (page.dewey_primary_label && page.dewey_primary_label.toLowerCase().includes(query)) return true;
+        if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
 
         // Tags (both manual and AI)
         if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
@@ -314,6 +316,52 @@ class SaveItDashboard {
             tagMap.set(c.label, { type: 'general', label: c.label });
           }
         });
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract L2 (domain) tags for a given L1 (general) tag
+   * @param {string} l1Label - The L1 tag label
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractL2TagsForL1(l1Label) {
+    const tagMap = new Map();
+
+    this.pages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        const pageGeneral = page.classifications.find(c => c.type === 'general');
+        if (pageGeneral && pageGeneral.label === l1Label) {
+          const domainTags = page.classifications.filter(c => c.type === 'domain');
+          domainTags.forEach(tag => {
+            tagMap.set(tag.label, { type: 'domain', label: tag.label });
+          });
+        }
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract L3 (topic) tags for a given L2 (domain) tag
+   * @param {string} l2Label - The L2 tag label
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractL3TagsForL2(l2Label) {
+    const tagMap = new Map();
+
+    this.pages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        const pageDomain = page.classifications.find(c => c.type === 'domain');
+        if (pageDomain && pageDomain.label === l2Label) {
+          const topicTags = page.classifications.filter(c => c.type === 'topic');
+          topicTags.forEach(tag => {
+            tagMap.set(tag.label, { type: 'topic', label: tag.label });
+          });
+        }
       }
     });
 
@@ -452,7 +500,7 @@ class SaveItDashboard {
   }
 
   /**
-   * Render tag bar
+   * Render tag bar with hierarchical selection
    */
   renderTagBar() {
     const tagBarContainer = document.getElementById('tag-bar');
@@ -461,64 +509,134 @@ class SaveItDashboard {
       return;
     }
 
-    let tags = [];
-    let context = null;
+    // Always show L1 tags
+    const l1Tags = this.extractGeneralTags();
 
-    if (this.discoveryMode && this.currentDiscoveryType && this.currentDiscoveryLabel) {
-      // Discovery mode - show sibling tags and breadcrumb
-      tags = this.extractSiblingTags(this.currentDiscoveryType, this.currentDiscoveryLabel);
-      context = this.currentDiscoveryContext;
-    } else {
-      // Main dashboard - show general-level tags with "All" breadcrumb
-      tags = this.extractGeneralTags();
-      context = { type: 'all', label: 'All' };
+    // Build L1 row HTML
+    const l1Html = l1Tags.map(tag => {
+      const isActive = this.selectedL1 === tag.label;
+      const activeClass = isActive ? 'active' : '';
+      return `<button class="tag ai-tag tag-general ${activeClass}" data-type="general" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
+    }).join('');
+
+    let l2Html = '';
+    let l3Html = '';
+
+    // Show L2 tags if L1 is selected
+    if (this.selectedL1) {
+      const l2Tags = this.extractL2TagsForL1(this.selectedL1);
+      l2Html = l2Tags.map(tag => {
+        const isActive = this.selectedL2 === tag.label;
+        const activeClass = isActive ? 'active' : '';
+        return `<button class="tag ai-tag tag-domain ${activeClass}" data-type="domain" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
+      }).join('');
     }
 
-    const html = Components.tagBar(tags, context);
-    tagBarContainer.innerHTML = html;
-
-    // Add click handler for back button
-    const backBtn = tagBarContainer.querySelector('#back-to-main');
-    if (backBtn) {
-      backBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.exitDiscoveryMode();
-      });
+    // Show L3 tags if L2 is selected
+    if (this.selectedL2) {
+      const l3Tags = this.extractL3TagsForL2(this.selectedL2);
+      l3Html = l3Tags.map(tag => {
+        const isActive = this.selectedL3 === tag.label;
+        const activeClass = isActive ? 'active' : '';
+        return `<button class="tag ai-tag tag-topic ${activeClass}" data-type="topic" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
+      }).join('');
     }
 
-    // Add click handlers for breadcrumb links
-    tagBarContainer.querySelectorAll('.breadcrumb a').forEach(link => {
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const action = link.dataset.action;
-        const label = link.dataset.label;
-        const parent = link.dataset.parent;
-        const grandparent = link.dataset.grandparent;
+    // Build complete tag bar HTML
+    tagBarContainer.innerHTML = `
+      <div class="tag-bar-tags">${l1Html}</div>
+      ${l2Html ? `<div class="tag-bar-tags tag-bar-l2">${l2Html}</div>` : ''}
+      ${l3Html ? `<div class="tag-bar-tags tag-bar-l3">${l3Html}</div>` : ''}
+    `;
 
-        if (action === 'show-all') {
-          this.exitDiscoveryMode();
-        } else if (action === 'filter-general' && label) {
-          this.discoverByTag(label, 'general');
-        } else if (action === 'filter-domain' && label && parent) {
-          this.discoverByTag(label, 'domain');
-        } else if (action === 'filter-topic' && label && parent && grandparent) {
-          this.discoverByTag(label, 'topic');
-        }
-      });
-    });
-
-    // Add click handlers for tag bar tags
+    // Add click handlers for all tags
     tagBarContainer.querySelectorAll('.tag.ai-tag').forEach(tagElement => {
       tagElement.addEventListener('click', (e) => {
         e.stopPropagation();
         const label = tagElement.dataset.label;
         const type = tagElement.dataset.type;
         if (label && type) {
-          this.discoverByTag(label, type);
+          this.handleTagClick(type, label);
         }
       });
     });
+  }
+
+  /**
+   * Handle tag click in hierarchical selection mode
+   * @param {string} type - Classification type (general/domain/topic)
+   * @param {string} label - Tag label
+   */
+  handleTagClick(type, label) {
+    if (type === 'general') {
+      // Toggle L1 selection, clear deeper levels
+      this.selectedL1 = (this.selectedL1 === label) ? null : label;
+      this.selectedL2 = null;
+      this.selectedL3 = null;
+    } else if (type === 'domain') {
+      // Toggle L2 selection, clear L3
+      this.selectedL2 = (this.selectedL2 === label) ? null : label;
+      this.selectedL3 = null;
+    } else if (type === 'topic') {
+      // Toggle L3 selection
+      this.selectedL3 = (this.selectedL3 === label) ? null : label;
+    }
+
+    // Filter results and re-render
+    this.filterBySelectedTags();
+  }
+
+  /**
+   * Filter pages based on currently selected hierarchical tags
+   */
+  filterBySelectedTags() {
+    // Start with all pages
+    console.log('[filterBySelectedTags] Starting with allPages:', this.allPages.length);
+    let filtered = [...this.allPages];
+
+    // Apply hierarchical filtering based on deepest selected tag
+    if (this.selectedL3) {
+      // Filter by L3 (topic) - most specific
+      filtered = filtered.filter(page => {
+        if (!page.classifications) return false;
+        return page.classifications.some(c => c.type === 'topic' && c.label === this.selectedL3);
+      });
+    } else if (this.selectedL2) {
+      // Filter by L2 (domain)
+      filtered = filtered.filter(page => {
+        if (!page.classifications) return false;
+        return page.classifications.some(c => c.type === 'domain' && c.label === this.selectedL2);
+      });
+    } else if (this.selectedL1) {
+      // Filter by L1 (general)
+      filtered = filtered.filter(page => {
+        if (!page.classifications) return false;
+        return page.classifications.some(c => c.type === 'general' && c.label === this.selectedL1);
+      });
+    }
+
+    // Apply any search filter on top of tag filter
+    if (this.currentFilter.search) {
+      const query = this.currentFilter.search.toLowerCase();
+      filtered = filtered.filter(page => {
+        if (page.title && page.title.toLowerCase().includes(query)) return true;
+        if (page.url && page.url.toLowerCase().includes(query)) return true;
+        if (page.description && page.description.toLowerCase().includes(query)) return true;
+        if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
+        if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
+        if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
+        if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
+        if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
+        if (page.domain && page.domain.toLowerCase().includes(query)) return true;
+        if (page.author && page.author.toLowerCase().includes(query)) return true;
+        return false;
+      });
+    }
+
+    this.pages = filtered;
+    console.log('[filterBySelectedTags] Filtered to pages:', this.pages.length);
+    this.updateStats();
+    this.render();
   }
 
   /**
@@ -650,9 +768,47 @@ class SaveItDashboard {
   }
 
   /**
+   * Reset all filters and return to default view
+   */
+  resetToDefaultView() {
+    // Clear search
+    const searchInput = document.getElementById('search');
+    const clearSearch = document.getElementById('clear-search');
+    if (searchInput) {
+      searchInput.value = '';
+    }
+    if (clearSearch) {
+      clearSearch.style.display = 'none';
+    }
+
+    // Reset all filter state
+    this.currentFilter.search = '';
+    this.selectedL1 = null;
+    this.selectedL2 = null;
+    this.selectedL3 = null;
+    this.discoveryMode = false;
+    this.currentDiscoveryLabel = null;
+    this.currentDiscoveryType = null;
+    this.currentDiscoveryContext = null;
+
+    // Restore pages to show all items (unfiltered)
+    this.pages = [...this.allPages];
+
+    // Re-render the view
+    this.render();
+  }
+
+  /**
    * Setup all event listeners
    */
   setupEventListeners() {
+    // Logo click - reset to default view
+    const logo = document.querySelector('.logo');
+    if (logo) {
+      logo.style.cursor = 'pointer';
+      logo.addEventListener('click', () => this.resetToDefaultView());
+    }
+
     // Sign-in button
     const signInBtn = document.getElementById('sign-in-btn');
     if (signInBtn) {
@@ -712,30 +868,6 @@ class SaveItDashboard {
 
     // Card actions (event delegation)
     document.getElementById('content').addEventListener('click', (e) => {
-      // Back button - return to main view from discovery
-      const backBtn = e.target.closest('#back-to-main');
-      if (backBtn) {
-        e.stopPropagation();
-        this.exitDiscoveryMode();
-        return;
-      }
-
-      // Tag click - trigger semantic discovery
-      const tagElement = e.target.closest('.ai-tag');
-      if (tagElement) {
-        e.stopPropagation();
-        const label = tagElement.dataset.label;
-        const type = tagElement.dataset.type;
-        console.log('[Tag Click] label:', label, 'type:', type);
-        if (label && type) {
-          console.log('[Tag Click] Calling discoverByTag');
-          this.discoverByTag(label, type);
-        } else {
-          console.warn('[Tag Click] Missing label or type, not triggering discovery');
-        }
-        return;
-      }
-
       // Delete button - handle and stop propagation
       const deleteBtn = e.target.closest('.btn-delete');
       if (deleteBtn) {
@@ -767,9 +899,8 @@ class SaveItDashboard {
    * Handle filter changes (search, category)
    */
   handleFilterChange() {
-    this.applyClientFilters();
-    this.updateStats();
-    this.render();
+    // Use filterBySelectedTags which handles both tag and search filtering
+    this.filterBySelectedTags();
   }
 
   /**
@@ -828,9 +959,7 @@ class SaveItDashboard {
 
       // Append new pages to existing
       this.allPages = [...this.allPages, ...newPages];
-      this.applyClientFilters();
-      this.updateStats();
-      this.render();
+      this.filterBySelectedTags();
 
     } catch (error) {
       console.error('Failed to load more pages:', error);
@@ -897,9 +1026,7 @@ class SaveItDashboard {
       await API.deletePage(id);
 
       this.allPages = this.allPages.filter(p => p.id !== id);
-      this.applyClientFilters();
-      this.updateStats();
-      this.render();
+      this.filterBySelectedTags();
 
       this.showToast('Page deleted successfully');
     } catch (error) {
@@ -1035,9 +1162,7 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
 
     // Restore original pages from allPages
     this.pages = this.allPages.slice();
-    this.applyClientFilters();
-
-    this.render();
+    this.filterBySelectedTags();
   }
 }
 

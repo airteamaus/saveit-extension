@@ -29,9 +29,8 @@ export const PageSchema = z.object({
   domain: z.string().optional(),
   reading_time_minutes: z.number().int().positive().optional(),
 
-  // Timestamp fields - support both new and legacy
+  // Timestamp field
   saved_at: z.string().datetime().optional(),
-  timestamp: z.string().datetime().optional(), // Legacy alias
 
   user_notes: z.string().optional(),
   manual_tags: z.array(z.string()).optional().default([]),
@@ -47,10 +46,7 @@ export const PageSchema = z.object({
   ai_summary_brief: z.string().optional(),
   ai_summary_extended: z.string().optional(),
   classifications: z.array(ClassificationSchema).optional(),
-
-  // Legacy classification fields (backwards compatibility)
-  dewey_primary: z.string().optional(),
-  dewey_primary_label: z.string().optional(),
+  primary_classification_label: z.string().optional(),
   ai_enriched_at: z.string().datetime().optional(),
 
   // Legacy fields (from mock data, not in BigQuery)

@@ -363,9 +363,9 @@ const API = {
     }
 
     if (options.sort === 'newest') {
-      filtered.sort((a, b) => new Date(b.saved_at || b.timestamp) - new Date(a.saved_at || a.timestamp));
+      filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
     } else if (options.sort === 'oldest') {
-      filtered.sort((a, b) => new Date(a.saved_at || a.timestamp) - new Date(b.saved_at || b.timestamp));
+      filtered.sort((a, b) => new Date(a.saved_at) - new Date(b.saved_at));
     }
 
     const offset = options.offset || 0;
@@ -511,8 +511,8 @@ const API = {
         if (page.classifications) {
           pageTags.push(...page.classifications.map(c => c.label));
         }
-        if (page.dewey_primary_label) {
-          pageTags.push(page.dewey_primary_label);
+        if (page.primary_classification_label) {
+          pageTags.push(page.primary_classification_label);
         }
         if (page.manual_tags) {
           pageTags.push(...page.manual_tags);
