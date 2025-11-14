@@ -785,6 +785,9 @@ class SaveItDashboard {
 
     const container = document.getElementById('content');
 
+    // Preserve scroll sentinel before ANY innerHTML modifications
+    const sentinel = document.getElementById('scroll-sentinel');
+
     if (this.pages.length === 0) {
       if (this.currentFilter.search) {
         container.innerHTML = `
@@ -812,16 +815,18 @@ class SaveItDashboard {
           container.innerHTML = Components.emptyState();
         }
       }
+
+      // Re-append sentinel even for empty states
+      if (sentinel) {
+        container.appendChild(sentinel);
+      }
       return;
     }
 
     const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
-
-    // Preserve scroll sentinel when updating content
-    const sentinel = document.getElementById('scroll-sentinel');
     container.innerHTML = cardsHtml;
 
-    // Re-append sentinel if it existed (for infinite scroll)
+    // Re-append sentinel after updating content
     if (sentinel) {
       container.appendChild(sentinel);
     }
@@ -1316,7 +1321,16 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
 
     // Use Components.discoveryResults to render full discovery view
     const container = document.getElementById('content');
+
+    // Preserve scroll sentinel before modifying content
+    const sentinel = document.getElementById('scroll-sentinel');
+
     container.innerHTML = Components.discoveryResults(results);
+
+    // Re-append sentinel after updating content
+    if (sentinel) {
+      container.appendChild(sentinel);
+    }
 
     // Render tag bar after updating pages
     this.renderTagBar();
