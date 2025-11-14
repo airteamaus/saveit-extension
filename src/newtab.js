@@ -5,6 +5,20 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
+/**
+ * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
+ * @returns {Object|null} browser.runtime or chrome.runtime
+ */
+function getBrowserRuntime() {
+  if (typeof browser !== 'undefined' && browser.runtime) {
+    return browser.runtime;
+  }
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+    return chrome.runtime;
+  }
+  return null;
+}
+
 class SaveItDashboard {
   constructor() {
     this.pages = [];
@@ -148,7 +162,8 @@ class SaveItDashboard {
     const buildDate = document.getElementById('build-date');
 
     if (versionNumber && typeof browser !== 'undefined' && browser.runtime) {
-      const manifest = browser.runtime.getManifest();
+      const runtime = getBrowserRuntime();
+      const manifest = runtime?.getManifest();
       versionNumber.textContent = manifest.version;
 
       // Show build date if available (added during release process)
@@ -595,7 +610,11 @@ class SaveItDashboard {
   async handleSignIn() {
     try {
       // Send message to background script to trigger sign-in
-      await browser.runtime.sendMessage({ action: 'signIn' });
+      const runtime = getBrowserRuntime();
+      if (!runtime) {
+        throw new Error('Browser runtime not available');
+      }
+      await runtime.sendMessage({ action: 'signIn' });
       // Auth state listener will handle UI updates
     } catch (error) {
       console.error('Sign-in failed:', error);
@@ -900,7 +919,8 @@ class SaveItDashboard {
    */
   showAbout() {
     const mode = API.isExtension ? 'Extension' : 'Development';
-    const version = typeof browser !== 'undefined' && browser.runtime ? browser.runtime.getManifest().version : 'standalone';
+    const runtime = getBrowserRuntime();
+    const version = runtime ? runtime.getManifest().version : 'standalone';
     const message = `SaveIt
 
 SaveIt uses AI to read and semantically index the subject of each page based on its content. This lets you recall saved pages through similarity of subject matter, as opposed to having to remember the domain name, title, or URL.
