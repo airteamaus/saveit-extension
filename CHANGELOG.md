@@ -5,6 +5,22 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.20.0] - 2025-11-14
+
+### ♻️ Refactoring
+
+- **dashboard:** implement similarity-based tag filtering with single code path (b8277d1)
+
+## [0.19.0] - 2025-11-14
+
+No notable changes.
+
+## [0.18.0] - 2025-11-14
+
+### ✨ Features
+
+- add badge feedback and clickable logo (45ad871)
+
 ## [0.17.0] - 2025-11-14
 
 ### 🐛 Bug Fixes
@@ -57,46 +73,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **release:** add automated release notes generation from conventional commits (61d9b30)
-
-### 🐛 Bug Fixes
-
-- **auth:** resolve authentication persistence bug requiring repeated sign-ins (ddec1a3)
-
-## [0.16.3] - 2025-11-13
-
-### 🐛 Bug Fixes
-
-- **e2e:** resolve duplicate #back-to-main ID selector ambiguity (1119b31)
-- **e2e:** use Components.discoveryResults() to render discovery header (7a46230)
-- **e2e:** use page.click() instead of locator().click() for better event propagation (7f9f38b)
-- **e2e:** resolve 4 failing E2E tests (e50907c)
-- **e2e:** replace browser optional chaining with typeof check (638ac5c)
-- resolve E2E test failures in headless mode (bc83d41)
-- **ci:** enable headless mode for E2E tests in CI (6ff3a6d)
-
-## [0.16.2] - 2025-11-13
-
-### ✨ Features
-
 - **ui:** swap metadata and delete button positions (05a9ed6)
 - improve About dialog with thoughtful messaging (c425a34)
-
-### 🐛 Bug Fixes
-
-- **ci:** build bundles before validation (2886966)
-
-### ♻️ Refactoring
-
-- replace flowery About text with factual technical explanation (448fcc1)
-
-### 📚 Documentation
-
-- add new tab page design exploration memo (31c062b)
-
-## [0.16.1] - 2025-11-12
-
-### ✨ Features
-
 - remove top-level 'All' breadcrumb from navigation (7ddde66)
 - add infinite scroll for saved pages dashboard (16c9f5b)
 - add account picker on sign-in and build date display (ba2cbbe)
@@ -130,6 +108,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **auth:** resolve authentication persistence bug requiring repeated sign-ins (ddec1a3)
+- **e2e:** resolve duplicate #back-to-main ID selector ambiguity (1119b31)
+- **e2e:** use Components.discoveryResults() to render discovery header (7a46230)
+- **e2e:** use page.click() instead of locator().click() for better event propagation (7f9f38b)
+- **e2e:** resolve 4 failing E2E tests (e50907c)
+- **e2e:** replace browser optional chaining with typeof check (638ac5c)
+- resolve E2E test failures in headless mode (bc83d41)
+- **ci:** enable headless mode for E2E tests in CI (6ff3a6d)
+- **ci:** build bundles before validation (2886966)
 - remove unused eslint-disable directive (544caed)
 - skip pre-push hook checks in CI environment (8ab4074)
 - ensure Firebase bundles are built before bundling background.js (6ea35c4)
@@ -153,6 +140,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ♻️ Refactoring
 
+- replace flowery About text with factual technical explanation (448fcc1)
 - **dashboard:** remove duplicate inlined CSS, use external stylesheet (36f08ca)
 - **dashboard:** remove unused category filter feature (b2beb1f)
 - **dashboard:** standardize metadata separator rendering (f66c49b)
@@ -169,6 +157,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Documentation
 
+- add new tab page design exploration memo (31c062b)
 - add comprehensive testing instructions and beta warnings (52f55bb)
 - update cache-busting recommendations (b45f722)
 - **refactor:** add comprehensive inline documentation (717961a)
