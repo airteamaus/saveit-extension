@@ -816,7 +816,15 @@ class SaveItDashboard {
     }
 
     const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
+
+    // Preserve scroll sentinel when updating content
+    const sentinel = document.getElementById('scroll-sentinel');
     container.innerHTML = cardsHtml;
+
+    // Re-append sentinel if it existed (for infinite scroll)
+    if (sentinel) {
+      container.appendChild(sentinel);
+    }
   }
 
   /**
