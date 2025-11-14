@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.9] - 2025-11-14
+
+### 🐛 Bug Fixes
+
+- **brave:** add Chrome API support in dashboard sign-in handler (4f16061)
+- **brave:** support Brave/Chrome API in Firebase and config initialization (f9f4391)
+
 ## [0.16.8] - 2025-11-14
 
 ### 🐛 Bug Fixes
@@ -91,15 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - add infinite scroll for saved pages dashboard (16c9f5b)
-
-### 🐛 Bug Fixes
-
-- remove unused eslint-disable directive (544caed)
-
-## [0.15.1] - 2025-11-12
-
-### ✨ Features
-
 - add account picker on sign-in and build date display (ba2cbbe)
 - make breadcrumbs clickable and fix husky hooks (d449d78)
 - add tag bar component with breadcrumb navigation (fced774)
@@ -131,6 +129,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- remove unused eslint-disable directive (544caed)
 - skip pre-push hook checks in CI environment (8ab4074)
 - ensure Firebase bundles are built before bundling background.js (6ea35c4)
 - update dependencies to resolve security vulnerabilities (20e18ee)
