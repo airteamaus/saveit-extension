@@ -5,7 +5,11 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [0.16.4] - 2025-11-14
+
+### ✨ Features
+
+- **release:** add automated release notes generation from conventional commits (61d9b30)
 
 ### 🐛 Bug Fixes
 
@@ -86,13 +90,6 @@ No notable changes.
 
 ## [0.14.6] - 2025-11-12
 
-### 🐛 Bug Fixes
-
-- update dependencies to resolve security vulnerabilities (20e18ee)
-- add package-lock.json to version control for CI/CD (423c440)
-
-## [0.14.5] - 2025-11-12
-
 ### ✨ Features
 
 - add tag bar component with breadcrumb navigation (fced774)
@@ -124,6 +121,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- update dependencies to resolve security vulnerabilities (20e18ee)
+- add package-lock.json to version control for CI/CD (423c440)
 - mark unused parameter with underscore prefix (f60e4c7)
 - **dashboard:** add polyfill to newtab.html for Chrome compatibility (e849144)
 - update API response schema for new pagination format (a146738)
