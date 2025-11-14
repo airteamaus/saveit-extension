@@ -966,7 +966,7 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
       console.log('[discoverByTag] Calling API.searchByTag');
       const results = await API.searchByTag(label);
       console.log('[discoverByTag] Got results, rendering:', results);
-      this.renderDiscoveryResults(results, label);
+      this.renderDiscoveryResults(results);
       console.log('[discoverByTag] Discovery complete');
     } catch (error) {
       console.error('[discoverByTag] Failed to search by tag:', error);
@@ -976,9 +976,9 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
 
   /**
    * Render discovery results
-   * Uses Components.discoveryResults to render the full discovery view with header
+   * Uses Components.discoveryResults to render the full discovery view
    */
-  renderDiscoveryResults(results, queryLabel) {
+  renderDiscoveryResults(results) {
     // Flatten all tiers into single array for tag extraction
     const allResults = [
       ...(results.exact_matches || []),
@@ -991,7 +991,7 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
 
     // Use Components.discoveryResults to render full discovery view
     const container = document.getElementById('content');
-    container.innerHTML = Components.discoveryResults(results, queryLabel);
+    container.innerHTML = Components.discoveryResults(results);
 
     // Render tag bar after updating pages
     this.renderTagBar();

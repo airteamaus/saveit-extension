@@ -82,11 +82,21 @@ html[data-theme="dark"] .row-notes {
   color: #a3a3a3;
 }
 
+html[data-theme="dark"] .row-meta {
+  background: #1a1a1a;
+  color: #d4d4d4;
+}
+
 @media (prefers-color-scheme: dark) {
   html:not([data-theme="light"]) .row-notes {
     background: #1a1a1a;
     border-left-color: #f59e0b;
     color: #a3a3a3;
+  }
+
+  html:not([data-theme="light"]) .row-meta {
+    background: #1a1a1a;
+    color: #d4d4d4;
   }
 }
 
@@ -635,18 +645,18 @@ body {
 .row-footer {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--spacing-md);
-  flex-wrap: wrap;
   padding-top: 4pt;
   padding-bottom: 4pt;
+  position: relative;
+  padding-right: 40px; /* Make room for absolutely positioned delete button */
 }
 
 .row-tags {
   display: flex;
   flex-wrap: wrap;
   gap: var(--spacing-xs);
-  flex: 0 1 auto;
+  flex: 1;
 }
 
 .row-meta {
@@ -657,8 +667,12 @@ body {
   flex-wrap: wrap;
   gap: var(--spacing-sm);
   font-size: 12px;
-  color: var(--color-text-lighter);
+  color: #525252;
   white-space: nowrap;
+  background: #ffffff;
+  padding: 4px 12px;
+  border-radius: 12px;
+  z-index: 10;
 }
 
 /* Metadata bullet separator pattern (CSS-based, not JS)
@@ -892,7 +906,11 @@ html[data-theme="dark"] .tag.tag-topic:hover {
 }
 
 .btn-delete {
-  /* Delete button in footer - right side */
+  /* Delete button in footer - absolutely positioned in footer area */
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 13px;
   background: transparent;
@@ -1080,15 +1098,15 @@ select:focus-visible {
 .discovery-view {
   max-width: 1200px;
   margin: 0 auto;
-  padding: var(--spacing-lg) 0;
+  padding: 0;
 }
 
 .discovery-header {
   display: flex;
   align-items: center;
   gap: var(--spacing-md);
-  margin-bottom: var(--spacing-xl);
-  padding: 0 var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  padding: 0;
 }
 
 .btn-back {
@@ -1141,7 +1159,7 @@ select:focus-visible {
 }
 
 .discovery-tier {
-  margin-bottom: var(--spacing-xl);
+  margin-bottom: var(--spacing-md);
 }
 
 .tier-title {
@@ -1154,7 +1172,7 @@ select:focus-visible {
   letter-spacing: 0.05em;
   color: var(--color-text-light);
   margin-bottom: var(--spacing-md);
-  padding: 0 var(--spacing-md);
+  padding: 0;
 }
 
 .tier-title svg {
@@ -1180,7 +1198,7 @@ select:focus-visible {
 .tier-results {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-md);
+  gap: 0;
 }
 
 /* Dark mode for discovery view */
