@@ -6,9 +6,18 @@
 const API = {
   /**
    * Detect if we're running inside the browser extension or as standalone HTML
+   * Checks both browser (Firefox + polyfill) and chrome (Chrome/Brave/Edge)
    */
   get isExtension() {
-    return typeof browser !== 'undefined' && browser.storage;
+    // Firefox native or polyfilled browser API
+    if (typeof browser !== 'undefined' && browser.storage) {
+      return true;
+    }
+    // Chrome native API (before polyfill loads)
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+      return true;
+    }
+    return false;
   },
 
   /**
@@ -36,6 +45,22 @@ const API = {
     }
     const user = window.firebaseAuth.currentUser;
     return user ? user.uid : null;
+  },
+
+  /**
+   * Get browser storage API (works with both browser and chrome APIs)
+   * @private
+   */
+  getStorage() {
+    // Prefer browser API (Firefox + polyfill)
+    if (typeof browser !== 'undefined' && browser.storage) {
+      return browser.storage.local;
+    }
+    // Fallback to chrome API (Chrome/Brave/Edge before polyfill loads)
+    if (typeof chrome !== 'undefined' && chrome.storage) {
+      return chrome.storage.local;
+    }
+    return null;
   },
 
   /**
@@ -97,8 +122,11 @@ const API = {
         return null;
       }
 
+      const storage = this.getStorage();
+      if (!storage) return null;
+
       const cacheKey = this.getCacheKey(userId);
-      const result = await browser.storage.local.get(cacheKey);
+      const result = await storage.get(cacheKey);
       const cached = result[cacheKey];
 
       if (!cached) {
@@ -112,7 +140,7 @@ const API = {
           cached_user: cached.userId,
           current_user: userId
         });
-        await browser.storage.local.remove(cacheKey);
+        await storage.remove(cacheKey);
         return null;
       }
 
@@ -149,8 +177,11 @@ const API = {
         return;
       }
 
+      const storage = this.getStorage();
+      if (!storage) return;
+
       const cacheKey = this.getCacheKey(userId);
-      await browser.storage.local.set({
+      await storage.set({
         [cacheKey]: {
           userId: userId, // Store user_id for validation
           pages: pages,
@@ -177,8 +208,11 @@ const API = {
         return;
       }
 
+      const storage = this.getStorage();
+      if (!storage) return;
+
       const cacheKey = this.getCacheKey(userId);
-      await browser.storage.local.remove(cacheKey);
+      await storage.remove(cacheKey);
       console.log('[invalidateCache] Cache invalidated for user:', userId);
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
@@ -192,7 +226,10 @@ const API = {
     if (!this.isExtension) return;
 
     try {
-      await browser.storage.local.clear();
+      const storage = this.getStorage();
+      if (!storage) return;
+
+      await storage.clear();
       console.log('[clearAllCache] All cache cleared');
     } catch (error) {
       console.error('[clearAllCache] Failed to clear cache:', error);
@@ -208,9 +245,12 @@ const API = {
     if (!this.isExtension) return;
 
     try {
+      const storage = this.getStorage();
+      if (!storage) return;
+
       // Remove old global cache key
       const legacyKey = 'savedPages_cache';
-      await browser.storage.local.remove(legacyKey);
+      await storage.remove(legacyKey);
       console.log('[cleanupLegacyCache] Removed legacy global cache');
     } catch (error) {
       console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
