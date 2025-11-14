@@ -41,6 +41,9 @@ class SaveItDashboard {
     this.selectedL2 = null; // Currently selected L2 (domain) tag
     this.selectedL3 = null; // Currently selected L3 (topic) tag
 
+    // Similarity search configuration
+    this.similarityThreshold = 0.5; // Filter out results below this threshold
+
     // Infinite scroll state
     this.isLoadingMore = false;
     this.hasMorePages = true;
@@ -206,7 +209,8 @@ class SaveItDashboard {
         this.nextCursor = response.pagination?.nextCursor || null;
       }
 
-      this.filterBySelectedTags();
+      // Initially show all pages (no tag selected)
+      this.pages = [...this.allPages];
     } catch (error) {
       console.error('Failed to load pages:', error);
 
@@ -244,7 +248,17 @@ class SaveItDashboard {
       // Only update if data changed
       if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
         this.allPages = freshPages;
-        this.filterBySelectedTags();
+        // If a tag is selected, re-run similarity search to update results
+        const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+        if (activeLabel) {
+          // Re-trigger tag click to refresh similarity results with new data
+          const activeType = this.selectedL3 ? 'topic' : (this.selectedL2 ? 'domain' : 'general');
+          await this.handleTagClick(activeType, activeLabel);
+        } else {
+          // No tag selected - show all pages
+          this.pages = [...this.allPages];
+          this.render();
+        }
       }
     } catch (error) {
       console.error('Background refresh failed:', error);
@@ -309,7 +323,7 @@ class SaveItDashboard {
   extractGeneralTags() {
     const tagMap = new Map();
 
-    this.pages.forEach(page => {
+    this.allPages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
         page.classifications.forEach(c => {
           if (c.type === 'general' && c.label) {
@@ -330,7 +344,7 @@ class SaveItDashboard {
   extractL2TagsForL1(l1Label) {
     const tagMap = new Map();
 
-    this.pages.forEach(page => {
+    this.allPages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
         const pageGeneral = page.classifications.find(c => c.type === 'general');
         if (pageGeneral && pageGeneral.label === l1Label) {
@@ -353,10 +367,72 @@ class SaveItDashboard {
   extractL3TagsForL2(l2Label) {
     const tagMap = new Map();
 
-    this.pages.forEach(page => {
+    this.allPages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
         const pageDomain = page.classifications.find(c => c.type === 'domain');
         if (pageDomain && pageDomain.label === l2Label) {
+          const topicTags = page.classifications.filter(c => c.type === 'topic');
+          topicTags.forEach(tag => {
+            tagMap.set(tag.label, { type: 'topic', label: tag.label });
+          });
+        }
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract all domain tags (L2) across all pages
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractDomainTags() {
+    const tagMap = new Map();
+
+    this.allPages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        const domainTags = page.classifications.filter(c => c.type === 'domain');
+        domainTags.forEach(tag => {
+          tagMap.set(tag.label, { type: 'domain', label: tag.label });
+        });
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract all topic tags (L3) across all pages
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractTopicTags() {
+    const tagMap = new Map();
+
+    this.allPages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        const topicTags = page.classifications.filter(c => c.type === 'topic');
+        topicTags.forEach(tag => {
+          tagMap.set(tag.label, { type: 'topic', label: tag.label });
+        });
+      }
+    });
+
+    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }
+
+  /**
+   * Extract topic tags (L3) for a given L1 (general) tag
+   * Shows all topics under the selected general category
+   * @param {string} l1Label - The L1 tag label
+   * @returns {Array<{type: string, label: string}>}
+   */
+  extractTopicTagsForL1(l1Label) {
+    const tagMap = new Map();
+
+    this.allPages.forEach(page => {
+      if (page.classifications && page.classifications.length > 0) {
+        const pageGeneral = page.classifications.find(c => c.type === 'general');
+        if (pageGeneral && pageGeneral.label === l1Label) {
           const topicTags = page.classifications.filter(c => c.type === 'topic');
           topicTags.forEach(tag => {
             tagMap.set(tag.label, { type: 'topic', label: tag.label });
@@ -509,6 +585,8 @@ class SaveItDashboard {
       return;
     }
 
+    console.log('[renderTagBar] Selection state:', { L1: this.selectedL1, L2: this.selectedL2, L3: this.selectedL3 });
+
     // Always show L1 tags
     const l1Tags = this.extractGeneralTags();
 
@@ -522,24 +600,30 @@ class SaveItDashboard {
     let l2Html = '';
     let l3Html = '';
 
-    // Show L2 tags if L1 is selected
+    // Only show L2 tags if L1 is selected
     if (this.selectedL1) {
       const l2Tags = this.extractL2TagsForL1(this.selectedL1);
-      l2Html = l2Tags.map(tag => {
-        const isActive = this.selectedL2 === tag.label;
-        const activeClass = isActive ? 'active' : '';
-        return `<button class="tag ai-tag tag-domain ${activeClass}" data-type="domain" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
-      }).join('');
+
+      if (l2Tags.length > 0) {
+        l2Html = l2Tags.map(tag => {
+          const isActive = this.selectedL2 === tag.label;
+          const activeClass = isActive ? 'active' : '';
+          return `<button class="tag ai-tag tag-domain ${activeClass}" data-type="domain" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
+        }).join('');
+      }
     }
 
-    // Show L3 tags if L2 is selected
+    // Only show L3 tags if L2 is selected
     if (this.selectedL2) {
       const l3Tags = this.extractL3TagsForL2(this.selectedL2);
-      l3Html = l3Tags.map(tag => {
-        const isActive = this.selectedL3 === tag.label;
-        const activeClass = isActive ? 'active' : '';
-        return `<button class="tag ai-tag tag-topic ${activeClass}" data-type="topic" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
-      }).join('');
+
+      if (l3Tags.length > 0) {
+        l3Html = l3Tags.map(tag => {
+          const isActive = this.selectedL3 === tag.label;
+          const activeClass = isActive ? 'active' : '';
+          return `<button class="tag ai-tag tag-topic ${activeClass}" data-type="topic" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
+        }).join('');
+      }
     }
 
     // Build complete tag bar HTML
@@ -564,10 +648,12 @@ class SaveItDashboard {
 
   /**
    * Handle tag click in hierarchical selection mode
+   * Uses async similarity search to find related pages
    * @param {string} type - Classification type (general/domain/topic)
    * @param {string} label - Tag label
    */
-  handleTagClick(type, label) {
+  async handleTagClick(type, label) {
+    // Update selection state
     if (type === 'general') {
       // Toggle L1 selection, clear deeper levels
       this.selectedL1 = (this.selectedL1 === label) ? null : label;
@@ -582,61 +668,112 @@ class SaveItDashboard {
       this.selectedL3 = (this.selectedL3 === label) ? null : label;
     }
 
-    // Filter results and re-render
-    this.filterBySelectedTags();
+    // Determine which tag to search by (deepest selected level)
+    const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+
+    if (!activeLabel) {
+      // No tag selected - show all pages, sorted by newest
+      this.pages = [...this.allPages];
+      this.updateStats();
+      this.render();
+      return;
+    }
+
+    // Show loading state
+    this.showLoading();
+
+    try {
+      console.log('[handleTagClick] Searching for:', activeLabel, 'threshold:', this.similarityThreshold);
+
+      // Call backend similarity search
+      const results = await API.searchByTag(activeLabel, this.similarityThreshold);
+
+      console.log('[handleTagClick] Got results:', {
+        exact: results.exact_matches?.length || 0,
+        similar: results.similar_matches?.length || 0,
+        related: results.related_matches?.length || 0
+      });
+
+      // Extract and score pages
+      this.pages = this.extractSimilarityResults(results);
+
+      // Apply search filter if active
+      if (this.currentFilter.search) {
+        this.applySearchFilter();
+      }
+
+      this.updateStats();
+      this.render();
+    } catch (error) {
+      console.error('Similarity search failed:', error);
+      // Show error to user - NO fallback
+      this.showError(error);
+    }
   }
 
   /**
-   * Filter pages based on currently selected hierarchical tags
+   * Extract pages from similarity search results
+   * Maps thing_id to full page objects and preserves similarity scores
+   * @param {Object} results - Results from API.searchByTag()
+   * @returns {Array} Array of page objects with _similarity scores
    */
-  filterBySelectedTags() {
-    // Start with all pages
-    console.log('[filterBySelectedTags] Starting with allPages:', this.allPages.length);
-    let filtered = [...this.allPages];
+  extractSimilarityResults(results) {
+    const pages = [];
 
-    // Apply hierarchical filtering based on deepest selected tag
-    if (this.selectedL3) {
-      // Filter by L3 (topic) - most specific
-      filtered = filtered.filter(page => {
-        if (!page.classifications) return false;
-        return page.classifications.some(c => c.type === 'topic' && c.label === this.selectedL3);
-      });
-    } else if (this.selectedL2) {
-      // Filter by L2 (domain)
-      filtered = filtered.filter(page => {
-        if (!page.classifications) return false;
-        return page.classifications.some(c => c.type === 'domain' && c.label === this.selectedL2);
-      });
-    } else if (this.selectedL1) {
-      // Filter by L1 (general)
-      filtered = filtered.filter(page => {
-        if (!page.classifications) return false;
-        return page.classifications.some(c => c.type === 'general' && c.label === this.selectedL1);
-      });
+    // Combine all tiers (already sorted by similarity in backend)
+    const allMatches = [
+      ...(results.exact_matches || []),
+      ...(results.similar_matches || []),
+      ...(results.related_matches || [])
+    ];
+
+    console.log('[extractSimilarityResults] Processing', allMatches.length, 'matches');
+
+    // Map thing_id to page from allPages and preserve similarity score
+    for (const match of allMatches) {
+      // Backend may return thing_data embedded, or just thing_id
+      let page;
+      if (match.thing_data) {
+        page = match.thing_data;
+      } else {
+        page = this.allPages.find(p => p.id === match.thing_id);
+      }
+
+      if (page) {
+        // Attach similarity score for potential display
+        page._similarity = match.similarity;
+        page._matched_label = match.matched_label;
+        pages.push(page);
+      }
     }
 
-    // Apply any search filter on top of tag filter
-    if (this.currentFilter.search) {
-      const query = this.currentFilter.search.toLowerCase();
-      filtered = filtered.filter(page => {
-        if (page.title && page.title.toLowerCase().includes(query)) return true;
-        if (page.url && page.url.toLowerCase().includes(query)) return true;
-        if (page.description && page.description.toLowerCase().includes(query)) return true;
-        if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
-        if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
-        if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
-        if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
-        if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
-        if (page.domain && page.domain.toLowerCase().includes(query)) return true;
-        if (page.author && page.author.toLowerCase().includes(query)) return true;
-        return false;
-      });
-    }
+    console.log('[extractSimilarityResults] Extracted', pages.length, 'pages');
+    return pages;
+  }
 
-    this.pages = filtered;
-    console.log('[filterBySelectedTags] Filtered to pages:', this.pages.length);
-    this.updateStats();
-    this.render();
+  /**
+   * Apply text search filter on already-filtered pages
+   * Searches across multiple content and metadata fields
+   */
+  applySearchFilter() {
+    const query = this.currentFilter.search.toLowerCase();
+    console.log('[applySearchFilter] Filtering with query:', query);
+
+    this.pages = this.pages.filter(page => {
+      if (page.title && page.title.toLowerCase().includes(query)) return true;
+      if (page.url && page.url.toLowerCase().includes(query)) return true;
+      if (page.description && page.description.toLowerCase().includes(query)) return true;
+      if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
+      if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
+      if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
+      if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
+      if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
+      if (page.domain && page.domain.toLowerCase().includes(query)) return true;
+      if (page.author && page.author.toLowerCase().includes(query)) return true;
+      return false;
+    });
+
+    console.log('[applySearchFilter] Filtered to', this.pages.length, 'pages');
   }
 
   /**
@@ -896,11 +1033,29 @@ class SaveItDashboard {
   }
 
   /**
-   * Handle filter changes (search, category)
+   * Handle filter changes (search box)
+   * Applies search filter on top of tag-filtered results
    */
   handleFilterChange() {
-    // Use filterBySelectedTags which handles both tag and search filtering
-    this.filterBySelectedTags();
+    // Get currently displayed pages (either similarity results or all pages)
+    const basePages = this.pages.length > 0 ? this.pages : [...this.allPages];
+
+    if (this.currentFilter.search) {
+      // Apply search filter
+      this.pages = basePages;
+      this.applySearchFilter();
+    } else {
+      // No search - restore base pages
+      const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+      if (!activeLabel) {
+        // No tag selected either - show all
+        this.pages = [...this.allPages];
+      }
+      // If tag is selected, pages already contains similarity results
+    }
+
+    this.updateStats();
+    this.render();
   }
 
   /**
@@ -959,7 +1114,12 @@ class SaveItDashboard {
 
       // Append new pages to existing
       this.allPages = [...this.allPages, ...newPages];
-      this.filterBySelectedTags();
+
+      // Also append to filtered pages (they'll match same criteria)
+      this.pages = [...this.pages, ...newPages];
+
+      this.updateStats();
+      this.render();
 
     } catch (error) {
       console.error('Failed to load more pages:', error);
@@ -1025,9 +1185,12 @@ class SaveItDashboard {
     try {
       await API.deletePage(id);
 
+      // Remove from both allPages and pages
       this.allPages = this.allPages.filter(p => p.id !== id);
-      this.filterBySelectedTags();
+      this.pages = this.pages.filter(p => p.id !== id);
 
+      this.updateStats();
+      this.render();
       this.showToast('Page deleted successfully');
     } catch (error) {
       console.error('Failed to delete page:', error);
@@ -1160,9 +1323,18 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
     this.currentDiscoveryType = null;
     this.currentDiscoveryContext = null;
 
-    // Restore original pages from allPages
-    this.pages = this.allPages.slice();
-    this.filterBySelectedTags();
+    // Restore pages based on current tag selection
+    const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+    if (activeLabel) {
+      // Re-trigger similarity search for selected tag
+      const activeType = this.selectedL3 ? 'topic' : (this.selectedL2 ? 'domain' : 'general');
+      this.handleTagClick(activeType, activeLabel);
+    } else {
+      // No tag selected - show all pages
+      this.pages = [...this.allPages];
+      this.updateStats();
+      this.render();
+    }
   }
 }
 
