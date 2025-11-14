@@ -6,10 +6,14 @@
  * @returns {'development' | 'staging' | 'production'}
  */
 function getEnvironment() {
-  // Check if running in browser extension
-  if (typeof browser !== 'undefined' && browser.runtime) {
+  // Check if running in browser extension (Firefox or Chrome/Brave/Edge)
+  const browserApi = (typeof browser !== 'undefined' && browser.runtime) ? browser
+    : (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) ? chrome
+    : null;
+
+  if (browserApi && browserApi.runtime) {
     try {
-      const version = browser.runtime.getManifest().version;
+      const version = browserApi.runtime.getManifest().version;
 
       // Beta versions go to staging
       if (version.includes('beta')) {
