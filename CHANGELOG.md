@@ -5,6 +5,17 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.16.5] - 2025-11-14
+
+### ✨ Features
+
+- **release:** add automated release notes generation from conventional commits (0163310)
+
+### 🐛 Bug Fixes
+
+- **ci:** fetch full git history for release notes generation (d934ef7)
+- **auth:** resolve authentication persistence bug requiring repeated sign-ins (800aa6e)
+
 ## [0.16.4] - 2025-11-14
 
 ### ✨ Features
@@ -84,12 +95,6 @@ No notable changes.
 
 ## [0.14.7] - 2025-11-12
 
-### 🐛 Bug Fixes
-
-- ensure Firebase bundles are built before bundling background.js (6ea35c4)
-
-## [0.14.6] - 2025-11-12
-
 ### ✨ Features
 
 - add tag bar component with breadcrumb navigation (fced774)
@@ -121,6 +126,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- ensure Firebase bundles are built before bundling background.js (6ea35c4)
 - update dependencies to resolve security vulnerabilities (20e18ee)
 - add package-lock.json to version control for CI/CD (423c440)
 - mark unused parameter with underscore prefix (f60e4c7)
