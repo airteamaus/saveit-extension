@@ -68,16 +68,41 @@ jobs:
           mv "$ZIP_PATH" "$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
 
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+
+          # Generate release notes from conventional commits
+          NOTES=$(node scripts/generate-changelog.js release-notes "$VERSION" || echo "")
+
+          if [ -z "$NOTES" ]; then
+            NOTES="No notable changes in this release."
+          fi
+
+          # Save to file for multiline handling
+          echo "$NOTES" > release-notes.tmp
+
+          # Set output (handle multiline)
+          {
+            echo 'NOTES<<EOF'
+            cat release-notes.tmp
+            echo EOF
+          } >> $GITHUB_OUTPUT
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             ${{ steps.find_xpi.outputs.XPI_NAME }}
             ${{ steps.find_zip.outputs.ZIP_NAME }}
-          generate_release_notes: true
           draft: false
           prerelease: false
           body: |
+            ${{ steps.release_notes.outputs.NOTES }}
+
+            ---
+
             ## 📦 Downloads
 
             ### 🦊 Firefox (Recommended - Auto-updates enabled)
