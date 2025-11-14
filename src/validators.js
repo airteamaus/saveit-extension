@@ -17,7 +17,11 @@ const ClassificationSchema = z.object({
  */
 export const PageSchema = z.object({
   // Required fields
-  id: z.string().uuid(),
+  // ID accepts both UUID (legacy) and composite format (user_id_urlhash)
+  // Composite format: alphanumeric, hyphens, underscores, @ (for email user_ids)
+  id: z.string()
+    .min(1, 'ID cannot be empty')
+    .regex(/^[a-zA-Z0-9@._-]+$/, 'Invalid thing ID format'),
   thing_type: z.string().default('bookmark'),
   user_email: z.string().email(),
 
