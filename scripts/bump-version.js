@@ -115,6 +115,18 @@ try {
   process.exit(1);
 }
 
+// Update CHANGELOG.md
+try {
+  console.log('Updating CHANGELOG.md...');
+  execSync('node scripts/generate-changelog.js', { stdio: 'inherit' });
+  execSync('git add CHANGELOG.md', { stdio: 'inherit' });
+  execSync(`git commit --amend --no-edit`, { stdio: 'inherit' });
+  console.log('✓ Updated CHANGELOG.md');
+} catch (err) {
+  console.warn('Warning: Failed to update CHANGELOG.md:', err.message);
+  console.warn('You can manually run: node scripts/generate-changelog.js');
+}
+
 // Ask if user wants to push immediately
 console.log(`
 ✓ Version bumped to ${newVersion}

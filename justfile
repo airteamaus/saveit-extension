@@ -94,6 +94,14 @@ run-chrome:
 bump version="patch":
     @node scripts/bump-version.js {{version}}
 
+# Generate CHANGELOG.md from conventional commits
+changelog:
+    @node scripts/generate-changelog.js
+
+# Generate release notes for a specific version
+release-notes version:
+    @node scripts/generate-changelog.js release-notes {{version}}
+
 # Open newtab.html in browser for standalone testing
 preview:
     open src/newtab.html
