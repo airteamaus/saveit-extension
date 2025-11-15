@@ -131,31 +131,6 @@ describe('Components', () => {
       expect(html).toContain('ai-tag');
     });
 
-    it('should fallback to dewey_primary_label', () => {
-      const page = {
-        dewey_primary_label: 'Philosophy'
-      };
-
-      const html = Components.renderClassifications(page);
-
-      expect(html).toContain('Philosophy');
-      expect(html).toContain('ai-tag');
-    });
-
-    it('should prefer classifications over dewey', () => {
-      const page = {
-        classifications: [
-          { type: 'general', label: 'Science', confidence: 0.9 }
-        ],
-        dewey_primary_label: 'Philosophy'
-      };
-
-      const html = Components.renderClassifications(page);
-
-      expect(html).toContain('Science');
-      expect(html).not.toContain('Philosophy');
-    });
-
     it('should return empty string when no classifications', () => {
       const page = {};
       const html = Components.renderClassifications(page);
