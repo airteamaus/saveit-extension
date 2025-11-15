@@ -219,7 +219,8 @@ class SaveItDashboard {
         error.message.includes('401') ||
         error.message.includes('Unauthorized') ||
         error.message.includes('Authentication failed') ||
-        error.message.includes('Sign-in failed')
+        error.message.includes('Sign-in failed') ||
+        error.message.includes('No user signed in')
       );
 
       if (isAuthError) {
