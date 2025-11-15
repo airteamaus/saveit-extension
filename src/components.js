@@ -177,22 +177,60 @@ const Components = {
   },
 
   /**
-   * Create sign-in state (unauthenticated)
+   * Create welcome/onboarding state for new users
+   * @returns {string} HTML string
+   */
+  welcomeState() {
+    return `
+      <div class="welcome-state">
+        <svg class="welcome-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <h2>Welcome to SaveIt</h2>
+        <p class="welcome-subtitle">AI-powered bookmarks that you can actually find again</p>
+
+        <ul class="welcome-features">
+          <li>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+            </svg>
+            <span>Save pages with one click</span>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+              <line x1="12" y1="17" x2="12.01" y2="17"></line>
+            </svg>
+            <span>AI reads and classifies content</span>
+          </li>
+          <li>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+            <span>Discover through semantic search</span>
+          </li>
+        </ul>
+
+        <button id="welcome-sign-in-btn" class="btn btn-primary btn-large">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Sign in with Google
+        </button>
+      </div>
+    `;
+  },
+
+  /**
+   * Create sign-in state (unauthenticated) - redirects to welcome state
    * @returns {string} HTML string
    */
   signInState() {
-    return `
-      <div class="empty-state">
-        <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-          <polyline points="10 17 15 12 10 7"></polyline>
-          <line x1="15" y1="12" x2="3" y2="12"></line>
-        </svg>
-        <h2>Sign in to view your saved pages</h2>
-        <p>Click the "Sign In" button above to authenticate with Google.</p>
-        <p class="secondary-text">Once signed in, click the SaveIt extension icon while browsing to save pages.</p>
-      </div>
-    `;
+    return this.welcomeState();
   },
 
   /**
