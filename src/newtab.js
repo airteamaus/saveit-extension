@@ -371,7 +371,7 @@ class SaveItDashboard {
   extractL2TagsForL1(l1Label) {
     const tagMap = new Map();
 
-    this.allPages.forEach(page => {
+    this.pages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
         const pageGeneral = page.classifications.find(c => c.type === 'general');
         if (pageGeneral && pageGeneral.label === l1Label) {
@@ -394,7 +394,7 @@ class SaveItDashboard {
   extractL3TagsForL2(l2Label) {
     const tagMap = new Map();
 
-    this.allPages.forEach(page => {
+    this.pages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
         const pageDomain = page.classifications.find(c => c.type === 'domain');
         if (pageDomain && pageDomain.label === l2Label) {
@@ -660,17 +660,7 @@ class SaveItDashboard {
       ${l3Html ? `<div class="tag-bar-tags tag-bar-l3">${l3Html}</div>` : ''}
     `;
 
-    // Add click handlers for all tags
-    tagBarContainer.querySelectorAll('.tag.ai-tag').forEach(tagElement => {
-      tagElement.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const label = tagElement.dataset.label;
-        const type = tagElement.dataset.type;
-        if (label && type) {
-          this.handleTagClick(type, label);
-        }
-      });
-    });
+    // Tag clicks handled by event delegation in setupEventListeners()
   }
 
   /**
@@ -1063,6 +1053,18 @@ class SaveItDashboard {
         e.stopPropagation();
         const id = deleteBtn.dataset.id;
         this.deletePage(id);
+        return;
+      }
+
+      // Tag click - handle tags anywhere (tag bar OR search results)
+      const tag = e.target.closest('.tag.ai-tag');
+      if (tag) {
+        e.stopPropagation();
+        const label = tag.dataset.label;
+        const type = tag.dataset.type;
+        if (label && type) {
+          this.handleTagClick(type, label);
+        }
         return;
       }
 
