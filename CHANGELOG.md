@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.1] - 2025-11-15
+
+No notable changes.
+
 ## [0.21.0] - 2025-11-15
 
 ### ✨ Features
@@ -79,13 +83,6 @@ No notable changes.
 
 ## [0.16.9] - 2025-11-14
 
-### 🐛 Bug Fixes
-
-- **brave:** add Chrome API support in dashboard sign-in handler (4f16061)
-- **brave:** support Brave/Chrome API in Firebase and config initialization (f9f4391)
-
-## [0.16.8] - 2025-11-14
-
 ### ✨ Features
 
 - **release:** add automated release notes generation from conventional commits (0163310)
@@ -124,7 +121,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **brave:** support Brave/Chrome API in Firebase and config initialization (392eca0)
+- **brave:** add Chrome API support in dashboard sign-in handler (4f16061)
+- **brave:** support Brave/Chrome API in Firebase and config initialization (f9f4391)
 - **chrome:** support Chrome API before polyfill loads (4a4b627)
 - **security:** isolate browser cache by user_id to prevent data leakage (35c1e40)
 - **ui:** unify discovery and home page layouts, improve metadata visibility (92dcdf2)
