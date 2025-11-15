@@ -666,35 +666,36 @@ class SaveItDashboard {
   /**
    * Handle tag click in hierarchical selection mode
    * Uses async similarity search to find related pages
+   * Automatically sets parent/grandparent context using buildBreadcrumbContext
    * @param {string} type - Classification type (general/domain/topic)
    * @param {string} label - Tag label
    */
   async handleTagClick(type, label) {
-    // Update selection state
+    // Build full hierarchy context for this tag
+    const context = this.buildBreadcrumbContext(type, label);
+
+    if (!context) {
+      console.warn('[handleTagClick] No context found for tag:', type, label);
+      return;
+    }
+
+    // Update selection state with full hierarchy (always select, no toggle)
     if (type === 'general') {
-      // Toggle L1 selection, clear deeper levels
-      this.selectedL1 = (this.selectedL1 === label) ? null : label;
+      this.selectedL1 = label;
       this.selectedL2 = null;
       this.selectedL3 = null;
     } else if (type === 'domain') {
-      // Toggle L2 selection, clear L3
-      this.selectedL2 = (this.selectedL2 === label) ? null : label;
+      this.selectedL1 = context.parentLabel || null;
+      this.selectedL2 = label;
       this.selectedL3 = null;
     } else if (type === 'topic') {
-      // Toggle L3 selection
-      this.selectedL3 = (this.selectedL3 === label) ? null : label;
+      this.selectedL1 = context.grandparentLabel || null;
+      this.selectedL2 = context.parentLabel || null;
+      this.selectedL3 = label;
     }
 
     // Determine which tag to search by (deepest selected level)
     const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
-
-    if (!activeLabel) {
-      // No tag selected - show all pages, sorted by newest
-      this.pages = [...this.allPages];
-      this.updateStats();
-      this.render();
-      return;
-    }
 
     // Show loading state
     this.showLoading();
