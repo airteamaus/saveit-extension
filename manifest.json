@@ -3,7 +3,6 @@
   "name": "SaveIt",
   "version": "0.20.4",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwG6UOyi6jcQXSDXBKnssVP6wG6SkUTR2D8GePEyCoOvx4G4C6sswvweVW69kvupm35F+5vop+d00uF3tjkvfq0NxT6/SYfYLFOWqcCPv+64NWoq46WDmKnRWaKeGMHuTDVur/E9QV3xGicEMyPrfyc9pcnhzAXvulqy77cg2Adnfb1wCujlvIpeyfuruUmbECgxAD/j5lkTWQc9KyX6ryUEejJVD7ZfS0EX3IM0hzY2U7baTbx+pDQsQBl197TFELcRQ/XasCpPDHIdQ8s4TLLnN0xO1RJva4ZogfR194qM8X1xTOKJfENgJSHJME7SfNrq21lbL8iIJV0hL/Y2pZQIDAQAB",
   "browser_specific_settings": {
     "gecko": {
       "id": "saveit@airteam.com.au"
@@ -23,10 +22,7 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": [
-      "src/bundles/browser-polyfill.min.js",
-      "src/background.js"
-    ],
+    "scripts": ["src/bundles/background-bundle.js"],
     "service_worker": "src/bundles/background-bundle.js",
     "type": "module"
   },
