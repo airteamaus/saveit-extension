@@ -1054,6 +1054,80 @@ html[data-theme="dark"] .tag.tag-topic.active {
   opacity: 0.8;
 }
 
+/* Welcome State (Onboarding) */
+.welcome-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-xl) var(--spacing-lg);
+  text-align: center;
+  min-height: 400px;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.welcome-icon {
+  color: var(--color-primary);
+  margin-bottom: var(--spacing-lg);
+}
+
+.welcome-state h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--color-text);
+  margin-bottom: var(--spacing-sm);
+}
+
+.welcome-subtitle {
+  font-size: 16px;
+  color: var(--color-text-light);
+  margin-bottom: var(--spacing-xl);
+  max-width: 400px;
+}
+
+.welcome-features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--spacing-xl) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: 350px;
+}
+
+.welcome-features li {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  text-align: left;
+  padding: var(--spacing-sm);
+  border-radius: var(--radius-md);
+  background: var(--color-bg-secondary);
+}
+
+.welcome-features svg {
+  flex-shrink: 0;
+  color: var(--color-primary);
+}
+
+.welcome-features span {
+  font-size: 15px;
+  color: var(--color-text);
+  font-weight: 500;
+}
+
+#welcome-sign-in-btn {
+  margin-top: var(--spacing-md);
+}
+
+.btn-large {
+  padding: 14px 28px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
 /* Loading Spinner */
 .spinner {
   width: 48px;

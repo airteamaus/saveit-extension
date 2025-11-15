@@ -1022,6 +1022,14 @@ class SaveItDashboard {
 
     // Card actions (event delegation)
     document.getElementById('content').addEventListener('click', (e) => {
+      // Welcome sign-in button
+      const welcomeSignInBtn = e.target.closest('#welcome-sign-in-btn');
+      if (welcomeSignInBtn) {
+        e.stopPropagation();
+        this.handleSignIn();
+        return;
+      }
+
       // Delete button - handle and stop propagation
       const deleteBtn = e.target.closest('.btn-delete');
       if (deleteBtn) {
