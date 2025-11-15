@@ -23,9 +23,9 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">60% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>9/15</span>
             </div>
         
             
@@ -37,16 +37,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">25% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>1/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">60% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/15</span>
+                <span class='fraction'>9/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line low'></div>
+    <div class='status-line medium'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -190,7 +190,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -201,7 +201,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -247,7 +247,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -259,13 +259,13 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -277,11 +277,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -311,7 +311,7 @@ import { z } from 'zod';
 /**
  * Classification schema (AI-generated tags)
  */
-const ClassificationSchema = <span class="cstat-no" title="statement not covered" >z.object({</span>
+const ClassificationSchema = z.object({
   type: z.enum(['general', 'domain', 'topic']),
   label: z.string().min(1),
   confidence: z.number().min(0).max(1),
@@ -322,9 +322,13 @@ const ClassificationSchema = <span class="cstat-no" title="statement not covered
  * Page/Thing schema - matches BigQuery table
  * Validates data returned from backend
  */
-export const PageSchema = <span class="cstat-no" title="statement not covered" >z.object({</span>
+export const PageSchema = z.object({
   // Required fields
-  id: z.string().uuid(),
+  // ID accepts both UUID (legacy) and composite format (user_id_urlhash)
+  // Composite format: alphanumeric, hyphens, underscores, @ (for email user_ids)
+  id: z.string()
+    .min(1, 'ID cannot be empty')
+    .regex(/^[a-zA-Z0-9@._-]+$/, 'Invalid thing ID format'),
   thing_type: z.string().default('bookmark'),
   user_email: z.string().email(),
 &nbsp;
@@ -336,9 +340,8 @@ export const PageSchema = <span class="cstat-no" title="statement not covered" >
   domain: z.string().optional(),
   reading_time_minutes: z.number().int().positive().optional(),
 &nbsp;
-  // Timestamp fields - support both new and legacy
+  // Timestamp field
   saved_at: z.string().datetime().optional(),
-  timestamp: z.string().datetime().optional(), // Legacy alias
 &nbsp;
   user_notes: z.string().optional(),
   manual_tags: z.array(z.string()).optional().default([]),
@@ -354,10 +357,7 @@ export const PageSchema = <span class="cstat-no" title="statement not covered" >
   ai_summary_brief: z.string().optional(),
   ai_summary_extended: z.string().optional(),
   classifications: z.array(ClassificationSchema).optional(),
-&nbsp;
-  // Legacy classification fields (backwards compatibility)
-  dewey_primary: z.string().optional(),
-  dewey_primary_label: z.string().optional(),
+  primary_classification_label: z.string().optional(),
   ai_enriched_at: z.string().datetime().optional(),
 &nbsp;
   // Legacy fields (from mock data, not in BigQuery)
@@ -368,7 +368,7 @@ export const PageSchema = <span class="cstat-no" title="statement not covered" >
 /**
  * API response schemas
  */
-export const GetPagesResponseSchema = <span class="cstat-no" title="statement not covered" >z.object({</span>
+export const GetPagesResponseSchema = z.object({
   pages: z.array(PageSchema),
   // Legacy fields (deprecated)
   total: z.number().int().nonnegative().optional(),
@@ -380,13 +380,13 @@ export const GetPagesResponseSchema = <span class="cstat-no" title="statement no
   }).optional()
 });
 &nbsp;
-export const SearchResultSchema = <span class="cstat-no" title="statement not covered" >z.object({</span>
+export const SearchResultSchema = z.object({
   thing_data: PageSchema,
   similarity: z.number().min(0).max(1).optional(),
   matched_label: z.string().optional()
 });
 &nbsp;
-export const SearchByTagResponseSchema = <span class="cstat-no" title="statement not covered" >z.object({</span>
+export const SearchByTagResponseSchema = z.object({
   query_label: z.string(),
   exact_matches: z.array(SearchResultSchema).optional().default([]),
   similar_matches: z.array(SearchResultSchema).optional().default([]),
@@ -397,12 +397,12 @@ export const SearchByTagResponseSchema = <span class="cstat-no" title="statement
  * Validate and parse page data
  * Returns null for invalid pages instead of throwing
  */
-export function <span class="fstat-no" title="function not covered" >validatePage(</span>data) {
-<span class="cstat-no" title="statement not covered" >  try {</span>
-<span class="cstat-no" title="statement not covered" >    return PageSchema.parse(data);</span>
+export function validatePage(data) {
+  try {
+    return PageSchema.parse(data);
   } catch (error) {
-<span class="cstat-no" title="statement not covered" >    console.error('Page validation failed:', error.message, data);</span>
-<span class="cstat-no" title="statement not covered" >    return null;</span>
+    console.error('Page validation failed:', error.message, data);
+    return null;
   }
 }
 &nbsp;
@@ -433,7 +433,7 @@ export function <span class="fstat-no" title="function not covered" >validateSea
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-13T06:47:50.491Z
+                at 2025-11-15T01:14:50.880Z
             </div>
         <script src="prettify.js"></script>
         <script>

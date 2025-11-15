@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/17</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>0/4</span>
+                <span class='fraction'>0/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/17</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
@@ -94,7 +94,39 @@
 <a name='L29'></a><a href='#L29'>29</a>
 <a name='L30'></a><a href='#L30'>30</a>
 <a name='L31'></a><a href='#L31'>31</a>
-<a name='L32'></a><a href='#L32'>32</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -105,6 +137,8 @@
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -128,14 +162,31 @@
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">// Firebase initialization wrapper for dashboard (newtab.html)
 // Makes Firebase available globally to non-module scripts
 &nbsp;
+/**
+ * Check if running in extension mode (works with both Firefox and Chrome APIs)
+ */
+function <span class="fstat-no" title="function not covered" >isExtension(</span>) {
+  // Firefox native or polyfilled browser API
+<span class="cstat-no" title="statement not covered" >  if (typeof browser !== 'undefined' &amp;&amp; browser.runtime) {</span>
+<span class="cstat-no" title="statement not covered" >    return true;</span>
+  }
+  // Chrome/Brave/Edge native API (before polyfill loads)
+<span class="cstat-no" title="statement not covered" >  if (typeof chrome !== 'undefined' &amp;&amp; chrome.runtime &amp;&amp; chrome.runtime.id) {</span>
+<span class="cstat-no" title="statement not covered" >    return true;</span>
+  }
+<span class="cstat-no" title="statement not covered" >  return false;</span>
+}
+&nbsp;
 // Promise that resolves when Firebase is ready
 <span class="cstat-no" title="statement not covered" >window.firebaseReady = (<span class="fstat-no" title="function not covered" >async </span>() =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >  try {</span>
     // Only load Firebase in extension mode
-<span class="cstat-no" title="statement not covered" >    if (typeof browser !== 'undefined' &amp;&amp; window.CONFIG?.firebase) {</span>
+<span class="cstat-no" title="statement not covered" >    if (isExtension() &amp;&amp; window.CONFIG?.firebase) {</span>
       const firebaseExports = <span class="cstat-no" title="statement not covered" >await import('./bundles/firebase-dashboard.js');</span>
       const app = <span class="cstat-no" title="statement not covered" >firebaseExports.initializeApp(window.CONFIG.firebase);</span>
-      const auth = <span class="cstat-no" title="statement not covered" >firebaseExports.getAuth(app);</span>
+      const auth = <span class="cstat-no" title="statement not covered" >firebaseExports.initializeAuth(app, {</span>
+        persistence: firebaseExports.indexedDBLocalPersistence
+      });
 &nbsp;
       // Make Firebase available globally
 <span class="cstat-no" title="statement not covered" >      window.firebaseApp = app;</span>
@@ -163,7 +214,7 @@
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-11-13T06:47:50.483Z
+                at 2025-11-15T01:14:50.871Z
             </div>
         <script src="prettify.js"></script>
         <script>

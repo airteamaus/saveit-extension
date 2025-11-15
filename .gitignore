@@ -14,6 +14,7 @@ src/bundles/
 # Environment files
 .env
 .env.local
+.env.chrome
 
 # Extension private key (DO NOT COMMIT)
 key.pem

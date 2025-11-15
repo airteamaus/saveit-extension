@@ -14,6 +14,9 @@
     "build": "node scripts/bundle-firebase.js && web-ext build --overwrite-dest",
     "validate": "web-ext lint",
     "dev": "web-ext run",
+    "upload-chrome": "node scripts/upload-chrome.js",
+    "upload-chrome:publish": "node scripts/upload-chrome.js --publish",
+    "upload-chrome:testers": "node scripts/upload-chrome.js --publish --target trustedTesters",
     "prepare": "husky install"
   },
   "keywords": [
@@ -31,6 +34,8 @@
     "@vitest/coverage-v8": "^4.0.8",
     "@vitest/ui": "^4.0.8",
     "chokidar": "^4.0.3",
+    "chrome-webstore-upload": "^4.0.3",
+    "dotenv": "^17.2.3",
     "esbuild": "^0.27.0",
     "eslint": "^9.15.0",
     "globals": "^16.5.0",
