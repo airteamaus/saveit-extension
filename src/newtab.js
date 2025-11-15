@@ -23,6 +23,7 @@ class SaveItDashboard {
   constructor() {
     this.pages = [];
     this.allPages = []; // Keep unfiltered copy for client-side filtering
+    this.totalPages = 0; // Total count from backend (all user's pages)
     this.currentFilter = {
       search: '',
       sort: 'newest',
@@ -236,15 +237,11 @@ class SaveItDashboard {
     try {
       const response = await API.getSavedPages(this.currentFilter);
 
-      // Handle response structure (pages array or object with pagination)
-      if (Array.isArray(response)) {
-        this.allPages = response;
-        this.hasMorePages = response.length >= this.currentFilter.limit;
-      } else {
-        this.allPages = response.pages || [];
-        this.hasMorePages = response.pagination?.hasNextPage || false;
-        this.nextCursor = response.pagination?.nextCursor || null;
-      }
+      // API always returns {pages, pagination} format
+      this.allPages = response.pages || [];
+      this.totalPages = response.pagination?.total || 0;
+      this.hasMorePages = response.pagination?.hasNextPage || false;
+      this.nextCursor = response.pagination?.nextCursor || null;
 
       // Initially show all pages (no tag selected)
       this.pages = [...this.allPages];
@@ -267,14 +264,20 @@ class SaveItDashboard {
       // Wait a bit to avoid competing with initial render
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const freshPages = await API.getSavedPages({
+      const freshResponse = await API.getSavedPages({
         ...this.currentFilter,
         skipCache: true
       });
 
+      const freshPages = freshResponse.pages || [];
+
       // Only update if data changed
       if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
         this.allPages = freshPages;
+        this.totalPages = freshResponse.pagination?.total || 0;
+        this.hasMorePages = freshResponse.pagination?.hasNextPage || false;
+        this.nextCursor = freshResponse.pagination?.nextCursor || null;
+
         // If a tag is selected, re-run similarity search to update results
         const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
         if (activeLabel) {
@@ -333,7 +336,7 @@ class SaveItDashboard {
    */
   updateStats() {
     const statsEl = document.getElementById('stats');
-    const total = this.allPages.length;
+    const total = this.totalPages; // Use total from backend
     const filtered = this.pages.length;
 
     if (filtered < total) {
@@ -1169,16 +1172,11 @@ class SaveItDashboard {
 
       const response = await API.getSavedPages(this.currentFilter);
 
-      // Handle response structure (pages array or object with pagination)
-      let newPages = [];
-      if (Array.isArray(response)) {
-        newPages = response;
-        this.hasMorePages = response.length >= this.currentFilter.limit;
-      } else {
-        newPages = response.pages || [];
-        this.hasMorePages = response.pagination?.hasNextPage || false;
-        this.nextCursor = response.pagination?.nextCursor || null;
-      }
+      // API always returns {pages, pagination} format
+      const newPages = response.pages || [];
+      this.totalPages = response.pagination?.total || this.totalPages; // Update total (should be same)
+      this.hasMorePages = response.pagination?.hasNextPage || false;
+      this.nextCursor = response.pagination?.nextCursor || null;
 
       // Append new pages to existing
       this.allPages = [...this.allPages, ...newPages];

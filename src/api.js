@@ -108,8 +108,9 @@ const API = {
 
 
   /**
-   * Get cached pages from browser storage
+   * Get cached response from browser storage
    * Cache is isolated per user to prevent cross-user data leakage
+   * Returns full response object with pagination metadata
    * @private
    */
   async getCachedPages() {
@@ -152,10 +153,11 @@ const API = {
 
       console.log(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
         user_id: userId,
-        pages_count: cached.pages ? cached.pages.length : 0,
-        first_item: cached.pages?.[0] ? { id: cached.pages[0].id, title: cached.pages[0].title } : null
+        pages_count: cached.response?.pages ? cached.response.pages.length : 0,
+        total: cached.response?.pagination?.total,
+        first_item: cached.response?.pages?.[0] ? { id: cached.response.pages[0].id, title: cached.response.pages[0].title } : null
       });
-      return cached.pages;
+      return cached.response; // Return full response object with pagination
     } catch (error) {
       console.error('[getCachedPages] Failed to read cache:', error);
       return null;
@@ -163,11 +165,12 @@ const API = {
   },
 
   /**
-   * Store pages in browser storage cache
+   * Store response in browser storage cache
    * Cache is isolated per user to prevent cross-user data leakage
+   * Stores full response object with pagination metadata
    * @private
    */
-  async setCachedPages(pages) {
+  async setCachedPages(response) {
     if (!this.isExtension) return;
 
     try {
@@ -184,11 +187,14 @@ const API = {
       await storage.set({
         [cacheKey]: {
           userId: userId, // Store user_id for validation
-          pages: pages,
+          response: response, // Store full response with pagination
           timestamp: Date.now()
         }
       });
-      console.log('[setCachedPages] Cache updated for user:', userId);
+      console.log('[setCachedPages] Cache updated for user:', userId, {
+        pages_count: response?.pages?.length,
+        total: response?.pagination?.total
+      });
     } catch (error) {
       console.error('[setCachedPages] Failed to write cache:', error);
     }
@@ -265,7 +271,7 @@ const API = {
    * @param {number} options.limit - Max results
    * @param {number} options.offset - Pagination offset
    * @param {boolean} options.skipCache - Force fresh fetch, skip cache
-   * @returns {Promise<Array>} Array of saved pages
+   * @returns {Promise<Object>} Response object with pages and pagination metadata
    */
   async getSavedPages(options = {}) {
     console.log('[getSavedPages] START:', {
@@ -279,7 +285,8 @@ const API = {
         const cached = await this.getCachedPages();
         if (cached) {
           console.log('[getSavedPages] Returning cached data:', {
-            count: cached.length
+            count: cached.pages?.length,
+            total: cached.pagination?.total
           });
           return cached;
         }
@@ -318,30 +325,44 @@ const API = {
         const data = await response.json();
         console.log('[getSavedPages] Raw JSON response:', data);
 
-        const pages = data.pages || data;
-
-        console.log('[getSavedPages] Parsed pages:', {
-          count: pages.length,
-          first_item: pages[0] ? { id: pages[0].id, title: pages[0].title } : null,
-          data_structure: {
-            has_pages_property: 'pages' in data,
-            is_array: Array.isArray(data),
-            data_keys: Object.keys(data)
+        // Normalize response format (backend should return {pages, pagination})
+        const normalizedResponse = {
+          pages: data.pages || data,
+          pagination: data.pagination || {
+            total: (data.pages || data).length,
+            hasNextPage: false,
+            nextCursor: null
           }
+        };
+
+        console.log('[getSavedPages] Normalized response:', {
+          count: normalizedResponse.pages.length,
+          total: normalizedResponse.pagination.total,
+          first_item: normalizedResponse.pages[0] ? { id: normalizedResponse.pages[0].id, title: normalizedResponse.pages[0].title } : null
         });
 
-        // Cache the result
-        await this.setCachedPages(pages);
+        // Cache the full response
+        await this.setCachedPages(normalizedResponse);
 
-        return pages;
+        return normalizedResponse;
       } catch (error) {
         console.error('[getSavedPages] Failed to fetch saved pages:', error);
         throw error;
       }
     } else {
-      // Development: Use mock data
+      // Development: Use mock data with pagination format
       console.log('[getSavedPages] Using mock data (standalone mode)');
-      return this.filterMockData(MOCK_DATA, options);
+      const filteredPages = this.filterMockData(MOCK_DATA, options);
+
+      // Return in standard format with pagination
+      return {
+        pages: filteredPages,
+        pagination: {
+          total: MOCK_DATA.length, // Total count (all mock data)
+          hasNextPage: (options.offset || 0) + filteredPages.length < MOCK_DATA.length,
+          nextCursor: null
+        }
+      };
     }
   },
 
