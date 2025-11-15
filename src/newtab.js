@@ -1076,6 +1076,19 @@ class SaveItDashboard {
       }
     });
 
+    // Tag bar actions (event delegation)
+    document.getElementById('tag-bar').addEventListener('click', (e) => {
+      const tag = e.target.closest('.tag.ai-tag');
+      if (tag) {
+        e.stopPropagation();
+        const label = tag.dataset.label;
+        const type = tag.dataset.type;
+        if (label && type) {
+          this.handleTagClick(type, label);
+        }
+      }
+    });
+
     // About link
     document.getElementById('about-link').addEventListener('click', (e) => {
       e.preventDefault();
