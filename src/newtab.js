@@ -241,6 +241,9 @@ class SaveItDashboard {
   async refreshInBackground() {
     if (!API.isExtension) return;
 
+    // Don't try to refresh if user isn't signed in
+    if (!this.getCurrentUser()) return;
+
     try {
       // Wait a bit to avoid competing with initial render
       await new Promise(resolve => setTimeout(resolve, 500));
