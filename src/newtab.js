@@ -820,6 +820,7 @@ class SaveItDashboard {
       if (sentinel) {
         container.appendChild(sentinel);
       }
+      this.updateStats();
       return;
     }
 
@@ -830,6 +831,9 @@ class SaveItDashboard {
     if (sentinel) {
       container.appendChild(sentinel);
     }
+
+    // Update stats after rendering
+    this.updateStats();
   }
 
   /**
