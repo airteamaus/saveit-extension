@@ -166,47 +166,55 @@ test.describe('Standalone Mode', () => {
     await expect(autoButton).toHaveClass(/active/);
   });
 
-  test('should enter discovery mode when clicking tag', async ({ page }) => {
+  test('should filter by tag when clicking', async ({ page }) => {
     await page.waitForSelector('.saved-page-card');
+    const initialCount = await page.locator('.saved-page-card').count();
 
     // Wait for AI tags to be visible and clickable
     await page.waitForSelector('.ai-tag', { state: 'visible' });
 
-    // Click on an AI tag using page.click for better event propagation
-    await page.click('.ai-tag');
+    // Click on an AI tag
+    const firstTag = page.locator('.ai-tag').first();
+    await firstTag.click();
 
-    // Wait for discovery view
-    await page.waitForSelector('.discovery-header', { timeout: 10000 });
+    // Wait for tag to be marked as active
+    await expect(firstTag).toHaveClass(/active/);
 
-    // Check discovery header is shown
-    const header = page.locator('.discovery-header');
-    await expect(header).toBeVisible();
-    await expect(header).toContainText('Discovery:');
+    // Wait for results to update (may take a moment for similarity search)
+    await page.waitForTimeout(500);
 
-    // Check back button exists (be specific to avoid duplicate ID issue)
-    const backButton = page.locator('.discovery-header #back-to-main');
-    await expect(backButton).toBeVisible();
+    // Verify pages are still shown (similarity search should return results)
+    const filteredCount = await page.locator('.saved-page-card').count();
+    expect(filteredCount).toBeGreaterThan(0);
+
+    // Stats should show filtered count
+    const stats = await page.locator('#stats').textContent();
+    expect(stats).toMatch(/\d+ (of \d+ )?pages?/);
   });
 
-  test('should return from discovery mode', async ({ page }) => {
+  test('should clear tag filter when clicking tag again', async ({ page }) => {
     await page.waitForSelector('.saved-page-card');
+    const initialCount = await page.locator('.saved-page-card').count();
 
-    // Wait for AI tags and enter discovery mode
+    // Wait for AI tags and click one
     await page.waitForSelector('.ai-tag', { state: 'visible' });
-    await page.click('.ai-tag');
-    await page.waitForSelector('.discovery-header', { timeout: 10000 });
+    const firstTag = page.locator('.ai-tag').first();
+    await firstTag.click();
+    await page.waitForTimeout(500);
 
-    // Click back button
-    await page.click('#back-to-main');
+    // Tag should be active
+    await expect(firstTag).toHaveClass(/active/);
+
+    // Click tag again to clear filter
+    await firstTag.click();
     await page.waitForTimeout(300);
 
-    // Verify we're back to main view (no discovery header)
-    const discoveryHeader = page.locator('.discovery-header');
-    await expect(discoveryHeader).not.toBeVisible();
+    // Tag should no longer be active
+    await expect(firstTag).not.toHaveClass(/active/);
 
-    // Verify cards are still shown
-    const cards = page.locator('.saved-page-card');
-    await expect(cards.first()).toBeVisible();
+    // All cards should be shown again
+    const finalCount = await page.locator('.saved-page-card').count();
+    expect(finalCount).toBe(initialCount);
   });
 
   test('should show about dialog', async ({ page }) => {
