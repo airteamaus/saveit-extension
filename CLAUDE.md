@@ -411,9 +411,10 @@ cloudFunctionUrl: 'https://saveit-xxx-uc.a.run.app'
 oauthClientId: 'xxx.apps.googleusercontent.com'
 ```
 
-**OAuth redirect URI:** Must match in Google Cloud Console:
-- Pattern: `https://<EXTENSION_ID>.extensions.allizom.org/`
-- Extension ID: `saveit@airteam.com.au` (from `manifest.json`)
+**OAuth redirect URIs:** Must match in Google Cloud Console:
+- Firefox: `https://<EXTENSION_ID>.extensions.allizom.org/` (ID: `saveit@airteam.com.au`)
+- Chrome (Web Store): `https://emiieedcdenibjicjfoekllgakpgekdk.chromiumapp.org/`
+- Chrome (Dev/Unpacked): `https://<generated-id>.chromiumapp.org/` (varies by directory)
 
 **Permissions:**
 - `activeTab` - Read current page URL/title
@@ -421,13 +422,20 @@ oauthClientId: 'xxx.apps.googleusercontent.com'
 - `identity` - OAuth authentication
 - `storage` - Cache user info
 - `https://*.run.app/*` - Cloud Function access
-- `https://www.googleapis.com/oauth2/*` - Google OAuth
+- `https://www.googleapis.com/*` - Google OAuth and Firebase
+
+**Cross-Browser Manifest:**
+- `manifest.json` includes both `service_worker` (Chrome) and `scripts` (Firefox) in `background` key
+- Chrome uses `service_worker`, shows harmless warning about `scripts` property
+- Firefox uses `scripts`, ignores `service_worker` property
+- Single manifest works for both browsers without build-time modifications
 
 ## Important Notes
 
-- **No build process** - Extension uses vanilla JS, no transpilation or bundling
-- **No npm dependencies** - Only browser APIs (Web Extensions API)
-- **Zero-config standalone mode** - Just open `src/newtab.html` in any browser
+- **Minimal build process** - Firebase SDK bundled via esbuild (`scripts/bundle-firebase.js`), no other transpilation
+- **Firebase dependency** - Uses Firebase SDK for authentication, bundled into `src/bundles/`
+- **webextension-polyfill** - Browser API compatibility layer for cross-browser support
+- **Zero-config standalone mode** - Just open `src/newtab.html` in any browser (uses mock data)
 - **Client-side filtering** - Search/filter happens in browser for instant feedback
 - **Auto-updates enabled** - Extension checks `updates.json` for new versions
 

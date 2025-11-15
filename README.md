@@ -10,7 +10,7 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 
 **Install from GitHub Release (Signed)**
 1. Go to [Releases](https://github.com/airteamaus/saveit-extension/releases)
-2. Download the latest `.xpi` file (current: v0.16.1)
+2. Download the latest `.xpi` file (current: v0.99.99)
 3. Open Firefox and go to `about:addons`
 4. Click the gear icon ⚙️ → "Install Add-on From File..."
 5. Select the downloaded `.xpi` file
