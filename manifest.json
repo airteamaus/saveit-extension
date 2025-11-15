@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SaveIt",
-  "version": "0.20.4",
+  "version": "0.21.0",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
   "browser_specific_settings": {
     "gecko": {
@@ -22,7 +22,9 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["src/bundles/background-bundle.js"],
+    "scripts": [
+      "src/bundles/background-bundle.js"
+    ],
     "service_worker": "src/bundles/background-bundle.js",
     "type": "module"
   },

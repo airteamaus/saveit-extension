@@ -5,6 +5,41 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.21.0] - 2025-11-15
+
+### ✨ Features
+
+- **chrome:** add Chrome Web Store upload automation (31518fc)
+- **onboarding:** add welcome state for first-time users (d405619)
+
+### 🐛 Bug Fixes
+
+- **manifest:** migrate to full Manifest V3 cross-browser support (fd5518a)
+
+### 🔧 Build System
+
+- **deps-dev:** bump js-yaml from 4.1.0 to 4.1.1 (49bd4d4)
+
+## [0.20.4] - 2025-11-15
+
+### ✨ Features
+
+- **onboarding:** add welcome state for first-time users (4e935ce)
+
+### 🐛 Bug Fixes
+
+- **dashboard:** call updateStats() in render() method (d8d5775)
+
+## [0.20.3] - 2025-11-15
+
+### ✨ Features
+
+- **validators:** accept composite thing IDs for duplicate prevention (bf25f30)
+
+### 🐛 Bug Fixes
+
+- **dashboard:** call updateStats() in render() method (8af4447)
+
 ## [0.20.2] - 2025-11-15
 
 ### ✨ Features
@@ -51,29 +86,6 @@ No notable changes.
 
 ## [0.16.8] - 2025-11-14
 
-### 🐛 Bug Fixes
-
-- **brave:** support Brave/Chrome API in Firebase and config initialization (392eca0)
-- **chrome:** support Chrome API before polyfill loads (4a4b627)
-
-## [0.16.7] - 2025-11-14
-
-### 🐛 Bug Fixes
-
-- **chrome:** support Chrome API before polyfill loads (ecb04b3)
-- **security:** isolate browser cache by user_id to prevent data leakage (35c1e40)
-- **ui:** unify discovery and home page layouts, improve metadata visibility (92dcdf2)
-
-## [0.16.6] - 2025-11-14
-
-### 🐛 Bug Fixes
-
-- **security:** isolate browser cache by user_id to prevent data leakage (64bfb04)
-- **ui:** unify discovery and home page layouts, improve metadata visibility (5e246b6)
-- **ci:** fetch full git history for release notes generation (000df26)
-
-## [0.16.5] - 2025-11-14
-
 ### ✨ Features
 
 - **release:** add automated release notes generation from conventional commits (0163310)
@@ -112,7 +124,11 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **ci:** fetch full git history for release notes generation (d934ef7)
+- **brave:** support Brave/Chrome API in Firebase and config initialization (392eca0)
+- **chrome:** support Chrome API before polyfill loads (4a4b627)
+- **security:** isolate browser cache by user_id to prevent data leakage (35c1e40)
+- **ui:** unify discovery and home page layouts, improve metadata visibility (92dcdf2)
+- **ci:** fetch full git history for release notes generation (000df26)
 - **auth:** resolve authentication persistence bug requiring repeated sign-ins (800aa6e)
 - **e2e:** resolve duplicate #back-to-main ID selector ambiguity (1119b31)
 - **e2e:** use Components.discoveryResults() to render discovery header (7a46230)
