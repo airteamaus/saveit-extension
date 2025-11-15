@@ -99,7 +99,11 @@ class SaveItDashboard {
       }
     }
 
-    await this.loadPages();
+    // Only load pages if user is signed in (or in standalone mode)
+    if (!API.isExtension || this.getCurrentUser()) {
+      await this.loadPages();
+    }
+
     this.setupEventListeners();
     this.render();
     this.refreshInBackground();
