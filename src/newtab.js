@@ -49,6 +49,9 @@ class SaveItDashboard {
     this.hasMorePages = true;
     this.nextCursor = null;
     this.scrollObserver = null;
+
+    // Initialization state
+    this.isInitialized = false;
   }
 
   /**
@@ -64,49 +67,66 @@ class SaveItDashboard {
     await API.cleanupLegacyCache();
 
     // Wait for Firebase to be ready in extension mode
-    let initialAuthResolved = false;
     if (API.isExtension && window.firebaseReady) {
       await window.firebaseReady;
 
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
-        // Wait for initial auth state before loading pages
-        await new Promise((resolve) => {
-          window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-            this.updateSignInButton(user ? {
-              email: user.email,
-              name: user.displayName
-            } : null);
-
-            // First time: resolve to continue init
-            if (!initialAuthResolved) {
-              initialAuthResolved = true;
-              resolve();
-            } else {
-              // Subsequent auth changes: clear cache and reload
-              // IMPORTANT: Clear cache to prevent showing previous user's data
-              console.log('[auth state changed] Clearing cache for user switch');
-              await API.invalidateCache();
-
-              if (user) {
-                await this.loadPages();
-                this.render();
-              } else {
-                this.showSignInPrompt();
-              }
-            }
+        // Wait for initial auth state (one-time check)
+        const initialUser = await new Promise((resolve) => {
+          const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+            unsubscribe(); // Unregister after first callback
+            resolve(user);
           });
+        });
+
+        // Update UI based on initial auth state
+        this.updateSignInButton(initialUser ? {
+          email: initialUser.email,
+          name: initialUser.displayName
+        } : null);
+
+        // Register persistent listener for auth changes (after init)
+        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
+          if (!this.isInitialized) return; // Skip during initialization
+
+          // Auth changed after init - clear cache and reload
+          console.log('[auth state changed] Clearing cache for user switch');
+          await API.invalidateCache();
+
+          this.updateSignInButton(user ? {
+            email: user.email,
+            name: user.displayName
+          } : null);
+
+          if (user) {
+            await this.loadPages();
+            this.render();
+            this.refreshInBackground();
+          } else {
+            this.showSignInPrompt();
+          }
         });
       }
     }
 
-    // Only load pages if user is signed in (or in standalone mode)
+    // Load pages and render based on auth state
     if (!API.isExtension || this.getCurrentUser()) {
+      // Standalone mode OR authenticated user
       await this.loadPages();
+      this.render();
+      if (API.isExtension && this.getCurrentUser()) {
+        this.refreshInBackground();
+      }
+    } else {
+      // Extension mode with no authenticated user
+      this.showSignInPrompt();
     }
 
     this.setupEventListeners();
-    this.render();
-    this.refreshInBackground();
+
+    // Mark initialization complete
+    this.isInitialized = true;
+    console.log('[Dashboard] Initialization complete');
   }
 
   /**
@@ -217,21 +237,7 @@ class SaveItDashboard {
       this.pages = [...this.allPages];
     } catch (error) {
       console.error('Failed to load pages:', error);
-
-      // Check if error is authentication-related
-      const isAuthError = error.message && (
-        error.message.includes('401') ||
-        error.message.includes('Unauthorized') ||
-        error.message.includes('Authentication failed') ||
-        error.message.includes('Sign-in failed') ||
-        error.message.includes('No user signed in')
-      );
-
-      if (isAuthError) {
-        this.showSignInPrompt();
-      } else {
-        this.showError(error);
-      }
+      this.showError(error);
     }
   }
 
