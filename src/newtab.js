@@ -71,12 +71,20 @@ class SaveItDashboard {
       await window.firebaseReady;
 
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
-        // Wait for initial auth state (one-time check)
-        const initialUser = await new Promise((resolve) => {
-          const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-            unsubscribe(); // Unregister after first callback
-            resolve(user);
-          });
+        // Wait for initial auth state (one-time check with timeout)
+        const initialUser = await Promise.race([
+          new Promise((resolve) => {
+            const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+              unsubscribe(); // Unregister after first callback
+              resolve(user);
+            });
+          }),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Firebase auth timeout')), 10000)
+          )
+        ]).catch(error => {
+          console.error('[init] Firebase auth failed:', error);
+          return null; // Continue without auth
         });
 
         // Update UI based on initial auth state
@@ -122,7 +130,12 @@ class SaveItDashboard {
       this.showSignInPrompt();
     }
 
-    this.setupEventListeners();
+    try {
+      this.setupEventListeners();
+    } catch (error) {
+      console.error('[init] Failed to setup event listeners:', error);
+      // Continue anyway - dashboard may still be partially usable
+    }
 
     // Mark initialization complete
     this.isInitialized = true;
@@ -1393,7 +1406,6 @@ async function initDashboard() {
 
     // Signal that dashboard is fully initialized (for E2E tests)
     window.dashboardReady = true;
-    console.log('[Dashboard] Initialization complete');
   } catch (error) {
     console.error('Fatal error during dashboard initialization:', error.message || error);
     console.error('Stack trace:', error.stack);
