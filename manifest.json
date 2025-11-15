@@ -3,7 +3,7 @@
   "name": "SaveIt",
   "version": "0.99.9",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
-  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnoQ2E4mPCJuAsMkwgy4/nIBs19ToxL5xT7vrtSah6kw7/g6ZjJ/Q3PZ/z5cWohXck6gnu+Fh3pT0aTVEr29BxADgQCA+dlj27jW9moLufqGZ/rl8fubxeXR4ERLD3n4S7th4XdtgbZM5WXlioPgARZbSgk08CjPxXx6kliXSQhpZaK8cKW24xPf5VJ7xY6K5wt5YwwWahivzgnioMNTLfXOXrZLTeYSBZcG5PYFRaC0GAhmK8rp72CVWaM12ujggH6/rBeByv55imnhV6Vr5NIdy87v8kGx1D7+AdXwbdpXEpxq7ZfqIOmvTTBFR82Rd0ySbJ7W3IwZoYL0YbrUjyQIDAQAB",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwG6UOyi6jcQXSDXBKnssVP6wG6SkUTR2D8GePEyCoOvx4G4C6sswvweVW69kvupm35F+5vop+d00uF3tjkvfq0NxT6/SYfYLFOWqcCPv+64NWoq46WDmKnRWaKeGMHuTDVur/E9QV3xGicEMyPrfyc9pcnhzAXvulqy77cg2Adnfb1wCujlvIpeyfuruUmbECgxAD/j5lkTWQc9KyX6ryUEejJVD7ZfS0EX3IM0hzY2U7baTbx+pDQsQBl197TFELcRQ/XasCpPDHIdQ8s4TLLnN0xO1RJva4ZogfR194qM8X1xTOKJfENgJSHJME7SfNrq21lbL8iIJV0hL/Y2pZQIDAQAB",
   "browser_specific_settings": {
     "gecko": {
       "id": "saveit@airteam.com.au"
