@@ -69,26 +69,7 @@ const pages = await API.getSavedPages();
 const validPages = validatePages(pages); // Auto-filters invalid
 ```
 
-### 4. Error Reporting
-
-- **Development**: Logs to console
-- **Staging**: Sends to Slack/error tracker
-- **Production**: Sends to monitoring service (Sentry/custom)
-- **Global handlers**: Catches unhandled promises and errors
-
-**Usage:**
-```javascript
-import { reportError } from './error-reporter.js';
-
-try {
-  await riskyOperation();
-} catch (error) {
-  reportError(error, { context: 'user_action', user_id: '123' });
-  showUserFriendlyMessage();
-}
-```
-
-### 5. Pre-Deployment Checklist
+### 4. Pre-Deployment Checklist
 
 Automated script (`scripts/pre-deploy-check.sh`) that runs:
 
@@ -108,7 +89,7 @@ Automated script (`scripts/pre-deploy-check.sh`) that runs:
 just pre-deploy
 ```
 
-### 6. CI/CD Pipeline (GitHub Actions)
+### 5. CI/CD Pipeline (GitHub Actions)
 
 **On every PR:**
 - Lint & validate
@@ -125,7 +106,7 @@ just pre-deploy
 
 **Status:** Required before merge
 
-### 7. Git Hooks (Husky)
+### 6. Git Hooks (Husky)
 
 **Pre-commit (fast, ~5-10s):**
 - Runs ESLint

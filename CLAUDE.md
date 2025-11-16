@@ -170,21 +170,6 @@ const validPages = validatePages(pages);  // Filters invalid entries
 
 Catches backend schema changes immediately.
 
-### Error Reporting
-
-```javascript
-import { reportError } from './error-reporter.js';
-
-try {
-  await riskyOperation();
-} catch (error) {
-  reportError(error, { context: 'user_action', action: 'save_page' });
-  showUserFriendlyMessage(error);
-}
-```
-
-**Environments:** Development (console only), Staging (Slack), Production (monitoring)
-
 ### Git Hooks
 
 **Pre-commit:** ESLint, web-ext lint, unit tests, warns on console.log
