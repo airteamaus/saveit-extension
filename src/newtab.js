@@ -396,6 +396,30 @@ class SaveItDashboard {
    * @param {string} label - Tag label
    */
   async handleTagClick(type, label) {
+    // Check if clicking the same tag again (toggle off)
+    const isAlreadySelected = (
+      (type === 'general' && this.selectedL1 === label && !this.selectedL2 && !this.selectedL3) ||
+      (type === 'domain' && this.selectedL2 === label && !this.selectedL3) ||
+      (type === 'topic' && this.selectedL3 === label)
+    );
+
+    if (isAlreadySelected) {
+      // Clear selection and show all pages
+      this.selectedL1 = null;
+      this.selectedL2 = null;
+      this.selectedL3 = null;
+      this.pages = [...this.allPages];
+
+      // Re-apply search filter if active
+      if (this.currentFilter.search) {
+        this.pages = this.searchManager.applySearchFilter(this.pages, this.currentFilter.search);
+      }
+
+      this.updateStats();
+      this.render();
+      return;
+    }
+
     // Build full hierarchy context for this tag
     const context = this.tagManager.buildBreadcrumbContext(type, label, this.allPages, this.pages);
 
@@ -404,7 +428,7 @@ class SaveItDashboard {
       return;
     }
 
-    // Update selection state with full hierarchy (always select, no toggle)
+    // Update selection state with full hierarchy
     if (type === 'general') {
       this.selectedL1 = label;
       this.selectedL2 = null;

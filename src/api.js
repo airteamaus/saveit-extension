@@ -389,9 +389,18 @@ const API = {
       filtered.sort((a, b) => new Date(a.saved_at) - new Date(b.saved_at));
     }
 
+    // In standalone mode, return all data on initial load (no pagination)
+    // This ensures tests see all mock data and stats show "X pages saved"
+    // Only apply pagination if explicitly loading more pages (offset > 0)
     const offset = options.offset || 0;
-    const limit = options.limit || 50;
-    return filtered.slice(offset, offset + limit);
+    if (offset === 0) {
+      // Initial load - return all data
+      return filtered;
+    } else {
+      // Infinite scroll - return paginated batch
+      const limit = options.limit || 50;
+      return filtered.slice(offset, offset + limit);
+    }
   },
 
   /**
