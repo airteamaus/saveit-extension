@@ -5,6 +5,100 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-11-16
+
+### 🐛 Bug Fixes
+
+- auto-kill stale Playwright processes before E2E tests (ebfb300)
+- reduce Playwright workers to 2 to eliminate E2E test race condition (c16e352)
+- resolve E2E test timeout in parallel execution (ddd0be6)
+- resolve E2E test failures for stats display and tag toggle (035a224)
+- **dashboard:** preserve total page count in cache and pagination (a24b831)
+
+### ♻️ Refactoring
+
+- extract page loader manager from newtab.js (-83 lines) (e598414)
+- extract event and auth managers from newtab.js (-206 lines) (a20a761)
+- extract cache, notification, and stats managers (1fe529d)
+- extract managers from newtab.js (-256 lines) (62df550)
+- extract AuthUIManager from newtab.js (f787aaa)
+- extract ScrollManager from newtab.js (6812c25)
+- extract SearchManager from newtab.js (dfaa24f)
+- extract TagManager from newtab.js (2852f3f)
+
+### 📚 Documentation
+
+- finalize newtab.js refactor plan and update architecture docs (4ed4452)
+
+### ✅ Tests
+
+- remove deprecated dewey_primary_label test cases (50a83c3)
+
+## [1.0.1] - 2025-11-15
+
+### ✨ Features
+
+- **tags:** show full hierarchical context when clicking any tag (213ad7d)
+- **tags:** enable tag clicks in search results and show hierarchical child tags (865898b)
+
+### 🐛 Bug Fixes
+
+- **tags:** restore tag bar click handling (28c90ec)
+
+### ♻️ Refactoring
+
+- **css:** use rem units for accessibility and user font size preferences (48854a9)
+- **css:** modernize theme system with light-dark() and system-ui (5d7bbcf)
+
+## [1.0.0] - 2025-11-15
+
+### ✨ Features
+
+- **tags:** enable tag clicks in search results and show hierarchical child tags (e35e6e2)
+
+### ♻️ Refactoring
+
+- **css:** use rem units for accessibility and user font size preferences (95b0f05)
+- **css:** modernize theme system with light-dark() and system-ui (7a1979d)
+
+### 📚 Documentation
+
+- update documentation for v0.99.99 and cross-browser support (62b8569)
+
+## [0.99.99] - 2025-11-15
+
+### 🐛 Bug Fixes
+
+- **manifest:** add cross-browser background script support and fix CSP violations (49395fc)
+- restore original Chrome extension key for stable local dev ID (11ecae7)
+
+## [0.99.9] - 2025-11-15
+
+No notable changes.
+
+## [0.99.0] - 2025-11-15
+
+### 🐛 Bug Fixes
+
+- **dashboard:** add resilience and remove duplicate logging (c284337)
+- **dashboard:** also prevent refreshInBackground when no user signed in (5499e65)
+
+### ♻️ Refactoring
+
+- **dashboard:** simplify init flow and fix race conditions (ad5f66c)
+
+## [0.22.1] - 2025-11-15
+
+### 🐛 Bug Fixes
+
+- **dashboard:** prevent loadPages when no user signed in (fd469bb)
+
+## [0.22.0] - 2025-11-15
+
+### 🐛 Bug Fixes
+
+- **dashboard:** show welcome screen when no user signed in (294ba7b)
+
 ## [0.21.1] - 2025-11-15
 
 No notable changes.
@@ -15,76 +109,8 @@ No notable changes.
 
 - **chrome:** add Chrome Web Store upload automation (31518fc)
 - **onboarding:** add welcome state for first-time users (d405619)
-
-### 🐛 Bug Fixes
-
-- **manifest:** migrate to full Manifest V3 cross-browser support (fd5518a)
-
-### 🔧 Build System
-
-- **deps-dev:** bump js-yaml from 4.1.0 to 4.1.1 (49bd4d4)
-
-## [0.20.4] - 2025-11-15
-
-### ✨ Features
-
-- **onboarding:** add welcome state for first-time users (4e935ce)
-
-### 🐛 Bug Fixes
-
-- **dashboard:** call updateStats() in render() method (d8d5775)
-
-## [0.20.3] - 2025-11-15
-
-### ✨ Features
-
 - **validators:** accept composite thing IDs for duplicate prevention (bf25f30)
-
-### 🐛 Bug Fixes
-
-- **dashboard:** call updateStats() in render() method (8af4447)
-
-## [0.20.2] - 2025-11-15
-
-### ✨ Features
-
-- **validators:** accept composite thing IDs for duplicate prevention (bc4d192)
-
-### 🐛 Bug Fixes
-
-- **dashboard:** preserve scroll sentinel in all innerHTML paths (1e527e3)
-- **dashboard:** preserve scroll sentinel when updating content (b76ad23)
-
-### ♻️ Refactoring
-
-- **dashboard:** implement similarity-based tag filtering with single code path (6d89ce6)
-
-## [0.20.0] - 2025-11-14
-
-### ♻️ Refactoring
-
-- **dashboard:** implement similarity-based tag filtering with single code path (b8277d1)
-
-## [0.19.0] - 2025-11-14
-
-No notable changes.
-
-## [0.18.0] - 2025-11-14
-
-### ✨ Features
-
 - add badge feedback and clickable logo (45ad871)
-
-## [0.17.0] - 2025-11-14
-
-### 🐛 Bug Fixes
-
-- **brave:** add Chrome API support in dashboard sign-in handler (3d9b4b5)
-
-## [0.16.9] - 2025-11-14
-
-### ✨ Features
-
 - **release:** add automated release notes generation from conventional commits (0163310)
 - **ui:** swap metadata and delete button positions (05a9ed6)
 - improve About dialog with thoughtful messaging (c425a34)
@@ -121,7 +147,11 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **brave:** add Chrome API support in dashboard sign-in handler (4f16061)
+- **manifest:** migrate to full Manifest V3 cross-browser support (fd5518a)
+- **dashboard:** call updateStats() in render() method (d8d5775)
+- **dashboard:** preserve scroll sentinel in all innerHTML paths (1e527e3)
+- **dashboard:** preserve scroll sentinel when updating content (b76ad23)
+- **brave:** add Chrome API support in dashboard sign-in handler (3d9b4b5)
 - **brave:** support Brave/Chrome API in Firebase and config initialization (f9f4391)
 - **chrome:** support Chrome API before polyfill loads (4a4b627)
 - **security:** isolate browser cache by user_id to prevent data leakage (35c1e40)
@@ -159,6 +189,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- **dashboard:** implement similarity-based tag filtering with single code path (6d89ce6)
 - replace flowery About text with factual technical explanation (448fcc1)
 - **dashboard:** remove duplicate inlined CSS, use external stylesheet (36f08ca)
 - **dashboard:** remove unused category filter feature (b2beb1f)
@@ -188,6 +219,10 @@ No notable changes.
 
 - **discovery:** add manual test page for semantic search mock (2239f51)
 - **components:** add unit tests for utility functions (751d465)
+
+### 🔧 Build System
+
+- **deps-dev:** bump js-yaml from 4.1.0 to 4.1.1 (49bd4d4)
 
 
 ---
