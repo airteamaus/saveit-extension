@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager */
+/* global TagManager, SearchManager */
 
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
@@ -58,6 +58,7 @@ class SaveItDashboard {
 
     // Initialize managers
     this.tagManager = new TagManager();
+    this.searchManager = new SearchManager();
   }
 
   /**
@@ -301,40 +302,6 @@ class SaveItDashboard {
     }
   }
 
-  /**
-   * Apply client-side search filter
-   */
-  applyClientFilters() {
-    let filtered = [...this.allPages];
-
-    // Apply search filter across all content and metadata fields
-    if (this.currentFilter.search) {
-      const query = this.currentFilter.search.toLowerCase();
-      filtered = filtered.filter(page => {
-        // Core content fields
-        if (page.title && page.title.toLowerCase().includes(query)) return true;
-        if (page.url && page.url.toLowerCase().includes(query)) return true;
-        if (page.description && page.description.toLowerCase().includes(query)) return true;
-        if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
-
-        // AI-generated fields
-        if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
-        if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
-        if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
-
-        // Tags (both manual and AI)
-        if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
-
-        // Metadata fields
-        if (page.domain && page.domain.toLowerCase().includes(query)) return true;
-        if (page.author && page.author.toLowerCase().includes(query)) return true;
-
-        return false;
-      });
-    }
-
-    this.pages = filtered;
-  }
 
   /**
    * Update stats display
@@ -474,7 +441,7 @@ class SaveItDashboard {
 
       // Apply search filter if active
       if (this.currentFilter.search) {
-        this.applySearchFilter();
+        this.pages = this.searchManager.applySearchFilter(this.pages, this.currentFilter.search);
       }
 
       this.updateStats();
@@ -526,30 +493,6 @@ class SaveItDashboard {
     return pages;
   }
 
-  /**
-   * Apply text search filter on already-filtered pages
-   * Searches across multiple content and metadata fields
-   */
-  applySearchFilter() {
-    const query = this.currentFilter.search.toLowerCase();
-    console.log('[applySearchFilter] Filtering with query:', query);
-
-    this.pages = this.pages.filter(page => {
-      if (page.title && page.title.toLowerCase().includes(query)) return true;
-      if (page.url && page.url.toLowerCase().includes(query)) return true;
-      if (page.description && page.description.toLowerCase().includes(query)) return true;
-      if (page.user_notes && page.user_notes.toLowerCase().includes(query)) return true;
-      if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(query)) return true;
-      if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(query)) return true;
-      if (page.primary_classification_label && page.primary_classification_label.toLowerCase().includes(query)) return true;
-      if (page.manual_tags && page.manual_tags.some(tag => tag.toLowerCase().includes(query))) return true;
-      if (page.domain && page.domain.toLowerCase().includes(query)) return true;
-      if (page.author && page.author.toLowerCase().includes(query)) return true;
-      return false;
-    });
-
-    console.log('[applySearchFilter] Filtered to', this.pages.length, 'pages');
-  }
 
   /**
    * Render pages to DOM
@@ -866,9 +809,8 @@ class SaveItDashboard {
     const basePages = this.pages.length > 0 ? this.pages : [...this.allPages];
 
     if (this.currentFilter.search) {
-      // Apply search filter
-      this.pages = basePages;
-      this.applySearchFilter();
+      // Apply search filter using SearchManager
+      this.pages = this.searchManager.applySearchFilter(basePages, this.currentFilter.search);
     } else {
       // No search - restore base pages
       const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
