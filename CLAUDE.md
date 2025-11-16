@@ -106,7 +106,11 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 
 **Component Pattern:**
 - `src/components.js` - Pure UI builders (no business logic)
-- `src/newtab.js` - Controller (search, filter, delete logic)
+- `src/newtab.js` - Main controller (orchestrates managers, handles data loading)
+- `src/tag-manager.js` - Tag hierarchy and classification logic
+- `src/search-manager.js` - Search and filtering logic
+- `src/scroll-manager.js` - Infinite scroll and pagination logic
+- `src/auth-ui.js` - Authentication UI management
 - `src/api.js` - API abstraction (auto-detects mode)
 - `src/mock-data.js` - Test data (standalone only)
 

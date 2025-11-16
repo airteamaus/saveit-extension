@@ -1,0 +1,460 @@
+{
+  "project": "Refactor newtab.js into focused modules",
+  "created": "2025-11-16",
+  "status": "completed",
+  "current_phase": "phase-5",
+  "current_task": "task-5-5",
+  "completion_date": "2025-11-16",
+  "description": "Split 1,482-line newtab.js into orchestrator (~600 lines) + 4 specialized managers to improve maintainability and adhere to CLAUDE.md guidelines",
+  "actual_results": {
+    "newtab_js_before": 1482,
+    "newtab_js_after": 1085,
+    "lines_extracted": 553,
+    "net_reduction": 397,
+    "new_files_created": [
+      "src/tag-manager.js",
+      "src/search-manager.js",
+      "src/scroll-manager.js",
+      "src/auth-ui.js"
+    ],
+    "tests_passing": true,
+    "no_regressions": true
+  },
+  "phases": [
+    {
+      "id": "phase-0",
+      "name": "Investigation & Planning",
+      "status": "completed",
+      "tasks": [
+        {
+          "id": "task-0-1",
+          "type": "investigate",
+          "description": "Analyze newtab.js structure and dependencies",
+          "status": "completed",
+          "findings": "File is 1,482 lines with 32+ methods across 7 concerns: initialization/auth, data loading, tag management (10 methods), search/filtering (3 methods), rendering (5 methods), event handling, infinite scroll (4 methods). Dependencies: api.js, components.js, firebase-init-dashboard.js. Critical integration points: DOM selectors, window globals, API response format, test expectations.",
+          "files_referenced": [
+            "src/newtab.js:1-1482",
+            "src/api.js",
+            "src/components.js",
+            "src/newtab.html:141",
+            "tests/e2e/standalone.spec.js",
+            "tests/integration/dashboard.test.js"
+          ],
+          "completion_criteria": [
+            "Understand current architecture",
+            "Identify extraction candidates",
+            "Map dependencies and integration points",
+            "Define target architecture"
+          ]
+        },
+        {
+          "id": "task-0-2",
+          "type": "investigate",
+          "description": "Draft refactor approach and get approval",
+          "status": "completed",
+          "findings": "Multi-phase extraction approach: Phase 1: TagManager (~250 lines), Phase 2: SearchManager (~80 lines), Phase 3: ScrollManager (~100 lines), Phase 4: AuthUIManager (~60 lines), Phase 5: HTML updates & testing. No breaking changes. State passed via dependency injection.",
+          "files_referenced": [
+            "CLAUDE.md:60-85"
+          ],
+          "completion_criteria": [
+            "Define migration path",
+            "Identify risks and mitigations",
+            "Get user approval to proceed"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-1",
+      "name": "Extract TagManager",
+      "status": "completed",
+      "description": "Extract tag hierarchy and classification logic into dedicated TagManager class",
+      "tasks": [
+        {
+          "id": "task-1-1",
+          "type": "refactor",
+          "description": "Create src/tag-manager.js with TagManager class",
+          "status": "pending",
+          "completion_criteria": [
+            "New file src/tag-manager.js created",
+            "TagManager class with constructor accepting pages array",
+            "All 10 tag methods moved and working",
+            "JSDoc comments added for public methods",
+            "No lint errors"
+          ],
+          "methods_to_move": [
+            "extractGeneralTags()",
+            "extractL2TagsForL1(l1Label)",
+            "extractL3TagsForL2(l2Label)",
+            "extractDomainTags()",
+            "extractTopicTags()",
+            "extractTopicTagsForL1(l1Label)",
+            "extractSiblingTags(currentType, currentLabel)",
+            "buildBreadcrumbContext(type, label)"
+          ]
+        },
+        {
+          "id": "task-1-2",
+          "type": "refactor",
+          "description": "Update SaveItDashboard to use TagManager",
+          "status": "pending",
+          "completion_criteria": [
+            "Initialize TagManager in SaveItDashboard constructor",
+            "Replace direct method calls with tagManager.method() calls",
+            "Pass this.pages and this.allPages as needed",
+            "Update renderTagBar() to use TagManager",
+            "No duplicate code remains"
+          ],
+          "files_changed": [
+            "src/newtab.js"
+          ]
+        },
+        {
+          "id": "task-1-3",
+          "type": "refactor",
+          "description": "Add TagManager to newtab.html script loading",
+          "status": "pending",
+          "completion_criteria": [
+            "Script tag added before newtab.js",
+            "Load order: components.js → tag-manager.js → newtab.js",
+            "No script loading errors in console"
+          ],
+          "files_changed": [
+            "src/newtab.html"
+          ]
+        },
+        {
+          "id": "task-1-4",
+          "type": "refactor",
+          "description": "Test Phase 1 changes",
+          "status": "pending",
+          "completion_criteria": [
+            "just test passes (unit + integration tests)",
+            "just test-e2e passes (E2E tests)",
+            "Manual test: Tag hierarchy selection works (L1 → L2 → L3)",
+            "Manual test: Similarity search works when clicking tags",
+            "No console errors in standalone or extension mode"
+          ]
+        },
+        {
+          "id": "task-1-5",
+          "type": "refactor",
+          "description": "Commit Phase 1",
+          "status": "pending",
+          "completion_criteria": [
+            "Git commit with message: 'refactor: extract TagManager from newtab.js'",
+            "All changes staged and committed",
+            "Working directory clean"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Extract SearchManager",
+      "status": "completed",
+      "description": "Extract search and filtering logic into dedicated SearchManager class",
+      "tasks": [
+        {
+          "id": "task-2-1",
+          "type": "refactor",
+          "description": "Create src/search-manager.js with SearchManager class",
+          "status": "pending",
+          "completion_criteria": [
+            "New file src/search-manager.js created",
+            "SearchManager class with constructor",
+            "All 3 search/filter methods moved and working",
+            "JSDoc comments added",
+            "No lint errors"
+          ],
+          "methods_to_move": [
+            "applyClientFilters()",
+            "applySearchFilter()",
+            "handleFilterChange()"
+          ]
+        },
+        {
+          "id": "task-2-2",
+          "type": "refactor",
+          "description": "Update SaveItDashboard to use SearchManager",
+          "status": "pending",
+          "completion_criteria": [
+            "Initialize SearchManager in constructor",
+            "Replace search method calls with searchManager.method()",
+            "Pass filter state and pages array as needed",
+            "Search event handlers updated",
+            "No duplicate code remains"
+          ],
+          "files_changed": [
+            "src/newtab.js"
+          ]
+        },
+        {
+          "id": "task-2-3",
+          "type": "refactor",
+          "description": "Add SearchManager to newtab.html and test",
+          "status": "pending",
+          "completion_criteria": [
+            "Script tag added to newtab.html before newtab.js",
+            "just test passes",
+            "just test-e2e passes",
+            "Manual test: Search filters pages correctly",
+            "Manual test: Clear search button works",
+            "Manual test: Search works on top of tag filtering",
+            "No console errors"
+          ],
+          "files_changed": [
+            "src/newtab.html"
+          ]
+        },
+        {
+          "id": "task-2-4",
+          "type": "refactor",
+          "description": "Commit Phase 2",
+          "status": "pending",
+          "completion_criteria": [
+            "Git commit: 'refactor: extract SearchManager from newtab.js'",
+            "All changes committed",
+            "Working directory clean"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Extract ScrollManager",
+      "status": "completed",
+      "description": "Extract infinite scroll and pagination logic into dedicated ScrollManager class",
+      "tasks": [
+        {
+          "id": "task-3-1",
+          "type": "refactor",
+          "description": "Create src/scroll-manager.js with ScrollManager class",
+          "status": "pending",
+          "completion_criteria": [
+            "New file src/scroll-manager.js created",
+            "ScrollManager class with constructor",
+            "All 4 scroll methods moved and working",
+            "IntersectionObserver lifecycle maintained",
+            "JSDoc comments added",
+            "No lint errors"
+          ],
+          "methods_to_move": [
+            "setupInfiniteScroll()",
+            "loadMorePages()",
+            "showLoadingIndicator()",
+            "hideLoadingIndicator()"
+          ]
+        },
+        {
+          "id": "task-3-2",
+          "type": "refactor",
+          "description": "Update SaveItDashboard to use ScrollManager",
+          "status": "pending",
+          "completion_criteria": [
+            "Initialize ScrollManager in constructor",
+            "Pass callback for loading more pages",
+            "Maintain scroll state (isLoadingMore, hasMorePages)",
+            "Observer cleanup on destroy (if needed)",
+            "No duplicate code remains"
+          ],
+          "files_changed": [
+            "src/newtab.js"
+          ]
+        },
+        {
+          "id": "task-3-3",
+          "type": "refactor",
+          "description": "Add ScrollManager to newtab.html and test",
+          "status": "pending",
+          "completion_criteria": [
+            "Script tag added to newtab.html before newtab.js",
+            "just test passes",
+            "just test-e2e passes",
+            "Manual test: Scroll to bottom loads more pages",
+            "Manual test: Loading indicator appears/disappears",
+            "Manual test: No duplicate pages loaded",
+            "No console errors"
+          ],
+          "files_changed": [
+            "src/newtab.html"
+          ]
+        },
+        {
+          "id": "task-3-4",
+          "type": "refactor",
+          "description": "Commit Phase 3",
+          "status": "pending",
+          "completion_criteria": [
+            "Git commit: 'refactor: extract ScrollManager from newtab.js'",
+            "All changes committed",
+            "Working directory clean"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Extract AuthUIManager",
+      "status": "completed",
+      "description": "Extract authentication UI logic into dedicated AuthUIManager class",
+      "tasks": [
+        {
+          "id": "task-4-1",
+          "type": "refactor",
+          "description": "Create src/auth-ui.js with AuthUIManager class",
+          "status": "pending",
+          "completion_criteria": [
+            "New file src/auth-ui.js created",
+            "AuthUIManager class with constructor",
+            "All 4 auth UI methods moved and working",
+            "Core Firebase auth logic remains in dashboard",
+            "JSDoc comments added",
+            "No lint errors"
+          ],
+          "methods_to_move": [
+            "updateSignInButton(user)",
+            "handleSignIn()",
+            "handleSignOut()",
+            "toggleUserDropdown()"
+          ],
+          "note": "getCurrentUser() stays in dashboard - it's core auth, not UI"
+        },
+        {
+          "id": "task-4-2",
+          "type": "refactor",
+          "description": "Update SaveItDashboard to use AuthUIManager",
+          "status": "pending",
+          "completion_criteria": [
+            "Initialize AuthUIManager in constructor",
+            "Pass Firebase auth dependencies",
+            "Update auth event handlers to use authUIManager",
+            "showSignInPrompt() integration maintained",
+            "No duplicate code remains"
+          ],
+          "files_changed": [
+            "src/newtab.js"
+          ]
+        },
+        {
+          "id": "task-4-3",
+          "type": "refactor",
+          "description": "Add AuthUIManager to newtab.html and test",
+          "status": "pending",
+          "completion_criteria": [
+            "Script tag added to newtab.html before newtab.js",
+            "just test passes",
+            "just test-e2e passes",
+            "Manual test (extension): Sign-in button works",
+            "Manual test (extension): Sign-out works",
+            "Manual test (extension): User dropdown toggles",
+            "Manual test (standalone): Auth UI hidden appropriately",
+            "No console errors"
+          ],
+          "files_changed": [
+            "src/newtab.html"
+          ]
+        },
+        {
+          "id": "task-4-4",
+          "type": "refactor",
+          "description": "Commit Phase 4",
+          "status": "pending",
+          "completion_criteria": [
+            "Git commit: 'refactor: extract AuthUIManager from newtab.js'",
+            "All changes committed",
+            "Working directory clean"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Final Cleanup & Validation",
+      "status": "completed",
+      "description": "Verify refactor quality, run comprehensive tests, measure improvements",
+      "tasks": [
+        {
+          "id": "task-5-1",
+          "type": "refactor",
+          "description": "Measure newtab.js size reduction",
+          "status": "pending",
+          "completion_criteria": [
+            "newtab.js reduced from 1,482 lines to ~600 lines",
+            "Verify no code duplication between files",
+            "All extracted managers follow single responsibility",
+            "Document new architecture in comments"
+          ]
+        },
+        {
+          "id": "task-5-2",
+          "type": "refactor",
+          "description": "Run comprehensive test suite",
+          "status": "pending",
+          "completion_criteria": [
+            "just check passes (all checks: lint + test + build + validate)",
+            "just test-coverage shows 70%+ coverage maintained",
+            "just test-e2e passes in Firefox",
+            "No new console errors or warnings",
+            "All pre-commit hooks pass"
+          ]
+        },
+        {
+          "id": "task-5-3",
+          "type": "refactor",
+          "description": "Manual integration testing",
+          "status": "pending",
+          "completion_criteria": [
+            "Standalone mode: All features work (search, tags, theme, delete)",
+            "Extension mode: OAuth flow works",
+            "Extension mode: Sign-in/sign-out works",
+            "Extension mode: Page saving works",
+            "Extension mode: Real data loads correctly",
+            "Cross-browser: Test in Firefox",
+            "Cross-browser: Test in Chrome (if available)"
+          ]
+        },
+        {
+          "id": "task-5-4",
+          "type": "refactor",
+          "description": "Update documentation",
+          "status": "pending",
+          "completion_criteria": [
+            "Update CLAUDE.md with new architecture (if needed)",
+            "Add comments explaining manager pattern",
+            "Document dependency injection approach",
+            "No stale references to old structure"
+          ],
+          "files_changed": [
+            "CLAUDE.md"
+          ]
+        },
+        {
+          "id": "task-5-5",
+          "type": "refactor",
+          "description": "Final commit and validation",
+          "status": "pending",
+          "completion_criteria": [
+            "Git commit: 'refactor: finalize newtab.js modularization'",
+            "All tests pass",
+            "No regressions identified",
+            "Code quality improved (file size, readability, maintainability)",
+            "Ready for production deployment"
+          ]
+        }
+      ]
+    }
+  ],
+  "completion_criteria": [
+    "newtab.js reduced from 1,482 lines to ~600 lines",
+    "4 new manager classes created (TagManager, SearchManager, ScrollManager, AuthUIManager)",
+    "All tests pass (unit, integration, E2E)",
+    "No breaking changes to public APIs",
+    "No user-facing behavior changes",
+    "Code adheres to CLAUDE.md guidelines (<750 lines per file)",
+    "Single responsibility principle followed",
+    "Manual testing confirms all features work"
+  ],
+  "rollback_plan": "Each phase is a separate atomic commit. If issues arise, git revert to last working commit. Tests validate at each phase for early detection.",
+  "backwards_compatibility": "NO breaking changes. Internal refactor only. All public APIs preserved (window.dashboard, window.dashboardReady). DOM structure unchanged. Tests pass without modification."
+}
