@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager */
+/* global TagManager, SearchManager, ScrollManager */
 
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
@@ -51,7 +51,6 @@ class SaveItDashboard {
     this.isLoadingMore = false;
     this.hasMorePages = true;
     this.nextCursor = null;
-    this.scrollObserver = null;
 
     // Initialization state
     this.isInitialized = false;
@@ -59,6 +58,7 @@ class SaveItDashboard {
     // Initialize managers
     this.tagManager = new TagManager();
     this.searchManager = new SearchManager();
+    this.scrollManager = new ScrollManager();
   }
 
   /**
@@ -829,28 +829,13 @@ class SaveItDashboard {
    * Setup infinite scroll using Intersection Observer
    */
   setupInfiniteScroll() {
-    // Create sentinel element to observe
-    const sentinel = document.createElement('div');
-    sentinel.id = 'scroll-sentinel';
-    sentinel.style.height = '1px';
-    document.getElementById('content').appendChild(sentinel);
-
-    // Create observer
-    this.scrollObserver = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (entry.isIntersecting && this.hasMorePages && !this.isLoadingMore) {
-          this.loadMorePages();
-        }
-      },
-      {
-        root: null, // viewport
-        rootMargin: '200px', // Trigger 200px before reaching sentinel
-        threshold: 0
-      }
+    this.scrollManager.setupInfiniteScroll(
+      () => this.loadMorePages(),
+      () => ({
+        hasMorePages: this.hasMorePages,
+        isLoading: this.isLoadingMore
+      })
     );
-
-    this.scrollObserver.observe(sentinel);
   }
 
   /**
@@ -860,7 +845,7 @@ class SaveItDashboard {
     if (this.isLoadingMore || !this.hasMorePages) return;
 
     this.isLoadingMore = true;
-    this.showLoadingIndicator();
+    this.scrollManager.showLoadingIndicator();
 
     try {
       // Update offset for next batch
@@ -888,37 +873,10 @@ class SaveItDashboard {
       this.showError(error);
     } finally {
       this.isLoadingMore = false;
-      this.hideLoadingIndicator();
+      this.scrollManager.hideLoadingIndicator();
     }
   }
 
-  /**
-   * Show loading indicator for infinite scroll
-   */
-  showLoadingIndicator() {
-    let indicator = document.getElementById('loading-indicator');
-    if (!indicator) {
-      indicator = document.createElement('div');
-      indicator.id = 'loading-indicator';
-      indicator.className = 'loading-indicator';
-      indicator.innerHTML = `
-        <div class="loading-spinner"></div>
-        <span>Loading more pages...</span>
-      `;
-      document.getElementById('content').appendChild(indicator);
-    }
-    indicator.style.display = 'flex';
-  }
-
-  /**
-   * Hide loading indicator
-   */
-  hideLoadingIndicator() {
-    const indicator = document.getElementById('loading-indicator');
-    if (indicator) {
-      indicator.style.display = 'none';
-    }
-  }
 
   /**
    * Open a saved page in new tab
