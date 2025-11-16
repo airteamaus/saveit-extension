@@ -5,7 +5,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  // Limit workers to 2 to avoid parallel execution race conditions
+  // Tests pass reliably at workers=1 (serial) but timeout intermittently at workers=5
+  workers: process.env.CI ? 1 : 2,
   reporter: 'html',
   use: {
     trace: 'on-first-retry',
