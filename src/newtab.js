@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager */
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager */
 
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
@@ -59,6 +59,7 @@ class SaveItDashboard {
     this.tagManager = new TagManager();
     this.searchManager = new SearchManager();
     this.scrollManager = new ScrollManager();
+    this.authUIManager = new AuthUIManager();
   }
 
   /**
@@ -95,7 +96,7 @@ class SaveItDashboard {
         });
 
         // Update UI based on initial auth state
-        this.updateSignInButton(initialUser ? {
+        this.authUIManager.updateSignInButton(initialUser ? {
           email: initialUser.email,
           name: initialUser.displayName
         } : null);
@@ -108,7 +109,7 @@ class SaveItDashboard {
           console.log('[auth state changed] Clearing cache for user switch');
           await API.invalidateCache();
 
-          this.updateSignInButton(user ? {
+          this.authUIManager.updateSignInButton(user ? {
             email: user.email,
             name: user.displayName
           } : null);
@@ -562,82 +563,6 @@ class SaveItDashboard {
     content.innerHTML = Components.signInState();
   }
 
-  /**
-   * Update sign-in button visibility based on auth state
-   */
-  updateSignInButton(user) {
-    const signInBtn = document.getElementById('sign-in-btn');
-    const userProfile = document.getElementById('user-profile');
-
-    if (!signInBtn || !userProfile) return;
-
-    if (user) {
-      // User is signed in - hide sign-in button, show profile
-      signInBtn.style.display = 'none';
-      userProfile.style.display = 'block';
-
-      // Update user info
-      const userName = document.getElementById('user-name');
-      const userEmail = document.getElementById('user-email');
-
-      if (userName && user.name) {
-        userName.textContent = user.name.split(' ')[0]; // First name only
-      }
-      if (userEmail && user.email) {
-        userEmail.textContent = user.email;
-      }
-    } else {
-      // User is signed out - show sign-in button, hide profile
-      signInBtn.style.display = 'flex';
-      userProfile.style.display = 'none';
-    }
-  }
-
-  /**
-   * Handle sign-in button click
-   * Triggers Firebase OAuth without requiring a page save
-   */
-  async handleSignIn() {
-    try {
-      // Send message to background script to trigger sign-in
-      const runtime = getBrowserRuntime();
-      if (!runtime) {
-        throw new Error('Browser runtime not available');
-      }
-      await runtime.sendMessage({ action: 'signIn' });
-      // Auth state listener will handle UI updates
-    } catch (error) {
-      console.error('Sign-in failed:', error);
-      alert('Failed to sign in. Please try again.');
-    }
-  }
-
-  /**
-   * Handle sign-out button click
-   */
-  async handleSignOut() {
-    try {
-      if (window.firebaseAuth && window.firebaseSignOut) {
-        await window.firebaseSignOut(window.firebaseAuth);
-        this.updateSignInButton(null);
-        this.showSignInPrompt();
-      }
-    } catch (error) {
-      console.error('Sign-out failed:', error);
-      alert('Failed to sign out. Please try again.');
-    }
-  }
-
-  /**
-   * Toggle user profile dropdown
-   */
-  toggleUserDropdown() {
-    const dropdown = document.getElementById('user-dropdown');
-    if (!dropdown) return;
-
-    const isVisible = dropdown.style.display === 'block';
-    dropdown.style.display = isVisible ? 'none' : 'block';
-  }
 
   /**
    * Reset all filters and return to default view
@@ -684,7 +609,7 @@ class SaveItDashboard {
     // Sign-in button
     const signInBtn = document.getElementById('sign-in-btn');
     if (signInBtn) {
-      signInBtn.addEventListener('click', () => this.handleSignIn());
+      signInBtn.addEventListener('click', () => this.authUIManager.handleSignIn(getBrowserRuntime));
     }
 
     // User profile button (toggle dropdown)
@@ -692,14 +617,14 @@ class SaveItDashboard {
     if (userProfileBtn) {
       userProfileBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        this.toggleUserDropdown();
+        this.authUIManager.toggleUserDropdown();
       });
     }
 
     // Sign-out button
     const signOutBtn = document.getElementById('sign-out-btn');
     if (signOutBtn) {
-      signOutBtn.addEventListener('click', () => this.handleSignOut());
+      signOutBtn.addEventListener('click', () => this.authUIManager.handleSignOut(() => this.showSignInPrompt()));
     }
 
     // Close dropdown when clicking outside
@@ -744,7 +669,7 @@ class SaveItDashboard {
       const welcomeSignInBtn = e.target.closest('#welcome-sign-in-btn');
       if (welcomeSignInBtn) {
         e.stopPropagation();
-        this.handleSignIn();
+        this.authUIManager.handleSignIn(getBrowserRuntime);
         return;
       }
 
