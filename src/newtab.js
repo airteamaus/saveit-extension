@@ -5,21 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager */
-
-/**
- * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
- * @returns {Object|null} browser.runtime or chrome.runtime
- */
-function getBrowserRuntime() {
-  if (typeof browser !== 'undefined' && browser.runtime) {
-    return browser.runtime;
-  }
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-    return chrome.runtime;
-  }
-  return null;
-}
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager */
 
 class SaveItDashboard {
   constructor() {
@@ -53,6 +39,22 @@ class SaveItDashboard {
     this.tagInteractionManager = new TagInteractionManager(API, this.tagManager, Components);
     this.statsManager = new StatsManager();
     this.notificationManager = new NotificationManager();
+    this.eventManager = new EventManager();
+    this.firebaseAuthManager = new FirebaseAuthManager();
+  }
+
+  /**
+   * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
+   * @returns {Object|null} browser.runtime or chrome.runtime
+   */
+  getBrowserRuntime() {
+    if (typeof browser !== 'undefined' && browser.runtime) {
+      return browser.runtime;
+    }
+    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+      return chrome.runtime;
+    }
+    return null;
   }
 
   /**
@@ -62,61 +64,13 @@ class SaveItDashboard {
     this.themeManager.initTheme();
     this.showLoading();
     this.themeManager.updateModeIndicator(API.isExtension);
-    this.themeManager.updateVersionIndicator(getBrowserRuntime);
+    this.themeManager.updateVersionIndicator(() => this.getBrowserRuntime());
 
     // Clean up legacy cache (migration for v0.13.5+)
     await API.cleanupLegacyCache();
 
-    // Wait for Firebase to be ready in extension mode
-    if (API.isExtension && window.firebaseReady) {
-      await window.firebaseReady;
-
-      if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
-        // Wait for initial auth state (one-time check with timeout)
-        const initialUser = await Promise.race([
-          new Promise((resolve) => {
-            const unsubscribe = window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
-              unsubscribe(); // Unregister after first callback
-              resolve(user);
-            });
-          }),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Firebase auth timeout')), 10000)
-          )
-        ]).catch(error => {
-          console.error('[init] Firebase auth failed:', error);
-          return null; // Continue without auth
-        });
-
-        // Update UI based on initial auth state
-        this.authUIManager.updateSignInButton(initialUser ? {
-          email: initialUser.email,
-          name: initialUser.displayName
-        } : null);
-
-        // Register persistent listener for auth changes (after init)
-        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
-          if (!this.isInitialized) return; // Skip during initialization
-
-          // Auth changed after init - clear cache and reload
-          console.log('[auth state changed] Clearing cache for user switch');
-          await API.invalidateCache();
-
-          this.authUIManager.updateSignInButton(user ? {
-            email: user.email,
-            name: user.displayName
-          } : null);
-
-          if (user) {
-            await this.loadPages();
-            this.render();
-            this.refreshInBackground();
-          } else {
-            this.showSignInPrompt();
-          }
-        });
-      }
-    }
+    // Initialize Firebase auth
+    await this.firebaseAuthManager.initAuth(this);
 
     // Load pages and render based on auth state
     if (!API.isExtension || this.getCurrentUser()) {
@@ -147,15 +101,7 @@ class SaveItDashboard {
    * Get current Firebase user
    */
   getCurrentUser() {
-    if (!API.isExtension || !window.firebaseAuth) return null;
-
-    const user = window.firebaseAuth.currentUser;
-    if (!user) return null;
-
-    return {
-      email: user.email,
-      name: user.displayName
-    };
+    return this.firebaseAuthManager.getCurrentUser();
   }
 
 
@@ -392,131 +338,7 @@ class SaveItDashboard {
    * Setup all event listeners
    */
   setupEventListeners() {
-    // Logo click - reset to default view
-    const logo = document.querySelector('.logo');
-    if (logo) {
-      logo.style.cursor = 'pointer';
-      logo.addEventListener('click', () => this.resetToDefaultView());
-    }
-
-    // Sign-in button
-    const signInBtn = document.getElementById('sign-in-btn');
-    if (signInBtn) {
-      signInBtn.addEventListener('click', () => this.authUIManager.handleSignIn(getBrowserRuntime));
-    }
-
-    // User profile button (toggle dropdown)
-    const userProfileBtn = document.getElementById('user-profile-btn');
-    if (userProfileBtn) {
-      userProfileBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        this.authUIManager.toggleUserDropdown();
-      });
-    }
-
-    // Sign-out button
-    const signOutBtn = document.getElementById('sign-out-btn');
-    if (signOutBtn) {
-      signOutBtn.addEventListener('click', () => this.authUIManager.handleSignOut(() => this.showSignInPrompt()));
-    }
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-      const dropdown = document.getElementById('user-dropdown');
-      const userProfile = document.getElementById('user-profile');
-      if (dropdown && userProfile && !userProfile.contains(e.target)) {
-        dropdown.style.display = 'none';
-      }
-    });
-
-    // Search input
-    const searchInput = document.getElementById('search');
-    const clearSearch = document.getElementById('clear-search');
-
-    searchInput.addEventListener('input', (e) => {
-      this.currentFilter.search = e.target.value;
-      clearSearch.style.display = e.target.value ? 'block' : 'none';
-      clearTimeout(this.debounceTimer);
-      this.debounceTimer = setTimeout(() => this.handleFilterChange(), 300);
-    });
-
-    clearSearch.addEventListener('click', () => {
-      searchInput.value = '';
-      this.currentFilter.search = '';
-      clearSearch.style.display = 'none';
-      this.handleFilterChange();
-    });
-
-    // Theme toggle buttons
-    document.querySelectorAll('.theme-option').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const theme = btn.dataset.theme;
-        localStorage.setItem('theme-preference', theme);
-        this.themeManager.applyTheme(theme);
-        this.themeManager.updateThemeButtons(theme);
-      });
-    });
-
-    // Card actions (event delegation)
-    document.getElementById('content').addEventListener('click', (e) => {
-      // Welcome sign-in button
-      const welcomeSignInBtn = e.target.closest('#welcome-sign-in-btn');
-      if (welcomeSignInBtn) {
-        e.stopPropagation();
-        this.authUIManager.handleSignIn(getBrowserRuntime);
-        return;
-      }
-
-      // Delete button - handle and stop propagation
-      const deleteBtn = e.target.closest('.btn-delete');
-      if (deleteBtn) {
-        e.stopPropagation();
-        const id = deleteBtn.dataset.id;
-        this.deletePage(id);
-        return;
-      }
-
-      // Tag click - handle tags anywhere (tag bar OR search results)
-      const tag = e.target.closest('.tag.ai-tag');
-      if (tag) {
-        e.stopPropagation();
-        const label = tag.dataset.label;
-        const type = tag.dataset.type;
-        if (label && type) {
-          this.handleTagClick(type, label);
-        }
-        return;
-      }
-
-      // Row click - open URL in new tab
-      const row = e.target.closest('.saved-page-card');
-      if (row) {
-        const url = row.dataset.url;
-        this.openPage(url);
-      }
-    });
-
-    // Tag bar actions (event delegation)
-    document.getElementById('tag-bar').addEventListener('click', (e) => {
-      const tag = e.target.closest('.tag.ai-tag');
-      if (tag) {
-        e.stopPropagation();
-        const label = tag.dataset.label;
-        const type = tag.dataset.type;
-        if (label && type) {
-          this.handleTagClick(type, label);
-        }
-      }
-    });
-
-    // About link
-    document.getElementById('about-link').addEventListener('click', (e) => {
-      e.preventDefault();
-      this.showAbout();
-    });
-
-    // Setup infinite scroll observer
-    this.setupInfiniteScroll();
+    this.eventManager.setupEventListeners(this);
   }
 
   /**
@@ -648,7 +470,7 @@ class SaveItDashboard {
    */
   showAbout() {
     const mode = API.isExtension ? 'Extension' : 'Development';
-    const runtime = getBrowserRuntime();
+    const runtime = this.getBrowserRuntime();
     const version = runtime ? runtime.getManifest().version : 'standalone';
     const message = `SaveIt
 
@@ -715,31 +537,3 @@ if (document.readyState === 'loading') {
 
 // Expose API for debugging in console
 window.API = API;
-
-if (!document.getElementById('toast-styles')) {
-  const style = document.createElement('style');
-  style.id = 'toast-styles';
-  style.textContent = `
-    @keyframes slideIn {
-      from {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-      to {
-        transform: translateX(0);
-        opacity: 1;
-      }
-    }
-    @keyframes slideOut {
-      from {
-        transform: translateX(0);
-        opacity: 1;
-      }
-      to {
-        transform: translateX(400px);
-        opacity: 0;
-      }
-    }
-  `;
-  document.head.appendChild(style);
-}
