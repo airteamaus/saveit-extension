@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager */
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager */
 
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
@@ -34,18 +34,6 @@ class SaveItDashboard {
       limit: 50 // Pages per batch for infinite scroll
     };
     this.debounceTimer = null;
-    this.discoveryMode = false; // Track if we're in discovery view
-    this.currentDiscoveryLabel = null; // Store current discovery query
-    this.currentDiscoveryType = null; // Store classification type (general/domain/topic)
-    this.currentDiscoveryContext = null; // Store parent context for breadcrumbs
-
-    // Hierarchical tag selection state
-    this.selectedL1 = null; // Currently selected L1 (general) tag
-    this.selectedL2 = null; // Currently selected L2 (domain) tag
-    this.selectedL3 = null; // Currently selected L3 (topic) tag
-
-    // Similarity search configuration
-    this.similarityThreshold = 0.5; // Filter out results below this threshold
 
     // Infinite scroll state
     this.isLoadingMore = false;
@@ -60,16 +48,19 @@ class SaveItDashboard {
     this.searchManager = new SearchManager();
     this.scrollManager = new ScrollManager();
     this.authUIManager = new AuthUIManager();
+    this.discoveryManager = new DiscoveryManager(API, Components, this.tagManager);
+    this.themeManager = new ThemeManager();
+    this.tagInteractionManager = new TagInteractionManager(API, this.tagManager, Components);
   }
 
   /**
    * Initialize the dashboard
    */
   async init() {
-    this.initTheme();
+    this.themeManager.initTheme();
     this.showLoading();
-    this.updateModeIndicator();
-    this.updateVersionIndicator();
+    this.themeManager.updateModeIndicator(API.isExtension);
+    this.themeManager.updateVersionIndicator(getBrowserRuntime);
 
     // Clean up legacy cache (migration for v0.13.5+)
     await API.cleanupLegacyCache();
@@ -165,67 +156,6 @@ class SaveItDashboard {
     };
   }
 
-  initTheme() {
-    const savedTheme = localStorage.getItem('theme-preference') || 'auto';
-    this.applyTheme(savedTheme);
-    this.updateThemeButtons(savedTheme);
-  }
-
-  applyTheme(theme) {
-    const html = document.documentElement;
-    if (theme === 'auto') {
-      html.removeAttribute('data-theme');
-    } else {
-      html.setAttribute('data-theme', theme);
-    }
-  }
-
-  updateThemeButtons(activeTheme) {
-    document.querySelectorAll('.theme-option').forEach(btn => {
-      if (btn.dataset.theme === activeTheme) {
-        btn.classList.add('active');
-        btn.setAttribute('aria-checked', 'true');
-      } else {
-        btn.classList.remove('active');
-        btn.setAttribute('aria-checked', 'false');
-      }
-    });
-  }
-
-  /**
-   * Update mode indicator in footer
-   */
-  updateModeIndicator() {
-    const modeLabel = document.getElementById('mode-label');
-    if (API.isExtension) {
-      modeLabel.textContent = 'Extension Mode';
-      modeLabel.style.color = '#10b981';
-    } else {
-      modeLabel.textContent = 'Development Mode (using mock data)';
-      modeLabel.style.color = '#f59e0b';
-    }
-  }
-
-  /**
-   * Update version indicator in footer
-   * Only shows version in extension mode where manifest is available
-   */
-  updateVersionIndicator() {
-    const versionNumber = document.getElementById('version-number');
-    const buildDate = document.getElementById('build-date');
-
-    if (versionNumber && typeof browser !== 'undefined' && browser.runtime) {
-      const runtime = getBrowserRuntime();
-      const manifest = runtime?.getManifest();
-      versionNumber.textContent = manifest.version;
-
-      // Show build date if available (added during release process)
-      if (buildDate && manifest.build_date) {
-        const date = new Date(manifest.build_date);
-        buildDate.textContent = `(${date.toLocaleDateString()})`;
-      }
-    }
-  }
 
   showLoading() {
     const content = document.getElementById('content');
@@ -286,10 +216,10 @@ class SaveItDashboard {
         this.nextCursor = freshResponse.pagination?.nextCursor || null;
 
         // If a tag is selected, re-run similarity search to update results
-        const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+        const activeLabel = this.tagInteractionManager.getActiveLabel();
         if (activeLabel) {
           // Re-trigger tag click to refresh similarity results with new data
-          const activeType = this.selectedL3 ? 'topic' : (this.selectedL2 ? 'domain' : 'general');
+          const activeType = this.tagInteractionManager.getActiveType();
           await this.handleTagClick(activeType, activeLabel);
         } else {
           // No tag selected - show all pages
@@ -331,138 +261,30 @@ class SaveItDashboard {
    * Render tag bar with hierarchical selection
    */
   renderTagBar() {
-    const tagBarContainer = document.getElementById('tag-bar');
-    if (!tagBarContainer) {
-      console.warn('Tag bar container not found');
-      return;
-    }
-
-    console.log('[renderTagBar] Selection state:', { L1: this.selectedL1, L2: this.selectedL2, L3: this.selectedL3 });
-
-    // Always show L1 tags
-    const l1Tags = this.tagManager.extractGeneralTags(this.allPages);
-
-    // Build L1 row HTML
-    const l1Html = l1Tags.map(tag => {
-      const isActive = this.selectedL1 === tag.label;
-      const activeClass = isActive ? 'active' : '';
-      return `<button class="tag ai-tag tag-general ${activeClass}" data-type="general" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
-    }).join('');
-
-    let l2Html = '';
-    let l3Html = '';
-
-    // Only show L2 tags if L1 is selected
-    if (this.selectedL1) {
-      const l2Tags = this.tagManager.extractL2TagsForL1(this.selectedL1, this.pages);
-
-      if (l2Tags.length > 0) {
-        l2Html = l2Tags.map(tag => {
-          const isActive = this.selectedL2 === tag.label;
-          const activeClass = isActive ? 'active' : '';
-          return `<button class="tag ai-tag tag-domain ${activeClass}" data-type="domain" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
-        }).join('');
-      }
-    }
-
-    // Only show L3 tags if L2 is selected
-    if (this.selectedL2) {
-      const l3Tags = this.tagManager.extractL3TagsForL2(this.selectedL2, this.pages);
-
-      if (l3Tags.length > 0) {
-        l3Html = l3Tags.map(tag => {
-          const isActive = this.selectedL3 === tag.label;
-          const activeClass = isActive ? 'active' : '';
-          return `<button class="tag ai-tag tag-topic ${activeClass}" data-type="topic" data-label="${Components.escapeHtml(tag.label)}">${Components.escapeHtml(tag.label)}</button>`;
-        }).join('');
-      }
-    }
-
-    // Build complete tag bar HTML
-    tagBarContainer.innerHTML = `
-      <div class="tag-bar-tags">${l1Html}</div>
-      ${l2Html ? `<div class="tag-bar-tags tag-bar-l2">${l2Html}</div>` : ''}
-      ${l3Html ? `<div class="tag-bar-tags tag-bar-l3">${l3Html}</div>` : ''}
-    `;
-
-    // Tag clicks handled by event delegation in setupEventListeners()
+    this.tagInteractionManager.renderTagBar(this.allPages, this.pages);
   }
 
   /**
    * Handle tag click in hierarchical selection mode
    * Uses async similarity search to find related pages
-   * Automatically sets parent/grandparent context using buildBreadcrumbContext
    * @param {string} type - Classification type (general/domain/topic)
    * @param {string} label - Tag label
    */
   async handleTagClick(type, label) {
-    // Check if clicking the same tag again (toggle off)
-    const isAlreadySelected = (
-      (type === 'general' && this.selectedL1 === label && !this.selectedL2 && !this.selectedL3) ||
-      (type === 'domain' && this.selectedL2 === label && !this.selectedL3) ||
-      (type === 'topic' && this.selectedL3 === label)
-    );
-
-    if (isAlreadySelected) {
-      // Clear selection and show all pages
-      this.selectedL1 = null;
-      this.selectedL2 = null;
-      this.selectedL3 = null;
-      this.pages = [...this.allPages];
-
-      // Re-apply search filter if active
-      if (this.currentFilter.search) {
-        this.pages = this.searchManager.applySearchFilter(this.pages, this.currentFilter.search);
-      }
-
-      this.updateStats();
-      this.render();
-      return;
-    }
-
-    // Build full hierarchy context for this tag
-    const context = this.tagManager.buildBreadcrumbContext(type, label, this.allPages, this.pages);
-
-    if (!context) {
-      console.warn('[handleTagClick] No context found for tag:', type, label);
-      return;
-    }
-
-    // Update selection state with full hierarchy
-    if (type === 'general') {
-      this.selectedL1 = label;
-      this.selectedL2 = null;
-      this.selectedL3 = null;
-    } else if (type === 'domain') {
-      this.selectedL1 = context.parentLabel || null;
-      this.selectedL2 = label;
-      this.selectedL3 = null;
-    } else if (type === 'topic') {
-      this.selectedL1 = context.grandparentLabel || null;
-      this.selectedL2 = context.parentLabel || null;
-      this.selectedL3 = label;
-    }
-
-    // Determine which tag to search by (deepest selected level)
-    const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
-
-    // Show loading state
-    this.showLoading();
-
     try {
-      console.log('[handleTagClick] Searching for:', activeLabel, 'threshold:', this.similarityThreshold);
+      const result = await this.tagInteractionManager.handleTagClick(
+        type,
+        label,
+        this.allPages,
+        this.pages,
+        () => this.showLoading(),
+        (error) => this.showError(error)
+      );
 
-      // Call backend similarity search
-      const results = await API.searchByTag(activeLabel, this.similarityThreshold);
+      if (!result) return;
 
-      console.log('[handleTagClick] Got results:', {
-        exact: results.exact_matches?.length || 0,
-        similar: results.similar_matches?.length || 0,
-        related: results.related_matches?.length || 0
-      });
-
-      // Extract and score pages
-      this.pages = this.extractSimilarityResults(results);
+      // Update pages from result
+      this.pages = result.pages;
 
       // Apply search filter if active
       if (this.currentFilter.search) {
@@ -471,51 +293,9 @@ class SaveItDashboard {
 
       this.updateStats();
       this.render();
-    } catch (error) {
-      console.error('Similarity search failed:', error);
-      // Show error to user - NO fallback
-      this.showError(error);
+    } catch {
+      // Error already handled by tagInteractionManager
     }
-  }
-
-  /**
-   * Extract pages from similarity search results
-   * Maps thing_id to full page objects and preserves similarity scores
-   * @param {Object} results - Results from API.searchByTag()
-   * @returns {Array} Array of page objects with _similarity scores
-   */
-  extractSimilarityResults(results) {
-    const pages = [];
-
-    // Combine all tiers (already sorted by similarity in backend)
-    const allMatches = [
-      ...(results.exact_matches || []),
-      ...(results.similar_matches || []),
-      ...(results.related_matches || [])
-    ];
-
-    console.log('[extractSimilarityResults] Processing', allMatches.length, 'matches');
-
-    // Map thing_id to page from allPages and preserve similarity score
-    for (const match of allMatches) {
-      // Backend may return thing_data embedded, or just thing_id
-      let page;
-      if (match.thing_data) {
-        page = match.thing_data;
-      } else {
-        page = this.allPages.find(p => p.id === match.thing_id);
-      }
-
-      if (page) {
-        // Attach similarity score for potential display
-        page._similarity = match.similarity;
-        page._matched_label = match.matched_label;
-        pages.push(page);
-      }
-    }
-
-    console.log('[extractSimilarityResults] Extracted', pages.length, 'pages');
-    return pages;
   }
 
 
@@ -604,13 +384,8 @@ class SaveItDashboard {
 
     // Reset all filter state
     this.currentFilter.search = '';
-    this.selectedL1 = null;
-    this.selectedL2 = null;
-    this.selectedL3 = null;
-    this.discoveryMode = false;
-    this.currentDiscoveryLabel = null;
-    this.currentDiscoveryType = null;
-    this.currentDiscoveryContext = null;
+    this.tagInteractionManager.clearSelection();
+    this.discoveryManager.exit();
 
     // Restore pages to show all items (unfiltered)
     this.pages = [...this.allPages];
@@ -682,8 +457,8 @@ class SaveItDashboard {
       btn.addEventListener('click', () => {
         const theme = btn.dataset.theme;
         localStorage.setItem('theme-preference', theme);
-        this.applyTheme(theme);
-        this.updateThemeButtons(theme);
+        this.themeManager.applyTheme(theme);
+        this.themeManager.updateThemeButtons(theme);
       });
     });
 
@@ -762,7 +537,7 @@ class SaveItDashboard {
       this.pages = this.searchManager.applySearchFilter(basePages, this.currentFilter.search);
     } else {
       // No search - restore base pages
-      const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+      const activeLabel = this.tagInteractionManager.getActiveLabel();
       if (!activeLabel) {
         // No tag selected either - show all
         this.pages = [...this.allPages];
@@ -937,26 +712,18 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    * @param {string} type - Classification type (general/domain/topic)
    */
   async discoverByTag(label, type) {
-    console.log('[discoverByTag] Starting discovery for:', label, type);
-    this.discoveryMode = true;
-    this.currentDiscoveryLabel = label;
-    this.currentDiscoveryType = type;
-
-    // Build breadcrumb context for this classification
-    this.currentDiscoveryContext = this.buildBreadcrumbContext(type, label);
-
-    // Show loading state
-    this.showLoading();
-
     try {
-      console.log('[discoverByTag] Calling API.searchByTag');
-      const results = await API.searchByTag(label);
-      console.log('[discoverByTag] Got results, rendering:', results);
+      const results = await this.discoveryManager.discover(
+        label,
+        type,
+        this.allPages,
+        this.pages,
+        () => this.showLoading(),
+        (error) => this.showError(error)
+      );
       this.renderDiscoveryResults(results);
-      console.log('[discoverByTag] Discovery complete');
-    } catch (error) {
-      console.error('[discoverByTag] Failed to search by tag:', error);
-      this.showError(error);
+    } catch {
+      // Error already logged and displayed by discoveryManager
     }
   }
 
@@ -965,28 +732,8 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    * Uses Components.discoveryResults to render the full discovery view
    */
   renderDiscoveryResults(results) {
-    // Flatten all tiers into single array for tag extraction
-    const allResults = [
-      ...(results.exact_matches || []),
-      ...(results.similar_matches || []),
-      ...(results.related_matches || [])
-    ];
-
-    // Store results as pages for tag extraction
-    this.pages = allResults.map(match => match.thing_data);
-
-    // Use Components.discoveryResults to render full discovery view
-    const container = document.getElementById('content');
-
-    // Preserve scroll sentinel before modifying content
-    const sentinel = document.getElementById('scroll-sentinel');
-
-    container.innerHTML = Components.discoveryResults(results);
-
-    // Re-append sentinel after updating content
-    if (sentinel) {
-      container.appendChild(sentinel);
-    }
+    // Use discoveryManager to render results and get page data
+    this.pages = this.discoveryManager.renderResults(results);
 
     // Render tag bar after updating pages
     this.renderTagBar();
@@ -996,16 +743,13 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    * Exit discovery mode and return to main view
    */
   exitDiscoveryMode() {
-    this.discoveryMode = false;
-    this.currentDiscoveryLabel = null;
-    this.currentDiscoveryType = null;
-    this.currentDiscoveryContext = null;
+    this.discoveryManager.exit();
 
     // Restore pages based on current tag selection
-    const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
+    const activeLabel = this.tagInteractionManager.getActiveLabel();
     if (activeLabel) {
       // Re-trigger similarity search for selected tag
-      const activeType = this.selectedL3 ? 'topic' : (this.selectedL2 ? 'domain' : 'general');
+      const activeType = this.tagInteractionManager.getActiveType();
       this.handleTagClick(activeType, activeLabel);
     } else {
       // No tag selected - show all pages
