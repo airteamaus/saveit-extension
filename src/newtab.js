@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager */
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager */
 
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
@@ -51,6 +51,8 @@ class SaveItDashboard {
     this.discoveryManager = new DiscoveryManager(API, Components, this.tagManager);
     this.themeManager = new ThemeManager();
     this.tagInteractionManager = new TagInteractionManager(API, this.tagManager, Components);
+    this.statsManager = new StatsManager();
+    this.notificationManager = new NotificationManager();
   }
 
   /**
@@ -238,15 +240,7 @@ class SaveItDashboard {
    * Update stats display
    */
   updateStats() {
-    const statsEl = document.getElementById('stats');
-    const total = this.totalPages; // Use total from backend
-    const filtered = this.pages.length;
-
-    if (filtered < total) {
-      statsEl.textContent = `Showing ${filtered} of ${total} pages`;
-    } else {
-      statsEl.textContent = `${total} ${total === 1 ? 'page' : 'pages'} saved`;
-    }
+    this.statsManager.updateStats(this.totalPages, this.pages.length);
   }
 
 
@@ -442,7 +436,8 @@ class SaveItDashboard {
     searchInput.addEventListener('input', (e) => {
       this.currentFilter.search = e.target.value;
       clearSearch.style.display = e.target.value ? 'block' : 'none';
-      this.debounce(() => this.handleFilterChange(), 300);
+      clearTimeout(this.debounceTimer);
+      this.debounceTimer = setTimeout(() => this.handleFilterChange(), 300);
     });
 
     clearSearch.addEventListener('click', () => {
@@ -676,88 +671,9 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    * Show toast notification
    */
   showToast(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: #1e293b;
-      color: white;
-      padding: 12px 24px;
-      border-radius: 8px;
-      box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
-      z-index: 1000;
-      animation: slideIn 0.3s ease-out;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-      toast.style.animation = 'slideOut 0.3s ease-out';
-      setTimeout(() => toast.remove(), 300);
-    }, 3000);
+    this.notificationManager.showToast(message);
   }
 
-  /**
-   * Debounce helper for search input
-   */
-  debounce(func, wait) {
-    clearTimeout(this.debounceTimer);
-    this.debounceTimer = setTimeout(func, wait);
-  }
-
-  /**
-   * Enter discovery mode - search for pages by tag similarity
-   * @param {string} label - Tag label to search for
-   * @param {string} type - Classification type (general/domain/topic)
-   */
-  async discoverByTag(label, type) {
-    try {
-      const results = await this.discoveryManager.discover(
-        label,
-        type,
-        this.allPages,
-        this.pages,
-        () => this.showLoading(),
-        (error) => this.showError(error)
-      );
-      this.renderDiscoveryResults(results);
-    } catch {
-      // Error already logged and displayed by discoveryManager
-    }
-  }
-
-  /**
-   * Render discovery results
-   * Uses Components.discoveryResults to render the full discovery view
-   */
-  renderDiscoveryResults(results) {
-    // Use discoveryManager to render results and get page data
-    this.pages = this.discoveryManager.renderResults(results);
-
-    // Render tag bar after updating pages
-    this.renderTagBar();
-  }
-
-  /**
-   * Exit discovery mode and return to main view
-   */
-  exitDiscoveryMode() {
-    this.discoveryManager.exit();
-
-    // Restore pages based on current tag selection
-    const activeLabel = this.tagInteractionManager.getActiveLabel();
-    if (activeLabel) {
-      // Re-trigger similarity search for selected tag
-      const activeType = this.tagInteractionManager.getActiveType();
-      this.handleTagClick(activeType, activeLabel);
-    } else {
-      // No tag selected - show all pages
-      this.pages = [...this.allPages];
-      this.updateStats();
-      this.render();
-    }
-  }
 }
 
 async function initDashboard() {

@@ -253,3 +253,47 @@ if (typeof window !== 'undefined' && !window.MOCK_DATA_EXTENDED) {
   MOCK_DATA.push(...extended);
   window.MOCK_DATA_EXTENDED = true;
 }
+
+/**
+ * Filter and sort mock data (for standalone testing)
+ * @param {Array} data - Mock data array to filter
+ * @param {Object} options - Filter options
+ * @param {string} options.search - Search query
+ * @param {string} options.sort - Sort order ('newest' or 'oldest')
+ * @param {number} options.limit - Max results
+ * @param {number} options.offset - Pagination offset
+ * @returns {Array} Filtered and sorted data
+ */
+/* eslint-disable-next-line no-unused-vars */
+function filterMockData(data, options) {
+  let filtered = [...data];
+
+  if (options.search) {
+    const query = options.search.toLowerCase();
+    filtered = filtered.filter(item =>
+      item.title.toLowerCase().includes(query) ||
+      item.url.toLowerCase().includes(query) ||
+      (item.description && item.description.toLowerCase().includes(query)) ||
+      (item.manual_tags && item.manual_tags.some(tag => tag.toLowerCase().includes(query)))
+    );
+  }
+
+  if (options.sort === 'newest') {
+    filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+  } else if (options.sort === 'oldest') {
+    filtered.sort((a, b) => new Date(a.saved_at) - new Date(b.saved_at));
+  }
+
+  // In standalone mode, return all data on initial load (no pagination)
+  // This ensures tests see all mock data and stats show "X pages saved"
+  // Only apply pagination if explicitly loading more pages (offset > 0)
+  const offset = options.offset || 0;
+  if (offset === 0) {
+    // Initial load - return all data
+    return filtered;
+  } else {
+    // Infinite scroll - return paginated batch
+    const limit = options.limit || 50;
+    return filtered.slice(offset, offset + limit);
+  }
+}

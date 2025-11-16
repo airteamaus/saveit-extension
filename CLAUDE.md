@@ -110,9 +110,12 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 - `src/tag-manager.js` - Tag hierarchy and classification logic
 - `src/search-manager.js` - Search and filtering logic
 - `src/scroll-manager.js` - Infinite scroll and pagination logic
+- `src/stats-manager.js` - Stats display logic
+- `src/notification-manager.js` - Notification/toast UI
+- `src/cache-manager.js` - Browser storage caching (user-isolated)
 - `src/auth-ui.js` - Authentication UI management
 - `src/api.js` - API abstraction (auto-detects mode)
-- `src/mock-data.js` - Test data (standalone only)
+- `src/mock-data.js` - Test data and filtering (standalone only)
 
 **Save Flow:**
 1. User clicks toolbar → `browser.browserAction.onClicked`

@@ -2,8 +2,25 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
+/* global CacheManager_Export, filterMockData */
+
 /* eslint-disable-next-line no-unused-vars */
 const API = {
+  /**
+   * Initialize cache manager (lazy initialization)
+   * @private
+   */
+  _cacheManager: null,
+  get cacheManager() {
+    if (!this._cacheManager && this.isExtension) {
+      this._cacheManager = new CacheManager_Export(
+        () => this.getCurrentUserId(),
+        () => this.getStorage()
+      );
+    }
+    return this._cacheManager;
+  },
+
   /**
    * Detect if we're running inside the browser extension or as standalone HTML
    * Checks both browser (Firefox + polyfill) and chrome (Chrome/Brave/Edge)
@@ -20,20 +37,6 @@ const API = {
     return false;
   },
 
-  /**
-   * Cache configuration
-   */
-  CACHE_KEY_PREFIX: 'savedPages_cache',
-  CACHE_MAX_AGE_MS: 5 * 60 * 1000, // 5 minutes
-
-  /**
-   * Get cache key for current user
-   * Includes user_id to prevent cross-user data leakage
-   * @private
-   */
-  getCacheKey(userId) {
-    return `${this.CACHE_KEY_PREFIX}_${userId}`;
-  },
 
   /**
    * Get current Firebase user ID
@@ -108,159 +111,45 @@ const API = {
 
 
   /**
-   * Get cached response from browser storage
-   * Cache is isolated per user to prevent cross-user data leakage
-   * Returns full response object with pagination metadata
+   * Get cached response from browser storage (delegates to CacheManager)
    * @private
    */
   async getCachedPages() {
     if (!this.isExtension) return null;
-
-    try {
-      const userId = this.getCurrentUserId();
-      if (!userId) {
-        console.log('[getCachedPages] No user logged in, skipping cache');
-        return null;
-      }
-
-      const storage = this.getStorage();
-      if (!storage) return null;
-
-      const cacheKey = this.getCacheKey(userId);
-      const result = await storage.get(cacheKey);
-      const cached = result[cacheKey];
-
-      if (!cached) {
-        console.log('[getCachedPages] No cache found for user:', userId);
-        return null;
-      }
-
-      // Validate that cached data belongs to current user (extra safety)
-      if (cached.userId && cached.userId !== userId) {
-        console.warn('[getCachedPages] Cache user_id mismatch! Clearing invalid cache.', {
-          cached_user: cached.userId,
-          current_user: userId
-        });
-        await storage.remove(cacheKey);
-        return null;
-      }
-
-      const age = Date.now() - cached.timestamp;
-      if (age > this.CACHE_MAX_AGE_MS) {
-        console.log('[getCachedPages] Cache expired, fetching fresh data');
-        return null;
-      }
-
-      console.log(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
-        user_id: userId,
-        pages_count: cached.response?.pages ? cached.response.pages.length : 0,
-        total: cached.response?.pagination?.total,
-        first_item: cached.response?.pages?.[0] ? { id: cached.response.pages[0].id, title: cached.response.pages[0].title } : null
-      });
-      return cached.response; // Return full response object with pagination
-    } catch (error) {
-      console.error('[getCachedPages] Failed to read cache:', error);
-      return null;
-    }
+    return await this.cacheManager.getCachedPages();
   },
 
   /**
-   * Store response in browser storage cache
-   * Cache is isolated per user to prevent cross-user data leakage
-   * Stores full response object with pagination metadata
+   * Store response in browser storage cache (delegates to CacheManager)
    * @private
    */
   async setCachedPages(response) {
     if (!this.isExtension) return;
-
-    try {
-      const userId = this.getCurrentUserId();
-      if (!userId) {
-        console.log('[setCachedPages] No user logged in, skipping cache write');
-        return;
-      }
-
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      const cacheKey = this.getCacheKey(userId);
-      await storage.set({
-        [cacheKey]: {
-          userId: userId, // Store user_id for validation
-          response: response, // Store full response with pagination
-          timestamp: Date.now()
-        }
-      });
-      console.log('[setCachedPages] Cache updated for user:', userId, {
-        pages_count: response?.pages?.length,
-        total: response?.pagination?.total
-      });
-    } catch (error) {
-      console.error('[setCachedPages] Failed to write cache:', error);
-    }
+    return await this.cacheManager.setCachedPages(response);
   },
 
   /**
-   * Invalidate the cache (call after delete, update operations)
-   * Clears cache for current user only
+   * Invalidate the cache (delegates to CacheManager)
    */
   async invalidateCache() {
     if (!this.isExtension) return;
-
-    try {
-      const userId = this.getCurrentUserId();
-      if (!userId) {
-        console.log('[invalidateCache] No user logged in');
-        return;
-      }
-
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      const cacheKey = this.getCacheKey(userId);
-      await storage.remove(cacheKey);
-      console.log('[invalidateCache] Cache invalidated for user:', userId);
-    } catch (error) {
-      console.error('[invalidateCache] Failed to invalidate cache:', error);
-    }
+    return await this.cacheManager.invalidateCache();
   },
 
   /**
-   * Clear all cached data (for debugging)
+   * Clear all cached data (delegates to CacheManager)
    */
   async clearAllCache() {
     if (!this.isExtension) return;
-
-    try {
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      await storage.clear();
-      console.log('[clearAllCache] All cache cleared');
-    } catch (error) {
-      console.error('[clearAllCache] Failed to clear cache:', error);
-    }
+    return await this.cacheManager.clearAllCache();
   },
 
   /**
-   * Clean up legacy cache (migration helper)
-   * Removes old global cache key that wasn't user-isolated
-   * Called once on extension upgrade to v0.13.5+
+   * Clean up legacy cache (delegates to CacheManager)
    */
   async cleanupLegacyCache() {
     if (!this.isExtension) return;
-
-    try {
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      // Remove old global cache key
-      const legacyKey = 'savedPages_cache';
-      await storage.remove(legacyKey);
-      console.log('[cleanupLegacyCache] Removed legacy global cache');
-    } catch (error) {
-      console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
-    }
+    return await this.cacheManager.cleanupLegacyCache();
   },
 
   /**
@@ -352,7 +241,7 @@ const API = {
     } else {
       // Development: Use mock data with pagination format
       console.log('[getSavedPages] Using mock data (standalone mode)');
-      const filteredPages = this.filterMockData(MOCK_DATA, options);
+      const filteredPages = filterMockData(MOCK_DATA, options);
 
       // Return in standard format with pagination
       return {
@@ -363,43 +252,6 @@ const API = {
           nextCursor: null
         }
       };
-    }
-  },
-
-  /**
-   * Filter and sort mock data (for standalone testing)
-   * @private
-   */
-  filterMockData(data, options) {
-    let filtered = [...data];
-
-    if (options.search) {
-      const query = options.search.toLowerCase();
-      filtered = filtered.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.url.toLowerCase().includes(query) ||
-        (item.description && item.description.toLowerCase().includes(query)) ||
-        (item.manual_tags && item.manual_tags.some(tag => tag.toLowerCase().includes(query)))
-      );
-    }
-
-    if (options.sort === 'newest') {
-      filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
-    } else if (options.sort === 'oldest') {
-      filtered.sort((a, b) => new Date(a.saved_at) - new Date(b.saved_at));
-    }
-
-    // In standalone mode, return all data on initial load (no pagination)
-    // This ensures tests see all mock data and stats show "X pages saved"
-    // Only apply pagination if explicitly loading more pages (offset > 0)
-    const offset = options.offset || 0;
-    if (offset === 0) {
-      // Initial load - return all data
-      return filtered;
-    } else {
-      // Infinite scroll - return paginated batch
-      const limit = options.limit || 50;
-      return filtered.slice(offset, offset + limit);
     }
   },
 
