@@ -1,27 +1,26 @@
 # CLAUDE.md
 
-Guidance for Claude Code when working with this repository.
+SaveIt - Browser extension with async AI enrichment for bookmarks
+
+**Stack**: Browser Extension (Firefox/Chrome), Cloud Functions, BigQuery, Firestore
+**Repos**: `saveit-extension/` (this - public), `saveit-backend/` (sibling - private)
+**Key flow**: User saves → Extension → Cloud Function → BigQuery → Cloud Tasks → Firestore
 
 ## Repository Structure
 
-SaveIt is split into two repositories in `/Users/rich/Code/`:
-
-- **saveit-extension/** (this repo - PUBLIC) - Browser extension, dashboard UI, GitHub Actions
-- **saveit-backend/** (sibling repo - PRIVATE) - Cloud Functions, BigQuery schemas, deployment scripts
-
-Key directories:
-- `src/` - Extension source code (HTML, JS, CSS, assets)
+**Directories:**
+- `src/` - Extension source (HTML, JS, CSS, assets)
 - `scripts/` - Build and release scripts
 - `docs/` - User-facing documentation
 - `.github/workflows/` - Automated XPI build & release
 
-See also: [docs/README.md](docs/README.md), [Backend CLAUDE.md](../saveit-backend/CLAUDE.md)
+**Related:** [docs/README.md](docs/README.md), [Backend CLAUDE.md](../saveit-backend/CLAUDE.md)
 
 ## Implementation Workflow
 
 **CRITICAL: Never write code without explicit approval of the approach.**
 
-1. **User requests a feature** → Research options, document alternatives with trade-offs
+1. **User requests feature** → Research options, document alternatives with trade-offs
 2. **Present plan** → Show approach, provide pseudocode examples
 3. **Wait for approval** → User says "ok, implement that" or "go ahead"
 4. **Then implement** → Code, test in standalone mode, test as extension, update docs
@@ -41,219 +40,133 @@ See also: [docs/README.md](docs/README.md), [Backend CLAUDE.md](../saveit-backen
 
 ## Architectural Principles
 
-**Backwards Compatibility Policy:**
+**Backwards Compatibility:**
+- ✗ No deprecated fields, dual schemas, or fallback logic
+- ✓ Extension version matches backend API version
+- ✓ Use explicit API versioning (`/v1/`, `/v2/`) for breaking changes
+- ✓ Coordinated deployment: Backend deploys `/v2/` → Extension updates → Remove `/v1/`
 
-We do NOT maintain backwards compatibility except through explicit versioning.
-
-**What this means:**
-- ❌ No deprecated fields that "stick around for compatibility"
-- ❌ No fallback logic for "old format" vs "new format" in validators
-- ❌ No dual field names in response handling
-- ❌ No code paths like "try new API, fall back to old API"
-- ✅ Extension version matches expected backend API version
-- ✅ Use explicit API versioning (`/v1/`, `/v2/`) when breaking changes are needed
-- ✅ Update validators when backend schema changes (requires coordinated deployment)
-
-**Rationale:** Supporting multiple code paths for backwards compatibility adds complexity, makes testing harder, and creates technical debt. Instead, version explicitly and require matched backend/extension versions.
-
-**Deployment coordination:** Backend and extension versions must stay synchronized. Breaking changes require:
-1. Backend deploys new API version (e.g., `/v2/save`)
-2. Extension updates to call new version
-3. Old API version (`/v1/save`) can be removed after all users update
-
-**During development (pre-1.0):** We may keep deprecated fields for 1-2 weeks during coordinated deployments, then remove immediately.
-
-**KISS & YAGNI:**
-- Start with the simplest solution that works
-- Implement only what's currently needed
-- Avoid over-engineering and speculative features
-
-**SOLID:**
-- **Single Responsibility** - Each component has one clear purpose
+**Design:**
+- **KISS & YAGNI** - Simplest solution, implement only what's needed
+- **Single Responsibility** - Each component has one purpose
 - **Open-Closed** - Extend via composition, not modification
-- **Dependency Inversion** - Depend on abstractions, not concrete implementations
+- **Dependency Inversion** - Depend on abstractions
 
 **Dependencies:**
-- Add only if they remove significant code or eliminate known defect classes
-- Must be widely used, actively maintained, and permissively licensed
+- Add only if they remove significant code or eliminate defect classes
+- Must be widely used, actively maintained, permissively licensed
 - Prefer browser APIs over external libraries
 
 ## Code Style
 
-**Module Size:**
-- Files should be <500 lines
-- Files >750 lines MUST be refactored
+**Module Size:** <500 lines (MUST refactor >750)
+**Error Handling:** Return errors over silent failures, provide context, never swallow errors
 
-**Error Handling:**
-- Prefer returning errors over silent failures
-- Provide actionable error context
-- Never swallow errors without logging
-
-**Comments:**
-
-Explain WHY, not WHAT. Comments that restate obvious code add cognitive load.
-
-✅ Good (explain reasoning):
+**Comments:** Explain WHY, not WHAT
 ```javascript
-// User info cached permanently to avoid OAuth popup on every save
-// Extension ID must match OAuth redirect URI in Google Cloud Console
-// Mode detection fails in standalone if browser API not available
+✓ // User info cached permanently to avoid OAuth popup on every save
+✗ // Set the user email
+✗ // TODO: Implement AI enrichment in Phase 2
 ```
 
-❌ Bad (restate obvious):
-```javascript
-// Set the user email
-// Call the API
-// Return the result
-```
-
-❌ Never promise future work in comments:
-```javascript
-// TODO: Implement AI enrichment in Phase 2
-// This will be replaced when we refactor the dashboard
-// Temporary workaround until we implement proper caching
-```
-
-**If code needs improvement, either fix it now or track it in an issue/doc—don't leave promises in comments.**
+**Fix code now or track in issue—don't leave TODO promises.**
 
 ## Documentation Guidelines
 
-**Writing Style:**
-- Use plain language, be direct and factual
-- **NO superlatives** - Avoid "amazing", "perfect", "incredible", "best"
-- **NO bragging** - State what exists, not how great it is
-- **Nothing is ever "finished"** - Everything is a work in progress
-
-**DO NOT create:**
-- Session summaries or daily progress reports
-- Timestamp-specific status files
-- Metrics that change daily
-- Anything outdated the moment it's written
-
-**DO update:**
-- `README.md` - Quick start guide
-- `docs/README.md` - User-facing installation and usage guide
-- `docs/DASHBOARD-README.md` - Dashboard development guide
-- `CLAUDE.md` - Commands, architecture, current state
+- Plain language, direct, factual
+- ✗ NO superlatives ("amazing", "perfect", "incredible")
+- ✗ NO bragging - state facts, not how great it is
+- ✗ NO "finished" - everything is work in progress
+- ✗ DO NOT create session summaries, timestamp-specific files, daily metrics
+- ✓ DO update `README.md`, `docs/README.md`, `docs/DASHBOARD-README.md`, `CLAUDE.md`
 
 ## Working with Multiple Repositories
 
-SaveIt uses TWO separate git repositories in the same parent directory.
+SaveIt uses TWO repos in `/Users/rich/Code/`: `saveit-extension/` (public), `saveit-backend/` (private)
 
 **Use absolute paths when crossing repos:**
 ```bash
-# Good - explicit paths
 cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
-
-# Bad - relative paths can be confusing
-cd ../saveit-backend && ./scripts/deploy-function.sh
 ```
 
-**The Bash tool resets working directory after each command:**
-- Each Bash call starts in the original working directory
-- Chain commands with `&&` if they must run in sequence
-- Always verify which repo you're working in
+**Bash tool resets working directory after each command** - Chain with `&&` for sequential ops
 
-**Repository-specific files:**
-- Extension: `src/`, `manifest.json`, `docs/`, `justfile`
-- Backend: `cloud-function/`, `contracts/`, `scripts/`, `.env`, `justfile`
-
-**Before creating or moving files between repos:**
-- Explain what you're doing and why
-- Ask for confirmation if it affects project structure
-- Verify changes in the correct repository
+**Before creating/moving files between repos:** Explain and ask for confirmation
 
 ## Architecture Overview
 
 **Two-Mode Dashboard:**
-1. **Standalone Mode** (`file://` protocol) - Loads mock data, perfect for UI development
-2. **Extension Mode** (`moz-extension://` protocol) - Calls Cloud Function endpoints
 
-Mode is auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
+| Mode | Protocol | Data Source | Use Case |
+|------|----------|-------------|----------|
+| Standalone | `file://` | Mock data | UI development |
+| Extension | `moz-extension://` | Cloud Functions | Real data testing |
+
+Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 
 **Component Pattern:**
 - `src/components.js` - Pure UI builders (no business logic)
-- `src/newtab.js` - Controller (handles search, filter, delete logic)
-- `src/api.js` - API abstraction layer (auto-detects mode)
-- `src/mock-data.js` - Test data (standalone mode only)
+- `src/newtab.js` - Controller (search, filter, delete logic)
+- `src/api.js` - API abstraction (auto-detects mode)
+- `src/mock-data.js` - Test data (standalone only)
 
 **Save Flow:**
-1. User clicks toolbar icon → `browser.browserAction.onClicked` fires
-2. Get user info from cache or OAuth flow
-3. POST pageData to Cloud Function
-4. Show notification on success/failure
+1. User clicks toolbar → `browser.browserAction.onClicked`
+2. Get user info from cache or OAuth
+3. POST to Cloud Function
+4. Show notification
 
-**OAuth caching:** User info cached permanently after first auth. Clear with `browser.storage.local.clear()`.
+**OAuth caching:** Permanent after first auth. Clear: `browser.storage.local.clear()`
 
-See backend's [docs/VISION.md](../saveit-backend/docs/VISION.md) for detailed architecture.
+See [backend docs/VISION.md](../saveit-backend/docs/VISION.md) for full architecture.
 
 ## Testing & Quality Assurance
 
-**CRITICAL: This project has comprehensive QA infrastructure. Always write and run tests!**
+**CRITICAL: Always write and run tests before committing!**
 
-### Quick Testing Commands
+### Quick Commands
 
 ```bash
-# Run tests (ALWAYS do this before committing)
-just test               # Unit + integration tests (fast, <1s)
-just test-watch         # Watch mode - auto-reruns on changes
-just test-coverage      # Coverage report (70% minimum enforced)
-just test-e2e           # End-to-end tests in Firefox (~30s)
-just test-e2e-ui        # E2E tests in interactive UI mode
-
-# Quality checks
+just test               # Unit + integration (<1s)
+just test-watch         # Auto-rerun on changes
+just test-coverage      # 70% minimum enforced
+just test-e2e           # E2E in Firefox (~30s)
 just check              # All checks: lint + test + build + validate
-just ci-check           # Simulate GitHub Actions locally
-just pre-deploy         # Full pre-deployment checklist (use before releases)
+just ci-check           # Simulate GitHub Actions
+just pre-deploy         # Full pre-deployment checklist
 ```
 
 ### When to Write Tests
 
-**ALWAYS write tests when:**
-1. Fixing a bug (test should fail before fix, pass after)
-2. Adding new functions or components
+**ALWAYS test when:**
+1. Fixing a bug (test fails before fix, passes after)
+2. Adding new functions/components
 3. Changing business logic
 4. Modifying API contracts
 
-**Test Coverage Requirements:**
-- Lines: 70% minimum
-- Functions: 70% minimum
-- Branches: 65% minimum
-- **CI will fail** if coverage drops below thresholds
+**Coverage minimums:** Lines 70%, Functions 70%, Branches 65% (CI enforced)
 
 ### Test Structure
 
-```
-tests/
-├── unit/               # Fast, isolated function tests
-│   ├── api.test.js     # API module (12 tests)
-│   └── components.test.js  # Components module (15 tests)
-├── integration/        # Components working together
-│   └── dashboard.test.js   # Dashboard flows (13 tests)
-└── e2e/               # Full user workflows in real browser
-    └── standalone.spec.js  # 10 scenarios covering core features
-```
+| Path | Type | Coverage |
+|------|------|----------|
+| `tests/unit/api.test.js` | Fast, isolated functions | 12 tests |
+| `tests/unit/components.test.js` | Component rendering | 15 tests |
+| `tests/integration/dashboard.test.js` | Multi-component flows | 13 tests |
+| `tests/e2e/standalone.spec.js` | Real browser workflows | 10 scenarios |
 
 ### Schema Validation
-
-**Use Zod validators for all API responses:**
 
 ```javascript
 import { validatePages, validateSearchResponse } from './validators.js';
 
-// Validate API response (filters out invalid entries)
 const pages = await API.getSavedPages();
-const validPages = validatePages(pages);  // Removes malformed data
-
-// Throws on invalid schema
-const searchResults = validateSearchResponse(data);
+const validPages = validatePages(pages);  // Filters invalid entries
 ```
 
-**Why:** Catches backend schema changes immediately, prevents runtime errors from malformed data.
+Catches backend schema changes immediately.
 
 ### Error Reporting
-
-**Use structured error reporting:**
 
 ```javascript
 import { reportError } from './error-reporter.js';
@@ -261,82 +174,37 @@ import { reportError } from './error-reporter.js';
 try {
   await riskyOperation();
 } catch (error) {
-  reportError(error, {
-    context: 'user_action',
-    user: getCurrentUser(),
-    action: 'save_page'
-  });
+  reportError(error, { context: 'user_action', action: 'save_page' });
   showUserFriendlyMessage(error);
 }
 ```
 
-**Environments:**
-- Development: Logs to console only
-- Staging (beta versions): Sends to Slack/error tracker
-- Production: Sends to monitoring service (ready for Sentry integration)
+**Environments:** Development (console only), Staging (Slack), Production (monitoring)
 
-### Git Hooks (Automatic Quality Gates)
+### Git Hooks
 
-**Pre-commit:** (runs automatically on `git commit`)
-- ✓ ESLint + web-ext lint
-- ✓ Unit + integration tests
-- ⚠️ Warns about console.log statements
-
-**Pre-push:** (runs automatically on `git push`)
-- ✓ Version validation (tags must match manifest.json)
-- ✓ Quick test suite
-
-**Bypass (NOT recommended):**
-```bash
-git commit --no-verify  # Skip hooks (use sparingly!)
-```
+**Pre-commit:** ESLint, web-ext lint, unit tests, warns on console.log
+**Pre-push:** Version validation (tags match manifest.json), quick tests
+**Bypass:** `git commit --no-verify` (use sparingly)
 
 ### CI/CD Pipeline
 
-**GitHub Actions runs on every PR/push:**
-1. Lint & validate manifests
-2. Unit + integration tests with coverage
-3. Build verification
-4. E2E tests in Firefox
-5. Security audit (npm audit)
+GitHub Actions (every PR/push): Lint → Tests with coverage → Build → E2E → Security audit
+**Must pass before merge.**
 
-**Status:** Must pass before merging to main
+### Environment Config
 
-### Environment-Specific Configuration
+Auto-detects from extension version:
 
-Config auto-detects environment from extension version:
+| Environment | Version Format | Backend URL | Error Reporting | Debug |
+|-------------|----------------|-------------|-----------------|-------|
+| Development | `file://` or localhost | Mock data | Disabled | On |
+| Staging | `v0.14.0-beta.1` | `saveit-staging-xxx.run.app` | Slack | On |
+| Production | `v0.14.0` | `saveit-xxx-uc.a.run.app` | Monitoring | Off |
 
-```javascript
-// Development (file:// protocol or localhost)
-- Uses mock data
-- Debug logging enabled
-- Error reporting disabled
+**Deploy to staging:** `just deploy-staging 0.14.0` → Test 24-48h → `just bump minor && git push --tags`
 
-// Staging (version contains 'beta', e.g., v0.14.0-beta.1)
-- Real backend: https://saveit-staging-xxx.run.app
-- Error reporting to Slack
-- Debug logging enabled
-
-// Production (normal releases, e.g., v0.14.0)
-- Real backend: https://saveit-xxx-uc.a.run.app
-- Error reporting to monitoring service
-- Debug logging disabled
-```
-
-**Deploy to staging:**
-```bash
-just deploy-staging 0.14.0  # Creates v0.14.0-beta.1
-# Test for 24-48 hours with real backend
-# If stable, promote to production:
-just bump minor
-git push origin main --tags
-```
-
-### Documentation
-
-- **Full testing guide:** `docs/TESTING.md`
-- **QA infrastructure:** `docs/QA-INFRASTRUCTURE.md`
-- **Quick start:** `QA-SETUP-COMPLETE.md`
+**Docs:** `docs/TESTING.md`, `docs/QA-INFRASTRUCTURE.md`, `QA-SETUP-COMPLETE.md`
 
 ## Quick Reference
 
@@ -361,47 +229,38 @@ just preview                    # Or: open src/newtab.html
 # Refresh browser (Cmd+R)
 
 # Extension mode (for OAuth, real data testing)
-just run                        # Or: ./scripts/run-extension.sh (RECOMMENDED - no caching issues)
+just run                        # RECOMMENDED - no caching issues
 just install                    # Or: ./scripts/install-dev.sh
 
-# Manual load:
-# 1. Open Firefox → about:debugging
-# 2. Click "This Firefox" → "Load Temporary Add-on"
-# 3. Select manifest.json
+# Manual load: Firefox → about:debugging → "This Firefox" → "Load Temporary Add-on" → Select manifest.json
 ```
 
 **Cache-Busting:**
-Firefox aggressively caches extension files even after reinstall. Solutions:
-- **Recommended**: Use `just run` for active development (web-ext loads files directly from disk, auto-reloads on changes)
-- **When using regular Firefox profile**: Run `just clear-cache` after closing Firefox, then reload extension in about:debugging
-- **Note**: Version bumps (`just bump patch`) help but may not always clear cache immediately
+Firefox caches extension files aggressively.
+- **Recommended:** `just run` (web-ext loads from disk, auto-reloads)
+- **Regular profile:** `just clear-cache` after closing Firefox, reload in about:debugging
+- **Note:** Version bumps help but may not clear cache immediately
 
 **Releasing:**
 ```bash
-# IMPORTANT: Always use 'just bump' - never manually create version tags!
+# IMPORTANT: Always use 'just bump' - never manual tags!
 
-# First time setup (installs git pre-push hook):
-just setup-hooks                # Validates tags match manifest.json
+just setup-hooks                # First time: install git hooks
 
 # Bump version (updates manifest.json, commits, creates tag):
 just bump patch                 # 0.9.0 → 0.9.1 (bug fixes)
-just bump minor                 # 0.9.0 → 0.10.0 (new features)
-just bump major                 # 0.9.0 → 1.0.0 (breaking changes)
+just bump minor                 # 0.9.0 → 0.10.0 (features)
+just bump major                 # 0.9.0 → 1.0.0 (breaking)
 
-# Push to trigger release:
-git push origin main --tags     # Pre-push hook validates version matches
+git push origin main --tags     # Pre-push hook validates version
 
-# GitHub Actions will:
-# - Build and sign extension with Mozilla (using AMO_JWT secrets)
-# - Create GitHub Release with signed XPI
-# - Update updates.json for auto-updates
+# GitHub Actions: Build → Sign with Mozilla → Create Release → Update updates.json
 ```
 
 **Version Management:**
-- Pre-push hook prevents pushing tags that don't match manifest.json version
-- Always use `just bump [patch|minor|major]` instead of manual `git tag`
-- Hook installed with `just setup-hooks` (required on new machine/clone)
-- Hook blocks push with helpful error message if versions mismatch
+- Pre-push hook blocks tags that don't match manifest.json
+- Always use `just bump [patch|minor|major]`
+- Hook installed with `just setup-hooks` (required per machine)
 
 ## Configuration
 
@@ -411,45 +270,37 @@ cloudFunctionUrl: 'https://saveit-xxx-uc.a.run.app'
 oauthClientId: 'xxx.apps.googleusercontent.com'
 ```
 
-**OAuth redirect URIs:** Must match in Google Cloud Console:
+**OAuth redirect URIs** (must match Google Cloud Console):
 - Firefox: `https://<EXTENSION_ID>.extensions.allizom.org/` (ID: `saveit@airteam.com.au`)
-- Chrome (Web Store): `https://emiieedcdenibjicjfoekllgakpgekdk.chromiumapp.org/`
-- Chrome (Dev/Unpacked): `https://<generated-id>.chromiumapp.org/` (varies by directory)
+- Chrome (Store): `https://emiieedcdenibjicjfoekllgakpgekdk.chromiumapp.org/`
+- Chrome (Unpacked): `https://<generated-id>.chromiumapp.org/` (varies)
 
-**Permissions:**
-- `activeTab` - Read current page URL/title
-- `notifications` - Show save confirmations
-- `identity` - OAuth authentication
-- `storage` - Cache user info
-- `https://*.run.app/*` - Cloud Function access
-- `https://www.googleapis.com/*` - Google OAuth and Firebase
+**Permissions:** `activeTab`, `notifications`, `identity`, `storage`, `https://*.run.app/*`, `https://www.googleapis.com/*`
 
 **Cross-Browser Manifest:**
-- `manifest.json` includes both `service_worker` (Chrome) and `scripts` (Firefox) in `background` key
-- Chrome uses `service_worker`, shows harmless warning about `scripts` property
-- Firefox uses `scripts`, ignores `service_worker` property
-- Single manifest works for both browsers without build-time modifications
+- `manifest.json` includes both `service_worker` (Chrome) and `scripts` (Firefox)
+- Chrome uses `service_worker`, warns about `scripts` (harmless)
+- Firefox uses `scripts`, ignores `service_worker`
+- Single manifest for both browsers
 
 ## Important Notes
 
-- **Minimal build process** - Firebase SDK bundled via esbuild (`scripts/bundle-firebase.js`), no other transpilation
-- **Firebase dependency** - Uses Firebase SDK for authentication, bundled into `src/bundles/`
-- **webextension-polyfill** - Browser API compatibility layer for cross-browser support
-- **Zero-config standalone mode** - Just open `src/newtab.html` in any browser (uses mock data)
-- **Client-side filtering** - Search/filter happens in browser for instant feedback
-- **Auto-updates enabled** - Extension checks `updates.json` for new versions
+- Firebase SDK bundled via esbuild (`scripts/bundle-firebase.js`)
+- webextension-polyfill for cross-browser compatibility
+- Zero-config standalone mode: open `src/newtab.html` (uses mock data)
+- Client-side filtering for instant feedback
+- Auto-updates via `updates.json`
 
 ## Security
 
 - OAuth scopes: `openid email profile` (minimal)
-- User can revoke OAuth access via Google Account settings
-- No API keys stored in extension
+- No API keys in extension
 - Cloud Function URL obscurity provides basic security
-- No sensitive data stored locally except user email/name
+- Local storage: user email/name only (revocable via Google Account)
 
 ## See Also
 
-- [README.md](README.md) - Quick start guide
-- [docs/README.md](docs/README.md) - User-facing installation and usage
+- [README.md](README.md) - Quick start
+- [docs/README.md](docs/README.md) - Installation & usage
 - [docs/DASHBOARD-README.md](docs/DASHBOARD-README.md) - Dashboard development
-- Backend repo: `/Users/rich/Code/saveit-backend/`
+- Backend: `/Users/rich/Code/saveit-backend/`

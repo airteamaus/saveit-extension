@@ -11,6 +11,9 @@ node_modules/
 web-ext-artifacts/
 src/bundles/
 
+# Test coverage reports
+coverage/
+
 # Environment files
 .env
 .env.local
