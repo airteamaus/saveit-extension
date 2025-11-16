@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager */
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager, PageLoaderManager */
 
 class SaveItDashboard {
   constructor() {
@@ -41,6 +41,7 @@ class SaveItDashboard {
     this.notificationManager = new NotificationManager();
     this.eventManager = new EventManager();
     this.firebaseAuthManager = new FirebaseAuthManager();
+    this.pageLoaderManager = new PageLoaderManager();
   }
 
   /**
@@ -119,66 +120,14 @@ class SaveItDashboard {
    * Load pages from API
    */
   async loadPages() {
-    try {
-      const response = await API.getSavedPages(this.currentFilter);
-
-      // API always returns {pages, pagination} format
-      this.allPages = response.pages || [];
-      this.totalPages = response.pagination?.total || 0;
-      this.hasMorePages = response.pagination?.hasNextPage || false;
-      this.nextCursor = response.pagination?.nextCursor || null;
-
-      // Initially show all pages (no tag selected)
-      this.pages = [...this.allPages];
-    } catch (error) {
-      console.error('Failed to load pages:', error);
-      this.showError(error);
-    }
+    await this.pageLoaderManager.loadPages(this);
   }
 
   /**
    * Refresh data in background (after showing cached data)
    */
   async refreshInBackground() {
-    if (!API.isExtension) return;
-
-    // Don't try to refresh if user isn't signed in
-    if (!this.getCurrentUser()) return;
-
-    try {
-      // Wait a bit to avoid competing with initial render
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      const freshResponse = await API.getSavedPages({
-        ...this.currentFilter,
-        skipCache: true
-      });
-
-      const freshPages = freshResponse.pages || [];
-
-      // Only update if data changed
-      if (JSON.stringify(freshPages) !== JSON.stringify(this.allPages)) {
-        this.allPages = freshPages;
-        this.totalPages = freshResponse.pagination?.total || 0;
-        this.hasMorePages = freshResponse.pagination?.hasNextPage || false;
-        this.nextCursor = freshResponse.pagination?.nextCursor || null;
-
-        // If a tag is selected, re-run similarity search to update results
-        const activeLabel = this.tagInteractionManager.getActiveLabel();
-        if (activeLabel) {
-          // Re-trigger tag click to refresh similarity results with new data
-          const activeType = this.tagInteractionManager.getActiveType();
-          await this.handleTagClick(activeType, activeLabel);
-        } else {
-          // No tag selected - show all pages
-          this.pages = [...this.allPages];
-          this.render();
-        }
-      }
-    } catch (error) {
-      console.error('Background refresh failed:', error);
-      // Don't show error to user - they already have cached data
-    }
+    await this.pageLoaderManager.refreshInBackground(this);
   }
 
 
@@ -383,39 +332,7 @@ class SaveItDashboard {
    * Load more pages (infinite scroll)
    */
   async loadMorePages() {
-    if (this.isLoadingMore || !this.hasMorePages) return;
-
-    this.isLoadingMore = true;
-    this.scrollManager.showLoadingIndicator();
-
-    try {
-      // Update offset for next batch
-      this.currentFilter.offset += this.currentFilter.limit;
-
-      const response = await API.getSavedPages(this.currentFilter);
-
-      // API always returns {pages, pagination} format
-      const newPages = response.pages || [];
-      this.totalPages = response.pagination?.total || this.totalPages; // Update total (should be same)
-      this.hasMorePages = response.pagination?.hasNextPage || false;
-      this.nextCursor = response.pagination?.nextCursor || null;
-
-      // Append new pages to existing
-      this.allPages = [...this.allPages, ...newPages];
-
-      // Also append to filtered pages (they'll match same criteria)
-      this.pages = [...this.pages, ...newPages];
-
-      this.updateStats();
-      this.render();
-
-    } catch (error) {
-      console.error('Failed to load more pages:', error);
-      this.showError(error);
-    } finally {
-      this.isLoadingMore = false;
-      this.scrollManager.hideLoadingIndicator();
-    }
+    await this.pageLoaderManager.loadMorePages(this);
   }
 
 
