@@ -37,7 +37,7 @@ test-watch:
 test-coverage:
     npm run test:coverage
 
-# Run E2E tests
+# Run E2E tests (automatically kills stale Playwright processes first)
 test-e2e:
     npm run test:e2e
 
