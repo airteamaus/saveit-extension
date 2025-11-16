@@ -5,6 +5,8 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
+/* global TagManager */
+
 /**
  * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
  * @returns {Object|null} browser.runtime or chrome.runtime
@@ -53,6 +55,9 @@ class SaveItDashboard {
 
     // Initialization state
     this.isInitialized = false;
+
+    // Initialize managers
+    this.tagManager = new TagManager();
   }
 
   /**
@@ -346,264 +351,13 @@ class SaveItDashboard {
     }
   }
 
-  /**
-   * Extract unique general-level tags from all pages
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractGeneralTags() {
-    const tagMap = new Map();
 
-    this.allPages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        page.classifications.forEach(c => {
-          if (c.type === 'general' && c.label) {
-            tagMap.set(c.label, { type: 'general', label: c.label });
-          }
-        });
-      }
-    });
 
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
 
-  /**
-   * Extract L2 (domain) tags for a given L1 (general) tag
-   * @param {string} l1Label - The L1 tag label
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractL2TagsForL1(l1Label) {
-    const tagMap = new Map();
 
-    this.pages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        const pageGeneral = page.classifications.find(c => c.type === 'general');
-        if (pageGeneral && pageGeneral.label === l1Label) {
-          const domainTags = page.classifications.filter(c => c.type === 'domain');
-          domainTags.forEach(tag => {
-            tagMap.set(tag.label, { type: 'domain', label: tag.label });
-          });
-        }
-      }
-    });
 
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
 
-  /**
-   * Extract L3 (topic) tags for a given L2 (domain) tag
-   * @param {string} l2Label - The L2 tag label
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractL3TagsForL2(l2Label) {
-    const tagMap = new Map();
 
-    this.pages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        const pageDomain = page.classifications.find(c => c.type === 'domain');
-        if (pageDomain && pageDomain.label === l2Label) {
-          const topicTags = page.classifications.filter(c => c.type === 'topic');
-          topicTags.forEach(tag => {
-            tagMap.set(tag.label, { type: 'topic', label: tag.label });
-          });
-        }
-      }
-    });
-
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  /**
-   * Extract all domain tags (L2) across all pages
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractDomainTags() {
-    const tagMap = new Map();
-
-    this.allPages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        const domainTags = page.classifications.filter(c => c.type === 'domain');
-        domainTags.forEach(tag => {
-          tagMap.set(tag.label, { type: 'domain', label: tag.label });
-        });
-      }
-    });
-
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  /**
-   * Extract all topic tags (L3) across all pages
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractTopicTags() {
-    const tagMap = new Map();
-
-    this.allPages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        const topicTags = page.classifications.filter(c => c.type === 'topic');
-        topicTags.forEach(tag => {
-          tagMap.set(tag.label, { type: 'topic', label: tag.label });
-        });
-      }
-    });
-
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  /**
-   * Extract topic tags (L3) for a given L1 (general) tag
-   * Shows all topics under the selected general category
-   * @param {string} l1Label - The L1 tag label
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractTopicTagsForL1(l1Label) {
-    const tagMap = new Map();
-
-    this.allPages.forEach(page => {
-      if (page.classifications && page.classifications.length > 0) {
-        const pageGeneral = page.classifications.find(c => c.type === 'general');
-        if (pageGeneral && pageGeneral.label === l1Label) {
-          const topicTags = page.classifications.filter(c => c.type === 'topic');
-          topicTags.forEach(tag => {
-            tagMap.set(tag.label, { type: 'topic', label: tag.label });
-          });
-        }
-      }
-    });
-
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  /**
-   * Extract sibling tags based on current discovery context
-   * Uses allPages to ensure we search across all data, not just filtered results
-   * @param {string} currentType - Current classification type (general/domain/topic)
-   * @param {string} currentLabel - Current tag label
-   * @returns {Array<{type: string, label: string}>}
-   */
-  extractSiblingTags(currentType, currentLabel) {
-    const tagMap = new Map();
-    const searchPages = this.allPages.length > 0 ? this.allPages : this.pages;
-
-    if (currentType === 'general') {
-      // For general level, show all domain tags within this general category
-      searchPages.forEach(page => {
-        if (page.classifications) {
-          const pageGeneral = page.classifications.find(c => c.type === 'general');
-          if (pageGeneral && pageGeneral.label === currentLabel) {
-            const domainTags = page.classifications.filter(c => c.type === 'domain');
-            domainTags.forEach(tag => {
-              tagMap.set(tag.label, { type: 'domain', label: tag.label });
-            });
-          }
-        }
-      });
-    } else if (currentType === 'domain') {
-      // Find the general parent of this domain
-      let generalParent = null;
-      for (const page of searchPages) {
-        if (page.classifications) {
-          const domainTag = page.classifications.find(c => c.type === 'domain' && c.label === currentLabel);
-          if (domainTag) {
-            generalParent = page.classifications.find(c => c.type === 'general');
-            break;
-          }
-        }
-      }
-
-      // Extract all domain tags that share the same general parent
-      if (generalParent) {
-        searchPages.forEach(page => {
-          if (page.classifications) {
-            const pageGeneral = page.classifications.find(c => c.type === 'general');
-            if (pageGeneral && pageGeneral.label === generalParent.label) {
-              const domainTags = page.classifications.filter(c => c.type === 'domain');
-              domainTags.forEach(tag => {
-                if (tag.label !== currentLabel) { // Exclude current tag
-                  tagMap.set(tag.label, { type: 'domain', label: tag.label });
-                }
-              });
-            }
-          }
-        });
-      }
-    } else if (currentType === 'topic') {
-      // Find the domain parent of this topic
-      let domainParent = null;
-      for (const page of searchPages) {
-        if (page.classifications) {
-          const topicTag = page.classifications.find(c => c.type === 'topic' && c.label === currentLabel);
-          if (topicTag) {
-            domainParent = page.classifications.find(c => c.type === 'domain');
-            break;
-          }
-        }
-      }
-
-      // Extract all topic tags that share the same domain parent
-      if (domainParent) {
-        searchPages.forEach(page => {
-          if (page.classifications) {
-            const pageDomain = page.classifications.find(c => c.type === 'domain');
-            if (pageDomain && pageDomain.label === domainParent.label) {
-              const topicTags = page.classifications.filter(c => c.type === 'topic');
-              topicTags.forEach(tag => {
-                if (tag.label !== currentLabel) { // Exclude current tag
-                  tagMap.set(tag.label, { type: 'topic', label: tag.label });
-                }
-              });
-            }
-          }
-        });
-      }
-    }
-
-    return Array.from(tagMap.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }
-
-  /**
-   * Build breadcrumb context for a given classification
-   * Uses allPages to ensure we search across all data
-   * @param {string} type - Classification type (general/domain/topic)
-   * @param {string} label - Classification label
-   * @returns {Object|null} Context object with hierarchy info
-   */
-  buildBreadcrumbContext(type, label) {
-    const searchPages = this.allPages.length > 0 ? this.allPages : this.pages;
-
-    // Find a page that has this classification
-    for (const page of searchPages) {
-      if (!page.classifications) continue;
-
-      const targetTag = page.classifications.find(c => c.type === type && c.label === label);
-      if (!targetTag) continue;
-
-      if (type === 'general') {
-        return {
-          type: 'general',
-          label: label
-        };
-      } else if (type === 'domain') {
-        const generalTag = page.classifications.find(c => c.type === 'general');
-        return {
-          type: 'domain',
-          label: label,
-          parentLabel: generalTag ? generalTag.label : null
-        };
-      } else if (type === 'topic') {
-        const domainTag = page.classifications.find(c => c.type === 'domain');
-        const generalTag = page.classifications.find(c => c.type === 'general');
-        return {
-          type: 'topic',
-          label: label,
-          parentLabel: domainTag ? domainTag.label : null,
-          grandparentLabel: generalTag ? generalTag.label : null
-        };
-      }
-    }
-
-    return null;
-  }
 
   /**
    * Render tag bar with hierarchical selection
@@ -618,7 +372,7 @@ class SaveItDashboard {
     console.log('[renderTagBar] Selection state:', { L1: this.selectedL1, L2: this.selectedL2, L3: this.selectedL3 });
 
     // Always show L1 tags
-    const l1Tags = this.extractGeneralTags();
+    const l1Tags = this.tagManager.extractGeneralTags(this.allPages);
 
     // Build L1 row HTML
     const l1Html = l1Tags.map(tag => {
@@ -632,7 +386,7 @@ class SaveItDashboard {
 
     // Only show L2 tags if L1 is selected
     if (this.selectedL1) {
-      const l2Tags = this.extractL2TagsForL1(this.selectedL1);
+      const l2Tags = this.tagManager.extractL2TagsForL1(this.selectedL1, this.pages);
 
       if (l2Tags.length > 0) {
         l2Html = l2Tags.map(tag => {
@@ -645,7 +399,7 @@ class SaveItDashboard {
 
     // Only show L3 tags if L2 is selected
     if (this.selectedL2) {
-      const l3Tags = this.extractL3TagsForL2(this.selectedL2);
+      const l3Tags = this.tagManager.extractL3TagsForL2(this.selectedL2, this.pages);
 
       if (l3Tags.length > 0) {
         l3Html = l3Tags.map(tag => {
@@ -675,7 +429,7 @@ class SaveItDashboard {
    */
   async handleTagClick(type, label) {
     // Build full hierarchy context for this tag
-    const context = this.buildBreadcrumbContext(type, label);
+    const context = this.tagManager.buildBreadcrumbContext(type, label, this.allPages, this.pages);
 
     if (!context) {
       console.warn('[handleTagClick] No context found for tag:', type, label);
