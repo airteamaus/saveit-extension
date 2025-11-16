@@ -21,7 +21,8 @@ test.describe('Standalone Mode', () => {
 
     // Load standalone dashboard
     await page.goto(`file://${newtabPath}`);
-    await page.waitForLoadState('networkidle');
+    // Note: networkidle is unreliable with file:// protocol, especially in parallel tests
+    // We rely on window.dashboardReady signal instead
 
     // Wait for dashboard to fully initialize (critical for headless mode)
     try {
