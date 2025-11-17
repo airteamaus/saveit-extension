@@ -189,6 +189,59 @@ class SaveItDashboard {
 
 
   /**
+   * Render empty search state (search active but no matches)
+   * @private
+   * @param {HTMLElement} container - Content container element
+   * @param {HTMLElement} sentinel - Scroll sentinel element
+   */
+  renderEmptySearchState(container, sentinel) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="11" cy="11" r="8"></circle>
+          <path d="m21 21-4.35-4.35"></path>
+        </svg>
+        <h2>No matching pages</h2>
+        <p>Try adjusting your search</p>
+      </div>
+    `;
+
+    // Re-append sentinel
+    if (sentinel) {
+      container.appendChild(sentinel);
+    }
+    this.updateStats();
+  }
+
+  /**
+   * Render empty state (no pages at all)
+   * @private
+   * @param {HTMLElement} container - Content container element
+   * @param {HTMLElement} sentinel - Scroll sentinel element
+   */
+  renderEmptyState(container, sentinel) {
+    // Check if user is authenticated before showing empty state
+    if (API.isExtension) {
+      const user = this.getCurrentUser();
+
+      if (user) {
+        container.innerHTML = Components.emptyState();
+      } else {
+        container.innerHTML = Components.signInState();
+      }
+    } else {
+      // In standalone mode, always show empty state (mock data)
+      container.innerHTML = Components.emptyState();
+    }
+
+    // Re-append sentinel
+    if (sentinel) {
+      container.appendChild(sentinel);
+    }
+    this.updateStats();
+  }
+
+  /**
    * Render pages to DOM
    */
   render() {
@@ -196,55 +249,27 @@ class SaveItDashboard {
     this.renderTagBar();
 
     const container = document.getElementById('content');
-
-    // Preserve scroll sentinel before ANY innerHTML modifications
     const sentinel = document.getElementById('scroll-sentinel');
 
+    // Handle empty states
     if (this.pages.length === 0) {
       if (this.currentFilter.search) {
-        container.innerHTML = `
-          <div class="empty-state">
-            <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-              <circle cx="11" cy="11" r="8"></circle>
-              <path d="m21 21-4.35-4.35"></path>
-            </svg>
-            <h2>No matching pages</h2>
-            <p>Try adjusting your search</p>
-          </div>
-        `;
+        this.renderEmptySearchState(container, sentinel);
       } else {
-        // Check if user is authenticated before showing empty state
-        if (API.isExtension) {
-          const user = this.getCurrentUser();
-
-          if (user) {
-            container.innerHTML = Components.emptyState();
-          } else {
-            container.innerHTML = Components.signInState();
-          }
-        } else {
-          // In standalone mode, always show empty state (mock data)
-          container.innerHTML = Components.emptyState();
-        }
+        this.renderEmptyState(container, sentinel);
       }
-
-      // Re-append sentinel even for empty states
-      if (sentinel) {
-        container.appendChild(sentinel);
-      }
-      this.updateStats();
       return;
     }
 
+    // Render page cards
     const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
     container.innerHTML = cardsHtml;
 
-    // Re-append sentinel after updating content
+    // Re-append sentinel
     if (sentinel) {
       container.appendChild(sentinel);
     }
 
-    // Update stats after rendering
     this.updateStats();
   }
 

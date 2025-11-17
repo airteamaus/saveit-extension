@@ -153,6 +153,91 @@ const API = {
   },
 
   /**
+   * Fetch data from Cloud Function (extension mode only)
+   * @private
+   * @param {Object} options - Filter options
+   * @returns {Promise<Object>} Raw response data from Cloud Function
+   */
+  async _fetchFromCloudFunction(options) {
+    console.log('[getSavedPages] Fetching from Cloud Function...');
+    const idToken = await this.getIdToken();
+
+    const params = new URLSearchParams({
+      limit: options.limit || 50,
+      offset: options.offset || 0,
+      search: options.search || '',
+      sort: options.sort || 'newest'
+    });
+
+    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      }
+    });
+
+    console.log('[getSavedPages] HTTP response:', {
+      status: response.status,
+      statusText: response.statusText,
+      ok: response.ok
+    });
+
+    if (!response.ok) {
+      const errorMessage = await this.parseErrorResponse(response);
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log('[getSavedPages] Raw JSON response:', data);
+    return data;
+  },
+
+  /**
+   * Normalize response format (backend should return {pages, pagination})
+   * @private
+   * @param {Object} data - Raw response data
+   * @returns {Object} Normalized response with pages and pagination
+   */
+  _normalizeResponse(data) {
+    const normalizedResponse = {
+      pages: data.pages || data,
+      pagination: data.pagination || {
+        total: (data.pages || data).length,
+        hasNextPage: false,
+        nextCursor: null
+      }
+    };
+
+    console.log('[getSavedPages] Normalized response:', {
+      count: normalizedResponse.pages.length,
+      total: normalizedResponse.pagination.total,
+      first_item: normalizedResponse.pages[0] ? { id: normalizedResponse.pages[0].id, title: normalizedResponse.pages[0].title } : null
+    });
+
+    return normalizedResponse;
+  },
+
+  /**
+   * Get mock data for standalone mode
+   * @private
+   * @param {Object} options - Filter options
+   * @returns {Object} Normalized response with mock pages and pagination
+   */
+  _getMockData(options) {
+    console.log('[getSavedPages] Using mock data (standalone mode)');
+    const filteredPages = filterMockData(MOCK_DATA, options);
+
+    return {
+      pages: filteredPages,
+      pagination: {
+        total: MOCK_DATA.length,
+        hasNextPage: (options.offset || 0) + filteredPages.length < MOCK_DATA.length,
+        nextCursor: null
+      }
+    };
+  },
+
+  /**
    * Fetch saved pages with optional filters
    * @param {Object} options - Filter options
    * @param {string} options.search - Search query
@@ -181,77 +266,21 @@ const API = {
         }
       }
 
-      // Production: Call real Cloud Function with GET method
+      // Fetch fresh data from Cloud Function
       try {
-        console.log('[getSavedPages] Fetching from Cloud Function...');
-        const idToken = await this.getIdToken();
+        const data = await this._fetchFromCloudFunction(options);
+        const normalized = this._normalizeResponse(data);
 
-        const params = new URLSearchParams({
-          limit: options.limit || 50,
-          offset: options.offset || 0,
-          search: options.search || '',
-          sort: options.sort || 'newest'
-        });
-
-        const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-
-        console.log('[getSavedPages] HTTP response:', {
-          status: response.status,
-          statusText: response.statusText,
-          ok: response.ok
-        });
-
-        if (!response.ok) {
-          const errorMessage = await this.parseErrorResponse(response);
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        console.log('[getSavedPages] Raw JSON response:', data);
-
-        // Normalize response format (backend should return {pages, pagination})
-        const normalizedResponse = {
-          pages: data.pages || data,
-          pagination: data.pagination || {
-            total: (data.pages || data).length,
-            hasNextPage: false,
-            nextCursor: null
-          }
-        };
-
-        console.log('[getSavedPages] Normalized response:', {
-          count: normalizedResponse.pages.length,
-          total: normalizedResponse.pagination.total,
-          first_item: normalizedResponse.pages[0] ? { id: normalizedResponse.pages[0].id, title: normalizedResponse.pages[0].title } : null
-        });
-
-        // Cache the full response
-        await this.setCachedPages(normalizedResponse);
-
-        return normalizedResponse;
+        // Cache and return
+        await this.setCachedPages(normalized);
+        return normalized;
       } catch (error) {
         console.error('[getSavedPages] Failed to fetch saved pages:', error);
         throw error;
       }
     } else {
-      // Development: Use mock data with pagination format
-      console.log('[getSavedPages] Using mock data (standalone mode)');
-      const filteredPages = filterMockData(MOCK_DATA, options);
-
-      // Return in standard format with pagination
-      return {
-        pages: filteredPages,
-        pagination: {
-          total: MOCK_DATA.length, // Total count (all mock data)
-          hasNextPage: (options.offset || 0) + filteredPages.length < MOCK_DATA.length,
-          nextCursor: null
-        }
-      };
+      // Standalone mode: use mock data
+      return this._getMockData(options);
     }
   },
 
@@ -348,6 +377,87 @@ const API = {
   },
 
   /**
+   * Fetch tag search from Cloud Function (extension mode only)
+   * @private
+   * @param {string} label - Tag label to search for
+   * @returns {Promise<Object>} Tag search results from Cloud Function
+   */
+  async _fetchTagSearchFromCloudFunction(label) {
+    const idToken = await this.getIdToken();
+
+    const params = new URLSearchParams({ label });
+
+    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorMessage = await this.parseErrorResponse(response);
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Mock semantic tag search for standalone mode
+   * @private
+   * @param {string} label - Tag label to search for
+   * @returns {Object} Mock results with exact_matches, similar_matches, related_matches
+   */
+  _mockSemanticTagSearch(label) {
+    console.log('🔍 Mock semantic search for:', label);
+    const results = {
+      query_label: label,
+      exact_matches: [],
+      similar_matches: [],
+      related_matches: []
+    };
+
+    // Simple mock: find pages with matching or similar tags
+    MOCK_DATA.forEach(page => {
+      const pageTags = [];
+      if (page.classifications) {
+        pageTags.push(...page.classifications.map(c => c.label));
+      }
+      if (page.primary_classification_label) {
+        pageTags.push(page.primary_classification_label);
+      }
+      if (page.manual_tags) {
+        pageTags.push(...page.manual_tags);
+      }
+
+      // Check for exact or similar matches
+      const lowerLabel = label.toLowerCase();
+      const hasExactMatch = pageTags.some(tag => tag.toLowerCase() === lowerLabel);
+      const hasSimilarMatch = pageTags.some(tag =>
+        tag.toLowerCase().includes(lowerLabel) || lowerLabel.includes(tag.toLowerCase())
+      );
+
+      if (hasExactMatch) {
+        results.exact_matches.push({
+          thing_data: page,
+          similarity: 1.0,
+          matched_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
+        });
+      } else if (hasSimilarMatch) {
+        results.similar_matches.push({
+          thing_data: page,
+          similarity: 0.85,
+          matched_label: pageTags.find(t =>
+            t.toLowerCase().includes(lowerLabel) || lowerLabel.includes(t.toLowerCase())
+          )
+        });
+      }
+    });
+
+    return results;
+  },
+
+  /**
    * Search for things by tag using semantic similarity
    * @param {string} label - Tag label to search for
    * @returns {Promise<Object>} Search results with grouped tiers (exact, similar, related)
@@ -355,76 +465,13 @@ const API = {
   async searchByTag(label) {
     if (this.isExtension) {
       try {
-        const idToken = await this.getIdToken();
-
-        const params = new URLSearchParams({ label });
-
-        const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-
-        if (!response.ok) {
-          const errorMessage = await this.parseErrorResponse(response);
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        return data;
+        return await this._fetchTagSearchFromCloudFunction(label);
       } catch (error) {
         console.error('Failed to search by tag:', error);
         throw error;
       }
     } else {
-      // Development: Mock semantic search with simple filtering
-      console.log('🔍 Mock semantic search for:', label);
-      const results = {
-        query_label: label,
-        exact_matches: [],
-        similar_matches: [],
-        related_matches: []
-      };
-
-      // Simple mock: find pages with matching or similar tags
-      MOCK_DATA.forEach(page => {
-        const pageTags = [];
-        if (page.classifications) {
-          pageTags.push(...page.classifications.map(c => c.label));
-        }
-        if (page.primary_classification_label) {
-          pageTags.push(page.primary_classification_label);
-        }
-        if (page.manual_tags) {
-          pageTags.push(...page.manual_tags);
-        }
-
-        // Check for exact or similar matches
-        const lowerLabel = label.toLowerCase();
-        const hasExactMatch = pageTags.some(tag => tag.toLowerCase() === lowerLabel);
-        const hasSimilarMatch = pageTags.some(tag =>
-          tag.toLowerCase().includes(lowerLabel) || lowerLabel.includes(tag.toLowerCase())
-        );
-
-        if (hasExactMatch) {
-          results.exact_matches.push({
-            thing_data: page,
-            similarity: 1.0,
-            matched_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
-          });
-        } else if (hasSimilarMatch) {
-          results.similar_matches.push({
-            thing_data: page,
-            similarity: 0.85,
-            matched_label: pageTags.find(t =>
-              t.toLowerCase().includes(lowerLabel) || lowerLabel.includes(t.toLowerCase())
-            )
-          });
-        }
-      });
-
-      return results;
+      return this._mockSemanticTagSearch(label);
     }
   }
 };
