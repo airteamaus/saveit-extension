@@ -72,6 +72,47 @@ const Components = {
   },
 
   /**
+   * Build metadata items array for a page
+   * @private
+   * @param {Object} page - Page data
+   * @returns {Array<string>} Array of metadata items (author, date, domain, reading time)
+   */
+  _buildMetadataItems(page) {
+    const metaItems = [];
+    if (page.author) metaItems.push(this.escapeHtml(page.author));
+    if (page.published_date) {
+      const pubDate = new Date(page.published_date);
+      metaItems.push(pubDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }));
+    }
+    if (page.domain) metaItems.push(this.escapeHtml(page.domain));
+    if (page.reading_time_minutes) metaItems.push(`${page.reading_time_minutes} min read`);
+    return metaItems;
+  },
+
+  /**
+   * Render tags footer section (classifications + manual tags)
+   * @private
+   * @param {Object} page - Page data
+   * @returns {string} HTML string for tags section or empty string
+   */
+  _renderTagsFooterSection(page) {
+    const hasTags = (page.classifications && page.classifications.length > 0) ||
+                    page.primary_classification_label ||
+                    (page.manual_tags && page.manual_tags.length > 0);
+
+    if (!hasTags) return '';
+
+    return `
+      <div class="row-tags">
+        ${this.renderClassifications(page)}
+        ${page.manual_tags && page.manual_tags.length > 0 ?
+          page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
+        : ''}
+      </div>
+    `;
+  },
+
+  /**
    * Create a saved page row element (returns HTML string)
    *
    * Renders a single page item with:
@@ -85,15 +126,7 @@ const Components = {
    * @returns {string} HTML string
    */
   savedPageCard(page) {
-    // Build metadata line with bullet separators
-    const metaItems = [];
-    if (page.author) metaItems.push(this.escapeHtml(page.author));
-    if (page.published_date) {
-      const pubDate = new Date(page.published_date);
-      metaItems.push(pubDate.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }));
-    }
-    if (page.domain) metaItems.push(this.escapeHtml(page.domain));
-    if (page.reading_time_minutes) metaItems.push(`${page.reading_time_minutes} min read`);
+    const metaItems = this._buildMetadataItems(page);
 
     return `
       <div class="saved-page-card" data-id="${page.id}" data-url="${this.escapeHtml(page.url)}">
@@ -110,14 +143,7 @@ const Components = {
           ` : '')}
 
           <div class="row-footer">
-            ${(page.classifications && page.classifications.length > 0) || page.primary_classification_label || (page.manual_tags && page.manual_tags.length > 0) ? `
-              <div class="row-tags">
-                ${this.renderClassifications(page)}
-                ${page.manual_tags && page.manual_tags.length > 0 ?
-                  page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
-                : ''}
-              </div>
-            ` : ''}
+            ${this._renderTagsFooterSection(page)}
 
             <button class="btn-delete" data-id="${page.id}" title="Delete page">
               <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
