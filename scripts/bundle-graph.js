@@ -31,17 +31,13 @@ const sharedConfig = {
 };
 
 async function buildGraphVizBundle() {
-  // Bundle graph-viz main entry point
-  // Mark Three.js and 3d-force-graph as external (loaded via import map)
+  // Bundle graph-viz main entry point with all dependencies
+  // Three.js is bundled for extension CSP compliance (no import maps allowed)
   await esbuild.build({
     ...sharedConfig,
     entryPoints: [path.join(GRAPH_VIZ_DIR, 'src', 'index.js')],
     outfile: path.join(BUNDLE_DIR, 'graph-viz.js'),
-    external: [
-      'three',
-      'three/*',
-      '3d-force-graph',
-    ],
+    // Include Three.js in bundle - extensions can't use import maps
   });
 
   console.log('  Built graph-viz.js');

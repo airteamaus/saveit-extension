@@ -3,10 +3,6 @@
 
 /* global ThemeManager */
 
-// Import 3d-force-graph from bundle
-import ForceGraph3D from './bundles/graph-viz.js';
-window.ForceGraph3D = ForceGraph3D;
-
 // Import GraphViz and Viewfinder from bundles
 import { GraphViz } from './bundles/graph-viz.js';
 import { Viewfinder } from './bundles/viewfinder.js';
