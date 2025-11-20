@@ -14,6 +14,9 @@ export default [
         API: 'writable',
         Components: 'writable',
         MOCK_DATA: 'writable',
+        debug: 'readonly',
+        debugWarn: 'readonly',
+        debugError: 'readonly',
       },
     },
     rules: {

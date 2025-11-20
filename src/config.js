@@ -88,22 +88,19 @@ if (ENV !== 'production' && typeof console !== 'undefined') {
  * Debug logging helpers - only log in development/staging
  * Use these instead of console.log to avoid noise in production
  */
-/* eslint-disable-next-line no-unused-vars */
-function debug(...args) {
+export function debug(...args) {
   if (CONFIG.enableDebugLogging) {
     console.log(...args);
   }
 }
 
-/* eslint-disable-next-line no-unused-vars */
-function debugWarn(...args) {
+export function debugWarn(...args) {
   if (CONFIG.enableDebugLogging) {
     console.warn(...args);
   }
 }
 
-/* eslint-disable-next-line no-unused-vars */
-function debugError(...args) {
+export function debugError(...args) {
   // Always log errors, even in production
   console.error(...args);
 }

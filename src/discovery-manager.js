@@ -67,7 +67,7 @@ class DiscoveryManager {
    * @returns {Promise<Object>} Discovery results from API
    */
   async discover(label, type, allPages, filteredPages, showLoadingCallback, showErrorCallback) {
-    console.log('[DiscoveryManager.discover] Starting discovery for:', label, type);
+    debug('[DiscoveryManager.discover] Starting discovery for:', label, type);
     this.discoveryMode = true;
     this.currentDiscoveryLabel = label;
     this.currentDiscoveryType = type;
@@ -84,9 +84,9 @@ class DiscoveryManager {
     showLoadingCallback();
 
     try {
-      console.log('[DiscoveryManager.discover] Calling API.searchByTag');
+      debug('[DiscoveryManager.discover] Calling API.searchByTag');
       const results = await this.api.searchByTag(label);
-      console.log('[DiscoveryManager.discover] Got results:', results);
+      debug('[DiscoveryManager.discover] Got results:', results);
       return results;
     } catch (error) {
       console.error('[DiscoveryManager.discover] Failed to search by tag:', error);

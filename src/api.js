@@ -159,7 +159,7 @@ const API = {
    * @returns {Promise<Object>} Raw response data from Cloud Function
    */
   async _fetchFromCloudFunction(options) {
-    console.log('[getSavedPages] Fetching from Cloud Function...');
+    debug('[getSavedPages] Fetching from Cloud Function...');
     const idToken = await this.getIdToken();
 
     const params = new URLSearchParams({
@@ -176,7 +176,7 @@ const API = {
       }
     });
 
-    console.log('[getSavedPages] HTTP response:', {
+    debug('[getSavedPages] HTTP response:', {
       status: response.status,
       statusText: response.statusText,
       ok: response.ok
@@ -188,7 +188,7 @@ const API = {
     }
 
     const data = await response.json();
-    console.log('[getSavedPages] Raw JSON response:', data);
+    debug('[getSavedPages] Raw JSON response:', data);
     return data;
   },
 
@@ -208,7 +208,7 @@ const API = {
       }
     };
 
-    console.log('[getSavedPages] Normalized response:', {
+    debug('[getSavedPages] Normalized response:', {
       count: normalizedResponse.pages.length,
       total: normalizedResponse.pagination.total,
       first_item: normalizedResponse.pages[0] ? { id: normalizedResponse.pages[0].id, title: normalizedResponse.pages[0].title } : null
@@ -224,7 +224,7 @@ const API = {
    * @returns {Object} Normalized response with mock pages and pagination
    */
   _getMockData(options) {
-    console.log('[getSavedPages] Using mock data (standalone mode)');
+    debug('[getSavedPages] Using mock data (standalone mode)');
     const filteredPages = filterMockData(MOCK_DATA, options);
 
     return {
@@ -248,7 +248,7 @@ const API = {
    * @returns {Promise<Object>} Response object with pages and pagination metadata
    */
   async getSavedPages(options = {}) {
-    console.log('[getSavedPages] START:', {
+    debug('[getSavedPages] START:', {
       isExtension: this.isExtension,
       skipCache: options.skipCache || false
     });
@@ -258,7 +258,7 @@ const API = {
       if (!options.skipCache) {
         const cached = await this.getCachedPages();
         if (cached) {
-          console.log('[getSavedPages] Returning cached data:', {
+          debug('[getSavedPages] Returning cached data:', {
             count: cached.pages?.length,
             total: cached.pagination?.total
           });
@@ -320,7 +320,7 @@ const API = {
         throw error;
       }
     } else {
-      console.log('🗑️  Mock delete:', id);
+      debug('Mock delete:', id);
       const index = MOCK_DATA.findIndex(p => p.id === id);
       if (index !== -1) {
         MOCK_DATA.splice(index, 1);
@@ -366,7 +366,7 @@ const API = {
         throw error;
       }
     } else {
-      console.log('✏️  Mock update:', id, updates);
+      debug('Mock update:', id, updates);
       const page = MOCK_DATA.find(p => p.id === id);
       if (page) {
         Object.assign(page, updates);
@@ -409,7 +409,7 @@ const API = {
    * @returns {Object} Mock results with exact_matches, similar_matches, related_matches
    */
   _mockSemanticTagSearch(label) {
-    console.log('🔍 Mock semantic search for:', label);
+    debug('Mock semantic search for:', label);
     const results = {
       query_label: label,
       exact_matches: [],
@@ -472,6 +472,132 @@ const API = {
       }
     } else {
       return this._mockSemanticTagSearch(label);
+    }
+  },
+
+  /**
+   * Fetch similar things from Cloud Function using pregenerated embeddings
+   * @private
+   * @param {string} thingId - Source thing ID
+   * @param {number} limit - Max results
+   * @param {number} offset - Pagination offset
+   * @returns {Promise<Object>} Similar things results
+   */
+  async _fetchSimilarFromCloudFunction(thingId, limit, offset) {
+    const idToken = await this.getIdToken();
+
+    const params = new URLSearchParams({
+      thing_id: thingId,
+      limit: limit.toString(),
+      offset: offset.toString()
+    });
+
+    // Note: thing_id in query params triggers the similar things handler (not /similar path)
+    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorMessage = await this.parseErrorResponse(response);
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Mock similar things search for standalone mode
+   * @private
+   * @param {string} thingId - Source thing ID
+   * @param {number} limit - Max results
+   * @param {number} offset - Pagination offset
+   * @returns {Object} Mock results with similar structure to backend
+   */
+  _mockGetSimilarByThingId(thingId, limit, offset) {
+    debug('Mock similar search for thing:', thingId);
+
+    // Find the source thing
+    const sourceThing = MOCK_DATA.find(p => p.id === thingId);
+    if (!sourceThing) {
+      return {
+        results: [],
+        pagination: { limit, offset, total: 0, has_more: false },
+        source: { thing_id: thingId, label: null }
+      };
+    }
+
+    // Get source thing's tags for matching
+    const sourceTags = [];
+    if (sourceThing.classifications) {
+      sourceTags.push(...sourceThing.classifications.map(c => c.label.toLowerCase()));
+    }
+    if (sourceThing.primary_classification_label) {
+      sourceTags.push(sourceThing.primary_classification_label.toLowerCase());
+    }
+
+    // Find similar things (those with matching tags)
+    const similar = MOCK_DATA
+      .filter(p => p.id !== thingId)
+      .map(page => {
+        const pageTags = [];
+        if (page.classifications) {
+          pageTags.push(...page.classifications.map(c => c.label.toLowerCase()));
+        }
+        if (page.primary_classification_label) {
+          pageTags.push(page.primary_classification_label.toLowerCase());
+        }
+
+        // Calculate simple similarity based on tag overlap
+        const overlap = sourceTags.filter(t => pageTags.includes(t)).length;
+        const similarity = sourceTags.length > 0 ? overlap / sourceTags.length : 0;
+
+        return { page, similarity };
+      })
+      .filter(item => item.similarity > 0)
+      .sort((a, b) => b.similarity - a.similarity);
+
+    // Apply pagination
+    const paginatedResults = similar.slice(offset, offset + limit);
+
+    return {
+      results: paginatedResults.map(item => ({
+        thing_id: item.page.id,
+        similarity: item.similarity,
+        thing_data: item.page
+      })),
+      pagination: {
+        limit,
+        offset,
+        total: similar.length,
+        has_more: offset + limit < similar.length
+      },
+      source: {
+        thing_id: thingId,
+        label: sourceThing.primary_classification_label || null
+      }
+    };
+  },
+
+  /**
+   * Get similar things by thing ID using pregenerated embeddings
+   * @param {string} thingId - Source thing ID to find similar items for
+   * @param {number} [limit=50] - Max results to return
+   * @param {number} [offset=0] - Pagination offset
+   * @returns {Promise<Object>} Results with pagination metadata
+   */
+  async getSimilarByThingId(thingId, limit = 50, offset = 0) {
+    if (this.isExtension) {
+      try {
+        return await this._fetchSimilarFromCloudFunction(thingId, limit, offset);
+      } catch (error) {
+        console.error('Failed to get similar things:', error);
+        throw error;
+      }
+    } else {
+      return this._mockGetSimilarByThingId(thingId, limit, offset);
     }
   }
 };

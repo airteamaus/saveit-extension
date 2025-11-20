@@ -33,7 +33,7 @@ class CacheManager {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
-        console.log('[getCachedPages] No user logged in, skipping cache');
+        debug('[getCachedPages] No user logged in, skipping cache');
         return null;
       }
 
@@ -45,7 +45,7 @@ class CacheManager {
       const cached = result[cacheKey];
 
       if (!cached) {
-        console.log('[getCachedPages] No cache found for user:', userId);
+        debug('[getCachedPages] No cache found for user:', userId);
         return null;
       }
 
@@ -61,11 +61,11 @@ class CacheManager {
 
       const age = Date.now() - cached.timestamp;
       if (age > this.CACHE_MAX_AGE_MS) {
-        console.log('[getCachedPages] Cache expired, fetching fresh data');
+        debug('[getCachedPages] Cache expired, fetching fresh data');
         return null;
       }
 
-      console.log(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
+      debug(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
         user_id: userId,
         pages_count: cached.response?.pages ? cached.response.pages.length : 0,
         total: cached.response?.pagination?.total,
@@ -87,7 +87,7 @@ class CacheManager {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
-        console.log('[setCachedPages] No user logged in, skipping cache write');
+        debug('[setCachedPages] No user logged in, skipping cache write');
         return;
       }
 
@@ -102,7 +102,7 @@ class CacheManager {
           timestamp: Date.now()
         }
       });
-      console.log('[setCachedPages] Cache updated for user:', userId, {
+      debug('[setCachedPages] Cache updated for user:', userId, {
         pages_count: response?.pages?.length,
         total: response?.pagination?.total
       });
@@ -119,7 +119,7 @@ class CacheManager {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
-        console.log('[invalidateCache] No user logged in');
+        debug('[invalidateCache] No user logged in');
         return;
       }
 
@@ -128,7 +128,7 @@ class CacheManager {
 
       const cacheKey = this.getCacheKey(userId);
       await storage.remove(cacheKey);
-      console.log('[invalidateCache] Cache invalidated for user:', userId);
+      debug('[invalidateCache] Cache invalidated for user:', userId);
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
     }
@@ -143,7 +143,7 @@ class CacheManager {
       if (!storage) return;
 
       await storage.clear();
-      console.log('[clearAllCache] All cache cleared');
+      debug('[clearAllCache] All cache cleared');
     } catch (error) {
       console.error('[clearAllCache] Failed to clear cache:', error);
     }
@@ -162,7 +162,7 @@ class CacheManager {
       // Remove old global cache key
       const legacyKey = 'savedPages_cache';
       await storage.remove(legacyKey);
-      console.log('[cleanupLegacyCache] Removed legacy global cache');
+      debug('[cleanupLegacyCache] Removed legacy global cache');
     } catch (error) {
       console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
     }

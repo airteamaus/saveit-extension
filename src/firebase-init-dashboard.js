@@ -34,11 +34,11 @@ window.firebaseReady = (async () => {
       window.firebaseSignOut = firebaseExports.signOut;
       window.firebaseOnAuthStateChanged = firebaseExports.onAuthStateChanged;
 
-      console.log('Firebase initialized for dashboard');
+      debug('Firebase initialized for dashboard');
       return true;
     } else {
       // Not in extension mode or no config
-      console.log('[Firebase] Skipped initialization (standalone mode)');
+      debug('[Firebase] Skipped initialization (standalone mode)');
       return false;
     }
   } catch (error) {

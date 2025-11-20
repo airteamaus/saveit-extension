@@ -95,7 +95,7 @@ class SaveItDashboard {
 
     // Mark initialization complete
     this.isInitialized = true;
-    console.log('[Dashboard] Initialization complete');
+    debug('[Dashboard] Initialization complete');
   }
 
   /**
