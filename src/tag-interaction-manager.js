@@ -59,7 +59,7 @@ class TagInteractionManager {
       return;
     }
 
-    console.log('[TagInteractionManager.renderTagBar] Selection state:', {
+    debug('[TagInteractionManager.renderTagBar] Selection state:', {
       L1: this.selectedL1,
       L2: this.selectedL2,
       L3: this.selectedL3
@@ -166,37 +166,100 @@ class TagInteractionManager {
     // Determine which tag to search by (deepest selected level)
     const activeLabel = this.selectedL3 || this.selectedL2 || this.selectedL1;
 
+    // Find a representative thing_id that has this tag
+    // Search allPages first, then currentPages (for tags in search results)
+    let representativeThing = this._findThingWithTag(activeLabel, allPages);
+    if (!representativeThing) {
+      representativeThing = this._findThingWithTag(activeLabel, currentPages);
+    }
+
+    if (!representativeThing) {
+      console.warn('[TagInteractionManager.handleTagClick] No thing found with tag:', activeLabel);
+      // Fallback to showing pages that match the tag locally from both sets
+      const combinedPages = [...allPages, ...currentPages];
+      const filteredPages = combinedPages.filter(page => {
+        const pageTags = this._getPageTags(page);
+        return pageTags.some(t => t.toLowerCase() === activeLabel.toLowerCase());
+      });
+      return {
+        pages: filteredPages,
+        clearSelection: false
+      };
+    }
+
     // Show loading state
     showLoadingCallback();
 
     try {
-      console.log('[TagInteractionManager.handleTagClick] Searching for:', activeLabel, 'threshold:', this.similarityThreshold);
+      debug('[TagInteractionManager.handleTagClick] Searching similar to thing:', representativeThing.id, 'for tag:', activeLabel);
 
-      // Call backend similarity search
-      const results = await this.api.searchByTag(activeLabel, this.similarityThreshold);
+      // Call backend similar things endpoint using pregenerated embeddings
+      const results = await this.api.getSimilarByThingId(representativeThing.id, 50, 0);
 
-      console.log('[TagInteractionManager.handleTagClick] Got results:', {
-        exact: results.exact_matches?.length || 0,
-        similar: results.similar_matches?.length || 0,
-        related: results.related_matches?.length || 0
+      debug('[TagInteractionManager.handleTagClick] Got results:', {
+        count: results.results?.length || 0,
+        total: results.pagination?.total || 0,
+        source_label: results.source?.label
       });
 
-      // Extract and score pages
-      const pages = this.extractSimilarityResults(results, allPages);
+      // Validate response format
+      if (!results.results) {
+        console.error('[TagInteractionManager.handleTagClick] Invalid response format - missing results array:', results);
+        throw new Error('Invalid response from server - expected results array');
+      }
+
+      // Extract pages from results
+      const pages = this.extractSimilarThingsResults(results);
 
       return {
         pages,
         clearSelection: false
       };
     } catch (error) {
-      console.error('[TagInteractionManager] Similarity search failed:', error);
+      console.error('[TagInteractionManager] Similar things search failed:', error);
       showErrorCallback(error);
       throw error;
     }
   }
 
   /**
-   * Extract pages from similarity search results
+   * Find a thing that has the specified tag
+   * @private
+   * @param {string} label - Tag label to find
+   * @param {Array} pages - Pages to search through
+   * @returns {Object|null} First page with this tag or null
+   */
+  _findThingWithTag(label, pages) {
+    const lowerLabel = label.toLowerCase();
+
+    return pages.find(page => {
+      const pageTags = this._getPageTags(page);
+      return pageTags.some(t => t.toLowerCase() === lowerLabel);
+    });
+  }
+
+  /**
+   * Get all tags from a page
+   * @private
+   * @param {Object} page - Page object
+   * @returns {Array<string>} Array of tag labels
+   */
+  _getPageTags(page) {
+    const tags = [];
+    if (page.classifications) {
+      tags.push(...page.classifications.map(c => c.label));
+    }
+    if (page.primary_classification_label) {
+      tags.push(page.primary_classification_label);
+    }
+    if (page.manual_tags) {
+      tags.push(...page.manual_tags);
+    }
+    return tags;
+  }
+
+  /**
+   * Extract pages from similarity search results (old searchByTag format)
    * Maps thing_id to full page objects and preserves similarity scores
    * @param {Object} results - Results from API.searchByTag()
    * @param {Array} allPages - All pages for lookup
@@ -212,7 +275,7 @@ class TagInteractionManager {
       ...(results.related_matches || [])
     ];
 
-    console.log('[TagInteractionManager.extractSimilarityResults] Processing', allMatches.length, 'matches');
+    debug('[TagInteractionManager.extractSimilarityResults] Processing', allMatches.length, 'matches');
 
     // Map thing_id to page from allPages and preserve similarity score
     for (const match of allMatches) {
@@ -232,7 +295,35 @@ class TagInteractionManager {
       }
     }
 
-    console.log('[TagInteractionManager.extractSimilarityResults] Extracted', pages.length, 'pages');
+    debug('[TagInteractionManager.extractSimilarityResults] Extracted', pages.length, 'pages');
+    return pages;
+  }
+
+  /**
+   * Extract pages from getSimilarByThingId results
+   * New format with results array instead of tiered matches
+   * @param {Object} results - Results from API.getSimilarByThingId()
+   * @returns {Array} Array of page objects with _similarity scores
+   */
+  extractSimilarThingsResults(results) {
+    const pages = [];
+
+    const allMatches = results.results || [];
+
+    debug('[TagInteractionManager.extractSimilarThingsResults] Processing', allMatches.length, 'matches');
+
+    // Extract pages from results (thing_data is always included)
+    for (const match of allMatches) {
+      if (match.thing_data) {
+        const page = match.thing_data;
+        // Attach similarity score for potential display
+        page._similarity = match.similarity;
+        page._matched_label = match.matched_label;
+        pages.push(page);
+      }
+    }
+
+    debug('[TagInteractionManager.extractSimilarThingsResults] Extracted', pages.length, 'pages');
     return pages;
   }
 

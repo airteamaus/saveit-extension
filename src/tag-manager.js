@@ -159,7 +159,15 @@ class TagManager {
    */
   extractSiblingTags(currentType, currentLabel, allPages, filteredPages) {
     const tagMap = new Map();
-    const searchPages = allPages.length > 0 ? allPages : filteredPages;
+    // Combine both page sets to ensure we find tags from search results
+    const combinedPages = [...(allPages || []), ...(filteredPages || [])];
+    // Deduplicate by id
+    const seenIds = new Set();
+    const searchPages = combinedPages.filter(page => {
+      if (!page.id || seenIds.has(page.id)) return false;
+      seenIds.add(page.id);
+      return true;
+    });
 
     if (currentType === 'general') {
       // For general level, show all domain tags within this general category
@@ -247,36 +255,40 @@ class TagManager {
    * @returns {Object|null} Context object with hierarchy info
    */
   buildBreadcrumbContext(type, label, allPages, filteredPages) {
-    const searchPages = allPages.length > 0 ? allPages : filteredPages;
+    // Search both page sets - allPages first, then filteredPages
+    // This handles cases where tag exists in search results but not in initial page load
+    const pageSets = [allPages, filteredPages].filter(set => set && set.length > 0);
 
-    // Find a page that has this classification
-    for (const page of searchPages) {
-      if (!page.classifications) continue;
+    for (const searchPages of pageSets) {
+      // Find a page that has this classification
+      for (const page of searchPages) {
+        if (!page.classifications) continue;
 
-      const targetTag = page.classifications.find(c => c.type === type && c.label === label);
-      if (!targetTag) continue;
+        const targetTag = page.classifications.find(c => c.type === type && c.label === label);
+        if (!targetTag) continue;
 
-      if (type === 'general') {
-        return {
-          type: 'general',
-          label: label
-        };
-      } else if (type === 'domain') {
-        const generalTag = page.classifications.find(c => c.type === 'general');
-        return {
-          type: 'domain',
-          label: label,
-          parentLabel: generalTag ? generalTag.label : null
-        };
-      } else if (type === 'topic') {
-        const domainTag = page.classifications.find(c => c.type === 'domain');
-        const generalTag = page.classifications.find(c => c.type === 'general');
-        return {
-          type: 'topic',
-          label: label,
-          parentLabel: domainTag ? domainTag.label : null,
-          grandparentLabel: generalTag ? generalTag.label : null
-        };
+        if (type === 'general') {
+          return {
+            type: 'general',
+            label: label
+          };
+        } else if (type === 'domain') {
+          const generalTag = page.classifications.find(c => c.type === 'general');
+          return {
+            type: 'domain',
+            label: label,
+            parentLabel: generalTag ? generalTag.label : null
+          };
+        } else if (type === 'topic') {
+          const domainTag = page.classifications.find(c => c.type === 'domain');
+          const generalTag = page.classifications.find(c => c.type === 'general');
+          return {
+            type: 'topic',
+            label: label,
+            parentLabel: domainTag ? domainTag.label : null,
+            grandparentLabel: generalTag ? generalTag.label : null
+          };
+        }
       }
     }
 

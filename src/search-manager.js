@@ -58,7 +58,7 @@ class SearchManager {
    */
   applySearchFilter(pages, query) {
     const searchQuery = query.toLowerCase();
-    console.log('[applySearchFilter] Filtering with query:', query);
+    debug('[applySearchFilter] Filtering with query:', query);
 
     const filtered = pages.filter(page => {
       if (page.title && page.title.toLowerCase().includes(searchQuery)) return true;
@@ -74,7 +74,7 @@ class SearchManager {
       return false;
     });
 
-    console.log('[applySearchFilter] Filtered to', filtered.length, 'pages');
+    debug('[applySearchFilter] Filtered to', filtered.length, 'pages');
     return filtered;
   }
 }

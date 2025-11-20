@@ -44,7 +44,7 @@ class FirebaseAuthManager {
           if (!dashboard.isInitialized) return; // Skip during initialization
 
           // Auth changed after init - clear cache and reload
-          console.log('[FirebaseAuthManager] Auth state changed, clearing cache for user switch');
+          debug('[FirebaseAuthManager] Auth state changed, clearing cache for user switch');
           await API.invalidateCache();
 
           dashboard.authUIManager.updateSignInButton(user ? {
