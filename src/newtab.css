@@ -252,6 +252,39 @@ body {
   outline-offset: 2px;
 }
 
+/* Graph Button */
+.graph-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.graph-btn svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+.graph-btn:hover {
+  background: var(--color-bg);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.graph-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 /* Sign In Button */
 .sign-in-btn {
   display: flex;
