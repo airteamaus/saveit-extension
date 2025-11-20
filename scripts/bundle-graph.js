@@ -31,9 +31,16 @@ const sharedConfig = {
 };
 
 async function buildGraphVizBundle() {
-  // Create a temporary entry file that exports both GraphViz and Viewfinder
+  // Create a temporary entry file that exports GraphViz, Viewfinder, and sets up ForceGraph3D global
   // This ensures only one copy of Three.js is bundled
+  // Resolve 3d-force-graph from graph-viz's node_modules
+  const forceGraphPath = path.join(GRAPH_VIZ_DIR, 'node_modules', '3d-force-graph', 'dist', '3d-force-graph.mjs').replace(/\\/g, '/');
+
   const entryContent = `
+// Import and expose ForceGraph3D globally (required by graph-viz internals)
+import ForceGraph3D from '${forceGraphPath}';
+window.ForceGraph3D = ForceGraph3D;
+
 export { GraphViz } from '${path.join(GRAPH_VIZ_DIR, 'src', 'index.js').replace(/\\/g, '/')}';
 export { Viewfinder } from '${path.join(GRAPH_VIZ_DIR, 'examples', 'components', 'viewfinder.js').replace(/\\/g, '/')}';
 `;

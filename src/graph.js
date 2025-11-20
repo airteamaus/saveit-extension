@@ -308,6 +308,9 @@ async function loadAndInitializeGraph() {
       data = getMockGraphData();
     }
 
+    // Debug: log the response
+    console.log('Graph API response:', { nodes: data?.nodes?.length, edges: data?.edges?.length, data });
+
     if (!data || !data.nodes || data.nodes.length === 0) {
       showError('No graph data available');
       return;
