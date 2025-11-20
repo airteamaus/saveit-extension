@@ -599,5 +599,49 @@ const API = {
     } else {
       return this._mockGetSimilarByThingId(thingId, limit, offset);
     }
+  },
+
+  /**
+   * Fetch graph data from Cloud Function
+   * @private
+   * @returns {Promise<Object>} Graph data with nodes and edges
+   */
+  async _fetchGraphFromCloudFunction() {
+    const idToken = await this.getIdToken();
+
+    const params = new URLSearchParams({ graph: 'true' });
+
+    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorMessage = await this.parseErrorResponse(response);
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  },
+
+  /**
+   * Get graph data for knowledge graph visualization
+   * Returns nodes (generals, domains, topics) and edges (relationships)
+   * @returns {Promise<Object>} Graph data { nodes: [], edges: [] }
+   */
+  async getGraphData() {
+    if (this.isExtension) {
+      try {
+        return await this._fetchGraphFromCloudFunction();
+      } catch (error) {
+        console.error('Failed to get graph data:', error);
+        throw error;
+      }
+    } else {
+      // Mock data returned by graph.js getMockGraphData()
+      throw new Error('Use getMockGraphData() in standalone mode');
+    }
   }
 };
