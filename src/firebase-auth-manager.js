@@ -39,6 +39,11 @@ class FirebaseAuthManager {
           name: initialUser.displayName
         } : null);
 
+        // Set Sentry user context
+        if (initialUser) {
+          window.SentryHelpers?.setUser(initialUser);
+        }
+
         // Register persistent listener for auth changes (after init)
         window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
           if (!dashboard.isInitialized) return; // Skip during initialization
@@ -53,11 +58,15 @@ class FirebaseAuthManager {
           } : null);
 
           if (user) {
+            // Set Sentry user context
+            window.SentryHelpers?.setUser(user);
             dashboard.showLoading();
             await dashboard.loadPages();
             dashboard.render();
             dashboard.refreshInBackground();
           } else {
+            // Clear Sentry user context on sign out
+            window.SentryHelpers?.clearUser();
             dashboard.showSignInPrompt();
           }
         });

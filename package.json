@@ -49,6 +49,7 @@
     "zod": "^3.24.1"
   },
   "dependencies": {
+    "@sentry/browser": "^8.0.0",
     "firebase": "^12.5.0"
   }
 }

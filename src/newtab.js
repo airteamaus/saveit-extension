@@ -114,6 +114,9 @@ class SaveItDashboard {
   showError(error) {
     const content = document.getElementById('content');
     content.innerHTML = Components.errorState(error);
+
+    // Capture error in Sentry
+    window.SentryHelpers?.captureError(error, { context: 'showError' });
   }
 
   /**
@@ -451,6 +454,9 @@ async function initDashboard() {
     console.error('Fatal error during dashboard initialization:', error.message || error);
     console.error('Stack trace:', error.stack);
     window.dashboardReady = false;
+
+    // Capture fatal error in Sentry
+    window.SentryHelpers?.captureError(error, { context: 'initDashboard', fatal: true });
 
     // Show user-friendly error message
     const content = document.getElementById('content');

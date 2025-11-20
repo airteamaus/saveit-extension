@@ -127,6 +127,17 @@ async function bundleBackgroundScript() {
   console.log('✅ Built background-bundle.js (with polyfill)');
 }
 
+async function buildSentryBundle() {
+  // Bundle sentry-init.js for dashboard (needs @sentry/browser bundled)
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: [path.join(SRC_DIR, 'sentry-init.js')],
+    outfile: path.join(BUNDLE_DIR, 'sentry-init.js'),
+  });
+
+  console.log('✅ Built sentry-init.js');
+}
+
 async function copyPolyfill() {
   const polyfillSource = path.join(
     __dirname,
@@ -144,14 +155,18 @@ async function copyPolyfill() {
 
 async function build() {
   try {
-    console.log('🔨 Building Firebase bundles...');
+    console.log('🔨 Building Firebase and Sentry bundles...');
     // Build Firebase bundles first (background.js depends on these)
     await Promise.all([
       buildBackgroundBundle(),
       buildDashboardBundle(),
     ]);
-    // Then bundle background.js (which imports from firebase-background.js)
-    await bundleBackgroundScript();
+    // Then bundle background.js (which imports from firebase-background.js and sentry.js)
+    // and sentry-init.js for dashboard
+    await Promise.all([
+      bundleBackgroundScript(),
+      buildSentryBundle(),
+    ]);
     copyPolyfill();
     console.log('✅ All bundles built successfully!');
   } catch (error) {

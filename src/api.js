@@ -276,6 +276,7 @@ const API = {
         return normalized;
       } catch (error) {
         console.error('[getSavedPages] Failed to fetch saved pages:', error);
+        window.SentryHelpers?.captureError(error, { context: 'getSavedPages', options });
         throw error;
       }
     } else {
@@ -317,6 +318,7 @@ const API = {
         return await response.json();
       } catch (error) {
         console.error('Failed to delete page:', error);
+        window.SentryHelpers?.captureError(error, { context: 'deletePage', id });
         throw error;
       }
     } else {
@@ -363,6 +365,7 @@ const API = {
         return await response.json();
       } catch (error) {
         console.error('Failed to update page:', error);
+        window.SentryHelpers?.captureError(error, { context: 'updatePage', id, updates });
         throw error;
       }
     } else {
@@ -468,6 +471,7 @@ const API = {
         return await this._fetchTagSearchFromCloudFunction(label);
       } catch (error) {
         console.error('Failed to search by tag:', error);
+        window.SentryHelpers?.captureError(error, { context: 'searchByTag', label });
         throw error;
       }
     } else {
@@ -594,6 +598,7 @@ const API = {
         return await this._fetchSimilarFromCloudFunction(thingId, limit, offset);
       } catch (error) {
         console.error('Failed to get similar things:', error);
+        window.SentryHelpers?.captureError(error, { context: 'getSimilarByThingId', thingId, limit, offset });
         throw error;
       }
     } else {
@@ -637,6 +642,7 @@ const API = {
         return await this._fetchGraphFromCloudFunction();
       } catch (error) {
         console.error('Failed to get graph data:', error);
+        window.SentryHelpers?.captureError(error, { context: 'getGraphData' });
         throw error;
       }
     } else {

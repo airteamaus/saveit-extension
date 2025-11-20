@@ -10,6 +10,10 @@ import {
   getIdToken,
   signOut
 } from './bundles/firebase-background.js';
+import { initSentry, setUser, setRequestId, captureError } from './sentry.js';
+
+// Initialize Sentry before anything else
+initSentry();
 
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
@@ -87,6 +91,9 @@ async function signInWithFirebase() {
   const firebaseIdToken = await getIdToken(userCredential.user);
 
   console.log('Firebase sign-in successful:', userCredential.user.email);
+
+  // Set Sentry user context
+  setUser(userCredential.user);
 
   return {
     user: userCredential.user,
@@ -171,7 +178,13 @@ browser.action.onClicked.addListener(async (tab) => {
       throw new Error(errorMessage);
     }
 
+    const data = await response.json();
     console.log('Page saved successfully!');
+
+    // Set request_id for error correlation
+    if (data.request_id) {
+      setRequestId(data.request_id);
+    }
 
     // Invalidate cache so dashboard shows fresh data
     try {
@@ -193,6 +206,13 @@ browser.action.onClicked.addListener(async (tab) => {
 
   } catch (error) {
     console.error('Error saving page:', error);
+
+    // Capture error in Sentry with context
+    captureError(error, {
+      context: 'save-page',
+      url: tab.url,
+      title: tab.title
+    });
 
     // Show error feedback on icon (always visible)
     await showBadgeFeedback('error', 3000);
