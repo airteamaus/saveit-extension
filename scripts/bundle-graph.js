@@ -31,28 +31,32 @@ const sharedConfig = {
 };
 
 async function buildGraphVizBundle() {
+  // Create a temporary entry file that exports both GraphViz and Viewfinder
+  // This ensures only one copy of Three.js is bundled
+  const entryContent = `
+export { GraphViz } from '${path.join(GRAPH_VIZ_DIR, 'src', 'index.js').replace(/\\/g, '/')}';
+export { Viewfinder } from '${path.join(GRAPH_VIZ_DIR, 'examples', 'components', 'viewfinder.js').replace(/\\/g, '/')}';
+`;
+  const entryFile = path.join(BUNDLE_DIR, '_entry.js');
+  fs.writeFileSync(entryFile, entryContent);
+
   // Bundle graph-viz main entry point with all dependencies
   // Three.js is bundled for extension CSP compliance (no import maps allowed)
   await esbuild.build({
     ...sharedConfig,
-    entryPoints: [path.join(GRAPH_VIZ_DIR, 'src', 'index.js')],
+    entryPoints: [entryFile],
     outfile: path.join(BUNDLE_DIR, 'graph-viz.js'),
     // Include Three.js in bundle - extensions can't use import maps
   });
 
-  console.log('  Built graph-viz.js');
+  // Clean up temp file
+  fs.unlinkSync(entryFile);
+
+  console.log('  Built graph-viz.js (includes Viewfinder)');
 }
 
-async function buildViewfinderBundle() {
-  // Bundle viewfinder component
-  await esbuild.build({
-    ...sharedConfig,
-    entryPoints: [path.join(GRAPH_VIZ_DIR, 'examples', 'components', 'viewfinder.js')],
-    outfile: path.join(BUNDLE_DIR, 'viewfinder.js'),
-  });
-
-  console.log('  Built viewfinder.js');
-}
+// Viewfinder is now included in the main graph-viz.js bundle
+// No separate bundle needed
 
 async function copyAssets() {
   // Copy CSS files
@@ -82,11 +86,8 @@ async function build() {
       throw new Error(`graph-viz directory not found at ${GRAPH_VIZ_DIR}`);
     }
 
-    // Build bundles in parallel
-    await Promise.all([
-      buildGraphVizBundle(),
-      buildViewfinderBundle(),
-    ]);
+    // Build main bundle (includes GraphViz and Viewfinder)
+    await buildGraphVizBundle();
 
     // Copy assets
     await copyAssets();

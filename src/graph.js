@@ -3,9 +3,8 @@
 
 /* global ThemeManager */
 
-// Import GraphViz and Viewfinder from bundles
-import { GraphViz } from './bundles/graph-viz.js';
-import { Viewfinder } from './bundles/viewfinder.js';
+// Import GraphViz and Viewfinder from bundle
+import { GraphViz, Viewfinder } from './bundles/graph-viz.js';
 
 // Global state
 let graph = null;
