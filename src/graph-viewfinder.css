@@ -1,0 +1,54 @@
+/**
+ * Viewfinder - Selection indicator styles
+ *
+ * Pulsing animation for the circular selection indicator.
+ * The viewfinder tracks the selected node in 2D screen space.
+ */
+
+/* Pulse animation for active viewfinder */
+.viewfinder.active {
+  animation: pulseCircle 2s ease-in-out infinite;
+}
+
+/* Pulse keyframes - grows and brightens with glow */
+@keyframes pulseCircle {
+  0%, 100% {
+    opacity: 0.4;
+    transform: translate(-50%, -50%) scale(1);
+    filter: drop-shadow(0 0 8px rgba(0, 191, 255, 0.3));
+  }
+  50% {
+    opacity: 0.5;
+    transform: translate(-50%, -50%) scale(1.1);
+    filter: drop-shadow(0 0 16px rgba(0, 191, 255, 0.5)) drop-shadow(0 0 32px rgba(0, 191, 255, 0.3));
+  }
+}
+
+/* Optional: Custom pulse speed via CSS variable */
+.viewfinder.active[data-pulse-speed] {
+  animation-duration: var(--pulse-speed, 2s);
+}
+
+/* Optional: Different pulse styles */
+.viewfinder.pulse-fast {
+  animation: pulseCircle 1s ease-in-out infinite;
+}
+
+.viewfinder.pulse-slow {
+  animation: pulseCircle 3s ease-in-out infinite;
+}
+
+.viewfinder.pulse-subtle {
+  animation: pulseCircleSubtle 2s ease-in-out infinite;
+}
+
+@keyframes pulseCircleSubtle {
+  0%, 100% {
+    opacity: 0.9;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.05);
+  }
+}
