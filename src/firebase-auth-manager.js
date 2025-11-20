@@ -53,6 +53,7 @@ class FirebaseAuthManager {
           } : null);
 
           if (user) {
+            dashboard.showLoading();
             await dashboard.loadPages();
             dashboard.render();
             dashboard.refreshInBackground();
