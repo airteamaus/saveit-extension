@@ -81,6 +81,9 @@ class PageLoaderManager { // eslint-disable-line no-unused-vars
   async loadMorePages(dashboard) {
     if (dashboard.isLoadingMore || !dashboard.hasMorePages) return;
 
+    // Don't try to load more if user isn't signed in
+    if (API.isExtension && !dashboard.getCurrentUser()) return;
+
     dashboard.isLoadingMore = true;
     dashboard.scrollManager.showLoadingIndicator();
 
