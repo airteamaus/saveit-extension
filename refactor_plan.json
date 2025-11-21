@@ -2,8 +2,8 @@
   "project": "Code Consolidation & Complexity Reduction",
   "created": "2025-11-21",
   "status": "in_progress",
-  "current_phase": "phase-4",
-  "current_task": "task-4-1",
+  "current_phase": "phase-5",
+  "current_task": "task-5-1",
   "goal": "Eliminate 402 lines of duplicate code through architectural consolidation",
 
   "phases": [
@@ -212,61 +212,69 @@
     {
       "id": "phase-4",
       "name": "Browser API Detection Consolidation",
-      "status": "pending",
-      "impact": "-30 lines",
+      "status": "completed",
+      "impact": "-28 lines (actual)",
       "tasks": [
         {
           "id": "task-4-1",
           "type": "implement",
           "description": "Add getBrowserRuntime() and getStorageAPI() to config.js",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:28-37", "src/api.js:57-66", "src/newtab.js:51-59"],
-          "files_changed": [],
+          "files_changed": ["src/config.js", "src/config-loader.js"],
           "completion_criteria": [
             "New getBrowserRuntime() function in config.js",
             "New getStorageAPI() function in config.js",
             "Both exported and available",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Added getBrowserRuntime() and getStorageAPI() to config.js:112-138. Updated config-loader.js to export functions globally. +32 lines (with JSDoc)."
         },
         {
           "id": "task-4-2",
           "type": "refactor",
           "description": "Update api.js to use shared browser detection",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:28-37", "src/api.js:57-66"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "api.js isExtension uses getBrowserRuntime()",
             "api.js getStorage uses getStorageAPI()",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Updated isExtension getter to use shared functions (reduced from 9 lines to 1 line). Updated getStorage method to use getStorageAPI() (reduced from 9 lines to 1 line). Added import statement. Net: -16 lines."
         },
         {
           "id": "task-4-3",
           "type": "refactor",
           "description": "Update newtab.js to use shared browser detection",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/newtab.js:51-59"],
-          "files_changed": [],
+          "files_changed": ["src/newtab.js"],
           "completion_criteria": [
             "newtab.js getBrowserRuntime uses shared function",
             "Tests pass",
             "Dashboard loads correctly"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Updated getBrowserRuntime() method to call window.getBrowserRuntime() (reduced from 8 lines to 1 line). -7 lines."
         },
         {
           "id": "task-4-4",
           "type": "refactor",
           "description": "Update firebase-init-dashboard.js to use shared browser detection",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/firebase-init-dashboard.js:7-17"],
-          "files_changed": [],
+          "files_changed": ["src/firebase-init-dashboard.js"],
           "completion_criteria": [
             "firebase-init-dashboard.js uses getBrowserRuntime()",
             "Tests pass",
             "Firebase initialization works"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Updated isExtension() function to use getBrowserRuntime() (reduced from 10 lines to 1 line). Added import statement. -7 lines."
         }
       ]
     },

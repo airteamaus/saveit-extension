@@ -49,13 +49,7 @@ class SaveItDashboard {
    * @returns {Object|null} browser.runtime or chrome.runtime
    */
   getBrowserRuntime() {
-    if (typeof browser !== 'undefined' && browser.runtime) {
-      return browser.runtime;
-    }
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-      return chrome.runtime;
-    }
-    return null;
+    return window.getBrowserRuntime();
   }
 
   /**

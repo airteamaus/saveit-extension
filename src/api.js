@@ -3,6 +3,7 @@
 // and uses mock data or real Cloud Function accordingly
 
 /* global CacheManager_Export, filterMockData */
+import { getBrowserRuntime, getStorageAPI } from './config.js';
 
 /* eslint-disable-next-line no-unused-vars */
 const API = {
@@ -26,15 +27,7 @@ const API = {
    * Checks both browser (Firefox + polyfill) and chrome (Chrome/Brave/Edge)
    */
   get isExtension() {
-    // Firefox native or polyfilled browser API
-    if (typeof browser !== 'undefined' && browser.storage) {
-      return true;
-    }
-    // Chrome native API (before polyfill loads)
-    if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-      return true;
-    }
-    return false;
+    return getBrowserRuntime() !== null && getStorageAPI() !== null;
   },
 
 
@@ -55,15 +48,7 @@ const API = {
    * @private
    */
   getStorage() {
-    // Prefer browser API (Firefox + polyfill)
-    if (typeof browser !== 'undefined' && browser.storage) {
-      return browser.storage.local;
-    }
-    // Fallback to chrome API (Chrome/Brave/Edge before polyfill loads)
-    if (typeof chrome !== 'undefined' && chrome.storage) {
-      return chrome.storage.local;
-    }
-    return null;
+    return getStorageAPI();
   },
 
   /**

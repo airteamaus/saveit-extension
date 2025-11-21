@@ -1,19 +1,13 @@
 // Firebase initialization wrapper for dashboard (newtab.html)
 // Makes Firebase available globally to non-module scripts
 
+import { getBrowserRuntime } from './config.js';
+
 /**
  * Check if running in extension mode (works with both Firefox and Chrome APIs)
  */
 function isExtension() {
-  // Firefox native or polyfilled browser API
-  if (typeof browser !== 'undefined' && browser.runtime) {
-    return true;
-  }
-  // Chrome/Brave/Edge native API (before polyfill loads)
-  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
-    return true;
-  }
-  return false;
+  return getBrowserRuntime() !== null;
 }
 
 // Promise that resolves when Firebase is ready

@@ -104,3 +104,35 @@ export function debugError(...args) {
   // Always log errors, even in production
   console.error(...args);
 }
+
+/**
+ * Get browser runtime API (Firefox or Chrome)
+ * @returns {object|null} Browser runtime API or null if not in extension
+ */
+export function getBrowserRuntime() {
+  // Firefox native or polyfilled browser API
+  if (typeof browser !== 'undefined' && browser.runtime) {
+    return browser.runtime;
+  }
+  // Chrome/Brave/Edge native API (before polyfill loads)
+  if (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.id) {
+    return chrome.runtime;
+  }
+  return null;
+}
+
+/**
+ * Get browser storage API (Firefox or Chrome)
+ * @returns {object|null} Browser storage.local API or null if not in extension
+ */
+export function getStorageAPI() {
+  // Firefox native or polyfilled browser API
+  if (typeof browser !== 'undefined' && browser.storage) {
+    return browser.storage.local;
+  }
+  // Chrome/Brave/Edge native API (before polyfill loads)
+  if (typeof chrome !== 'undefined' && chrome.storage) {
+    return chrome.storage.local;
+  }
+  return null;
+}
