@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.1] - 2025-11-22
+
+No notable changes.
+
 ## [1.4.0] - 2025-11-21
 
 No notable changes.
@@ -71,32 +75,6 @@ No notable changes.
 - **nav:** add knowledge graph button to newtab header (c2b27ed)
 - **graph:** add knowledge graph page with HUD and node info panel (5caf776)
 - **build:** add graph-viz bundling for extension (b94f5f9)
-
-### 🐛 Bug Fixes
-
-- include ForceGraph3D in bundle (669ac84)
-- include Viewfinder in main bundle to avoid duplicate Three.js (63bdbf4)
-- bundle Three.js for extension CSP compliance (f3e708f)
-- improve logged-out state handling and sign-in UX (7037329)
-- clean up console.log spam in newtab and add favicon (6d18a39)
-
-### ♻️ Refactoring
-
-- consolidate tag extraction and similarity result methods (d2f11af)
-- consolidate browser API detection in config.js (e61ee3b)
-- consolidate mock search logic with shared utilities (77f375f)
-- consolidate fetch-with-auth pattern in api.js (8299f99)
-- consolidate error handling in api.js (9741296)
-- extract helper methods from large functions (5dc7cde)
-
-### 📚 Documentation
-
-- update CLAUDE.md with comprehensive tool reference (41a6338)
-
-## [1.2.0] - 2025-11-20
-
-### ✨ Features
-
 - **tags:** show full hierarchical context when clicking any tag (213ad7d)
 - **tags:** enable tag clicks in search results and show hierarchical child tags (865898b)
 - **chrome:** add Chrome Web Store upload automation (31518fc)
@@ -139,8 +117,11 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- improve logged-out state handling and sign-in UX (2c9695b)
-- clean up console.log spam in newtab and add favicon (b4b790a)
+- include ForceGraph3D in bundle (669ac84)
+- include Viewfinder in main bundle to avoid duplicate Three.js (63bdbf4)
+- bundle Three.js for extension CSP compliance (f3e708f)
+- improve logged-out state handling and sign-in UX (7037329)
+- clean up console.log spam in newtab and add favicon (6d18a39)
 - auto-kill stale Playwright processes before E2E tests (ebfb300)
 - reduce Playwright workers to 2 to eliminate E2E test race condition (c16e352)
 - resolve E2E test timeout in parallel execution (ddd0be6)
@@ -195,7 +176,12 @@ No notable changes.
 
 ### ♻️ Refactoring
 
-- extract helper methods from large functions (36be21e)
+- consolidate tag extraction and similarity result methods (d2f11af)
+- consolidate browser API detection in config.js (e61ee3b)
+- consolidate mock search logic with shared utilities (77f375f)
+- consolidate fetch-with-auth pattern in api.js (8299f99)
+- consolidate error handling in api.js (9741296)
+- extract helper methods from large functions (5dc7cde)
 - extract page loader manager from newtab.js (-83 lines) (e598414)
 - extract event and auth managers from newtab.js (-206 lines) (a20a761)
 - extract cache, notification, and stats managers (1fe529d)
@@ -225,6 +211,7 @@ No notable changes.
 
 ### 📚 Documentation
 
+- update CLAUDE.md with comprehensive tool reference (41a6338)
 - finalize newtab.js refactor plan and update architecture docs (4ed4452)
 - update documentation for v0.99.99 and cross-browser support (62b8569)
 - add new tab page design exploration memo (31c062b)
