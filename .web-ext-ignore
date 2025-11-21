@@ -1,24 +1,34 @@
 # Development profile directory (contains Firefox media plugins)
 firefox-dev-profile/
+firefox-dev-profile/**
 
 # Test files
 test/
+test/**
 tests/
+tests/**
 test-*.html
 
 # Development files
 *.test.js
 .git/
+.git/**
 .gitignore
 node_modules/
+node_modules/**
 
 # Backend repository (cloned during CI/CD for graph-viz bundle)
 saveit-backend/
+saveit-backend/**
 
 # Build artifacts
 web-ext-artifacts/
+web-ext-artifacts/**
 playwright-report/
+playwright-report/**
 coverage/
+coverage/**
 
 # Scripts (not part of extension)
 scripts/
+scripts/**
