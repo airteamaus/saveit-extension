@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.6] - 2025-11-21
+
+### 🐛 Bug Fixes
+
+- add debug output to backend cleanup step (e61f25b)
+
 ## [1.3.5] - 2025-11-21
 
 No notable changes.
@@ -96,35 +102,6 @@ No notable changes.
 
 ## [1.1.0] - 2025-11-16
 
-### 🐛 Bug Fixes
-
-- auto-kill stale Playwright processes before E2E tests (ebfb300)
-- reduce Playwright workers to 2 to eliminate E2E test race condition (c16e352)
-- resolve E2E test timeout in parallel execution (ddd0be6)
-- resolve E2E test failures for stats display and tag toggle (035a224)
-- **dashboard:** preserve total page count in cache and pagination (a24b831)
-
-### ♻️ Refactoring
-
-- extract page loader manager from newtab.js (-83 lines) (e598414)
-- extract event and auth managers from newtab.js (-206 lines) (a20a761)
-- extract cache, notification, and stats managers (1fe529d)
-- extract managers from newtab.js (-256 lines) (62df550)
-- extract AuthUIManager from newtab.js (f787aaa)
-- extract ScrollManager from newtab.js (6812c25)
-- extract SearchManager from newtab.js (dfaa24f)
-- extract TagManager from newtab.js (2852f3f)
-
-### 📚 Documentation
-
-- finalize newtab.js refactor plan and update architecture docs (4ed4452)
-
-### ✅ Tests
-
-- remove deprecated dewey_primary_label test cases (50a83c3)
-
-## [1.0.1] - 2025-11-15
-
 ### ✨ Features
 
 - **tags:** show full hierarchical context when clicking any tag (213ad7d)
@@ -169,6 +146,11 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- auto-kill stale Playwright processes before E2E tests (ebfb300)
+- reduce Playwright workers to 2 to eliminate E2E test race condition (c16e352)
+- resolve E2E test timeout in parallel execution (ddd0be6)
+- resolve E2E test failures for stats display and tag toggle (035a224)
+- **dashboard:** preserve total page count in cache and pagination (a24b831)
 - **tags:** restore tag bar click handling (28c90ec)
 - **manifest:** add cross-browser background script support and fix CSP violations (49395fc)
 - restore original Chrome extension key for stable local dev ID (11ecae7)
@@ -218,6 +200,14 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- extract page loader manager from newtab.js (-83 lines) (e598414)
+- extract event and auth managers from newtab.js (-206 lines) (a20a761)
+- extract cache, notification, and stats managers (1fe529d)
+- extract managers from newtab.js (-256 lines) (62df550)
+- extract AuthUIManager from newtab.js (f787aaa)
+- extract ScrollManager from newtab.js (6812c25)
+- extract SearchManager from newtab.js (dfaa24f)
+- extract TagManager from newtab.js (2852f3f)
 - **css:** use rem units for accessibility and user font size preferences (48854a9)
 - **css:** modernize theme system with light-dark() and system-ui (5d7bbcf)
 - **dashboard:** simplify init flow and fix race conditions (ad5f66c)
@@ -239,6 +229,7 @@ No notable changes.
 
 ### 📚 Documentation
 
+- finalize newtab.js refactor plan and update architecture docs (4ed4452)
 - update documentation for v0.99.99 and cross-browser support (62b8569)
 - add new tab page design exploration memo (31c062b)
 - add comprehensive testing instructions and beta warnings (52f55bb)
@@ -250,6 +241,7 @@ No notable changes.
 
 ### ✅ Tests
 
+- remove deprecated dewey_primary_label test cases (50a83c3)
 - **discovery:** add manual test page for semantic search mock (2239f51)
 - **components:** add unit tests for utility functions (751d465)
 
