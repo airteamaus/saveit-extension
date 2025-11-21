@@ -114,8 +114,11 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 - `src/notification-manager.js` - Notification/toast UI
 - `src/cache-manager.js` - Browser storage caching (user-isolated)
 - `src/auth-ui.js` - Authentication UI management
+- `src/page-loader-manager.js` - Page loading and data fetching
+- `src/event-manager.js` - Event handling coordination
 - `src/api.js` - API abstraction (auto-detects mode)
 - `src/mock-data.js` - Test data and filtering (standalone only)
+- `src/graph.js` - Knowledge graph visualization page
 
 **Save Flow:**
 1. User clicks toolbar → `browser.browserAction.onClicked`
@@ -131,17 +134,9 @@ See [backend docs/VISION.md](../saveit-backend/docs/VISION.md) for full architec
 
 **CRITICAL: Always write and run tests before committing!**
 
-### Quick Commands
+### Test Commands
 
-```bash
-just test               # Unit + integration (<1s)
-just test-watch         # Auto-rerun on changes
-just test-coverage      # 70% minimum enforced
-just test-e2e           # E2E in Firefox (~30s)
-just check              # All checks: lint + test + build + validate
-just ci-check           # Simulate GitHub Actions
-just pre-deploy         # Full pre-deployment checklist
-```
+See Tool Reference below for complete command listing.
 
 ### When to Write Tests
 
@@ -198,21 +193,50 @@ Auto-detects from extension version:
 
 **Docs:** `docs/TESTING.md`, `docs/QA-INFRASTRUCTURE.md`, `QA-SETUP-COMPLETE.md`
 
-## Quick Reference
+## Tool Reference
 
-**Task runner:**
-```bash
-just                # Show all tasks
-just preview        # Open standalone dashboard
-just run            # Run in Firefox with auto-reload
-just install        # Install persistently in Firefox
-just lint           # Lint extension
-just test           # Run unit + integration tests
-just check          # Run all checks (lint + test + validate + build)
-just pre-deploy     # Full pre-deployment checklist
-just bump patch     # Bump version and create git tag
-just build          # Build all bundles (Firebase + graph-viz)
-```
+| Task | Command | Notes |
+|------|---------|-------|
+| **Development** |
+| Show all tasks | `just` | Lists available commands |
+| Preview standalone | `just preview` | Opens newtab.html in browser |
+| Run in Firefox | `just run` | Auto-reload enabled (recommended) |
+| Run in Chrome | `just run-chrome` | Chrome testing |
+| Install in Firefox | `just install` | Persistent installation |
+| Install dependencies | `just install-deps` | npm install + setup |
+| **Building** |
+| Build all bundles | `just build` | Firebase + graph-viz bundles |
+| Build Firebase only | `just build-firebase` | Firebase SDK bundles |
+| Build extension (Firefox) | `just build` | Requires AMO_JWT |
+| Build extension (Chrome) | `just build-chrome` | Universal build |
+| Build both browsers | `just build-all` | Firefox + Chrome |
+| Watch Firebase bundles | `just watch-firebase` | Auto-rebuild on changes |
+| Clean artifacts | `just clean` | Remove build outputs |
+| **Testing** |
+| Unit + integration | `just test` | <1s, coverage enforced |
+| Watch mode | `just test-watch` | Auto-rerun on changes |
+| Coverage report | `just test-coverage` | 70% minimum |
+| E2E (headless) | `just test-e2e` | Firefox, ~30s |
+| E2E (UI mode) | `just test-e2e-ui` | Interactive debugging |
+| Test bundle build | `just test-build` | Verify Firebase bundles |
+| Test CSP compliance | `just test-csp` | Check HTML for violations |
+| **Quality Checks** |
+| All checks | `just check` | lint + test + build + validate |
+| CI simulation | `just ci-check` | Local GitHub Actions check |
+| Lint extension | `just lint` | web-ext lint |
+| Lint + fix | `just lint-fix` | Auto-fix issues |
+| Lint JavaScript | `just lint-js` | ESLint only |
+| Validate manifest | `just validate` | Check manifest.json |
+| **Deployment** |
+| Pre-deploy checklist | `just pre-deploy` | Comprehensive checks |
+| Deploy to staging | `just deploy-staging VERSION` | Beta release |
+| Deploy to prod | `just deploy-prod` | Promote staging |
+| Bump version | `just bump [patch\|minor\|major]` | Update + tag |
+| Setup git hooks | `just setup-hooks` | Install husky hooks |
+| Clear Firefox cache | `just clear-cache` | Requires Firefox closed |
+| **Documentation** |
+| Generate changelog | `just changelog` | From conventional commits |
+| Release notes | `just release-notes VERSION` | For specific version |
 
 ## Build Process
 
@@ -222,8 +246,8 @@ just build          # Build all bundles (Firebase + graph-viz)
 1. `firebase-background.js` - Firebase SDK for service worker (101KB)
 2. `firebase-dashboard.js` - Firebase SDK for dashboard (100KB)
 3. `background-bundle.js` - Background script with polyfill (186KB)
-4. `sentry-init.js` - Sentry error tracking (70KB)
-5. `graph-viz.js` - Graph visualization library (1.5MB, includes Viewfinder)
+4. `sentry-init.js` - Sentry error tracking (70KB, prod only)
+5. `graph-viz.js` - Graph visualization library (1.5MB, includes Viewfinder + Three.js)
 6. `browser-polyfill.min.js` - WebExtension API polyfill (10KB, copied from node_modules)
 7. `*.js.map` - Source maps for debugging (~10MB total)
 
@@ -303,6 +327,10 @@ oauthClientId: 'xxx.apps.googleusercontent.com'
 - Chrome (Unpacked): `https://<generated-id>.chromiumapp.org/` (varies)
 
 **Permissions:** `activeTab`, `notifications`, `identity`, `storage`, `https://*.run.app/*`, `https://www.googleapis.com/*`
+
+**Features:**
+- Knowledge graph: `src/graph.html` (3D visualization, Neo4j-powered)
+- Error tracking: Sentry (production only, auto-configured from environment)
 
 **Cross-Browser Manifest:**
 - `manifest.json` includes both `service_worker` (Chrome) and `scripts` (Firefox)
