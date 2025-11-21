@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.7] - 2025-11-21
+
+No notable changes.
+
 ## [1.3.6] - 2025-11-21
 
 ### 🐛 Bug Fixes
@@ -97,10 +101,6 @@ No notable changes.
 - extract helper methods from large functions (36be21e)
 
 ## [1.1.1] - 2025-11-16
-
-No notable changes.
-
-## [1.1.0] - 2025-11-16
 
 ### ✨ Features
 
