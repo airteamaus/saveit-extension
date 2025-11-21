@@ -1,0 +1,312 @@
+{
+  "project": "Code Consolidation & Complexity Reduction",
+  "created": "2025-11-21",
+  "status": "in_progress",
+  "current_phase": "phase-2",
+  "current_task": "task-2-1",
+  "goal": "Eliminate 402 lines of duplicate code through architectural consolidation",
+
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Error Handling Consolidation",
+      "status": "completed",
+      "impact": "-60 lines (actual)",
+      "tasks": [
+        {
+          "id": "task-1-1",
+          "type": "implement",
+          "description": "Extract _executeWithErrorHandling() wrapper in api.js",
+          "status": "completed",
+          "files_referenced": ["src/api.js:270-281", "src/api.js:318-323", "src/api.js:365-370"],
+          "files_changed": ["src/api.js"],
+          "completion_criteria": [
+            "New _executeWithErrorHandling() method added to api.js",
+            "All 6 try/catch blocks in api.js converted to use wrapper",
+            "Tests pass",
+            "No behavior changes"
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Added _executeWithErrorHandling() at line 147. Converted all 6 API methods (getSavedPages, deletePage, updatePage, searchByTag, getSimilarByThingId, getGraphData). Net reduction: ~60 lines. All tests pass."
+        },
+        {
+          "id": "task-1-2",
+          "type": "investigate",
+          "description": "Review error handling in background.js",
+          "status": "completed",
+          "files_referenced": ["src/background.js:207-215"],
+          "files_changed": [],
+          "completion_criteria": [
+            "Determine if wrapper applies to background.js",
+            "Document findings"
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "background.js has single error handler with custom UI logic (badge feedback, user-friendly messages, notifications). Already uses consistent pattern with Sentry. Not a candidate for generic API wrapper (different architectural layer - UI vs API)."
+        },
+        {
+          "id": "task-1-3",
+          "type": "investigate",
+          "description": "Review error handling in page-loader-manager.js",
+          "status": "completed",
+          "files_referenced": ["src/page-loader-manager.js:25-28", "src/page-loader-manager.js:71-74"],
+          "files_changed": [],
+          "completion_criteria": [
+            "Determine if wrapper applies to page-loader-manager.js",
+            "Document findings"
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "page-loader-manager.js has 3 error handlers that call dashboard.showError() instead of throwing. No Sentry needed (API layer already tracks). Already consistent within module. Not a candidate for API wrapper (different architectural layer - UI vs API)."
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Fetch Pattern Consolidation",
+      "status": "pending",
+      "impact": "-130 lines",
+      "tasks": [
+        {
+          "id": "task-2-1",
+          "type": "implement",
+          "description": "Extract _fetchWithAuth() utility in api.js",
+          "status": "pending",
+          "files_referenced": ["src/api.js:161-193", "src/api.js:388-406", "src/api.js:490-513", "src/api.js:614-632"],
+          "files_changed": [],
+          "completion_criteria": [
+            "New _fetchWithAuth(endpoint, params, options) method created",
+            "Handles GET/POST/PATCH/DELETE methods",
+            "Automatically gets ID token and parses errors",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-2-2",
+          "type": "refactor",
+          "description": "Convert _fetchFromCloudFunction to use _fetchWithAuth",
+          "status": "pending",
+          "files_referenced": ["src/api.js:161-193"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_fetchFromCloudFunction uses _fetchWithAuth",
+            "Tests pass",
+            "getSavedPages still works"
+          ]
+        },
+        {
+          "id": "task-2-3",
+          "type": "refactor",
+          "description": "Convert _fetchTagSearchFromCloudFunction to use _fetchWithAuth",
+          "status": "pending",
+          "files_referenced": ["src/api.js:388-406"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_fetchTagSearchFromCloudFunction uses _fetchWithAuth",
+            "Tests pass",
+            "searchByTag still works"
+          ]
+        },
+        {
+          "id": "task-2-4",
+          "type": "refactor",
+          "description": "Convert _fetchSimilarFromCloudFunction to use _fetchWithAuth",
+          "status": "pending",
+          "files_referenced": ["src/api.js:490-513"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_fetchSimilarFromCloudFunction uses _fetchWithAuth",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-2-5",
+          "type": "refactor",
+          "description": "Convert _fetchGraphFromCloudFunction to use _fetchWithAuth",
+          "status": "pending",
+          "files_referenced": ["src/api.js:614-632"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_fetchGraphFromCloudFunction uses _fetchWithAuth",
+            "Tests pass"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Mock Search Logic Consolidation",
+      "status": "pending",
+      "impact": "-60 lines",
+      "tasks": [
+        {
+          "id": "task-3-1",
+          "type": "implement",
+          "description": "Extract _getPageTags() utility in api.js",
+          "status": "pending",
+          "files_referenced": ["src/api.js:424-434", "src/api.js:532-541"],
+          "files_changed": [],
+          "completion_criteria": [
+            "New _getPageTags(page) utility extracts all tags from a page",
+            "Returns array of tag strings",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-3-2",
+          "type": "implement",
+          "description": "Extract _calculateTagSimilarity() utility in api.js",
+          "status": "pending",
+          "files_referenced": ["src/api.js:436-458", "src/api.js:544-575"],
+          "files_changed": [],
+          "completion_criteria": [
+            "New _calculateTagSimilarity(pageTags, queryLabel) utility",
+            "Returns { type: 'exact'|'similar'|null, score: number, matchedTag: string }",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-3-3",
+          "type": "refactor",
+          "description": "Refactor _mockSemanticTagSearch to use utilities",
+          "status": "pending",
+          "files_referenced": ["src/api.js:414-461"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_mockSemanticTagSearch uses _getPageTags and _calculateTagSimilarity",
+            "Tests pass",
+            "searchByTag still works in standalone mode"
+          ]
+        },
+        {
+          "id": "task-3-4",
+          "type": "refactor",
+          "description": "Refactor _mockGetSimilarByThingId to use utilities",
+          "status": "pending",
+          "files_referenced": ["src/api.js:523-586"],
+          "files_changed": [],
+          "completion_criteria": [
+            "_mockGetSimilarByThingId uses _getPageTags and _calculateTagSimilarity",
+            "Tests pass",
+            "Similar pages search works in standalone mode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Browser API Detection Consolidation",
+      "status": "pending",
+      "impact": "-30 lines",
+      "tasks": [
+        {
+          "id": "task-4-1",
+          "type": "implement",
+          "description": "Add getBrowserRuntime() and getStorageAPI() to config.js",
+          "status": "pending",
+          "files_referenced": ["src/api.js:28-37", "src/api.js:57-66", "src/newtab.js:51-59"],
+          "files_changed": [],
+          "completion_criteria": [
+            "New getBrowserRuntime() function in config.js",
+            "New getStorageAPI() function in config.js",
+            "Both exported and available",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-4-2",
+          "type": "refactor",
+          "description": "Update api.js to use shared browser detection",
+          "status": "pending",
+          "files_referenced": ["src/api.js:28-37", "src/api.js:57-66"],
+          "files_changed": [],
+          "completion_criteria": [
+            "api.js isExtension uses getBrowserRuntime()",
+            "api.js getStorage uses getStorageAPI()",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-4-3",
+          "type": "refactor",
+          "description": "Update newtab.js to use shared browser detection",
+          "status": "pending",
+          "files_referenced": ["src/newtab.js:51-59"],
+          "files_changed": [],
+          "completion_criteria": [
+            "newtab.js getBrowserRuntime uses shared function",
+            "Tests pass",
+            "Dashboard loads correctly"
+          ]
+        },
+        {
+          "id": "task-4-4",
+          "type": "refactor",
+          "description": "Update firebase-init-dashboard.js to use shared browser detection",
+          "status": "pending",
+          "files_referenced": ["src/firebase-init-dashboard.js:7-17"],
+          "files_changed": [],
+          "completion_criteria": [
+            "firebase-init-dashboard.js uses getBrowserRuntime()",
+            "Tests pass",
+            "Firebase initialization works"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Tag Extraction Consolidation",
+      "status": "pending",
+      "impact": "-12 lines",
+      "tasks": [
+        {
+          "id": "task-5-1",
+          "type": "refactor",
+          "description": "Move tag-interaction-manager._getPageTags() to api.js as shared utility",
+          "status": "pending",
+          "files_referenced": ["src/tag-interaction-manager.js:247-259", "src/api.js:424-434"],
+          "files_changed": [],
+          "completion_criteria": [
+            "api.js has single _getPageTags() implementation (may already exist from phase-3)",
+            "tag-interaction-manager.js uses api.js version",
+            "Tests pass"
+          ]
+        },
+        {
+          "id": "task-5-2",
+          "type": "refactor",
+          "description": "Update api.js mock methods to use shared _getPageTags",
+          "status": "pending",
+          "files_referenced": ["src/api.js:424-434", "src/api.js:532-541"],
+          "files_changed": [],
+          "completion_criteria": [
+            "All duplicate tag extraction removed",
+            "Tests pass",
+            "Note: May be complete from phase-3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Similarity Result Extraction Consolidation",
+      "status": "pending",
+      "impact": "-20 lines",
+      "tasks": [
+        {
+          "id": "task-6-1",
+          "type": "refactor",
+          "description": "Consolidate extractSimilarityResults and extractSimilarThingsResults in tag-interaction-manager.js",
+          "status": "pending",
+          "files_referenced": ["src/tag-interaction-manager.js:268-300", "src/tag-interaction-manager.js:308-328"],
+          "files_changed": [],
+          "completion_criteria": [
+            "Single _extractSimilarityResults(matches, sourceFormat) method",
+            "Handles both old searchByTag and new getSimilarByThingId formats",
+            "Tests pass",
+            "Tag interactions still work"
+          ]
+        }
+      ]
+    }
+  ]
+}

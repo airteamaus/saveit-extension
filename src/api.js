@@ -137,6 +137,24 @@ const API = {
   },
 
   /**
+   * Execute async operation with consistent error handling
+   * @private
+   * @param {Function} operation - Async function to execute
+   * @param {string} context - Context for error logging (e.g., 'getSavedPages')
+   * @param {Object} metadata - Additional context for Sentry
+   * @returns {Promise<*>} Operation result
+   */
+  async _executeWithErrorHandling(operation, context, metadata = {}) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.error(`[${context}] Error:`, error);
+      window.SentryHelpers?.captureError(error, { context, ...metadata });
+      throw error;
+    }
+  },
+
+  /**
    * Clear all cached data (delegates to CacheManager)
    */
   async clearAllCache() {
@@ -267,18 +285,18 @@ const API = {
       }
 
       // Fetch fresh data from Cloud Function
-      try {
-        const data = await this._fetchFromCloudFunction(options);
-        const normalized = this._normalizeResponse(data);
+      return this._executeWithErrorHandling(
+        async () => {
+          const data = await this._fetchFromCloudFunction(options);
+          const normalized = this._normalizeResponse(data);
 
-        // Cache and return
-        await this.setCachedPages(normalized);
-        return normalized;
-      } catch (error) {
-        console.error('[getSavedPages] Failed to fetch saved pages:', error);
-        window.SentryHelpers?.captureError(error, { context: 'getSavedPages', options });
-        throw error;
-      }
+          // Cache and return
+          await this.setCachedPages(normalized);
+          return normalized;
+        },
+        'getSavedPages',
+        { options }
+      );
     } else {
       // Standalone mode: use mock data
       return this._getMockData(options);
@@ -292,35 +310,35 @@ const API = {
    */
   async deletePage(id) {
     if (this.isExtension) {
-      try {
-        const idToken = await this.getIdToken();
+      return this._executeWithErrorHandling(
+        async () => {
+          const idToken = await this.getIdToken();
 
-        const params = new URLSearchParams({ id });
+          const params = new URLSearchParams({ id });
 
-        const response = await fetch(
-          `${CONFIG.cloudFunctionUrl}?${params}`,
-          {
-            method: 'DELETE',
-            headers: {
-              'Authorization': `Bearer ${idToken}`
+          const response = await fetch(
+            `${CONFIG.cloudFunctionUrl}?${params}`,
+            {
+              method: 'DELETE',
+              headers: {
+                'Authorization': `Bearer ${idToken}`
+              }
             }
+          );
+
+          if (!response.ok) {
+            const errorMessage = await this.parseErrorResponse(response);
+            throw new Error(errorMessage);
           }
-        );
 
-        if (!response.ok) {
-          const errorMessage = await this.parseErrorResponse(response);
-          throw new Error(errorMessage);
-        }
+          // Invalidate cache after successful delete
+          await this.invalidateCache();
 
-        // Invalidate cache after successful delete
-        await this.invalidateCache();
-
-        return await response.json();
-      } catch (error) {
-        console.error('Failed to delete page:', error);
-        window.SentryHelpers?.captureError(error, { context: 'deletePage', id });
-        throw error;
-      }
+          return await response.json();
+        },
+        'deletePage',
+        { id }
+      );
     } else {
       debug('Mock delete:', id);
       const index = MOCK_DATA.findIndex(p => p.id === id);
@@ -339,35 +357,35 @@ const API = {
    */
   async updatePage(id, updates) {
     if (this.isExtension) {
-      try {
-        const idToken = await this.getIdToken();
+      return this._executeWithErrorHandling(
+        async () => {
+          const idToken = await this.getIdToken();
 
-        const response = await fetch(
-          `${CONFIG.cloudFunctionUrl}/updatePage`,
-          {
-            method: 'PATCH',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${idToken}`
-            },
-            body: JSON.stringify({
-              id,
-              ...updates
-            })
+          const response = await fetch(
+            `${CONFIG.cloudFunctionUrl}/updatePage`,
+            {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+              },
+              body: JSON.stringify({
+                id,
+                ...updates
+              })
+            }
+          );
+
+          if (!response.ok) {
+            const errorMessage = await this.parseErrorResponse(response);
+            throw new Error(errorMessage);
           }
-        );
 
-        if (!response.ok) {
-          const errorMessage = await this.parseErrorResponse(response);
-          throw new Error(errorMessage);
-        }
-
-        return await response.json();
-      } catch (error) {
-        console.error('Failed to update page:', error);
-        window.SentryHelpers?.captureError(error, { context: 'updatePage', id, updates });
-        throw error;
-      }
+          return await response.json();
+        },
+        'updatePage',
+        { id, updates }
+      );
     } else {
       debug('Mock update:', id, updates);
       const page = MOCK_DATA.find(p => p.id === id);
@@ -467,13 +485,11 @@ const API = {
    */
   async searchByTag(label) {
     if (this.isExtension) {
-      try {
-        return await this._fetchTagSearchFromCloudFunction(label);
-      } catch (error) {
-        console.error('Failed to search by tag:', error);
-        window.SentryHelpers?.captureError(error, { context: 'searchByTag', label });
-        throw error;
-      }
+      return this._executeWithErrorHandling(
+        async () => this._fetchTagSearchFromCloudFunction(label),
+        'searchByTag',
+        { label }
+      );
     } else {
       return this._mockSemanticTagSearch(label);
     }
@@ -594,13 +610,11 @@ const API = {
    */
   async getSimilarByThingId(thingId, limit = 50, offset = 0) {
     if (this.isExtension) {
-      try {
-        return await this._fetchSimilarFromCloudFunction(thingId, limit, offset);
-      } catch (error) {
-        console.error('Failed to get similar things:', error);
-        window.SentryHelpers?.captureError(error, { context: 'getSimilarByThingId', thingId, limit, offset });
-        throw error;
-      }
+      return this._executeWithErrorHandling(
+        async () => this._fetchSimilarFromCloudFunction(thingId, limit, offset),
+        'getSimilarByThingId',
+        { thingId, limit, offset }
+      );
     } else {
       return this._mockGetSimilarByThingId(thingId, limit, offset);
     }
@@ -638,13 +652,10 @@ const API = {
    */
   async getGraphData() {
     if (this.isExtension) {
-      try {
-        return await this._fetchGraphFromCloudFunction();
-      } catch (error) {
-        console.error('Failed to get graph data:', error);
-        window.SentryHelpers?.captureError(error, { context: 'getGraphData' });
-        throw error;
-      }
+      return this._executeWithErrorHandling(
+        async () => this._fetchGraphFromCloudFunction(),
+        'getGraphData'
+      );
     } else {
       // Mock data returned by graph.js getMockGraphData()
       throw new Error('Use getMockGraphData() in standalone mode');
