@@ -3,6 +3,7 @@ firefox-dev-profile/
 
 # Test files
 test/
+tests/
 test-*.html
 
 # Development files
@@ -10,3 +11,14 @@ test-*.html
 .git/
 .gitignore
 node_modules/
+
+# Backend repository (cloned during CI/CD for graph-viz bundle)
+saveit-backend/
+
+# Build artifacts
+web-ext-artifacts/
+playwright-report/
+coverage/
+
+# Scripts (not part of extension)
+scripts/
