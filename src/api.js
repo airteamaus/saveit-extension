@@ -155,6 +155,43 @@ const API = {
   },
 
   /**
+   * Fetch from Cloud Function with authentication
+   * @private
+   * @param {string} endpoint - Endpoint path (or full URL)
+   * @param {Object|URLSearchParams} params - Query parameters
+   * @param {Object} options - Fetch options (method, body, etc.)
+   * @returns {Promise<Object>} Parsed JSON response
+   */
+  async _fetchWithAuth(endpoint, params = null, options = {}) {
+    const idToken = await this.getIdToken();
+
+    // Build URL with params if provided
+    let url = endpoint.startsWith('http') ? endpoint : `${CONFIG.cloudFunctionUrl}${endpoint}`;
+    if (params) {
+      const searchParams = params instanceof URLSearchParams
+        ? params
+        : new URLSearchParams(params);
+      url = `${url}?${searchParams}`;
+    }
+
+    const response = await fetch(url, {
+      method: options.method || 'GET',
+      headers: {
+        'Authorization': `Bearer ${idToken}`,
+        ...options.headers
+      },
+      ...options
+    });
+
+    if (!response.ok) {
+      const errorMessage = await this.parseErrorResponse(response);
+      throw new Error(errorMessage);
+    }
+
+    return await response.json();
+  },
+
+  /**
    * Clear all cached data (delegates to CacheManager)
    */
   async clearAllCache() {
@@ -178,34 +215,15 @@ const API = {
    */
   async _fetchFromCloudFunction(options) {
     debug('[getSavedPages] Fetching from Cloud Function...');
-    const idToken = await this.getIdToken();
 
-    const params = new URLSearchParams({
+    const params = {
       limit: options.limit || 50,
       offset: options.offset || 0,
       search: options.search || '',
       sort: options.sort || 'newest'
-    });
+    };
 
-    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      }
-    });
-
-    debug('[getSavedPages] HTTP response:', {
-      status: response.status,
-      statusText: response.statusText,
-      ok: response.ok
-    });
-
-    if (!response.ok) {
-      const errorMessage = await this.parseErrorResponse(response);
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
+    const data = await this._fetchWithAuth('', params);
     debug('[getSavedPages] Raw JSON response:', data);
     return data;
   },
@@ -404,23 +422,7 @@ const API = {
    * @returns {Promise<Object>} Tag search results from Cloud Function
    */
   async _fetchTagSearchFromCloudFunction(label) {
-    const idToken = await this.getIdToken();
-
-    const params = new URLSearchParams({ label });
-
-    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorMessage = await this.parseErrorResponse(response);
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
+    return await this._fetchWithAuth('', { label });
   },
 
   /**
@@ -504,28 +506,14 @@ const API = {
    * @returns {Promise<Object>} Similar things results
    */
   async _fetchSimilarFromCloudFunction(thingId, limit, offset) {
-    const idToken = await this.getIdToken();
-
-    const params = new URLSearchParams({
+    // Note: thing_id in query params triggers the similar things handler (not /similar path)
+    const params = {
       thing_id: thingId,
       limit: limit.toString(),
       offset: offset.toString()
-    });
+    };
 
-    // Note: thing_id in query params triggers the similar things handler (not /similar path)
-    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorMessage = await this.parseErrorResponse(response);
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
+    return await this._fetchWithAuth('', params);
   },
 
   /**
@@ -626,23 +614,7 @@ const API = {
    * @returns {Promise<Object>} Graph data with nodes and edges
    */
   async _fetchGraphFromCloudFunction() {
-    const idToken = await this.getIdToken();
-
-    const params = new URLSearchParams({ graph: 'true' });
-
-    const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${idToken}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorMessage = await this.parseErrorResponse(response);
-      throw new Error(errorMessage);
-    }
-
-    return await response.json();
+    return await this._fetchWithAuth('', { graph: 'true' });
   },
 
   /**

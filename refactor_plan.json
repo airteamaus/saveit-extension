@@ -2,8 +2,8 @@
   "project": "Code Consolidation & Complexity Reduction",
   "created": "2025-11-21",
   "status": "in_progress",
-  "current_phase": "phase-2",
-  "current_task": "task-2-1",
+  "current_phase": "phase-3",
+  "current_task": "task-3-1",
   "goal": "Eliminate 402 lines of duplicate code through architectural consolidation",
 
   "phases": [
@@ -62,72 +62,82 @@
     {
       "id": "phase-2",
       "name": "Fetch Pattern Consolidation",
-      "status": "pending",
-      "impact": "-130 lines",
+      "status": "completed",
+      "impact": "-64 lines (actual)",
       "tasks": [
         {
           "id": "task-2-1",
           "type": "implement",
           "description": "Extract _fetchWithAuth() utility in api.js",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:161-193", "src/api.js:388-406", "src/api.js:490-513", "src/api.js:614-632"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "New _fetchWithAuth(endpoint, params, options) method created",
             "Handles GET/POST/PATCH/DELETE methods",
             "Automatically gets ID token and parses errors",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Added _fetchWithAuth() at line 165. Handles auth token, URL building, error parsing. +36 lines (including JSDoc)."
         },
         {
           "id": "task-2-2",
           "type": "refactor",
           "description": "Convert _fetchFromCloudFunction to use _fetchWithAuth",
-          "status": "pending",
-          "files_referenced": ["src/api.js:161-193"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/api.js:216-248"],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_fetchFromCloudFunction uses _fetchWithAuth",
             "Tests pass",
             "getSavedPages still works"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 32 lines to 14 lines (-18 lines). Preserved debug logging."
         },
         {
           "id": "task-2-3",
           "type": "refactor",
           "description": "Convert _fetchTagSearchFromCloudFunction to use _fetchWithAuth",
-          "status": "pending",
-          "files_referenced": ["src/api.js:388-406"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/api.js:424-442"],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_fetchTagSearchFromCloudFunction uses _fetchWithAuth",
             "Tests pass",
             "searchByTag still works"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 18 lines to 2 lines (-16 lines). Simple one-line call."
         },
         {
           "id": "task-2-4",
           "type": "refactor",
           "description": "Convert _fetchSimilarFromCloudFunction to use _fetchWithAuth",
-          "status": "pending",
-          "files_referenced": ["src/api.js:490-513"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/api.js:508-531"],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_fetchSimilarFromCloudFunction uses _fetchWithAuth",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 23 lines to 9 lines (-14 lines). Preserved thing_id comment."
         },
         {
           "id": "task-2-5",
           "type": "refactor",
           "description": "Convert _fetchGraphFromCloudFunction to use _fetchWithAuth",
-          "status": "pending",
-          "files_referenced": ["src/api.js:614-632"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/api.js:616-634"],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_fetchGraphFromCloudFunction uses _fetchWithAuth",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 18 lines to 2 lines (-16 lines). Simple one-line call."
         }
       ]
     },
