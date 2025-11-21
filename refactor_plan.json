@@ -1,10 +1,12 @@
 {
   "project": "Code Consolidation & Complexity Reduction",
   "created": "2025-11-21",
-  "status": "in_progress",
-  "current_phase": "phase-5",
-  "current_task": "task-5-1",
+  "status": "completed",
+  "completed_date": "2025-11-21",
+  "current_phase": null,
+  "current_task": null,
   "goal": "Eliminate 402 lines of duplicate code through architectural consolidation",
+  "actual_impact": "-232 lines total (phases 1-6)",
 
   "phases": [
     {
@@ -281,56 +283,62 @@
     {
       "id": "phase-5",
       "name": "Tag Extraction Consolidation",
-      "status": "pending",
-      "impact": "-12 lines",
+      "status": "completed",
+      "impact": "-19 lines (actual)",
       "tasks": [
         {
           "id": "task-5-1",
           "type": "refactor",
           "description": "Move tag-interaction-manager._getPageTags() to api.js as shared utility",
-          "status": "pending",
-          "files_referenced": ["src/tag-interaction-manager.js:247-259", "src/api.js:424-434"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/tag-interaction-manager.js:247-259", "src/api.js:186-198"],
+          "files_changed": ["src/tag-interaction-manager.js"],
           "completion_criteria": [
             "api.js has single _getPageTags() implementation (may already exist from phase-3)",
             "tag-interaction-manager.js uses api.js version",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "api.js already had _getPageTags() from phase-3 (line 186). Updated tag-interaction-manager.js to call this.api._getPageTags() instead of this._getPageTags(). Removed duplicate method definition (lines 247-259, -19 lines including JSDoc). All tests pass."
         },
         {
           "id": "task-5-2",
           "type": "refactor",
           "description": "Update api.js mock methods to use shared _getPageTags",
-          "status": "pending",
-          "files_referenced": ["src/api.js:424-434", "src/api.js:532-541"],
+          "status": "completed",
+          "files_referenced": ["src/api.js:478", "src/api.js:557", "src/api.js:563"],
           "files_changed": [],
           "completion_criteria": [
             "All duplicate tag extraction removed",
             "Tests pass",
             "Note: May be complete from phase-3"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Already completed in phase-3. Verified _mockSemanticTagSearch (line 478) and _mockGetSimilarByThingId (lines 557, 563) are using this._getPageTags(). No changes needed."
         }
       ]
     },
     {
       "id": "phase-6",
       "name": "Similarity Result Extraction Consolidation",
-      "status": "pending",
-      "impact": "-20 lines",
+      "status": "completed",
+      "impact": "-13 lines (actual)",
       "tasks": [
         {
           "id": "task-6-1",
           "type": "refactor",
           "description": "Consolidate extractSimilarityResults and extractSimilarThingsResults in tag-interaction-manager.js",
-          "status": "pending",
-          "files_referenced": ["src/tag-interaction-manager.js:268-300", "src/tag-interaction-manager.js:308-328"],
-          "files_changed": [],
+          "status": "completed",
+          "files_referenced": ["src/tag-interaction-manager.js:249-298", "src/tag-interaction-manager.js:212"],
+          "files_changed": ["src/tag-interaction-manager.js"],
           "completion_criteria": [
             "Single _extractSimilarityResults(matches, sourceFormat) method",
             "Handles both old searchByTag and new getSimilarByThingId formats",
             "Tests pass",
             "Tag interactions still work"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Consolidated extractSimilarityResults and extractSimilarThingsResults into single _extractSimilarityResults method (lines 250-289). New method auto-detects format (tiered vs flat results) and handles both. Kept backwards compatibility aliases for old public methods. Updated call site at line 212 to use new method. Net reduction: -13 lines. All tests pass."
         }
       ]
     }

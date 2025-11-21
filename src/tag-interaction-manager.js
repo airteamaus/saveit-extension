@@ -178,7 +178,7 @@ class TagInteractionManager {
       // Fallback to showing pages that match the tag locally from both sets
       const combinedPages = [...allPages, ...currentPages];
       const filteredPages = combinedPages.filter(page => {
-        const pageTags = this._getPageTags(page);
+        const pageTags = this.api._getPageTags(page);
         return pageTags.some(t => t.toLowerCase() === activeLabel.toLowerCase());
       });
       return {
@@ -209,7 +209,7 @@ class TagInteractionManager {
       }
 
       // Extract pages from results
-      const pages = this.extractSimilarThingsResults(results);
+      const pages = this._extractSimilarityResults(results);
 
       return {
         pages,
@@ -233,57 +233,46 @@ class TagInteractionManager {
     const lowerLabel = label.toLowerCase();
 
     return pages.find(page => {
-      const pageTags = this._getPageTags(page);
+      const pageTags = this.api._getPageTags(page);
       return pageTags.some(t => t.toLowerCase() === lowerLabel);
     });
   }
 
-  /**
-   * Get all tags from a page
-   * @private
-   * @param {Object} page - Page object
-   * @returns {Array<string>} Array of tag labels
-   */
-  _getPageTags(page) {
-    const tags = [];
-    if (page.classifications) {
-      tags.push(...page.classifications.map(c => c.label));
-    }
-    if (page.primary_classification_label) {
-      tags.push(page.primary_classification_label);
-    }
-    if (page.manual_tags) {
-      tags.push(...page.manual_tags);
-    }
-    return tags;
-  }
 
   /**
-   * Extract pages from similarity search results (old searchByTag format)
-   * Maps thing_id to full page objects and preserves similarity scores
-   * @param {Object} results - Results from API.searchByTag()
-   * @param {Array} allPages - All pages for lookup
+   * Extract pages from similarity search results
+   * Handles both old searchByTag format (tiered matches) and new getSimilarByThingId format (flat results)
+   * @private
+   * @param {Object} results - Results from API.searchByTag() or API.getSimilarByThingId()
+   * @param {Array} [allPages] - All pages for lookup (only needed for old format with thing_id references)
    * @returns {Array} Array of page objects with _similarity scores
    */
-  extractSimilarityResults(results, allPages) {
+  _extractSimilarityResults(results, allPages = []) {
     const pages = [];
 
-    // Combine all tiers (already sorted by similarity in backend)
-    const allMatches = [
-      ...(results.exact_matches || []),
-      ...(results.similar_matches || []),
-      ...(results.related_matches || [])
-    ];
+    // Normalize input format: detect old (tiered) vs new (flat results array)
+    let allMatches;
+    if (results.results) {
+      // New format: flat results array
+      allMatches = results.results;
+    } else {
+      // Old format: tiered matches (exact/similar/related)
+      allMatches = [
+        ...(results.exact_matches || []),
+        ...(results.similar_matches || []),
+        ...(results.related_matches || [])
+      ];
+    }
 
-    debug('[TagInteractionManager.extractSimilarityResults] Processing', allMatches.length, 'matches');
+    debug('[TagInteractionManager._extractSimilarityResults] Processing', allMatches.length, 'matches');
 
-    // Map thing_id to page from allPages and preserve similarity score
+    // Extract pages from matches
     for (const match of allMatches) {
-      // Backend may return thing_data embedded, or just thing_id
+      // Backend may return thing_data embedded, or just thing_id (old format)
       let page;
       if (match.thing_data) {
         page = match.thing_data;
-      } else {
+      } else if (match.thing_id && allPages.length > 0) {
         page = allPages.find(p => p.id === match.thing_id);
       }
 
@@ -295,36 +284,17 @@ class TagInteractionManager {
       }
     }
 
-    debug('[TagInteractionManager.extractSimilarityResults] Extracted', pages.length, 'pages');
+    debug('[TagInteractionManager._extractSimilarityResults] Extracted', pages.length, 'pages');
     return pages;
   }
 
-  /**
-   * Extract pages from getSimilarByThingId results
-   * New format with results array instead of tiered matches
-   * @param {Object} results - Results from API.getSimilarByThingId()
-   * @returns {Array} Array of page objects with _similarity scores
-   */
+  // Backwards compatibility aliases (deprecated, use _extractSimilarityResults)
+  extractSimilarityResults(results, allPages) {
+    return this._extractSimilarityResults(results, allPages);
+  }
+
   extractSimilarThingsResults(results) {
-    const pages = [];
-
-    const allMatches = results.results || [];
-
-    debug('[TagInteractionManager.extractSimilarThingsResults] Processing', allMatches.length, 'matches');
-
-    // Extract pages from results (thing_data is always included)
-    for (const match of allMatches) {
-      if (match.thing_data) {
-        const page = match.thing_data;
-        // Attach similarity score for potential display
-        page._similarity = match.similarity;
-        page._matched_label = match.matched_label;
-        pages.push(page);
-      }
-    }
-
-    debug('[TagInteractionManager.extractSimilarThingsResults] Extracted', pages.length, 'pages');
-    return pages;
+    return this._extractSimilarityResults(results);
   }
 
   /**
