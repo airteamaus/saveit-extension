@@ -5,6 +5,49 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] - 2025-11-21
+
+### ✨ Features
+
+- integrate similar pages and clickable navigation in knowledge graph (187046b)
+- **build:** enable source maps and fix CI bundle generation (399d274)
+- add Sentry error tracking to browser extension (ebae714)
+- **nav:** add knowledge graph button to newtab header (c2b27ed)
+- **graph:** add knowledge graph page with HUD and node info panel (5caf776)
+- **build:** add graph-viz bundling for extension (b94f5f9)
+
+### 🐛 Bug Fixes
+
+- include ForceGraph3D in bundle (669ac84)
+- include Viewfinder in main bundle to avoid duplicate Three.js (63bdbf4)
+- bundle Three.js for extension CSP compliance (f3e708f)
+- improve logged-out state handling and sign-in UX (7037329)
+- clean up console.log spam in newtab and add favicon (6d18a39)
+
+### ♻️ Refactoring
+
+- consolidate tag extraction and similarity result methods (d2f11af)
+- consolidate browser API detection in config.js (e61ee3b)
+- consolidate mock search logic with shared utilities (77f375f)
+- consolidate fetch-with-auth pattern in api.js (8299f99)
+- consolidate error handling in api.js (9741296)
+- extract helper methods from large functions (5dc7cde)
+
+### 📚 Documentation
+
+- update CLAUDE.md with comprehensive tool reference (41a6338)
+
+## [1.2.0] - 2025-11-20
+
+### 🐛 Bug Fixes
+
+- improve logged-out state handling and sign-in UX (2c9695b)
+- clean up console.log spam in newtab and add favicon (b4b790a)
+
+### ♻️ Refactoring
+
+- extract helper methods from large functions (36be21e)
+
 ## [1.1.1] - 2025-11-16
 
 No notable changes.
@@ -93,18 +136,6 @@ No notable changes.
 
 ## [0.22.1] - 2025-11-15
 
-### 🐛 Bug Fixes
-
-- **dashboard:** prevent loadPages when no user signed in (fd469bb)
-
-## [0.22.0] - 2025-11-15
-
-### 🐛 Bug Fixes
-
-- **dashboard:** show welcome screen when no user signed in (294ba7b)
-
-## [0.21.1] - 2025-11-15
-
 ### ✨ Features
 
 - **chrome:** add Chrome Web Store upload automation (31518fc)
@@ -147,6 +178,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **dashboard:** prevent loadPages when no user signed in (fd469bb)
+- **dashboard:** show welcome screen when no user signed in (294ba7b)
 - **manifest:** migrate to full Manifest V3 cross-browser support (fd5518a)
 - **dashboard:** call updateStats() in render() method (d8d5775)
 - **dashboard:** preserve scroll sentinel in all innerHTML paths (1e527e3)
