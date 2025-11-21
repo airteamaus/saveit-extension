@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "SaveIt",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnoQ2E4mPCJuAsMkwgy4/nIBs19ToxL5xT7vrtSah6kw7/g6ZjJ/Q3PZ/z5cWohXck6gnu+Fh3pT0aTVEr29BxADgQCA+dlj27jW9moLufqGZ/rl8fubxeXR4ERLD3n4S7th4XdtgbZM5WXlioPgARZbSgk08CjPxXx6kliXSQhpZaK8cKW24xPf5VJ7xY6K5wt5YwwWahivzgnioMNTLfXOXrZLTeYSBZcG5PYFRaC0GAhmK8rp72CVWaM12ujggH6/rBeByv55imnhV6Vr5NIdy87v8kGx1D7+AdXwbdpXEpxq7ZfqIOmvTTBFR82Rd0ySbJ7W3IwZoYL0YbrUjyQIDAQAB",
   "browser_specific_settings": {

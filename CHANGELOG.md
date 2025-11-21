@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.2] - 2025-11-22
+
+No notable changes.
+
 ## [1.4.1] - 2025-11-22
 
 No notable changes.
@@ -45,27 +49,6 @@ No notable changes.
 - exclude backend repo and build artifacts from web-ext validation (8cba3d6)
 
 ## [1.3.1] - 2025-11-21
-
-### 🐛 Bug Fixes
-
-- remove pkill command from E2E test script to prevent CI/CD exit code 143 (33334dd)
-- exclude non-extension code from web-ext lint (d4f49a0)
-- use webfactory/ssh-agent for SSH key handling (0a59718)
-- correct saveit-backend checkout path for CI workspace (abcb9a7)
-
-### ⚡ Performance
-
-- remove unused webServer from E2E test config (832e705)
-
-### ♻️ Refactoring
-
-- improve tag system and similarity search accuracy (5bebbff)
-
-### 👷 CI/CD
-
-- add deploy key for saveit-backend graph-viz build (dfda0e2)
-
-## [1.3.0] - 2025-11-21
 
 ### ✨ Features
 
@@ -117,6 +100,10 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- remove pkill command from E2E test script to prevent CI/CD exit code 143 (33334dd)
+- exclude non-extension code from web-ext lint (d4f49a0)
+- use webfactory/ssh-agent for SSH key handling (0a59718)
+- correct saveit-backend checkout path for CI workspace (abcb9a7)
 - include ForceGraph3D in bundle (669ac84)
 - include Viewfinder in main bundle to avoid duplicate Three.js (63bdbf4)
 - bundle Three.js for extension CSP compliance (f3e708f)
@@ -174,8 +161,13 @@ No notable changes.
 - **dashboard:** improve metadata alignment when no tags present (82c4a3a)
 - **mock-data:** flatten ai_enriched_at to match BigQuery API schema (61b7933)
 
+### ⚡ Performance
+
+- remove unused webServer from E2E test config (832e705)
+
 ### ♻️ Refactoring
 
+- improve tag system and similarity search accuracy (5bebbff)
 - consolidate tag extraction and similarity result methods (d2f11af)
 - consolidate browser API detection in config.js (e61ee3b)
 - consolidate mock search logic with shared utilities (77f375f)
@@ -231,6 +223,10 @@ No notable changes.
 ### 🔧 Build System
 
 - **deps-dev:** bump js-yaml from 4.1.0 to 4.1.1 (49bd4d4)
+
+### 👷 CI/CD
+
+- add deploy key for saveit-backend graph-viz build (dfda0e2)
 
 
 ---
