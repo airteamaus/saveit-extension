@@ -192,6 +192,54 @@ const API = {
   },
 
   /**
+   * Extract all tags from a page
+   * @private
+   * @param {Object} page - Page object
+   * @param {boolean} lowercase - Convert tags to lowercase
+   * @returns {string[]} Array of tag strings
+   */
+  _getPageTags(page, lowercase = false) {
+    const tags = [];
+    if (page.classifications) {
+      tags.push(...page.classifications.map(c => c.label));
+    }
+    if (page.primary_classification_label) {
+      tags.push(page.primary_classification_label);
+    }
+    if (page.manual_tags) {
+      tags.push(...page.manual_tags);
+    }
+    return lowercase ? tags.map(t => t.toLowerCase()) : tags;
+  },
+
+  /**
+   * Calculate tag similarity between page tags and a query label
+   * @private
+   * @param {string[]} pageTags - Array of page tags
+   * @param {string} queryLabel - Query label to match against
+   * @returns {Object} { type: 'exact'|'similar'|null, score: number, matchedTag: string|null }
+   */
+  _calculateTagSimilarity(pageTags, queryLabel) {
+    const lowerLabel = queryLabel.toLowerCase();
+
+    // Check for exact match
+    const exactMatch = pageTags.find(tag => tag.toLowerCase() === lowerLabel);
+    if (exactMatch) {
+      return { type: 'exact', score: 1.0, matchedTag: exactMatch };
+    }
+
+    // Check for similar match (substring)
+    const similarMatch = pageTags.find(tag =>
+      tag.toLowerCase().includes(lowerLabel) || lowerLabel.includes(tag.toLowerCase())
+    );
+    if (similarMatch) {
+      return { type: 'similar', score: 0.85, matchedTag: similarMatch };
+    }
+
+    return { type: null, score: 0, matchedTag: null };
+  },
+
+  /**
    * Clear all cached data (delegates to CacheManager)
    */
   async clearAllCache() {
@@ -442,37 +490,20 @@ const API = {
 
     // Simple mock: find pages with matching or similar tags
     MOCK_DATA.forEach(page => {
-      const pageTags = [];
-      if (page.classifications) {
-        pageTags.push(...page.classifications.map(c => c.label));
-      }
-      if (page.primary_classification_label) {
-        pageTags.push(page.primary_classification_label);
-      }
-      if (page.manual_tags) {
-        pageTags.push(...page.manual_tags);
-      }
+      const pageTags = this._getPageTags(page);
+      const similarity = this._calculateTagSimilarity(pageTags, label);
 
-      // Check for exact or similar matches
-      const lowerLabel = label.toLowerCase();
-      const hasExactMatch = pageTags.some(tag => tag.toLowerCase() === lowerLabel);
-      const hasSimilarMatch = pageTags.some(tag =>
-        tag.toLowerCase().includes(lowerLabel) || lowerLabel.includes(tag.toLowerCase())
-      );
-
-      if (hasExactMatch) {
+      if (similarity.type === 'exact') {
         results.exact_matches.push({
           thing_data: page,
-          similarity: 1.0,
-          matched_label: pageTags.find(t => t.toLowerCase() === lowerLabel)
+          similarity: similarity.score,
+          matched_label: similarity.matchedTag
         });
-      } else if (hasSimilarMatch) {
+      } else if (similarity.type === 'similar') {
         results.similar_matches.push({
           thing_data: page,
-          similarity: 0.85,
-          matched_label: pageTags.find(t =>
-            t.toLowerCase().includes(lowerLabel) || lowerLabel.includes(t.toLowerCase())
-          )
+          similarity: similarity.score,
+          matched_label: similarity.matchedTag
         });
       }
     });
@@ -538,25 +569,13 @@ const API = {
     }
 
     // Get source thing's tags for matching
-    const sourceTags = [];
-    if (sourceThing.classifications) {
-      sourceTags.push(...sourceThing.classifications.map(c => c.label.toLowerCase()));
-    }
-    if (sourceThing.primary_classification_label) {
-      sourceTags.push(sourceThing.primary_classification_label.toLowerCase());
-    }
+    const sourceTags = this._getPageTags(sourceThing, true);
 
     // Find similar things (those with matching tags)
     const similar = MOCK_DATA
       .filter(p => p.id !== thingId)
       .map(page => {
-        const pageTags = [];
-        if (page.classifications) {
-          pageTags.push(...page.classifications.map(c => c.label.toLowerCase()));
-        }
-        if (page.primary_classification_label) {
-          pageTags.push(page.primary_classification_label.toLowerCase());
-        }
+        const pageTags = this._getPageTags(page, true);
 
         // Calculate simple similarity based on tag overlap
         const overlap = sourceTags.filter(t => pageTags.includes(t)).length;

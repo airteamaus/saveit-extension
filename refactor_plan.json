@@ -2,8 +2,8 @@
   "project": "Code Consolidation & Complexity Reduction",
   "created": "2025-11-21",
   "status": "in_progress",
-  "current_phase": "phase-3",
-  "current_task": "task-3-1",
+  "current_phase": "phase-4",
+  "current_task": "task-4-1",
   "goal": "Eliminate 402 lines of duplicate code through architectural consolidation",
 
   "phases": [
@@ -144,60 +144,68 @@
     {
       "id": "phase-3",
       "name": "Mock Search Logic Consolidation",
-      "status": "pending",
+      "status": "completed",
       "impact": "-60 lines",
       "tasks": [
         {
           "id": "task-3-1",
           "type": "implement",
           "description": "Extract _getPageTags() utility in api.js",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:424-434", "src/api.js:532-541"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "New _getPageTags(page) utility extracts all tags from a page",
             "Returns array of tag strings",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Added _getPageTags(page, lowercase=false) at line 201. Supports optional lowercase conversion for overlap-based similarity calculations."
         },
         {
           "id": "task-3-2",
           "type": "implement",
           "description": "Extract _calculateTagSimilarity() utility in api.js",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:436-458", "src/api.js:544-575"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "New _calculateTagSimilarity(pageTags, queryLabel) utility",
             "Returns { type: 'exact'|'similar'|null, score: number, matchedTag: string }",
             "Tests pass"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Added _calculateTagSimilarity(pageTags, queryLabel) at line 222. Returns structured similarity object with type (exact/similar/null), score, and matched tag."
         },
         {
           "id": "task-3-3",
           "type": "refactor",
           "description": "Refactor _mockSemanticTagSearch to use utilities",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:414-461"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_mockSemanticTagSearch uses _getPageTags and _calculateTagSimilarity",
             "Tests pass",
             "searchByTag still works in standalone mode"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 47 lines to 30 lines (-17 lines). Eliminated duplicate tag extraction and similarity logic."
         },
         {
           "id": "task-3-4",
           "type": "refactor",
           "description": "Refactor _mockGetSimilarByThingId to use utilities",
-          "status": "pending",
+          "status": "completed",
           "files_referenced": ["src/api.js:523-586"],
-          "files_changed": [],
+          "files_changed": ["src/api.js"],
           "completion_criteria": [
             "_mockGetSimilarByThingId uses _getPageTags and _calculateTagSimilarity",
             "Tests pass",
             "Similar pages search works in standalone mode"
-          ]
+          ],
+          "completion_date": "2025-11-21",
+          "findings": "Reduced from 64 lines to 52 lines (-12 lines). Eliminated duplicate tag extraction using _getPageTags with lowercase option."
         }
       ]
     },
