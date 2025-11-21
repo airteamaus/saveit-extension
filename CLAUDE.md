@@ -104,27 +104,48 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 
 Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 
-**Component Pattern:**
-- `src/components.js` - Pure UI builders (no business logic)
-- `src/newtab.js` - Main controller (orchestrates managers, handles data loading)
-- `src/tag-manager.js` - Tag hierarchy and classification logic
-- `src/search-manager.js` - Search and filtering logic
-- `src/scroll-manager.js` - Infinite scroll and pagination logic
-- `src/stats-manager.js` - Stats display logic
-- `src/notification-manager.js` - Notification/toast UI
-- `src/cache-manager.js` - Browser storage caching (user-isolated)
-- `src/auth-ui.js` - Authentication UI management
-- `src/page-loader-manager.js` - Page loading and data fetching
-- `src/event-manager.js` - Event handling coordination
-- `src/api.js` - API abstraction (auto-detects mode)
-- `src/mock-data.js` - Test data and filtering (standalone only)
-- `src/graph.js` - Knowledge graph visualization page
+**Architecture Layers:**
 
-**Save Flow:**
-1. User clicks toolbar → `browser.browserAction.onClicked`
-2. Get user info from cache or OAuth
-3. POST to Cloud Function
-4. Show notification
+*UI Layer (presentation):*
+- `src/components.js` - Pure UI builders
+- `src/newtab.js` - Main dashboard controller
+- `src/graph.js` / `graph.html` - 3D knowledge graph (Three.js + GraphViz)
+
+*Manager Layer (business logic):*
+- `src/tag-manager.js` - Tag hierarchy & classification
+- `src/search-manager.js` - Search & filtering
+- `src/scroll-manager.js` - Infinite scroll & pagination
+- `src/page-loader-manager.js` - Data fetching & loading states
+- `src/event-manager.js` - Event coordination
+- `src/stats-manager.js` - Statistics display
+- `src/notification-manager.js` - Toast notifications
+- `src/auth-ui.js` - Authentication UI
+
+*Data Layer (API & storage):*
+- `src/api.js` - API abstraction (mode auto-detection)
+- `src/cache-manager.js` - Browser storage (user-isolated)
+- `src/mock-data.js` - Test data (standalone mode only)
+- `src/background.js` - Service worker (toolbar saves, OAuth)
+
+**Key Flows:**
+
+*Toolbar Save:*
+1. User clicks toolbar → `background.js` → `browser.browserAction.onClicked`
+2. Get cached user or trigger OAuth popup
+3. POST to Cloud Function `/save`
+4. Show success/error notification
+
+*Dashboard Load:*
+1. `newtab.js` checks auth state
+2. `page-loader-manager.js` fetches via `api.js`
+3. Managers render cards, tags, stats
+4. Infinite scroll loads more on demand
+
+*Graph Visualization:*
+1. `graph.js` fetches from `/graph-data` API
+2. GraphViz renders 3D force-directed graph (Three.js)
+3. HUD panel shows node details + similar pages
+4. Viewfinder minimap for navigation
 
 **OAuth caching:** Permanent after first auth. Clear: `browser.storage.local.clear()`
 

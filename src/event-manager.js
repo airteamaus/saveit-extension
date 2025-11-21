@@ -84,10 +84,10 @@ class EventManager {
         const runtime = dashboard.getBrowserRuntime();
         if (runtime) {
           const graphUrl = runtime.getURL('src/graph.html');
-          window.open(graphUrl, '_blank');
+          window.location.href = graphUrl;
         } else {
           // Standalone mode - try relative path
-          window.open('graph.html', '_blank');
+          window.location.href = 'graph.html';
         }
       });
     }

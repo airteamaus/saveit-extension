@@ -359,10 +359,10 @@ class SaveItDashboard {
 
 
   /**
-   * Open a saved page in new tab
+   * Open a saved page in the same tab
    */
   openPage(url) {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.location.href = url;
   }
 
   /**
