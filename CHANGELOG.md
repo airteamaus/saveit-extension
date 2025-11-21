@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.5] - 2025-11-21
+
+No notable changes.
+
 ## [1.3.4] - 2025-11-21
 
 No notable changes.
@@ -125,21 +129,6 @@ No notable changes.
 
 - **tags:** show full hierarchical context when clicking any tag (213ad7d)
 - **tags:** enable tag clicks in search results and show hierarchical child tags (865898b)
-
-### 🐛 Bug Fixes
-
-- **tags:** restore tag bar click handling (28c90ec)
-
-### ♻️ Refactoring
-
-- **css:** use rem units for accessibility and user font size preferences (48854a9)
-- **css:** modernize theme system with light-dark() and system-ui (5d7bbcf)
-
-## [1.0.0] - 2025-11-15
-
-### ✨ Features
-
-- **tags:** enable tag clicks in search results and show hierarchical child tags (e35e6e2)
 - **chrome:** add Chrome Web Store upload automation (31518fc)
 - **onboarding:** add welcome state for first-time users (d405619)
 - **validators:** accept composite thing IDs for duplicate prevention (bf25f30)
@@ -180,6 +169,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **tags:** restore tag bar click handling (28c90ec)
 - **manifest:** add cross-browser background script support and fix CSP violations (49395fc)
 - restore original Chrome extension key for stable local dev ID (11ecae7)
 - **dashboard:** add resilience and remove duplicate logging (c284337)
@@ -228,8 +218,8 @@ No notable changes.
 
 ### ♻️ Refactoring
 
-- **css:** use rem units for accessibility and user font size preferences (95b0f05)
-- **css:** modernize theme system with light-dark() and system-ui (7a1979d)
+- **css:** use rem units for accessibility and user font size preferences (48854a9)
+- **css:** modernize theme system with light-dark() and system-ui (5d7bbcf)
 - **dashboard:** simplify init flow and fix race conditions (ad5f66c)
 - **dashboard:** implement similarity-based tag filtering with single code path (6d89ce6)
 - replace flowery About text with factual technical explanation (448fcc1)
