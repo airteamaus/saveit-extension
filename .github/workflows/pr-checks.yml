@@ -25,7 +25,7 @@ jobs:
         run: npm ci
 
       - name: Build bundles
-        run: node scripts/bundle-firebase.js
+        run: node scripts/bundle-firebase.js && node scripts/bundle-graph.js
 
       - name: Run ESLint
         run: npm run lint

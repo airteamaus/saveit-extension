@@ -211,7 +211,42 @@ just test           # Run unit + integration tests
 just check          # Run all checks (lint + test + validate + build)
 just pre-deploy     # Full pre-deployment checklist
 just bump patch     # Bump version and create git tag
+just build          # Build all bundles (Firebase + graph-viz)
 ```
+
+## Build Process
+
+**Bundle generation:** Extension uses esbuild to bundle dependencies for browser compatibility.
+
+**Bundles created** (in `src/bundles/`, gitignored):
+1. `firebase-background.js` - Firebase SDK for service worker (101KB)
+2. `firebase-dashboard.js` - Firebase SDK for dashboard (100KB)
+3. `background-bundle.js` - Background script with polyfill (186KB)
+4. `sentry-init.js` - Sentry error tracking (70KB)
+5. `graph-viz.js` - Graph visualization library (1.5MB, includes Viewfinder)
+6. `browser-polyfill.min.js` - WebExtension API polyfill (10KB, copied from node_modules)
+7. `*.js.map` - Source maps for debugging (~10MB total)
+
+**Build commands:**
+```bash
+npm run build                    # Build all bundles + package extension
+npm run build:graph              # Build graph-viz bundle only
+node scripts/bundle-firebase.js  # Build Firebase bundles only
+node scripts/bundle-graph.js     # Build graph-viz bundle only
+```
+
+**Build scripts:**
+- `scripts/bundle-firebase.js` - Bundles Firebase SDK (esbuild, target: Firefox 115+, Chrome 120+)
+- `scripts/bundle-graph.js` - Bundles graph-viz from `../saveit-backend/graph-viz/src/`
+
+**Build configuration:**
+- Tool: esbuild v0.27.0
+- Source maps: Enabled (for debugging)
+- Minify: Yes
+- Tree shaking: Yes
+- Format: ESM
+
+**IMPORTANT:** Bundles are NOT committed to git (excluded via .gitignore). CI/CD builds them automatically.
 
 **Development:**
 ```bash

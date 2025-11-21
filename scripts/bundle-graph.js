@@ -25,7 +25,7 @@ const sharedConfig = {
   format: 'esm',
   platform: 'browser',
   target: ['firefox115', 'chrome120'],
-  sourcemap: false,
+  sourcemap: true,
   minify: true,
   treeShaking: true,
 };
