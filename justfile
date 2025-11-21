@@ -15,7 +15,7 @@ watch-firebase:
 
 # Lint the extension with web-ext
 lint:
-    npx web-ext lint
+    npx web-ext lint --ignore-files saveit-backend/ --ignore-files scripts/
 
 # Lint JavaScript with ESLint
 lint-js:
