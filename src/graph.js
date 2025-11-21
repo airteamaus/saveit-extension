@@ -9,6 +9,7 @@ import { GraphViz, Viewfinder } from './bundles/graph-viz.js';
 // Global state
 let graph = null;
 let viewfinder = null;
+let graphData = null; // Store graph data for looking up node details
 
 /**
  * Initialize theme from saved preference
@@ -118,99 +119,14 @@ function getMockGraphData() {
 }
 
 /**
- * Show node info panel with thing list
- * @param {Object} node - The selected node
- */
-function showNodeInfoPanel(node) {
-  const panel = document.getElementById('node-info-panel');
-  if (!panel) return;
-
-  // Update panel content
-  const labelEl = panel.querySelector('.node-info-label');
-  const typeEl = panel.querySelector('.node-info-type');
-  const countEl = panel.querySelector('.node-info-count');
-  const itemsEl = panel.querySelector('.node-info-items');
-
-  if (labelEl) labelEl.textContent = node.label || node.id;
-  if (typeEl) typeEl.textContent = node.thing_type || 'unknown';
-
-  const things = node.things || [];
-  if (countEl) {
-    countEl.textContent = things.length === 1
-      ? '1 bookmark'
-      : `${things.length} bookmarks`;
-  }
-
-  // Render items
-  if (itemsEl) {
-    itemsEl.innerHTML = '';
-
-    if (things.length === 0) {
-      itemsEl.innerHTML = '<div class="node-info-more">No bookmarks</div>';
-    } else {
-      const maxItems = 10;
-      const displayItems = things.slice(0, maxItems);
-
-      displayItems.forEach(thing => {
-        const item = document.createElement('a');
-        item.className = 'node-info-item';
-        item.textContent = thing.title || thing.url || thing.id;
-        item.href = thing.url || '#';
-        item.target = '_blank';
-        item.rel = 'noopener noreferrer';
-        itemsEl.appendChild(item);
-      });
-
-      if (things.length > maxItems) {
-        const more = document.createElement('div');
-        more.className = 'node-info-more';
-        more.textContent = `... and ${things.length - maxItems} more`;
-        itemsEl.appendChild(more);
-      }
-    }
-  }
-
-  // Show panel
-  panel.classList.add('visible');
-}
-
-/**
- * Hide node info panel
- */
-function hideNodeInfoPanel() {
-  const panel = document.getElementById('node-info-panel');
-  if (panel) {
-    panel.classList.remove('visible');
-  }
-}
-
-/**
- * Initialize node info panel close handlers
- */
-function initNodeInfoPanel() {
-  const panel = document.getElementById('node-info-panel');
-  if (!panel) return;
-
-  // Close button
-  const closeBtn = panel.querySelector('.node-info-close');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', hideNodeInfoPanel);
-  }
-
-  // Escape key to close
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && panel.classList.contains('visible')) {
-      hideNodeInfoPanel();
-    }
-  });
-}
-
-/**
  * Initialize GraphViz with data
  * @param {Object} data - Graph data with nodes and edges
  */
 async function initializeGraph(data) {
   try {
+    // Store graph data for node lookups
+    graphData = data;
+
     // Create GraphViz instance
     graph = new GraphViz('#graph-container', {
       dataSource: data,
@@ -246,18 +162,53 @@ async function initializeGraph(data) {
               }
             }
           }
-        ]
+        ],
+        // Callback when child node is clicked - select that node
+        onChildNodeClick: (nodeId) => {
+          if (graph) {
+            graph.selectNode(nodeId);
+          }
+        },
+        // Callback to fetch similar pages for a selected node
+        onSimilarPagesRequest: async (nodeId, callback) => {
+          // Find the node in the graph data
+          const node = graphData?.nodes?.find(n => n.id === nodeId);
+          if (!node) {
+            console.warn('Graph: Node not found:', nodeId);
+            callback([]);
+            return;
+          }
+
+          // Get the things (pages) associated with this node
+          const things = node.things || [];
+          if (things.length === 0) {
+            callback([]);
+            return;
+          }
+
+          // Pick a representative thing (first one for simplicity)
+          const representativeThing = things[0];
+
+          try {
+            // Fetch similar pages using the API
+            const response = await API.getSimilarByThingId(representativeThing.id, 10);
+            const results = response?.results || [];
+            callback(results);
+          } catch (error) {
+            console.error('Graph: Error fetching similar pages:', error);
+            callback([]);
+          }
+        }
       },
 
-      // Node click - show info panel
-      onNodeClick: (node) => {
-        showNodeInfoPanel(node);
-      },
-
-      // Selection change callback
+      // Selection change callback - prevent deselect when hovering HUD panel
       onSelectionChange: (event) => {
         if (event === 'deselect') {
-          hideNodeInfoPanel();
+          const selectionManager = graph?.getSelectionManager();
+          if (selectionManager?.isHUDPanelHovered) {
+            // Prevent deselection when clicking pages in HUD panel
+            return;
+          }
         }
       },
 
@@ -354,7 +305,6 @@ async function init() {
 
   // Initialize UI handlers
   initAuthUI();
-  initNodeInfoPanel();
 
   if (API.isExtension) {
     // Wait for Firebase to be ready
