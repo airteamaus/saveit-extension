@@ -24,6 +24,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Checkout saveit-backend (private repo)
+        uses: actions/checkout@v4
+        with:
+          repository: airteamaus/saveit-backend
+          ssh-key: ${{ secrets.BACKEND_DEPLOY_KEY }}
+          path: ../saveit-backend
+
+      - name: Install backend dependencies
+        run: cd ../saveit-backend/graph-viz && npm install
+
       - name: Build bundles
         run: node scripts/bundle-firebase.js && node scripts/bundle-graph.js
 
@@ -79,6 +89,16 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Checkout saveit-backend (private repo)
+        uses: actions/checkout@v4
+        with:
+          repository: airteamaus/saveit-backend
+          ssh-key: ${{ secrets.BACKEND_DEPLOY_KEY }}
+          path: ../saveit-backend
+
+      - name: Install backend dependencies
+        run: cd ../saveit-backend/graph-viz && npm install
 
       - name: Build extension
         run: npm run build
