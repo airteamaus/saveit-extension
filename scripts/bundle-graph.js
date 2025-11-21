@@ -13,7 +13,16 @@ const __dirname = path.dirname(__filename);
 
 const EXTENSION_DIR = path.join(__dirname, '..');
 const BUNDLE_DIR = path.join(EXTENSION_DIR, 'src', 'bundles');
-const GRAPH_VIZ_DIR = path.join(__dirname, '..', '..', 'saveit-backend', 'graph-viz');
+
+// Check multiple possible paths for graph-viz directory
+// 1. Sibling repo (local development): ../../saveit-backend/graph-viz
+// 2. Inside repo (CI): ../saveit-backend/graph-viz
+const POSSIBLE_GRAPH_VIZ_PATHS = [
+  path.join(__dirname, '..', '..', 'saveit-backend', 'graph-viz'), // Local dev
+  path.join(__dirname, '..', 'saveit-backend', 'graph-viz'),        // CI
+];
+
+const GRAPH_VIZ_DIR = POSSIBLE_GRAPH_VIZ_PATHS.find(p => fs.existsSync(p));
 
 // Ensure bundles directory exists
 if (!fs.existsSync(BUNDLE_DIR)) {
@@ -89,8 +98,9 @@ async function build() {
     console.log('Building graph bundles...');
 
     // Verify graph-viz directory exists
-    if (!fs.existsSync(GRAPH_VIZ_DIR)) {
-      throw new Error(`graph-viz directory not found at ${GRAPH_VIZ_DIR}`);
+    if (!GRAPH_VIZ_DIR) {
+      const searchedPaths = POSSIBLE_GRAPH_VIZ_PATHS.map(p => `  - ${p}`).join('\n');
+      throw new Error(`graph-viz directory not found. Searched:\n${searchedPaths}`);
     }
 
     // Build main bundle (includes GraphViz and Viewfinder)

@@ -28,10 +28,10 @@ jobs:
         with:
           repository: airteamaus/saveit-backend
           ssh-key: ${{ secrets.BACKEND_DEPLOY_KEY }}
-          path: ../saveit-backend
+          path: saveit-backend
 
       - name: Install backend dependencies
-        run: cd ../saveit-backend/graph-viz && npm install
+        run: cd saveit-backend/graph-viz && npm install
 
       - name: Add build date to manifest
         run: |

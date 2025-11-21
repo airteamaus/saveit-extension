@@ -11,6 +11,9 @@ node_modules/
 web-ext-artifacts/
 src/bundles/
 
+# CI checkout directory (private repo)
+saveit-backend/
+
 # Test coverage reports
 coverage/
 
