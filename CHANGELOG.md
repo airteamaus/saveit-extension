@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2025-11-21
+
+No notable changes.
+
 ## [1.3.7] - 2025-11-21
 
 No notable changes.
@@ -91,17 +95,6 @@ No notable changes.
 
 ## [1.2.0] - 2025-11-20
 
-### 🐛 Bug Fixes
-
-- improve logged-out state handling and sign-in UX (2c9695b)
-- clean up console.log spam in newtab and add favicon (b4b790a)
-
-### ♻️ Refactoring
-
-- extract helper methods from large functions (36be21e)
-
-## [1.1.1] - 2025-11-16
-
 ### ✨ Features
 
 - **tags:** show full hierarchical context when clicking any tag (213ad7d)
@@ -146,6 +139,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- improve logged-out state handling and sign-in UX (2c9695b)
+- clean up console.log spam in newtab and add favicon (b4b790a)
 - auto-kill stale Playwright processes before E2E tests (ebfb300)
 - reduce Playwright workers to 2 to eliminate E2E test race condition (c16e352)
 - resolve E2E test timeout in parallel execution (ddd0be6)
@@ -200,6 +195,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- extract helper methods from large functions (36be21e)
 - extract page loader manager from newtab.js (-83 lines) (e598414)
 - extract event and auth managers from newtab.js (-206 lines) (a20a761)
 - extract cache, notification, and stats managers (1fe529d)
