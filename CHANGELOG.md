@@ -5,6 +5,44 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.4] - 2025-11-21
+
+No notable changes.
+
+## [1.3.3] - 2025-11-21
+
+### 🐛 Bug Fixes
+
+- use glob patterns to properly exclude backend files from validation (37d1ec6)
+- use .web-ext-ignore instead of command-line ignore flags (20de54f)
+
+## [1.3.2] - 2025-11-21
+
+### 🐛 Bug Fixes
+
+- exclude backend repo and build artifacts from web-ext validation (8cba3d6)
+
+## [1.3.1] - 2025-11-21
+
+### 🐛 Bug Fixes
+
+- remove pkill command from E2E test script to prevent CI/CD exit code 143 (33334dd)
+- exclude non-extension code from web-ext lint (d4f49a0)
+- use webfactory/ssh-agent for SSH key handling (0a59718)
+- correct saveit-backend checkout path for CI workspace (abcb9a7)
+
+### ⚡ Performance
+
+- remove unused webServer from E2E test config (832e705)
+
+### ♻️ Refactoring
+
+- improve tag system and similarity search accuracy (5bebbff)
+
+### 👷 CI/CD
+
+- add deploy key for saveit-backend graph-viz build (dfda0e2)
+
 ## [1.3.0] - 2025-11-21
 
 ### ✨ Features
@@ -102,42 +140,6 @@ No notable changes.
 ### ✨ Features
 
 - **tags:** enable tag clicks in search results and show hierarchical child tags (e35e6e2)
-
-### ♻️ Refactoring
-
-- **css:** use rem units for accessibility and user font size preferences (95b0f05)
-- **css:** modernize theme system with light-dark() and system-ui (7a1979d)
-
-### 📚 Documentation
-
-- update documentation for v0.99.99 and cross-browser support (62b8569)
-
-## [0.99.99] - 2025-11-15
-
-### 🐛 Bug Fixes
-
-- **manifest:** add cross-browser background script support and fix CSP violations (49395fc)
-- restore original Chrome extension key for stable local dev ID (11ecae7)
-
-## [0.99.9] - 2025-11-15
-
-No notable changes.
-
-## [0.99.0] - 2025-11-15
-
-### 🐛 Bug Fixes
-
-- **dashboard:** add resilience and remove duplicate logging (c284337)
-- **dashboard:** also prevent refreshInBackground when no user signed in (5499e65)
-
-### ♻️ Refactoring
-
-- **dashboard:** simplify init flow and fix race conditions (ad5f66c)
-
-## [0.22.1] - 2025-11-15
-
-### ✨ Features
-
 - **chrome:** add Chrome Web Store upload automation (31518fc)
 - **onboarding:** add welcome state for first-time users (d405619)
 - **validators:** accept composite thing IDs for duplicate prevention (bf25f30)
@@ -178,6 +180,10 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **manifest:** add cross-browser background script support and fix CSP violations (49395fc)
+- restore original Chrome extension key for stable local dev ID (11ecae7)
+- **dashboard:** add resilience and remove duplicate logging (c284337)
+- **dashboard:** also prevent refreshInBackground when no user signed in (5499e65)
 - **dashboard:** prevent loadPages when no user signed in (fd469bb)
 - **dashboard:** show welcome screen when no user signed in (294ba7b)
 - **manifest:** migrate to full Manifest V3 cross-browser support (fd5518a)
@@ -222,6 +228,9 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- **css:** use rem units for accessibility and user font size preferences (95b0f05)
+- **css:** modernize theme system with light-dark() and system-ui (7a1979d)
+- **dashboard:** simplify init flow and fix race conditions (ad5f66c)
 - **dashboard:** implement similarity-based tag filtering with single code path (6d89ce6)
 - replace flowery About text with factual technical explanation (448fcc1)
 - **dashboard:** remove duplicate inlined CSS, use external stylesheet (36f08ca)
@@ -240,6 +249,7 @@ No notable changes.
 
 ### 📚 Documentation
 
+- update documentation for v0.99.99 and cross-browser support (62b8569)
 - add new tab page design exploration memo (31c062b)
 - add comprehensive testing instructions and beta warnings (52f55bb)
 - update cache-busting recommendations (b45f722)
