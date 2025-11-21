@@ -9,6 +9,8 @@ export default defineConfig({
   // Tests pass reliably at workers=1 (serial) but timeout intermittently at workers=5
   workers: process.env.CI ? 1 : 2,
   reporter: 'html',
+  timeout: 30000, // 30s per test (default)
+  globalTimeout: 120000, // 2 minutes for entire test suite
   use: {
     trace: 'on-first-retry',
     headless: !!process.env.CI
