@@ -50,9 +50,9 @@ class TagInteractionManager {
   /**
    * Render tag bar with hierarchical selection
    * @param {Array} allPages - All pages (for L1 extraction)
-   * @param {Array} filteredPages - Currently filtered pages (for L2/L3 extraction)
+   * @param {Array} _filteredPages - Currently filtered pages (for L2/L3 extraction)
    */
-  renderTagBar(allPages, filteredPages) {
+  renderTagBar(allPages, _filteredPages) {
     const tagBarContainer = document.getElementById('tag-bar');
     if (!tagBarContainer) {
       console.warn('[TagInteractionManager] Tag bar container not found');
@@ -80,7 +80,9 @@ class TagInteractionManager {
 
     // Only show L2 tags if L1 is selected
     if (this.selectedL1) {
-      const l2Tags = this.tagManager.extractL2TagsForL1(this.selectedL1, filteredPages);
+      // Extract L2 tags from ALL pages with this L1, not just filtered results
+      // This ensures we show all domain tags under the selected general category
+      const l2Tags = this.tagManager.extractL2TagsForL1(this.selectedL1, allPages);
 
       if (l2Tags.length > 0) {
         l2Html = l2Tags.map(tag => {
@@ -93,7 +95,8 @@ class TagInteractionManager {
 
     // Only show L3 tags if L2 is selected
     if (this.selectedL2) {
-      const l3Tags = this.tagManager.extractL3TagsForL2(this.selectedL2, filteredPages);
+      // Extract L3 tags from ALL pages with this L2, not just filtered results
+      const l3Tags = this.tagManager.extractL3TagsForL2(this.selectedL2, allPages);
 
       if (l3Tags.length > 0) {
         l3Html = l3Tags.map(tag => {
@@ -194,12 +197,14 @@ class TagInteractionManager {
       debug('[TagInteractionManager.handleTagClick] Searching similar to thing:', representativeThing.id, 'for tag:', activeLabel);
 
       // Call backend similar things endpoint using pregenerated embeddings
-      const results = await this.api.getSimilarByThingId(representativeThing.id, 50, 0);
+      // Pass activeLabel as classification_label for more accurate semantic search
+      const results = await this.api.getSimilarByThingId(representativeThing.id, 50, 0, activeLabel);
 
       debug('[TagInteractionManager.handleTagClick] Got results:', {
         count: results.results?.length || 0,
         total: results.pagination?.total || 0,
-        source_label: results.source?.label
+        source_label: results.source?.label,
+        requested_label: results.source?.requested_label
       });
 
       // Validate response format
@@ -223,19 +228,43 @@ class TagInteractionManager {
   }
 
   /**
-   * Find a thing that has the specified tag
+   * Find the best representative thing for a given tag
+   * Uses heuristic: page with most tags = best classified = best representative
    * @private
    * @param {string} label - Tag label to find
    * @param {Array} pages - Pages to search through
-   * @returns {Object|null} First page with this tag or null
+   * @returns {Object|null} Best representative page with this tag or null
    */
   _findThingWithTag(label, pages) {
     const lowerLabel = label.toLowerCase();
 
-    return pages.find(page => {
+    // Find all pages with this tag
+    const pagesWithTag = pages.filter(page => {
       const pageTags = this.api._getPageTags(page);
       return pageTags.some(t => t.toLowerCase() === lowerLabel);
     });
+
+    if (pagesWithTag.length === 0) {
+      return null;
+    }
+
+    // Pick best representative: page with most tags (indicates well-classified content)
+    // Well-classified pages are better representatives for similarity search
+    const bestRepresentative = pagesWithTag.reduce((best, page) => {
+      const bestTags = this.api._getPageTags(best);
+      const pageTags = this.api._getPageTags(page);
+      return pageTags.length > bestTags.length ? page : best;
+    });
+
+    debug('[TagInteractionManager._findThingWithTag] Selected representative:', {
+      tag: label,
+      title: bestRepresentative.title,
+      url: bestRepresentative.url,
+      totalTags: this.api._getPageTags(bestRepresentative).length,
+      candidatesCount: pagesWithTag.length
+    });
+
+    return bestRepresentative;
   }
 
 

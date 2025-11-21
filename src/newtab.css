@@ -696,7 +696,7 @@ body {
   background: light-dark(rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.15));
   color: light-dark(var(--color-primary), #60a5fa);
   border: 1px solid light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.3));
-  font-weight: 600;
+  font-weight: 400;
 }
 
 .tag.tag-domain:hover {

@@ -46,8 +46,11 @@ class TagManager {
 
     pages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
-        const pageGeneral = page.classifications.find(c => c.type === 'general');
-        if (pageGeneral && pageGeneral.label === l1Label) {
+        // Check if ANY general tag matches (page can have multiple general tags)
+        const hasMatchingGeneral = page.classifications.some(c =>
+          c.type === 'general' && c.label === l1Label
+        );
+        if (hasMatchingGeneral) {
           const domainTags = page.classifications.filter(c => c.type === 'domain');
           domainTags.forEach(tag => {
             tagMap.set(tag.label, { type: 'domain', label: tag.label });
@@ -70,8 +73,11 @@ class TagManager {
 
     pages.forEach(page => {
       if (page.classifications && page.classifications.length > 0) {
-        const pageDomain = page.classifications.find(c => c.type === 'domain');
-        if (pageDomain && pageDomain.label === l2Label) {
+        // Check if ANY domain tag matches (page can have multiple domain tags)
+        const hasMatchingDomain = page.classifications.some(c =>
+          c.type === 'domain' && c.label === l2Label
+        );
+        if (hasMatchingDomain) {
           const topicTags = page.classifications.filter(c => c.type === 'topic');
           topicTags.forEach(tag => {
             tagMap.set(tag.label, { type: 'topic', label: tag.label });

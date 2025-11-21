@@ -2,8 +2,8 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
-/* global CacheManager_Export, filterMockData */
-import { getBrowserRuntime, getStorageAPI } from './config.js';
+/* global CacheManager_Export, filterMockData, getBrowserRuntime, getStorageAPI */
+// getBrowserRuntime and getStorageAPI are provided by config-loader.js (loaded as module)
 
 /* eslint-disable-next-line no-unused-vars */
 const API = {
@@ -519,15 +519,21 @@ const API = {
    * @param {string} thingId - Source thing ID
    * @param {number} limit - Max results
    * @param {number} offset - Pagination offset
+   * @param {string} [classificationLabel] - Optional: specific classification label to use for similarity search
    * @returns {Promise<Object>} Similar things results
    */
-  async _fetchSimilarFromCloudFunction(thingId, limit, offset) {
+  async _fetchSimilarFromCloudFunction(thingId, limit, offset, classificationLabel = null) {
     // Note: thing_id in query params triggers the similar things handler (not /similar path)
     const params = {
       thing_id: thingId,
       limit: limit.toString(),
       offset: offset.toString()
     };
+
+    // Add classification_label if provided for more accurate semantic search
+    if (classificationLabel) {
+      params.classification_label = classificationLabel;
+    }
 
     return await this._fetchWithAuth('', params);
   },
@@ -598,14 +604,15 @@ const API = {
    * @param {string} thingId - Source thing ID to find similar items for
    * @param {number} [limit=50] - Max results to return
    * @param {number} [offset=0] - Pagination offset
+   * @param {string} [classificationLabel] - Optional: specific classification label to use for similarity search
    * @returns {Promise<Object>} Results with pagination metadata
    */
-  async getSimilarByThingId(thingId, limit = 50, offset = 0) {
+  async getSimilarByThingId(thingId, limit = 50, offset = 0, classificationLabel = null) {
     if (this.isExtension) {
       return this._executeWithErrorHandling(
-        async () => this._fetchSimilarFromCloudFunction(thingId, limit, offset),
+        async () => this._fetchSimilarFromCloudFunction(thingId, limit, offset, classificationLabel),
         'getSimilarByThingId',
-        { thingId, limit, offset }
+        { thingId, limit, offset, classificationLabel }
       );
     } else {
       return this._mockGetSimilarByThingId(thingId, limit, offset);
