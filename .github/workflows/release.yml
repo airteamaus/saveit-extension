@@ -44,6 +44,14 @@ jobs:
       - name: Build bundles
         run: node scripts/bundle-firebase.js && node scripts/bundle-graph.js
 
+      - name: Clean up backend repo (not needed in extension package)
+        run: |
+          ls -la | head -20
+          echo "Removing saveit-backend directory..."
+          rm -rf saveit-backend
+          echo "Verifying removal..."
+          ls -la | grep saveit-backend || echo "✓ saveit-backend successfully removed"
+
       - name: Build Chrome extension (unsigned zip)
         run: |
           # Build creates universal package that works for both Firefox and Chrome
