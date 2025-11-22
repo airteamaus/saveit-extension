@@ -6,7 +6,6 @@
  * Uses IntersectionObserver to detect when user scrolls near bottom
  * and triggers loading of additional pages
  */
-/* eslint-disable-next-line no-unused-vars */
 class ScrollManager {
   constructor() {
     this.scrollObserver = null;
@@ -89,3 +88,10 @@ class ScrollManager {
     }
   }
 }
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ScrollManager };
+}
+/* eslint-enable no-undef */

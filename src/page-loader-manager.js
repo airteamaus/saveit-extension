@@ -1,7 +1,7 @@
 // page-loader-manager.js - Page loading and data lifecycle management
 // Handles fetching pages, background refresh, and infinite scroll loading
 
-class PageLoaderManager { // eslint-disable-line no-unused-vars
+class PageLoaderManager {
   constructor() {
     // Manager state is stored in dashboard instance
   }
@@ -117,3 +117,10 @@ class PageLoaderManager { // eslint-disable-line no-unused-vars
     }
   }
 }
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { PageLoaderManager };
+}
+/* eslint-enable no-undef */

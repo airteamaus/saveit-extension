@@ -17,10 +17,10 @@ export default defineConfig({
         'src/mock-data.js'
       ],
       thresholds: {
-        lines: 16,       // Phase 2 complete (currently 16.54%)
-        functions: 18,   // Phase 2 complete (currently 18.66%)
-        branches: 22,    // Phase 2 complete (currently 22.36%)
-        statements: 17   // Phase 2 complete (currently 17.5%)
+        lines: 28,       // Phase 3 complete (currently 28.6%)
+        functions: 27,   // Phase 3 complete (currently 27.66%)
+        branches: 35,    // Phase 3 complete (currently 35.13%)
+        statements: 29   // Phase 3 complete (currently 29.14%)
       }
     }
   }
