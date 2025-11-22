@@ -15,7 +15,7 @@ const ClassificationSchema = z.object({
  * Page/Thing schema - matches BigQuery table
  * Validates data returned from backend
  */
-export const PageSchema = z.object({
+export const PageSchema = z.strictObject({
   // Required fields
   // ID accepts both UUID (legacy) and composite format (user_id_urlhash)
   // Composite format: alphanumeric, hyphens, underscores, @ (for email user_ids)
@@ -23,26 +23,28 @@ export const PageSchema = z.object({
     .min(1, 'ID cannot be empty')
     .regex(/^[a-zA-Z0-9@._-]+$/, 'Invalid thing ID format'),
   thing_type: z.string().default('bookmark'),
-  user_email: z.string().email(),
+  user_email: z.email(),
 
   // Core optional fields
-  url: z.string().url().optional(),
+  url: z.url().optional(),
   title: z.string().optional(),
-  thumbnail: z.string().url().optional(),
+  thumbnail: z.url().optional(),
   description: z.string().optional(),
   domain: z.string().optional(),
   reading_time_minutes: z.number().int().positive().optional(),
 
   // Timestamp field
-  saved_at: z.string().datetime().optional(),
+  saved_at: z.iso.datetime().optional(),
 
   user_notes: z.string().optional(),
+  // Zod v4: .default() applies to output, so parse({}) returns { manual_tags: [] }
+  // This is safer than undefined - all usage sites handle empty arrays correctly
   manual_tags: z.array(z.string()).optional().default([]),
 
   // Internal fields
   deleted: z.boolean().optional().default(false),
-  deleted_at: z.string().datetime().optional(),
-  updated_at: z.string().datetime().optional(),
+  deleted_at: z.iso.datetime().optional(),
+  updated_at: z.iso.datetime().optional(),
   user_id: z.string().optional(),
   content_ref: z.string().optional(),
 
@@ -51,12 +53,12 @@ export const PageSchema = z.object({
   ai_summary_extended: z.string().optional(),
   classifications: z.array(ClassificationSchema).optional(),
   primary_classification_label: z.string().optional(),
-  ai_enriched_at: z.string().datetime().optional(),
+  ai_enriched_at: z.iso.datetime().optional(),
 
   // Legacy fields (from mock data, not in BigQuery)
   author: z.string().optional(),
-  published_date: z.string().datetime().optional()
-}).strict(); // Fail on unknown fields
+  published_date: z.iso.datetime().optional()
+}); // z.strictObject fails on unknown fields
 
 /**
  * API response schemas
