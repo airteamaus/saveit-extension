@@ -8,7 +8,6 @@
  * - L2 (domain): Domain-specific tags within a general category
  * - L3 (topic): Specific topics within a domain
  */
-/* eslint-disable-next-line no-unused-vars */
 class TagManager {
   constructor() {
     // TagManager is stateless - operates on data passed to methods
@@ -301,3 +300,10 @@ class TagManager {
     return null;
   }
 }
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { TagManager };
+}
+/* eslint-enable no-undef */

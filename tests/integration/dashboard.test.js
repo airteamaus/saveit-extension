@@ -1,7 +1,18 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+
+// Import real managers
+import searchModule from '../../src/search-manager.js';
+import statsModule from '../../src/stats-manager.js';
+import componentsModule from '../../src/components.js';
+
+const SearchManager = searchModule.SearchManager;
+const StatsManager = statsModule.StatsManager;
+const Components = componentsModule.Components;
 
 describe('Dashboard Integration', () => {
   let container;
+  let searchManager;
+  let statsManager;
 
   beforeEach(() => {
     // Set up DOM
@@ -12,49 +23,58 @@ describe('Dashboard Integration', () => {
       <div id="clear-search"></div>
     `;
     container = document.getElementById('content');
+    searchManager = new SearchManager();
+    statsManager = new StatsManager();
   });
 
-  describe('Rendering', () => {
-    it('should show empty state when no pages', () => {
-      container.innerHTML = '<div class="empty-state">No saved pages yet</div>';
+  describe('Components Rendering', () => {
+    it('should render empty state when no pages', () => {
+      const html = Components.emptyState();
+      container.innerHTML = html;
 
       expect(container.querySelector('.empty-state')).toBeTruthy();
       expect(container.textContent).toContain('No saved pages yet');
     });
 
     it('should render page cards when pages exist', () => {
-      container.innerHTML = `
-        <div class="saved-page-card" data-id="1"></div>
-        <div class="saved-page-card" data-id="2"></div>
-      `;
+      const pages = [
+        { id: '1', title: 'Page 1', url: 'https://example.com/1' },
+        { id: '2', title: 'Page 2', url: 'https://example.com/2' }
+      ];
 
+      container.innerHTML = pages.map(p => Components.savedPageCard(p)).join('');
       const cards = container.querySelectorAll('.saved-page-card');
+
       expect(cards.length).toBe(2);
+      expect(cards[0].getAttribute('data-id')).toBe('1');
+      expect(cards[1].getAttribute('data-id')).toBe('2');
     });
 
-    it('should show search empty state when search has no results', () => {
-      container.innerHTML = `
-        <div class="empty-state">
-          <h2>No matching pages</h2>
-        </div>
-      `;
+    it('should render error state with message', () => {
+      const error = new Error('Failed to load pages');
+      container.innerHTML = Components.errorState(error);
 
-      expect(container.textContent).toContain('No matching pages');
+      expect(container.querySelector('.error-state')).toBeTruthy();
+      expect(container.textContent).toContain('Failed to load pages');
+    });
+
+    it('should render loading state', () => {
+      container.innerHTML = Components.loadingState();
+
+      expect(container.querySelector('.loading-state')).toBeTruthy();
+      expect(container.textContent).toContain('Loading your saved pages');
     });
   });
 
-  describe('Search functionality', () => {
-    it('should filter pages by search query', () => {
+  describe('Search Manager Integration', () => {
+    it('should filter pages by title', () => {
       const pages = [
         { id: '1', title: 'JavaScript Tutorial', url: 'https://example.com/js' },
         { id: '2', title: 'Python Guide', url: 'https://example.com/py' },
         { id: '3', title: 'JavaScript Advanced', url: 'https://example.com/js-adv' }
       ];
 
-      const query = 'JavaScript';
-      const filtered = pages.filter(p =>
-        p.title.toLowerCase().includes(query.toLowerCase())
-      );
+      const filtered = searchManager.applyClientFilters(pages, 'JavaScript');
 
       expect(filtered.length).toBe(2);
       expect(filtered[0].title).toContain('JavaScript');
@@ -72,129 +92,162 @@ describe('Dashboard Integration', () => {
         }
       ];
 
-      const searchInPage = (page, query) => {
-        const q = query.toLowerCase();
-        return (
-          page.title?.toLowerCase().includes(q) ||
-          page.url?.toLowerCase().includes(q) ||
-          page.description?.toLowerCase().includes(q) ||
-          page.author?.toLowerCase().includes(q)
-        );
-      };
+      expect(searchManager.applyClientFilters(pages, 'github').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'john').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'project').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'nonexistent').length).toBe(0);
+    });
 
-      expect(searchInPage(pages[0], 'github')).toBe(true);
-      expect(searchInPage(pages[0], 'john')).toBe(true);
-      expect(searchInPage(pages[0], 'project')).toBe(true);
-      expect(searchInPage(pages[0], 'nonexistent')).toBe(false);
+    it('should return all pages when query is empty', () => {
+      const pages = [
+        { id: '1', title: 'Page 1', url: 'https://example.com/1' },
+        { id: '2', title: 'Page 2', url: 'https://example.com/2' }
+      ];
+
+      const filtered = searchManager.applyClientFilters(pages, '');
+
+      expect(filtered.length).toBe(2);
+    });
+
+    it('should search in AI-generated fields', () => {
+      const pages = [
+        {
+          id: '1',
+          title: 'Article',
+          url: 'https://example.com',
+          ai_summary_brief: 'Machine learning tutorial',
+          primary_classification_label: 'Computer Science'
+        }
+      ];
+
+      expect(searchManager.applyClientFilters(pages, 'machine learning').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'computer science').length).toBe(1);
+    });
+
+    it('should search in manual tags', () => {
+      const pages = [
+        {
+          id: '1',
+          title: 'Article',
+          url: 'https://example.com',
+          manual_tags: ['javascript', 'webdev', 'tutorial']
+        }
+      ];
+
+      expect(searchManager.applyClientFilters(pages, 'javascript').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'webdev').length).toBe(1);
+      expect(searchManager.applyClientFilters(pages, 'python').length).toBe(0);
     });
   });
 
-  describe('Stats display', () => {
+  describe('Stats Manager Integration', () => {
     it('should show correct count for all pages', () => {
+      statsManager.updateStats(5, 5);
       const statsEl = document.getElementById('stats');
-      const total = 5;
-      statsEl.textContent = `${total} pages saved`;
 
       expect(statsEl.textContent).toBe('5 pages saved');
     });
 
     it('should show filtered count when search active', () => {
+      statsManager.updateStats(10, 3);
       const statsEl = document.getElementById('stats');
-      const total = 10;
-      const filtered = 3;
-      statsEl.textContent = `Showing ${filtered} of ${total} pages`;
 
       expect(statsEl.textContent).toBe('Showing 3 of 10 pages');
     });
 
     it('should use singular form for 1 page', () => {
+      statsManager.updateStats(1, 1);
       const statsEl = document.getElementById('stats');
-      statsEl.textContent = '1 page saved';
 
       expect(statsEl.textContent).toBe('1 page saved');
     });
+
+    it('should handle missing stats element gracefully', () => {
+      document.getElementById('stats').remove();
+
+      // Should not throw
+      expect(() => statsManager.updateStats(5, 5)).not.toThrow();
+    });
   });
 
-  describe('Discovery mode', () => {
-    it('should show discovery header with tag name', () => {
-      const tagLabel = 'JavaScript';
-      const totalResults = 5;
-
-      container.innerHTML = `
-        <div class="discovery-header">
-          <h2>Discovery: <span class="highlight">${tagLabel}</span></h2>
-          <p class="discovery-subtitle">${totalResults} related pages</p>
-        </div>
-      `;
-
-      expect(container.querySelector('.discovery-header')).toBeTruthy();
-      expect(container.textContent).toContain('Discovery: JavaScript');
-      expect(container.textContent).toContain('5 related pages');
-    });
-
-    it('should flatten and combine all result tiers', () => {
+  describe('Discovery Mode Integration', () => {
+    it('should render discovery results with exact matches', () => {
       const results = {
         exact_matches: [
-          { thing_data: { id: '1', title: 'Exact 1' } },
-          { thing_data: { id: '2', title: 'Exact 2' } }
-        ],
-        similar_matches: [
-          { thing_data: { id: '3', title: 'Similar 1' } }
-        ],
-        related_matches: [
-          { thing_data: { id: '4', title: 'Related 1' } },
-          { thing_data: { id: '5', title: 'Related 2' } }
+          { thing_data: { id: '1', title: 'Exact 1', url: 'https://example.com/1' } },
+          { thing_data: { id: '2', title: 'Exact 2', url: 'https://example.com/2' } }
         ]
       };
 
-      const allResults = [
-        ...(results.exact_matches || []),
-        ...(results.similar_matches || []),
-        ...(results.related_matches || [])
-      ];
+      const html = Components.discoveryResults(results);
+      container.innerHTML = html;
 
-      expect(allResults.length).toBe(5);
-      expect(allResults[0].thing_data.id).toBe('1');
-      expect(allResults[2].thing_data.id).toBe('3');
-      expect(allResults[4].thing_data.id).toBe('5');
+      expect(container.textContent).toContain('Exact 1');
+      expect(container.textContent).toContain('Exact 2');
+    });
+
+    it('should render all result tiers together', () => {
+      const results = {
+        exact_matches: [
+          { thing_data: { id: '1', title: 'Exact 1', url: 'https://example.com/1' } }
+        ],
+        similar_matches: [
+          { thing_data: { id: '2', title: 'Similar 1', url: 'https://example.com/2' } }
+        ],
+        related_matches: [
+          { thing_data: { id: '3', title: 'Related 1', url: 'https://example.com/3' } }
+        ]
+      };
+
+      const html = Components.discoveryResults(results);
+      container.innerHTML = html;
+
+      const cards = container.querySelectorAll('.saved-page-card');
+      expect(cards.length).toBe(3);
+    });
+
+    it('should show empty state when no discovery results', () => {
+      const html = Components.discoveryResults({});
+      container.innerHTML = html;
+
+      expect(container.querySelector('.empty-state')).toBeTruthy();
+      expect(container.textContent).toContain('No related pages');
     });
   });
 
-  describe('Error handling', () => {
-    it('should display error state with message', () => {
-      const error = new Error('Failed to load pages');
-      container.innerHTML = `
-        <div class="error-state">
-          <h2>Failed to load pages</h2>
-          <p>${error.message}</p>
-        </div>
-      `;
-
-      expect(container.querySelector('.error-state')).toBeTruthy();
-      expect(container.textContent).toContain('Failed to load pages');
-    });
-
-    it('should identify authentication errors', () => {
-      const authErrors = [
-        'HTTP 401',
-        'Unauthorized access',
-        'Authentication failed',
-        'Sign-in failed'
+  describe('End-to-End Flow', () => {
+    it('should render pages, filter by search, and update stats', () => {
+      const allPages = [
+        { id: '1', title: 'JavaScript Tutorial', url: 'https://example.com/js' },
+        { id: '2', title: 'Python Guide', url: 'https://example.com/py' },
+        { id: '3', title: 'JavaScript Advanced', url: 'https://example.com/js-adv' }
       ];
 
-      const isAuthError = (message) => {
-        return message.includes('401') ||
-               message.includes('Unauthorized') ||
-               message.includes('Authentication failed') ||
-               message.includes('Sign-in failed');
-      };
+      // Initial render
+      container.innerHTML = allPages.map(p => Components.savedPageCard(p)).join('');
+      statsManager.updateStats(allPages.length, allPages.length);
 
-      authErrors.forEach(error => {
-        expect(isAuthError(error)).toBe(true);
-      });
+      let statsEl = document.getElementById('stats');
+      expect(statsEl.textContent).toBe('3 pages saved');
+      expect(container.querySelectorAll('.saved-page-card').length).toBe(3);
 
-      expect(isAuthError('Network error')).toBe(false);
-      expect(isAuthError('HTTP 500')).toBe(false);
+      // Apply search filter
+      const filtered = searchManager.applyClientFilters(allPages, 'JavaScript');
+      container.innerHTML = filtered.map(p => Components.savedPageCard(p)).join('');
+      statsManager.updateStats(allPages.length, filtered.length);
+
+      statsEl = document.getElementById('stats');
+      expect(statsEl.textContent).toBe('Showing 2 of 3 pages');
+      expect(container.querySelectorAll('.saved-page-card').length).toBe(2);
+
+      // Clear search
+      const allFiltered = searchManager.applyClientFilters(allPages, '');
+      container.innerHTML = allFiltered.map(p => Components.savedPageCard(p)).join('');
+      statsManager.updateStats(allPages.length, allFiltered.length);
+
+      statsEl = document.getElementById('stats');
+      expect(statsEl.textContent).toBe('3 pages saved');
+      expect(container.querySelectorAll('.saved-page-card').length).toBe(3);
     });
   });
 });

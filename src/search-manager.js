@@ -5,7 +5,6 @@
  * SearchManager - Manages search and filtering operations
  * Provides client-side text search across multiple page fields
  */
-/* eslint-disable-next-line no-unused-vars */
 class SearchManager {
   constructor() {
     // SearchManager is stateless - operates on data passed to methods
@@ -78,3 +77,10 @@ class SearchManager {
     return filtered;
   }
 }
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { SearchManager };
+}
+/* eslint-enable no-undef */

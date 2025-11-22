@@ -1,7 +1,6 @@
 // stats-manager.js - Stats display management
 // Handles updating the stats counter in the dashboard header
 
-/* eslint-disable-next-line no-unused-vars */
 class StatsManager {
   /**
    * Update stats display in the dashboard header
@@ -19,3 +18,10 @@ class StatsManager {
     }
   }
 }
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { StatsManager };
+}
+/* eslint-enable no-undef */

@@ -5,7 +5,6 @@
 /* global CacheManager_Export, filterMockData, getBrowserRuntime, getStorageAPI */
 // getBrowserRuntime and getStorageAPI are provided by config-loader.js (loaded as module)
 
-/* eslint-disable-next-line no-unused-vars */
 const API = {
   /**
    * Initialize cache manager (lazy initialization)
@@ -645,3 +644,10 @@ const API = {
     }
   }
 };
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { API };
+}
+/* eslint-enable no-undef */

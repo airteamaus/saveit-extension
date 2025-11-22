@@ -43,7 +43,6 @@
  * NOTE: UI prioritizes ai_summary_brief over description for display
  */
 
-/* eslint-disable-next-line no-unused-vars */
 const Components = {
   /**
    * Render classification tags with type-specific styling
@@ -346,3 +345,10 @@ const Components = {
     return html;
   }
 };
+
+// Export for testing
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { Components };
+}
+/* eslint-enable no-undef */
