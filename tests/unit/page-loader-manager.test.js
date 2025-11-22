@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createMockDashboard } from '../fixtures/dashboard-fixture.js';
 
 describe('PageLoaderManager', () => {
   let PageLoaderManager;
@@ -14,32 +15,8 @@ describe('PageLoaderManager', () => {
     };
     global.API = mockAPI;
 
-    // Create mock dashboard
-    mockDashboard = {
-      allPages: [],
-      pages: [],
-      totalPages: 0,
-      hasMorePages: false,
-      nextCursor: null,
-      isLoadingMore: false,
-      currentFilter: {
-        limit: 50,
-        offset: 0
-      },
-      showError: vi.fn(),
-      render: vi.fn(),
-      updateStats: vi.fn(),
-      getCurrentUser: vi.fn(() => ({ email: 'test@example.com' })),
-      handleTagClick: vi.fn(),
-      tagInteractionManager: {
-        getActiveLabel: vi.fn(() => null),
-        getActiveType: vi.fn(() => null)
-      },
-      scrollManager: {
-        showLoadingIndicator: vi.fn(),
-        hideLoadingIndicator: vi.fn()
-      }
-    };
+    // Create mock dashboard using fixture factory
+    mockDashboard = createMockDashboard();
 
     // Load PageLoaderManager module
     const module = await import('../../src/page-loader-manager.js');
@@ -132,6 +109,13 @@ describe('PageLoaderManager', () => {
     beforeEach(() => {
       // Enable extension mode for background refresh
       mockAPI.isExtension = true;
+      // Use fake timers for all tests that call refreshInBackground
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      // Restore real timers after each test
+      vi.useRealTimers();
     });
 
     it('should skip refresh in standalone mode', async () => {
@@ -151,8 +135,6 @@ describe('PageLoaderManager', () => {
     });
 
     it('should fetch fresh data with skipCache', async () => {
-      vi.useFakeTimers();
-
       const mockResponse = {
         pages: [{ id: '1', title: 'Fresh' }],
         pagination: { total: 1 }
@@ -169,13 +151,9 @@ describe('PageLoaderManager', () => {
         ...mockDashboard.currentFilter,
         skipCache: true
       });
-
-      vi.useRealTimers();
     });
 
     it('should update dashboard when data changed', async () => {
-      vi.useFakeTimers();
-
       mockDashboard.allPages = [{ id: '1', title: 'Old' }];
 
       const mockResponse = {
@@ -191,13 +169,9 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.allPages).toEqual(mockResponse.pages);
       expect(mockDashboard.pages).toEqual(mockResponse.pages);
       expect(mockDashboard.render).toHaveBeenCalled();
-
-      vi.useRealTimers();
     });
 
     it('should not update when data unchanged', async () => {
-      vi.useFakeTimers();
-
       const existingPages = [{ id: '1', title: 'Same' }];
       mockDashboard.allPages = existingPages;
 
@@ -212,13 +186,9 @@ describe('PageLoaderManager', () => {
       await refreshPromise;
 
       expect(mockDashboard.render).not.toHaveBeenCalled();
-
-      vi.useRealTimers();
     });
 
     it('should re-trigger tag click when active tag exists', async () => {
-      vi.useFakeTimers();
-
       mockDashboard.tagInteractionManager.getActiveLabel.mockReturnValue('JavaScript');
       mockDashboard.tagInteractionManager.getActiveType.mockReturnValue('general');
       mockDashboard.allPages = [{ id: '1' }];
@@ -235,13 +205,9 @@ describe('PageLoaderManager', () => {
 
       expect(mockDashboard.handleTagClick).toHaveBeenCalledWith('general', 'JavaScript');
       expect(mockDashboard.render).not.toHaveBeenCalled(); // handleTagClick handles rendering
-
-      vi.useRealTimers();
     });
 
     it('should not show errors to user on failure', async () => {
-      vi.useFakeTimers();
-
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockAPI.getSavedPages.mockRejectedValue(new Error('Network error'));
 
@@ -256,7 +222,6 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.showError).not.toHaveBeenCalled();
 
       consoleErrorSpy.mockRestore();
-      vi.useRealTimers();
     });
   });
 
