@@ -146,7 +146,10 @@ async function initializeGraph(data) {
             icon: '⊙',
             label: 'Focus',
             onClick: () => {
-              if (graph) graph.resetCamera();
+              if (graph) {
+                const isFocused = graph.getCameraController().toggleFocus();
+                console.log(isFocused ? 'Focused view (close zoom)' : 'Active view (normal distance)');
+              }
             }
           },
           {
