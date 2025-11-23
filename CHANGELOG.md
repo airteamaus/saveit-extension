@@ -5,6 +5,39 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3] - 2025-11-23
+
+### ♻️ Refactoring
+
+- **test:** reduce test complexity and improve maintainability (a8e945d)
+
+### ✅ Tests
+
+- improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
+- improve coverage from 0.72% to 17.5% (24x increase) (f124db3)
+
+## [1.5.2] - 2025-11-22
+
+No notable changes.
+
+## [1.5.1] - 2025-11-22
+
+### ✨ Features
+
+- **graph:** update focus button to use toggleFocus (a6c96bc)
+
+## [1.5.0] - 2025-11-22
+
+### ✨ Features
+
+- **graph:** update focus button to use toggleFocus (b4ba1ec)
+
+## [1.4.5] - 2025-11-22
+
+### ♻️ Refactoring
+
+- upgrade Zod v3 to v4 with full API modernization (697fa70)
+
 ## [1.4.4] - 2025-11-22
 
 ### ♻️ Refactoring
@@ -24,28 +57,6 @@ No notable changes.
 No notable changes.
 
 ## [1.4.0] - 2025-11-21
-
-No notable changes.
-
-## [1.3.7] - 2025-11-21
-
-No notable changes.
-
-## [1.3.6] - 2025-11-21
-
-### 🐛 Bug Fixes
-
-- add debug output to backend cleanup step (e61f25b)
-
-## [1.3.5] - 2025-11-21
-
-No notable changes.
-
-## [1.3.4] - 2025-11-21
-
-No notable changes.
-
-## [1.3.3] - 2025-11-21
 
 ### ✨ Features
 
@@ -97,6 +108,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- add debug output to backend cleanup step (e61f25b)
 - use glob patterns to properly exclude backend files from validation (37d1ec6)
 - use .web-ext-ignore instead of command-line ignore flags (20de54f)
 - exclude backend repo and build artifacts from web-ext validation (8cba3d6)
