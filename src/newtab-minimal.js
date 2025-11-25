@@ -15,6 +15,7 @@ const backgroundEl = document.getElementById('background');
 const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
 const favoritesRow = document.getElementById('favorites-row');
+const statsCount = document.getElementById('stats-count');
 
 /**
  * Update UI based on authentication state
@@ -299,6 +300,21 @@ async function initFavorites() {
 }
 
 /**
+ * Update stats counter display
+ * @param {Object|null} pagination - Pagination object with total count
+ */
+function updateStats(pagination) {
+  if (!pagination || typeof pagination.total !== 'number') {
+    statsCount.classList.add('hidden');
+    return;
+  }
+
+  const total = pagination.total;
+  statsCount.textContent = `${total} ${total === 1 ? 'thing' : 'things'} saved`;
+  statsCount.classList.remove('hidden');
+}
+
+/**
  * Initialize Firebase auth listener
  */
 async function initAuth() {
@@ -312,11 +328,13 @@ async function initAuth() {
         window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
           updateAuthUI(user);
           if (user) {
-            // User is signed in, load favorites
-            await initFavorites();
+            // User is signed in, load favorites and stats
+            const pagination = await initFavorites();
+            updateStats(pagination);
           } else {
-            // User signed out, hide favorites
+            // User signed out, hide favorites and stats
             favoritesRow.classList.add('hidden');
+            statsCount.classList.add('hidden');
           }
         });
       } else {

@@ -305,6 +305,12 @@ body {
   font-weight: 500;
 }
 
+/* Stats counter */
+.stats-count {
+  font-size: 0.9375rem;
+  color: var(--color-text-light);
+}
+
 /* Footer */
 .minimal-footer {
   position: fixed;
