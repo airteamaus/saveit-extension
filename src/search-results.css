@@ -249,7 +249,7 @@ body {
 
 .result-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-sm);
   margin-bottom: var(--spacing-sm);
 }
@@ -266,6 +266,7 @@ body {
   height: 20px;
   border-radius: 4px;
   flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .result-title {
