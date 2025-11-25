@@ -9,8 +9,6 @@ const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
 const signInBtn = document.getElementById('sign-in-btn');
-const userGreeting = document.getElementById('user-greeting');
-const userNameSpan = document.getElementById('user-name');
 const backgroundEl = document.getElementById('background');
 const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
@@ -24,12 +22,8 @@ const statsCount = document.getElementById('stats-count');
 function updateAuthUI(user) {
   if (user) {
     signInBtn.classList.add('hidden');
-    userGreeting.classList.remove('hidden');
-    const firstName = user.displayName ? user.displayName.split(' ')[0] : 'User';
-    userNameSpan.textContent = firstName;
   } else {
     signInBtn.classList.remove('hidden');
-    userGreeting.classList.add('hidden');
   }
 }
 
