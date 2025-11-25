@@ -85,6 +85,83 @@ function initAuthUI() {
       }
     });
   }
+
+  // Initialize header user menu
+  initUserMenu();
+}
+
+/**
+ * Initialize user menu dropdown in header
+ */
+function initUserMenu() {
+  const userAvatarBtn = document.getElementById('user-avatar-btn');
+  const userDropdown = document.getElementById('user-dropdown');
+  const signOutBtn = document.getElementById('sign-out-btn');
+
+  if (userAvatarBtn && userDropdown) {
+    // Toggle dropdown on avatar click
+    userAvatarBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      userDropdown.classList.toggle('hidden');
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+      if (!userDropdown.contains(e.target) && !userAvatarBtn.contains(e.target)) {
+        userDropdown.classList.add('hidden');
+      }
+    });
+  }
+
+  if (signOutBtn && window.firebaseSignOut) {
+    signOutBtn.addEventListener('click', async () => {
+      try {
+        await window.firebaseSignOut();
+        // Auth state change will handle UI update
+      } catch (error) {
+        console.error('Sign out failed:', error);
+      }
+    });
+  }
+}
+
+/**
+ * Update user menu with user info
+ * @param {Object|null} user - Firebase user or null
+ */
+function updateUserMenu(user) {
+  const userMenu = document.getElementById('user-menu');
+  const userAvatar = document.getElementById('user-avatar');
+  const userEmail = document.getElementById('user-email');
+  const userDropdown = document.getElementById('user-dropdown');
+
+  if (!userMenu) return;
+
+  if (user) {
+    // Show user menu
+    userMenu.classList.remove('hidden');
+
+    // Set avatar (photo or initials)
+    if (userAvatar) {
+      if (user.photoURL) {
+        userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Avatar">`;
+      } else {
+        const initials = (user.email || 'U').charAt(0).toUpperCase();
+        userAvatar.textContent = initials;
+      }
+    }
+
+    // Set email
+    if (userEmail) {
+      userEmail.textContent = user.email || '';
+    }
+  } else {
+    // Hide user menu
+    userMenu.classList.add('hidden');
+    if (userDropdown) {
+      userDropdown.classList.add('hidden');
+    }
+  }
 }
 
 /**
@@ -284,6 +361,9 @@ async function loadAndInitializeGraph() {
  * @param {Object|null} user - Firebase user or null
  */
 function handleAuthStateChange(user) {
+  // Update header user menu
+  updateUserMenu(user);
+
   if (user) {
     // User is signed in
     hideAuthRequired();
