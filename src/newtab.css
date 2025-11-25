@@ -562,6 +562,7 @@ body {
 
 .saved-page-card:hover {
   background: var(--color-bg);
+  box-shadow: var(--shadow-sm);
 }
 
 .row-content {
@@ -788,6 +789,7 @@ body {
 
 .btn-primary:hover {
   background: var(--color-primary-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .btn-secondary {
@@ -918,7 +920,7 @@ body {
   text-align: left;
   padding: var(--spacing-sm);
   border-radius: var(--radius-md);
-  background: var(--color-bg-secondary);
+  background: var(--color-bg);
 }
 
 .welcome-features svg {
@@ -1059,7 +1061,8 @@ body {
 /* Accessibility */
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+a:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
