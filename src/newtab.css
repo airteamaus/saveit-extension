@@ -19,7 +19,7 @@
   --color-danger-hover: #b91c1c;
 
   --color-bg: light-dark(#f8fafc, #0a0a0a);
-  --color-surface: light-dark(#ffffff, #1a1a1a);
+  --color-surface: light-dark(#ffffff, #171717);
   --color-border: light-dark(#e2e8f0, #2a2a2a);
   --color-text: light-dark(#1e293b, #e5e5e5);
   --color-text-light: light-dark(#64748b, #a3a3a3);
@@ -55,10 +55,10 @@
   --font-size-xl: 1.75rem;    /* 28px - hero text */
 
   /* Component-specific colors */
-  --notes-bg: light-dark(#fef3c7, #1a1a1a);
+  --notes-bg: light-dark(#fef3c7, #171717);
   --notes-border: #f59e0b;
   --notes-text: light-dark(#78350f, #a3a3a3);
-  --meta-bg: light-dark(#ffffff, #1a1a1a);
+  --meta-bg: light-dark(#ffffff, #171717);
   --meta-text: light-dark(#525252, #d4d4d4);
   --search-focus-shadow: light-dark(0 0 0 3px rgba(37, 99, 235, 0.1), 0 0 0 3px rgba(37, 99, 235, 0.2));
 }
