@@ -36,7 +36,8 @@ class FirebaseAuthManager {
         // Update UI based on initial auth state
         dashboard.authUIManager.updateSignInButton(initialUser ? {
           email: initialUser.email,
-          name: initialUser.displayName
+          name: initialUser.displayName,
+          photoURL: initialUser.photoURL
         } : null);
 
         // Set Sentry user context
@@ -54,7 +55,8 @@ class FirebaseAuthManager {
 
           dashboard.authUIManager.updateSignInButton(user ? {
             email: user.email,
-            name: user.displayName
+            name: user.displayName,
+            photoURL: user.photoURL
           } : null);
 
           if (user) {
@@ -86,7 +88,8 @@ class FirebaseAuthManager {
 
     return {
       email: user.email,
-      name: user.displayName
+      name: user.displayName,
+      photoURL: user.photoURL
     };
   }
 }

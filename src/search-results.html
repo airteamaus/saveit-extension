@@ -16,6 +16,27 @@
       SaveIt
     </a>
 
+    <div id="user-menu" class="user-menu hidden">
+      <button id="user-avatar-btn" class="user-avatar-btn" title="Account">
+        <span id="user-avatar" class="user-avatar"></span>
+      </button>
+      <div id="user-dropdown" class="user-dropdown hidden">
+        <div class="user-info">
+          <span id="user-email" class="user-email"></span>
+        </div>
+        <button id="sign-out-btn" class="dropdown-item">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Sign out
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
     <form id="search-form" class="search-form">
       <span class="search-icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -37,9 +58,7 @@
         </svg>
       </button>
     </form>
-  </header>
 
-  <main class="main">
     <div id="results-header" class="results-header hidden">
       <span id="results-count"></span>
     </div>

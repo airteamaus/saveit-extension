@@ -7,7 +7,7 @@ let currentOffset = 0;
 let totalResults = 0;
 let isLoading = false;
 const RESULTS_PER_PAGE = 20;
-const SIMILARITY_THRESHOLD = 0.65;
+const SIMILARITY_THRESHOLD = 0.58;
 
 // DOM elements
 const searchForm = document.getElementById('search-form');
@@ -18,6 +18,12 @@ const resultsCount = document.getElementById('results-count');
 const resultsContainer = document.getElementById('results-container');
 const loadMoreContainer = document.getElementById('load-more-container');
 const loadMoreBtn = document.getElementById('load-more-btn');
+const userMenu = document.getElementById('user-menu');
+const userAvatarBtn = document.getElementById('user-avatar-btn');
+const userAvatar = document.getElementById('user-avatar');
+const userDropdown = document.getElementById('user-dropdown');
+const userEmail = document.getElementById('user-email');
+const signOutBtn = document.getElementById('sign-out-btn');
 
 /**
  * Get favicon URL for a domain
@@ -26,17 +32,6 @@ const loadMoreBtn = document.getElementById('load-more-btn');
  */
 function getFaviconUrl(domain) {
   return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-}
-
-/**
- * Truncate text to max length
- * @param {string} text - Text to truncate
- * @param {number} maxLength - Maximum length
- * @returns {string} Truncated text
- */
-function truncate(text, maxLength) {
-  if (!text || text.length <= maxLength) return text || '';
-  return text.substring(0, maxLength).trim() + '...';
 }
 
 /**
@@ -59,11 +54,11 @@ function createResultCard(result) {
     <div class="result-header">
       ${page.domain ? `<img class="result-favicon" src="${getFaviconUrl(page.domain)}" alt="" onerror="this.style.display='none'">` : ''}
       <h3 class="result-title">${escapeHtml(page.title || 'Untitled')}</h3>
+      ${page.reading_time_minutes ? `<span class="result-reading-time">${page.reading_time_minutes} min</span>` : ''}
     </div>
-    ${summary ? `<p class="result-summary">${escapeHtml(truncate(summary, 200))}</p>` : ''}
+    ${summary ? `<p class="result-summary">${escapeHtml(summary)}</p>` : ''}
     <div class="result-meta">
       ${page.domain ? `<span class="result-meta-item">${escapeHtml(page.domain)}</span>` : ''}
-      ${page.reading_time_minutes ? `<span class="result-meta-item">${page.reading_time_minutes} min read</span>` : ''}
     </div>
   `;
 
@@ -277,19 +272,10 @@ function handleSearch(e) {
 }
 
 /**
- * Handle clear search button click
+ * Handle clear search button click - navigate back to new tab page
  */
 function handleClearSearch() {
-  searchInput.value = '';
-  clearSearchBtn.classList.add('hidden');
-  showInitialState();
-
-  // Clear URL param
-  const url = new URL(window.location);
-  url.searchParams.delete('q');
-  window.history.replaceState({}, '', url);
-
-  searchInput.focus();
+  window.location.href = 'newtab-minimal.html';
 }
 
 /**
@@ -300,6 +286,69 @@ function handleInputChange() {
     clearSearchBtn.classList.remove('hidden');
   } else {
     clearSearchBtn.classList.add('hidden');
+  }
+}
+
+/**
+ * Get user initials from name or email
+ * @param {Object} user - Firebase user object
+ * @returns {string} Initials (1-2 characters)
+ */
+function getUserInitials(user) {
+  if (user.displayName) {
+    const parts = user.displayName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+  if (user.email) {
+    return user.email[0].toUpperCase();
+  }
+  return '?';
+}
+
+/**
+ * Update user avatar display
+ * @param {Object} user - Firebase user object
+ */
+function updateUserAvatar(user) {
+  if (!userAvatar || !userMenu) return;
+
+  if (user) {
+    userMenu.classList.remove('hidden');
+    if (user.photoURL) {
+      userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
+    } else {
+      userAvatar.textContent = getUserInitials(user);
+    }
+    if (userEmail) {
+      userEmail.textContent = user.email || '';
+    }
+  } else {
+    userMenu.classList.add('hidden');
+  }
+}
+
+/**
+ * Toggle user dropdown
+ */
+function toggleUserDropdown() {
+  if (!userDropdown) return;
+  userDropdown.classList.toggle('hidden');
+}
+
+/**
+ * Handle sign out
+ */
+async function handleSignOut() {
+  try {
+    if (window.firebaseAuth && window.firebaseSignOut) {
+      await window.firebaseSignOut(window.firebaseAuth);
+      // Auth state listener will update UI
+    }
+  } catch (error) {
+    console.error('[search-results] Sign out failed:', error);
   }
 }
 
@@ -331,6 +380,7 @@ async function init() {
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
         // Listen for auth state changes
         window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+          updateUserAvatar(user);
           if (user) {
             // User is signed in, execute search
             executeSearchIfQuery();
@@ -358,6 +408,15 @@ searchForm.addEventListener('submit', handleSearch);
 clearSearchBtn.addEventListener('click', handleClearSearch);
 searchInput.addEventListener('input', handleInputChange);
 loadMoreBtn.addEventListener('click', () => executeSearch(currentQuery, true));
+userAvatarBtn.addEventListener('click', toggleUserDropdown);
+signOutBtn.addEventListener('click', handleSignOut);
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (userMenu && !userMenu.contains(e.target)) {
+    userDropdown.classList.add('hidden');
+  }
+});
 
 // Initialize
 init();

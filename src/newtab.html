@@ -11,12 +11,12 @@
   <header class="header">
     <div class="header-content">
       <div class="header-left">
-        <h1 class="logo">
+        <a href="newtab-minimal.html" class="logo">
           <svg class="logo-icon" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
           SaveIt
-        </h1>
+        </a>
         <span class="stats" id="stats">Loading...</span>
       </div>
 
@@ -96,10 +96,7 @@
 
         <div id="user-profile" class="user-profile" style="display: none;">
           <button id="user-profile-btn" class="user-profile-btn">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
+            <span id="user-avatar" class="user-avatar"></span>
             <span id="user-name">User</span>
           </button>
           <div id="user-dropdown" class="user-dropdown" style="display: none;">

@@ -14,12 +14,82 @@ const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
 const favoritesRow = document.getElementById('favorites-row');
 const statsCount = document.getElementById('stats-count');
+const userMenu = document.getElementById('user-menu');
+const userAvatarBtn = document.getElementById('user-avatar-btn');
+const userAvatar = document.getElementById('user-avatar');
+const userDropdown = document.getElementById('user-dropdown');
+const userEmailEl = document.getElementById('user-email');
+const signOutBtn = document.getElementById('sign-out-btn');
+
+/**
+ * Get user initials from name or email
+ * @param {Object} user - Firebase user object
+ * @returns {string} Initials (1-2 characters)
+ */
+function getUserInitials(user) {
+  if (user.displayName) {
+    const parts = user.displayName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+  if (user.email) {
+    return user.email[0].toUpperCase();
+  }
+  return '?';
+}
+
+/**
+ * Update user avatar display
+ * @param {Object} user - Firebase user object
+ */
+function updateUserAvatar(user) {
+  if (!userAvatar || !userMenu) return;
+
+  if (user) {
+    userMenu.classList.remove('hidden');
+    if (user.photoURL) {
+      userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
+    } else {
+      userAvatar.textContent = getUserInitials(user);
+    }
+    if (userEmailEl) {
+      userEmailEl.textContent = user.email || '';
+    }
+  } else {
+    userMenu.classList.add('hidden');
+  }
+}
+
+/**
+ * Toggle user dropdown
+ */
+function toggleUserDropdown() {
+  if (!userDropdown) return;
+  userDropdown.classList.toggle('hidden');
+}
+
+/**
+ * Handle sign out
+ */
+async function handleSignOut() {
+  try {
+    if (window.firebaseAuth && window.firebaseSignOut) {
+      await window.firebaseSignOut(window.firebaseAuth);
+      // Auth state listener will update UI
+    }
+  } catch (error) {
+    console.error('[newtab-minimal] Sign out failed:', error);
+  }
+}
 
 /**
  * Update UI based on authentication state
  * @param {Object|null} user - User object with email and displayName, or null
  */
 function updateAuthUI(user) {
+  updateUserAvatar(user);
   if (user) {
     signInBtn.classList.add('hidden');
   } else {
@@ -346,6 +416,15 @@ async function initAuth() {
 // Event listeners
 searchForm.addEventListener('submit', handleSearch);
 signInBtn.addEventListener('click', handleSignIn);
+userAvatarBtn.addEventListener('click', toggleUserDropdown);
+signOutBtn.addEventListener('click', handleSignOut);
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (userMenu && !userMenu.contains(e.target)) {
+    userDropdown.classList.add('hidden');
+  }
+});
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([

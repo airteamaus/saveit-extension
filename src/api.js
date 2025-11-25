@@ -652,11 +652,11 @@ const API = {
    * @param {Object} options - Search options
    * @param {number} [options.limit=50] - Max results to return
    * @param {number} [options.offset=0] - Pagination offset
-   * @param {number} [options.threshold=0.70] - Minimum similarity threshold (0-1)
+   * @param {number} [options.threshold=0.58] - Minimum similarity threshold (0-1)
    * @returns {Promise<Object>} Search results { results: [...], pagination: {...}, query, threshold }
    */
   async searchContent(query, options = {}) {
-    const { limit = 50, offset = 0, threshold = 0.65 } = options;
+    const { limit = 50, offset = 0, threshold = 0.58 } = options;
 
     if (this.isExtension) {
       return this._executeWithErrorHandling(
