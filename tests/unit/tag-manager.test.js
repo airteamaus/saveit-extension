@@ -152,6 +152,216 @@ describe('TagManager', () => {
     });
   });
 
+  describe('extractL2TagsForL1', () => {
+    it('should extract domain tags for a given general tag', () => {
+      const tags = tagManager.extractL2TagsForL1('Computer Science', mockPages);
+
+      expect(tags).toEqual([
+        { type: 'domain', label: 'Machine Learning' },
+        { type: 'domain', label: 'Web Development' }
+      ]);
+    });
+
+    it('should return empty array for non-existent general tag', () => {
+      const tags = tagManager.extractL2TagsForL1('Non-existent', mockPages);
+      expect(tags).toEqual([]);
+    });
+
+    it('should handle empty pages array', () => {
+      const tags = tagManager.extractL2TagsForL1('Computer Science', []);
+      expect(tags).toEqual([]);
+    });
+
+    it('should return sorted tags alphabetically', () => {
+      const tags = tagManager.extractL2TagsForL1('Computer Science', mockPages);
+      expect(tags[0].label).toBe('Machine Learning');
+      expect(tags[1].label).toBe('Web Development');
+    });
+  });
+
+  describe('extractL3TagsForL2', () => {
+    it('should extract topic tags for a given domain tag', () => {
+      const tags = tagManager.extractL3TagsForL2('Web Development', mockPages);
+
+      expect(tags).toEqual([
+        { type: 'topic', label: 'React' },
+        { type: 'topic', label: 'Vue.js' }
+      ]);
+    });
+
+    it('should return empty array for non-existent domain tag', () => {
+      const tags = tagManager.extractL3TagsForL2('Non-existent', mockPages);
+      expect(tags).toEqual([]);
+    });
+
+    it('should handle empty pages array', () => {
+      const tags = tagManager.extractL3TagsForL2('Web Development', []);
+      expect(tags).toEqual([]);
+    });
+
+    it('should return sorted tags alphabetically', () => {
+      const tags = tagManager.extractL3TagsForL2('Web Development', mockPages);
+      expect(tags[0].label).toBe('React');
+      expect(tags[1].label).toBe('Vue.js');
+    });
+  });
+
+  describe('extractTopicTagsForL1', () => {
+    it('should extract topic tags for a given general tag', () => {
+      const tags = tagManager.extractTopicTagsForL1('Computer Science', mockPages);
+
+      expect(tags).toEqual([
+        { type: 'topic', label: 'Neural Networks' },
+        { type: 'topic', label: 'React' },
+        { type: 'topic', label: 'Vue.js' }
+      ]);
+    });
+
+    it('should return empty array for non-existent general tag', () => {
+      const tags = tagManager.extractTopicTagsForL1('Non-existent', mockPages);
+      expect(tags).toEqual([]);
+    });
+
+    it('should return sorted tags', () => {
+      const tags = tagManager.extractTopicTagsForL1('Computer Science', mockPages);
+      expect(tags[0].label).toBe('Neural Networks');
+    });
+
+    it('should handle pages without matching general tag', () => {
+      const tags = tagManager.extractTopicTagsForL1('Mathematics', mockPages);
+      expect(tags).toEqual([{ type: 'topic', label: 'Bayesian' }]);
+    });
+  });
+
+  describe('extractSiblingTags', () => {
+    it('should extract domain siblings for general tag', () => {
+      const tags = tagManager.extractSiblingTags('general', 'Computer Science', mockPages, []);
+
+      expect(tags).toEqual([
+        { type: 'domain', label: 'Machine Learning' },
+        { type: 'domain', label: 'Web Development' }
+      ]);
+    });
+
+    it('should extract domain siblings excluding current tag', () => {
+      const tags = tagManager.extractSiblingTags('domain', 'Web Development', mockPages, []);
+
+      // Should find Machine Learning (sibling under Computer Science) but not Web Development
+      expect(tags).toEqual([{ type: 'domain', label: 'Machine Learning' }]);
+    });
+
+    it('should extract topic siblings excluding current tag', () => {
+      const tags = tagManager.extractSiblingTags('topic', 'React', mockPages, []);
+
+      // Should find Vue.js (sibling under Web Development) but not React
+      expect(tags).toEqual([{ type: 'topic', label: 'Vue.js' }]);
+    });
+
+    it('should return empty array when no siblings exist', () => {
+      const tags = tagManager.extractSiblingTags('topic', 'Bayesian', mockPages, []);
+      // Bayesian is the only topic under Statistics
+      expect(tags).toEqual([]);
+    });
+
+    it('should handle empty allPages by using filteredPages', () => {
+      const tags = tagManager.extractSiblingTags('general', 'Computer Science', [], mockPages);
+      expect(tags.length).toBeGreaterThan(0);
+    });
+
+    it('should deduplicate pages from allPages and filteredPages', () => {
+      const tags = tagManager.extractSiblingTags('general', 'Computer Science', mockPages, mockPages);
+      // Should still return unique tags despite duplicate pages
+      expect(tags).toEqual([
+        { type: 'domain', label: 'Machine Learning' },
+        { type: 'domain', label: 'Web Development' }
+      ]);
+    });
+
+    it('should handle pages without classifications', () => {
+      const pagesWithoutClassifications = [{ id: '1', title: 'No tags' }];
+      const tags = tagManager.extractSiblingTags('general', 'Test', pagesWithoutClassifications, []);
+      expect(tags).toEqual([]);
+    });
+  });
+
+  describe('buildBreadcrumbContext', () => {
+    it('should build context for general tag', () => {
+      const context = tagManager.buildBreadcrumbContext('general', 'Computer Science', mockPages, []);
+
+      expect(context).toEqual({
+        type: 'general',
+        label: 'Computer Science'
+      });
+    });
+
+    it('should build context for domain tag with parent', () => {
+      const context = tagManager.buildBreadcrumbContext('domain', 'Web Development', mockPages, []);
+
+      expect(context).toEqual({
+        type: 'domain',
+        label: 'Web Development',
+        parentLabel: 'Computer Science'
+      });
+    });
+
+    it('should build context for topic tag with parent and grandparent', () => {
+      const context = tagManager.buildBreadcrumbContext('topic', 'React', mockPages, []);
+
+      expect(context).toEqual({
+        type: 'topic',
+        label: 'React',
+        parentLabel: 'Web Development',
+        grandparentLabel: 'Computer Science'
+      });
+    });
+
+    it('should return null for non-existent tag', () => {
+      const context = tagManager.buildBreadcrumbContext('general', 'Non-existent', mockPages, []);
+      expect(context).toBeNull();
+    });
+
+    it('should fall back to filteredPages when tag not in allPages', () => {
+      const context = tagManager.buildBreadcrumbContext('general', 'Computer Science', [], mockPages);
+      expect(context).not.toBeNull();
+      expect(context.label).toBe('Computer Science');
+    });
+
+    it('should handle pages without classifications', () => {
+      const pagesWithoutClassifications = [{ id: '1', title: 'No tags' }];
+      const context = tagManager.buildBreadcrumbContext('general', 'Test', pagesWithoutClassifications, []);
+      expect(context).toBeNull();
+    });
+
+    it('should handle domain tag without general parent', () => {
+      const pagesWithMissingParent = [{
+        id: '1',
+        classifications: [{ type: 'domain', label: 'Orphan Domain' }]
+      }];
+      const context = tagManager.buildBreadcrumbContext('domain', 'Orphan Domain', pagesWithMissingParent, []);
+
+      expect(context).toEqual({
+        type: 'domain',
+        label: 'Orphan Domain',
+        parentLabel: null
+      });
+    });
+
+    it('should handle topic tag without domain or general parent', () => {
+      const pagesWithMissingParents = [{
+        id: '1',
+        classifications: [{ type: 'topic', label: 'Orphan Topic' }]
+      }];
+      const context = tagManager.buildBreadcrumbContext('topic', 'Orphan Topic', pagesWithMissingParents, []);
+
+      expect(context).toEqual({
+        type: 'topic',
+        label: 'Orphan Topic',
+        parentLabel: null,
+        grandparentLabel: null
+      });
+    });
+  });
+
   describe('Edge Cases', () => {
     it('should handle pages with empty classifications array', () => {
       const pages = [{ id: '1', classifications: [] }];

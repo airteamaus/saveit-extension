@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PageSchema, validatePage } from '../../src/validators.js';
+import { PageSchema, validatePage, validatePages, validateSearchResponse } from '../../src/validators.js';
 
 describe('PageSchema ID validation', () => {
   describe('UUID format (legacy)', () => {
@@ -162,6 +162,110 @@ describe('PageSchema ID validation', () => {
 
       const result = validatePage(data);
       expect(result).toBeNull();
+    });
+  });
+
+  describe('validatePages helper', () => {
+    it('should filter out invalid pages', () => {
+      const pages = [
+        { id: 'valid-id-1', thing_type: 'bookmark', user_email: 'test@example.com' },
+        { id: 'invalid id with spaces', thing_type: 'bookmark', user_email: 'test@example.com' },
+        { id: 'valid-id-2', thing_type: 'bookmark', user_email: 'test@example.com' }
+      ];
+
+      const result = validatePages(pages);
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('valid-id-1');
+      expect(result[1].id).toBe('valid-id-2');
+    });
+
+    it('should return empty array for all invalid pages', () => {
+      const pages = [
+        { id: '', thing_type: 'bookmark', user_email: 'test@example.com' },
+        { id: 'invalid id', thing_type: 'bookmark', user_email: 'test@example.com' }
+      ];
+
+      const result = validatePages(pages);
+      expect(result).toHaveLength(0);
+    });
+
+    it('should return all pages when all valid', () => {
+      const pages = [
+        { id: 'valid-id-1', thing_type: 'bookmark', user_email: 'test@example.com' },
+        { id: 'valid-id-2', thing_type: 'bookmark', user_email: 'test@example.com' }
+      ];
+
+      const result = validatePages(pages);
+      expect(result).toHaveLength(2);
+    });
+
+    it('should handle empty array', () => {
+      const result = validatePages([]);
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('validateSearchResponse helper', () => {
+    it('should validate valid search response', () => {
+      const response = {
+        query_label: 'test',
+        exact_matches: [],
+        similar_matches: [],
+        related_matches: []
+      };
+
+      const result = validateSearchResponse(response);
+      expect(result.query_label).toBe('test');
+      expect(result.exact_matches).toEqual([]);
+    });
+
+    it('should validate response with matches', () => {
+      const response = {
+        query_label: 'JavaScript',
+        exact_matches: [
+          {
+            thing_data: {
+              id: 'valid-id',
+              thing_type: 'bookmark',
+              user_email: 'test@example.com'
+            },
+            similarity: 0.95
+          }
+        ],
+        similar_matches: [],
+        related_matches: []
+      };
+
+      const result = validateSearchResponse(response);
+      expect(result.exact_matches).toHaveLength(1);
+      expect(result.exact_matches[0].similarity).toBe(0.95);
+    });
+
+    it('should apply defaults for missing match arrays', () => {
+      const response = {
+        query_label: 'test'
+      };
+
+      const result = validateSearchResponse(response);
+      expect(result.exact_matches).toEqual([]);
+      expect(result.similar_matches).toEqual([]);
+      expect(result.related_matches).toEqual([]);
+    });
+
+    it('should throw for invalid response format', () => {
+      const invalidResponse = {
+        invalid_field: 'test'
+      };
+
+      expect(() => validateSearchResponse(invalidResponse)).toThrow('Invalid search response format');
+    });
+
+    it('should throw for missing query_label', () => {
+      const invalidResponse = {
+        exact_matches: []
+      };
+
+      expect(() => validateSearchResponse(invalidResponse)).toThrow('Invalid search response format');
     });
   });
 });
