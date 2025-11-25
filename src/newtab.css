@@ -84,23 +84,15 @@ body {
 
 /* Header */
 .header {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--shadow-sm);
+  background: var(--color-bg);
 }
 
 .header-content {
-  max-width: 1400px;
-  margin: 0 auto;
   padding: var(--spacing-md) var(--spacing-lg);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-lg);
-  flex-wrap: wrap;
 }
 
 .header-left {
@@ -110,25 +102,18 @@ body {
 }
 
 .logo {
-  font-size: var(--font-size-lg);
-  font-weight: 700;
+  font-size: 1.125rem;
+  font-weight: 600;
   color: var(--color-primary);
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
-  cursor: pointer;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  user-select: none;
   text-decoration: none;
+  flex-shrink: 0;
 }
 
 .logo:hover {
-  opacity: 0.8;
-  transform: translateY(-1px);
-}
-
-.logo:active {
-  transform: translateY(0);
+  opacity: 0.9;
 }
 
 .logo-icon {
@@ -421,10 +406,10 @@ body {
 /* Main Content */
 .main {
   flex: 1;
-  max-width: 1400px;
+  max-width: 900px;
   width: 100%;
   margin: 0 auto;
-  padding: 0;
+  padding: var(--spacing-lg);
 }
 
 /* Tag Bar - Navigation bar for hierarchical tag browsing */
@@ -503,10 +488,10 @@ body {
 }
 
 .content {
-  /* Row-based list layout */
+  /* Card-based list layout */
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--spacing-md);
 }
 
 /* ==================================================================
@@ -538,15 +523,14 @@ body {
    ================================================================== */
 
 .saved-page-card {
-  background: var(--color-surface);
-  border-bottom: 1px solid var(--color-border);
-  padding: var(--spacing-md) var(--spacing-lg);
-  transition: all 0.3s ease-out;
-  display: flex;
-  align-items: flex-start;
-  gap: var(--spacing-md);
+  background: transparent;
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+  transition: background-color 0.2s;
+  display: block;
   cursor: pointer;
-  position: relative;
+  text-decoration: none;
+  color: inherit;
 }
 
 .saved-page-card.deleting {
@@ -561,23 +545,21 @@ body {
 }
 
 .saved-page-card:hover {
-  background: var(--color-bg);
-  box-shadow: var(--shadow-sm);
+  background: var(--color-surface);
 }
 
 .row-content {
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-xs);
-  min-width: 0; /* Enable text truncation */
 }
 
-/* Row header - favicon and title inline */
+/* Row header - favicon, title, and reading time */
 .row-header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
 }
 
 .favicon {
@@ -586,38 +568,33 @@ body {
 }
 
 .row-title {
-  font-size: var(--font-size-md);
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 500;
   line-height: 1.4;
   color: var(--color-text);
-  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   flex: 1;
   margin: 0;
 }
 
 /* Row summary */
 .row-summary {
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--color-text-light);
   line-height: 1.5;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin: 0;
+  margin-bottom: var(--spacing-sm);
 }
 
-/* Row footer - tags left, metadata right */
+/* Row footer - tags and delete button */
 .row-footer {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
-  padding-top: 4pt;
-  padding-bottom: 4pt;
-  position: relative;
-  padding-right: 40px; /* Make room for absolutely positioned delete button */
+  gap: var(--spacing-sm);
+  margin-top: var(--spacing-sm);
 }
 
 .row-tags {
@@ -628,19 +605,11 @@ body {
 }
 
 .row-meta {
-  position: absolute;
-  top: var(--spacing-md);
-  right: var(--spacing-lg);
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  align-items: center;
+  gap: var(--spacing-md);
   font-size: 0.75rem;
-  color: var(--meta-text);
-  white-space: nowrap;
-  background: var(--meta-bg);
-  padding: 4px 12px;
-  border-radius: 12px;
-  z-index: 10;
+  color: var(--color-text-light);
 }
 
 /* Metadata bullet separator pattern (CSS-based, not JS)
@@ -804,11 +773,6 @@ body {
 }
 
 .btn-delete {
-  /* Delete button in footer - absolutely positioned in footer area */
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
   padding: var(--spacing-xs) var(--spacing-sm);
   font-size: 0.8125rem;
   background: transparent;
@@ -817,8 +781,9 @@ body {
   border-radius: var(--radius-sm);
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.2s;
+  transition: opacity 0.2s, background-color 0.2s;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 .saved-page-card:hover .btn-delete {
@@ -828,7 +793,6 @@ body {
 .btn-delete:hover {
   background: var(--color-danger);
   color: white;
-  border-color: var(--color-danger);
 }
 
 /* Empty State */
@@ -961,22 +925,15 @@ body {
 
 /* Footer */
 .footer {
-  background: var(--color-surface);
-  border-top: 1px solid var(--color-border);
-  padding: var(--spacing-lg);
-  margin-top: auto;
+  padding: var(--spacing-md) var(--spacing-lg);
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--color-text-light);
 }
 
 .footer-content {
-  max-width: 1400px;
+  max-width: 900px;
   margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: var(--spacing-md);
-  flex-wrap: wrap;
-  font-size: var(--font-size-base);
-  color: var(--color-text-light);
 }
 
 .footer-links {
@@ -1029,22 +986,8 @@ body {
     width: 100%;
   }
 
-  .saved-page-card {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .btn-delete {
-    position: static;
-    transform: none;
     opacity: 1;
-    margin-top: var(--spacing-sm);
-  }
-
-  .row-meta {
-    position: static;
-    margin-top: var(--spacing-sm);
-    justify-content: flex-start;
   }
 
   .footer-content {
