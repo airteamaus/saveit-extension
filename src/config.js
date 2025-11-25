@@ -72,6 +72,10 @@ const CONFIGS = {
   }
 };
 
+// Unsplash API key for new tab backgrounds
+// Get your key at https://unsplash.com/developers
+export const unsplashAccessKey = 'kx7Y5oHJDL_OagEuaUVxIbxDn5xqzItYiFh8vGToS6E';
+
 // Export the active config based on environment
 const ENV = getEnvironment();
 export const CONFIG = {
