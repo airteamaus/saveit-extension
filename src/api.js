@@ -642,6 +642,109 @@ const API = {
       // Mock data returned by graph.js getMockGraphData()
       throw new Error('Use getMockGraphData() in standalone mode');
     }
+  },
+
+  /**
+   * Search for things by semantic content similarity
+   * Uses vector search on content_embedding field
+   *
+   * @param {string} query - Search query text
+   * @param {Object} options - Search options
+   * @param {number} [options.limit=50] - Max results to return
+   * @param {number} [options.offset=0] - Pagination offset
+   * @param {number} [options.threshold=0.70] - Minimum similarity threshold (0-1)
+   * @returns {Promise<Object>} Search results { results: [...], pagination: {...}, query, threshold }
+   */
+  async searchContent(query, options = {}) {
+    const { limit = 50, offset = 0, threshold = 0.70 } = options;
+
+    if (this.isExtension) {
+      return this._executeWithErrorHandling(
+        async () => {
+          const params = {
+            search_text: query,
+            limit: limit.toString(),
+            offset: offset.toString(),
+            threshold: threshold.toString()
+          };
+          return await this._fetchWithAuth('', params);
+        },
+        'searchContent',
+        { query, limit, offset, threshold }
+      );
+    } else {
+      // Standalone mode: mock semantic search using client-side filtering
+      return this._mockSearchContent(query, limit, offset, threshold);
+    }
+  },
+
+  /**
+   * Mock content search for standalone mode
+   * Uses simple text matching as approximation of semantic search
+   * @private
+   */
+  _mockSearchContent(query, limit, offset, threshold) {
+    debug('Mock content search for:', query);
+
+    const queryLower = query.toLowerCase();
+
+    // Score each page by simple text matching
+    const scored = MOCK_DATA
+      .filter(page => !page.deleted)
+      .map(page => {
+        let score = 0;
+
+        // Title match (highest weight)
+        if (page.title && page.title.toLowerCase().includes(queryLower)) {
+          score += 0.4;
+        }
+
+        // AI summary match (medium weight)
+        if (page.ai_summary_brief && page.ai_summary_brief.toLowerCase().includes(queryLower)) {
+          score += 0.3;
+        }
+        if (page.ai_summary_extended && page.ai_summary_extended.toLowerCase().includes(queryLower)) {
+          score += 0.2;
+        }
+
+        // Description match (lower weight)
+        if (page.description && page.description.toLowerCase().includes(queryLower)) {
+          score += 0.1;
+        }
+
+        // Classification match
+        if (page.classifications) {
+          for (const c of page.classifications) {
+            if (c.label.toLowerCase().includes(queryLower)) {
+              score += 0.15;
+              break;
+            }
+          }
+        }
+
+        return { page, similarity: Math.min(1, score) };
+      })
+      .filter(item => item.similarity >= threshold)
+      .sort((a, b) => b.similarity - a.similarity);
+
+    // Apply pagination
+    const paginatedResults = scored.slice(offset, offset + limit);
+
+    return {
+      results: paginatedResults.map(item => ({
+        thing_id: item.page.id,
+        similarity: item.similarity,
+        thing_data: item.page
+      })),
+      pagination: {
+        limit,
+        offset,
+        total: scored.length,
+        has_more: offset + limit < scored.length
+      },
+      query,
+      threshold
+    };
   }
 };
 

@@ -50,8 +50,6 @@ function createFavoriteItem(page) {
   const item = document.createElement('a');
   item.className = 'favorite-item';
   item.href = page.url;
-  item.target = '_blank';
-  item.rel = 'noopener';
 
   const iconContainer = document.createElement('div');
   iconContainer.className = 'favorite-icon';
@@ -111,17 +109,17 @@ function renderFavorites(pages) {
 }
 
 /**
- * Handle search form submission - navigate to full dashboard with query
+ * Handle search form submission - navigate to search results page
  * @param {Event} e - Form submit event
  */
 function handleSearch(e) {
   e.preventDefault();
   const query = searchInput.value.trim();
   if (query) {
-    // Navigate to full dashboard with search query
-    window.location.href = `newtab.html?search=${encodeURIComponent(query)}`;
+    // Navigate to minimal search results page
+    window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
   } else {
-    // Empty search navigates to browse all
+    // Empty search navigates to full dashboard to browse all
     window.location.href = 'newtab.html';
   }
 }

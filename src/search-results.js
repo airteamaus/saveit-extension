@@ -1,0 +1,339 @@
+// search-results.js - Minimal search results page functionality
+// Handles semantic search via API and result rendering
+
+// State
+let currentQuery = '';
+let currentOffset = 0;
+let totalResults = 0;
+let isLoading = false;
+const RESULTS_PER_PAGE = 20;
+const SIMILARITY_THRESHOLD = 0.70;
+
+// DOM elements
+const searchForm = document.getElementById('search-form');
+const searchInput = document.getElementById('search-input');
+const clearSearchBtn = document.getElementById('clear-search');
+const resultsHeader = document.getElementById('results-header');
+const resultsCount = document.getElementById('results-count');
+const resultsContainer = document.getElementById('results-container');
+const loadMoreContainer = document.getElementById('load-more-container');
+const loadMoreBtn = document.getElementById('load-more-btn');
+
+/**
+ * Get favicon URL for a domain
+ * @param {string} domain - Domain name
+ * @returns {string} Favicon URL
+ */
+function getFaviconUrl(domain) {
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+}
+
+/**
+ * Truncate text to max length
+ * @param {string} text - Text to truncate
+ * @param {number} maxLength - Maximum length
+ * @returns {string} Truncated text
+ */
+function truncate(text, maxLength) {
+  if (!text || text.length <= maxLength) return text || '';
+  return text.substring(0, maxLength).trim() + '...';
+}
+
+/**
+ * Create a result card element
+ * @param {Object} result - Search result { thing_id, similarity, thing_data }
+ * @returns {HTMLElement} Result card element
+ */
+function createResultCard(result) {
+  const page = result.thing_data;
+  const card = document.createElement('a');
+  card.className = 'result-card';
+  card.href = page.url;
+  card.target = '_blank';
+  card.rel = 'noopener';
+
+  // Get summary (prefer AI summary over description)
+  const summary = page.ai_summary_brief || page.description || '';
+
+  card.innerHTML = `
+    <div class="result-header">
+      ${page.domain ? `<img class="result-favicon" src="${getFaviconUrl(page.domain)}" alt="" onerror="this.style.display='none'">` : ''}
+      <h3 class="result-title">${escapeHtml(page.title || 'Untitled')}</h3>
+    </div>
+    ${summary ? `<p class="result-summary">${escapeHtml(truncate(summary, 200))}</p>` : ''}
+    <div class="result-meta">
+      ${page.domain ? `<span class="result-meta-item">${escapeHtml(page.domain)}</span>` : ''}
+      ${page.reading_time_minutes ? `<span class="result-meta-item">${page.reading_time_minutes} min read</span>` : ''}
+    </div>
+  `;
+
+  return card;
+}
+
+/**
+ * Create skeleton loading cards
+ * @param {number} count - Number of skeleton cards
+ * @returns {string} HTML string
+ */
+function createSkeletonCards(count = 3) {
+  return Array(count).fill(`
+    <div class="skeleton-card">
+      <div class="skeleton-line title"></div>
+      <div class="skeleton-line summary"></div>
+      <div class="skeleton-line summary"></div>
+      <div class="skeleton-line meta"></div>
+    </div>
+  `).join('');
+}
+
+/**
+ * Escape HTML to prevent XSS
+ * @param {string} text - Text to escape
+ * @returns {string} Escaped text
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Show loading state
+ */
+function showLoading() {
+  isLoading = true;
+  resultsContainer.innerHTML = createSkeletonCards(5);
+  resultsHeader.classList.add('hidden');
+  loadMoreContainer.classList.add('hidden');
+}
+
+/**
+ * Show empty state
+ * @param {string} query - Search query
+ */
+function showEmpty(query) {
+  resultsContainer.innerHTML = `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <h2>No results for "${escapeHtml(query)}"</h2>
+      <p>Try different keywords or check your spelling</p>
+    </div>
+  `;
+  resultsHeader.classList.add('hidden');
+  loadMoreContainer.classList.add('hidden');
+}
+
+/**
+ * Show error state
+ * @param {string} message - Error message
+ */
+function showError(message) {
+  resultsContainer.innerHTML = `
+    <div class="error-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <h2>Something went wrong</h2>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `;
+  resultsHeader.classList.add('hidden');
+  loadMoreContainer.classList.add('hidden');
+}
+
+/**
+ * Show initial/welcome state
+ */
+function showInitialState() {
+  resultsContainer.innerHTML = `
+    <div class="empty-state">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+      <h2>Search your saved pages</h2>
+      <p>Enter a query to find pages by content and meaning</p>
+    </div>
+  `;
+  resultsHeader.classList.add('hidden');
+  loadMoreContainer.classList.add('hidden');
+}
+
+/**
+ * Render search results
+ * @param {Array} results - Array of search results
+ * @param {boolean} append - Whether to append to existing results
+ */
+function renderResults(results, append = false) {
+  isLoading = false;
+
+  if (!append) {
+    resultsContainer.innerHTML = '';
+  }
+
+  results.forEach(result => {
+    resultsContainer.appendChild(createResultCard(result));
+  });
+
+  // Update header
+  resultsHeader.classList.remove('hidden');
+  resultsCount.textContent = `${totalResults} result${totalResults === 1 ? '' : 's'} for "${currentQuery}"`;
+
+  // Show/hide load more
+  const hasMore = currentOffset + results.length < totalResults;
+  if (hasMore) {
+    loadMoreContainer.classList.remove('hidden');
+    loadMoreBtn.disabled = false;
+  } else {
+    loadMoreContainer.classList.add('hidden');
+  }
+}
+
+/**
+ * Execute search query
+ * @param {string} query - Search query
+ * @param {boolean} loadMore - Whether this is a "load more" request
+ */
+async function executeSearch(query, loadMore = false) {
+  if (!query.trim()) {
+    showInitialState();
+    return;
+  }
+
+  // Prevent duplicate searches
+  if (isLoading) return;
+
+  isLoading = true;
+
+  if (!loadMore) {
+    currentQuery = query;
+    currentOffset = 0;
+    showLoading();
+  } else {
+    loadMoreBtn.disabled = true;
+    loadMoreBtn.textContent = 'Loading...';
+  }
+
+  try {
+    // Check if API is available
+    if (typeof API === 'undefined' || !API.searchContent) {
+      throw new Error('Search not available. Please sign in.');
+    }
+
+    const response = await API.searchContent(query, {
+      limit: RESULTS_PER_PAGE,
+      offset: currentOffset,
+      threshold: SIMILARITY_THRESHOLD
+    });
+
+    if (!loadMore) {
+      totalResults = response.pagination.total;
+    }
+
+    if (response.results.length === 0 && !loadMore) {
+      showEmpty(query);
+      return;
+    }
+
+    currentOffset += response.results.length;
+    renderResults(response.results, loadMore);
+
+  } catch (error) {
+    console.error('[search-results] Search failed:', error);
+    if (!loadMore) {
+      showError(error.message || 'Failed to search. Please try again.');
+    }
+  } finally {
+    isLoading = false;
+    loadMoreBtn.textContent = 'Load more results';
+    loadMoreBtn.disabled = false;
+  }
+}
+
+/**
+ * Handle search form submission
+ * @param {Event} e - Form submit event
+ */
+function handleSearch(e) {
+  e.preventDefault();
+  const query = searchInput.value.trim();
+
+  // Update URL with search query
+  const url = new URL(window.location);
+  if (query) {
+    url.searchParams.set('q', query);
+  } else {
+    url.searchParams.delete('q');
+  }
+  window.history.replaceState({}, '', url);
+
+  executeSearch(query);
+}
+
+/**
+ * Handle clear search button click
+ */
+function handleClearSearch() {
+  searchInput.value = '';
+  clearSearchBtn.classList.add('hidden');
+  showInitialState();
+
+  // Clear URL param
+  const url = new URL(window.location);
+  url.searchParams.delete('q');
+  window.history.replaceState({}, '', url);
+
+  searchInput.focus();
+}
+
+/**
+ * Handle search input changes
+ */
+function handleInputChange() {
+  if (searchInput.value.trim()) {
+    clearSearchBtn.classList.remove('hidden');
+  } else {
+    clearSearchBtn.classList.add('hidden');
+  }
+}
+
+/**
+ * Initialize page
+ */
+async function init() {
+  // Wait for Firebase auth if available
+  if (window.firebaseReady) {
+    try {
+      await window.firebaseReady;
+    } catch (error) {
+      console.error('[search-results] Firebase init failed:', error);
+    }
+  }
+
+  // Get query from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  const query = urlParams.get('q') || '';
+
+  if (query) {
+    searchInput.value = query;
+    clearSearchBtn.classList.remove('hidden');
+    executeSearch(query);
+  } else {
+    showInitialState();
+  }
+}
+
+// Event listeners
+searchForm.addEventListener('submit', handleSearch);
+clearSearchBtn.addEventListener('click', handleClearSearch);
+searchInput.addEventListener('input', handleInputChange);
+loadMoreBtn.addEventListener('click', () => executeSearch(currentQuery, true));
+
+// Initialize
+init();

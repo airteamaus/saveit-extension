@@ -210,19 +210,19 @@ describe('newtab-minimal', () => {
     function getSearchUrl(query) {
       const trimmed = query.trim();
       if (trimmed) {
-        return `newtab.html?search=${encodeURIComponent(trimmed)}`;
+        return `search-results.html?q=${encodeURIComponent(trimmed)}`;
       }
       return 'newtab.html';
     }
 
-    it('should encode search query in URL', () => {
+    it('should navigate to search-results page with query', () => {
       const result = getSearchUrl('test query');
-      expect(result).toBe('newtab.html?search=test%20query');
+      expect(result).toBe('search-results.html?q=test%20query');
     });
 
     it('should handle special characters', () => {
       const result = getSearchUrl('test & query');
-      expect(result).toBe('newtab.html?search=test%20%26%20query');
+      expect(result).toBe('search-results.html?q=test%20%26%20query');
     });
 
     it('should return plain newtab.html for empty query', () => {
