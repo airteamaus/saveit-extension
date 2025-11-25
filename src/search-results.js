@@ -7,7 +7,7 @@ let currentOffset = 0;
 let totalResults = 0;
 let isLoading = false;
 const RESULTS_PER_PAGE = 20;
-const SIMILARITY_THRESHOLD = 0.70;
+const SIMILARITY_THRESHOLD = 0.65;
 
 // DOM elements
 const searchForm = document.getElementById('search-form');
@@ -304,19 +304,9 @@ function handleInputChange() {
 }
 
 /**
- * Initialize page
+ * Execute search when user is authenticated
  */
-async function init() {
-  // Wait for Firebase auth if available
-  if (window.firebaseReady) {
-    try {
-      await window.firebaseReady;
-    } catch (error) {
-      console.error('[search-results] Firebase init failed:', error);
-    }
-  }
-
-  // Get query from URL
+function executeSearchIfQuery() {
   const urlParams = new URLSearchParams(window.location.search);
   const query = urlParams.get('q') || '';
 
@@ -326,6 +316,40 @@ async function init() {
     executeSearch(query);
   } else {
     showInitialState();
+  }
+}
+
+/**
+ * Initialize page
+ */
+async function init() {
+  // Wait for Firebase auth if available
+  if (window.firebaseReady) {
+    try {
+      await window.firebaseReady;
+
+      if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
+        // Listen for auth state changes
+        window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+          if (user) {
+            // User is signed in, execute search
+            executeSearchIfQuery();
+          } else {
+            // User not signed in, show error
+            showError('Please sign in to search your saved pages.');
+          }
+        });
+      } else {
+        // Firebase not available (standalone mode), try anyway
+        executeSearchIfQuery();
+      }
+    } catch (error) {
+      console.error('[search-results] Firebase init failed:', error);
+      showError('Failed to initialize. Please try again.');
+    }
+  } else {
+    // Standalone mode - use mock data
+    executeSearchIfQuery();
   }
 }
 

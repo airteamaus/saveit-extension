@@ -656,7 +656,7 @@ const API = {
    * @returns {Promise<Object>} Search results { results: [...], pagination: {...}, query, threshold }
    */
   async searchContent(query, options = {}) {
-    const { limit = 50, offset = 0, threshold = 0.70 } = options;
+    const { limit = 50, offset = 0, threshold = 0.65 } = options;
 
     if (this.isExtension) {
       return this._executeWithErrorHandling(
