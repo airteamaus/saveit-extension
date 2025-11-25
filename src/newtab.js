@@ -87,9 +87,42 @@ class SaveItDashboard {
       // Continue anyway - dashboard may still be partially usable
     }
 
+    // Handle ?search= URL parameter (from minimal new tab)
+    this.applySearchFromURL();
+
     // Mark initialization complete
     this.isInitialized = true;
     debug('[Dashboard] Initialization complete');
+  }
+
+  /**
+   * Apply search filter from URL parameter
+   * Handles navigation from minimal new tab with ?search=query
+   */
+  applySearchFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('search');
+
+    if (searchQuery) {
+      const searchInput = document.getElementById('search');
+      const clearSearch = document.getElementById('clear-search');
+
+      // Pre-fill search input
+      if (searchInput) {
+        searchInput.value = searchQuery;
+      }
+
+      // Show clear button
+      if (clearSearch) {
+        clearSearch.style.display = 'block';
+      }
+
+      // Set filter and trigger search
+      this.currentFilter.search = searchQuery;
+      this.handleFilterChange();
+
+      debug('[Dashboard] Applied search from URL:', searchQuery);
+    }
   }
 
   /**

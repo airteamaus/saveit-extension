@@ -33,7 +33,7 @@
     }
   },
   "chrome_url_overrides": {
-    "newtab": "src/newtab.html"
+    "newtab": "src/newtab-minimal.html"
   },
   "icons": {
     "48": "src/icon.png"
