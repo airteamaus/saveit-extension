@@ -80,6 +80,82 @@ body.has-background .sign-in-btn {
   background: rgba(37, 99, 235, 0.9);
 }
 
+/* Favorites row - 6 recent saves */
+.favorites-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: var(--spacing-md);
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: var(--spacing-md);
+}
+
+.favorite-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: var(--spacing-sm);
+  text-decoration: none;
+  color: var(--color-text);
+  border-radius: var(--radius-md);
+  transition: all 0.2s;
+}
+
+.favorite-item:hover {
+  background: var(--color-surface);
+  transform: translateY(-2px);
+}
+
+.favorite-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+
+.favorite-icon img {
+  width: 24px;
+  height: 24px;
+}
+
+.favorite-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--color-text-light);
+}
+
+.favorite-title {
+  font-size: 0.75rem;
+  text-align: center;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--color-text-light);
+}
+
+/* Favorites with background image */
+body.has-background .favorite-item:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+body.has-background .favorite-icon {
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+body.has-background .favorite-title {
+  color: rgba(255, 255, 255, 0.8);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
 body {
   font-family: var(--font-sans);
   background: var(--color-bg);
@@ -285,6 +361,30 @@ body.has-background .minimal-footer a:hover {
   .minimal-container {
     padding: var(--spacing-md);
     margin-top: -5vh;
+  }
+
+  .favorites-row {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--spacing-sm);
+  }
+
+  .favorites-row .favorite-item:nth-child(n+4) {
+    display: none;
+  }
+
+  .favorite-icon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .favorite-icon img,
+  .favorite-icon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .favorite-title {
+    max-width: 70px;
   }
 
   .minimal-logo {

@@ -14,6 +14,7 @@ const userNameSpan = document.getElementById('user-name');
 const backgroundEl = document.getElementById('background');
 const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
+const favoritesRow = document.getElementById('favorites-row');
 
 /**
  * Update UI based on authentication state
@@ -29,6 +30,89 @@ function updateAuthUI(user) {
     signInBtn.classList.remove('hidden');
     userGreeting.classList.add('hidden');
   }
+}
+
+/**
+ * Get favicon URL for a page
+ * @param {string} url - Page URL
+ * @returns {string} Favicon URL via Google's service
+ */
+function getFaviconUrl(url) {
+  try {
+    const domain = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a favorite item element
+ * @param {Object} page - Page object with url, title
+ * @returns {HTMLElement} Favorite item anchor element
+ */
+function createFavoriteItem(page) {
+  const item = document.createElement('a');
+  item.className = 'favorite-item';
+  item.href = page.url;
+  item.target = '_blank';
+  item.rel = 'noopener';
+
+  const iconContainer = document.createElement('div');
+  iconContainer.className = 'favorite-icon';
+
+  const faviconUrl = getFaviconUrl(page.url);
+  if (faviconUrl) {
+    const img = document.createElement('img');
+    img.src = faviconUrl;
+    img.alt = '';
+    img.onerror = () => {
+      // Fallback to bookmark icon on error
+      iconContainer.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+      `;
+    };
+    iconContainer.appendChild(img);
+  } else {
+    iconContainer.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+      </svg>
+    `;
+  }
+
+  const title = document.createElement('span');
+  title.className = 'favorite-title';
+  title.textContent = page.title || new URL(page.url).hostname;
+  title.title = page.title || page.url;
+
+  item.appendChild(iconContainer);
+  item.appendChild(title);
+
+  return item;
+}
+
+/**
+ * Render favorites row with recent saves
+ * @param {Array} pages - Array of page objects
+ */
+function renderFavorites(pages) {
+  if (!pages || pages.length === 0) {
+    favoritesRow.classList.add('hidden');
+    return;
+  }
+
+  // Take up to 6 most recent
+  const favorites = pages.slice(0, 6);
+
+  favoritesRow.innerHTML = '';
+  favorites.forEach(page => {
+    favoritesRow.appendChild(createFavoriteItem(page));
+  });
+
+  favoritesRow.classList.remove('hidden');
 }
 
 /**
@@ -192,6 +276,29 @@ async function initBackground() {
 }
 
 /**
+ * Fetch and display favorites (recent saves)
+ * Returns pagination data for stats display
+ * @returns {Promise<Object|null>} Pagination object or null
+ */
+async function initFavorites() {
+  try {
+    // Check if API is available (extension mode)
+    if (typeof API === 'undefined' || !API.getSavedPages) {
+      return null;
+    }
+
+    const response = await API.getSavedPages({ limit: 6, sort: 'newest' });
+    if (response && response.pages) {
+      renderFavorites(response.pages);
+      return response.pagination;
+    }
+  } catch (error) {
+    console.error('[newtab-minimal] Failed to load favorites:', error);
+  }
+  return null;
+}
+
+/**
  * Initialize Firebase auth listener
  */
 async function initAuth() {
@@ -202,8 +309,15 @@ async function initAuth() {
 
       if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
         // Listen for auth state changes
-        window.firebaseOnAuthStateChanged(window.firebaseAuth, (user) => {
+        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
           updateAuthUI(user);
+          if (user) {
+            // User is signed in, load favorites
+            await initFavorites();
+          } else {
+            // User signed out, hide favorites
+            favoritesRow.classList.add('hidden');
+          }
         });
       } else {
         // Firebase not available (standalone mode)
