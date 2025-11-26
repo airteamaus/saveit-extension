@@ -160,6 +160,53 @@ body {
   color: var(--graph-text-muted);
 }
 
+/* Compact Theme Toggle (for dropdown menus) */
+.theme-toggle-compact {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--graph-border);
+}
+
+.theme-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--graph-border);
+  background: transparent;
+  color: var(--graph-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-option-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.theme-option-icon:hover {
+  color: var(--graph-text);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--graph-text-muted);
+}
+
+.theme-option-icon.active {
+  background: var(--graph-primary);
+  color: white;
+  border-color: var(--graph-primary);
+}
+
+.theme-option-icon:focus-visible {
+  outline: 2px solid var(--graph-primary);
+  outline-offset: 2px;
+}
+
 /* Utility */
 .hidden {
   display: none !important;

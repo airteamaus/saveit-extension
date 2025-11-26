@@ -26,6 +26,61 @@ class ThemeManager {
   }
 
   /**
+   * Create and inject theme toggle HTML into a container
+   * @param {HTMLElement} container - Container element to inject toggle into
+   */
+  injectThemeToggle(container) {
+    if (!container) return;
+
+    const toggle = document.createElement('div');
+    toggle.className = 'theme-toggle-compact';
+    toggle.setAttribute('role', 'radiogroup');
+    toggle.setAttribute('aria-label', 'Theme selection');
+    toggle.innerHTML = `
+      <button class="theme-option-icon" data-theme="auto" aria-label="Auto theme" title="System preference">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="4"></circle>
+          <path d="M12 2v2m0 16v2M4.93 4.93l1.41 1.41m11.32 11.32l1.41 1.41M2 12h2m16 0h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path>
+        </svg>
+      </button>
+      <button class="theme-option-icon" data-theme="light" aria-label="Light theme" title="Light mode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+      </button>
+      <button class="theme-option-icon" data-theme="dark" aria-label="Dark theme" title="Dark mode">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+      </button>
+    `;
+    container.appendChild(toggle);
+
+    // Setup click handlers
+    toggle.querySelectorAll('.theme-option-icon').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const theme = btn.dataset.theme;
+        localStorage.setItem('theme-preference', theme);
+        this.applyTheme(theme);
+        this.updateThemeButtons(theme);
+      });
+    });
+
+    // Set initial active state
+    const savedTheme = localStorage.getItem('theme-preference') || 'auto';
+    this.updateThemeButtons(savedTheme);
+  }
+
+  /**
    * Apply theme to document
    * @param {string} theme - Theme name ('light', 'dark', or 'auto')
    */
@@ -43,7 +98,8 @@ class ThemeManager {
    * @param {string} activeTheme - Currently active theme
    */
   updateThemeButtons(activeTheme) {
-    document.querySelectorAll('.theme-option').forEach(btn => {
+    // Update both full-size and compact theme buttons
+    document.querySelectorAll('.theme-option, .theme-option-icon').forEach(btn => {
       if (btn.dataset.theme === activeTheme) {
         btn.classList.add('active');
         btn.setAttribute('aria-checked', 'true');
