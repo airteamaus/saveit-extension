@@ -18,8 +18,8 @@
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
 
-  --color-bg: light-dark(#f8fafc, #0a0a0a);
-  --color-surface: light-dark(#ffffff, #171717);
+  --color-bg: light-dark(#f8fafc, #000000);
+  --color-surface: light-dark(#ffffff, #1a1a1a);
   --color-border: light-dark(#e2e8f0, #2a2a2a);
   --color-text: light-dark(#1e293b, #e5e5e5);
   --color-text-light: light-dark(#64748b, #a3a3a3);
@@ -33,14 +33,13 @@
   --spacing-xl: 32px;
 
   /* Border radius */
-  --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
 
-  /* Shadows - darker in dark mode */
-  --shadow-sm: light-dark(0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 2px 0 rgb(0 0 0 / 0.3));
-  --shadow-md: light-dark(0 4px 6px -1px rgb(0 0 0 / 0.1), 0 4px 6px -1px rgb(0 0 0 / 0.4));
-  --shadow-lg: light-dark(0 10px 15px -3px rgb(0 0 0 / 0.1), 0 10px 15px -3px rgb(0 0 0 / 0.5));
+  /* Shadows - subtle in dark mode */
+  --shadow-sm: light-dark(0 1px 2px 0 rgb(0 0 0 / 0.05), 0 1px 2px 0 rgb(0 0 0 / 0.2));
+  --shadow-md: light-dark(0 4px 6px -1px rgb(0 0 0 / 0.1), 0 4px 6px -1px rgb(0 0 0 / 0.25));
+  --shadow-lg: light-dark(0 10px 15px -3px rgb(0 0 0 / 0.1), 0 10px 15px -3px rgb(0 0 0 / 0.3));
 
   /* Typography */
   --font-sans: system-ui, sans-serif;
@@ -179,7 +178,7 @@ body {
   color: var(--color-text-light);
   cursor: pointer;
   padding: var(--spacing-xs);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -384,7 +383,7 @@ body {
   padding: 8px 12px;
   background: transparent;
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--color-danger);
   font-size: var(--font-size-base);
   font-weight: 500;
@@ -414,7 +413,9 @@ body {
 
 /* Tag Bar - Navigation bar for hierarchical tag browsing */
 .tag-bar {
-  background: var(--color-surface);
+  background: light-dark(var(--color-surface), rgba(26, 26, 26, 0.8));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--color-border);
   padding: var(--spacing-sm) var(--spacing-lg);
 }
@@ -439,7 +440,7 @@ body {
   color: var(--color-text-light);
   transition: all 0.2s ease;
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .tag-bar-header .btn-back:hover {
@@ -545,7 +546,7 @@ body {
 }
 
 .saved-page-card:hover {
-  background: var(--color-surface);
+  background: light-dark(var(--color-surface), rgba(255, 255, 255, 0.03));
 }
 
 .row-content {
@@ -564,7 +565,7 @@ body {
 
 .favicon {
   flex-shrink: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
 }
 
 .row-title {
@@ -628,7 +629,7 @@ body {
   padding: 2px var(--spacing-sm);
   background: light-dark(var(--color-bg), #2a2a2a);
   color: var(--color-text-light);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: 500;
 }
@@ -651,70 +652,67 @@ body {
 }
 
 /* Multi-level classification tags - visual hierarchy
-   General (broad field): Subtle gray, small font - foundation categories
-   Domain (subfield): Blue, medium weight - most prominent, primary classification
-   Topic (specific): Purple, italic - detailed concepts */
+   General (broad field): Cool gray-blue, smallest (10px), light weight - foundation categories
+   Domain (subfield): Blue, medium (11px), medium weight - most prominent, primary classification
+   Topic (specific): Subtle purple, medium (11px), italic - detailed concepts within domain */
 
 /* General tags - subtle, foundational */
 .tag.tag-general {
-  background: light-dark(rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.15));
-  color: light-dark(#16a34a, #4ade80);
-  border: 1px solid light-dark(rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.3));
+  background: light-dark(rgba(100, 116, 139, 0.1), rgba(100, 116, 139, 0.12));
+  color: light-dark(#64748b, #94a3b8);
+  border: 1px solid light-dark(rgba(100, 116, 139, 0.2), rgba(100, 116, 139, 0.25));
   font-size: var(--font-size-xs);
   font-weight: 400;
 }
 
 .tag.tag-general:hover {
-  background: light-dark(rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.25));
-  border-color: light-dark(rgba(34, 197, 94, 0.4), rgba(34, 197, 94, 0.5));
-  color: light-dark(#15803d, #22c55e);
+  background: light-dark(rgba(100, 116, 139, 0.15), rgba(100, 116, 139, 0.18));
+  border-color: light-dark(rgba(100, 116, 139, 0.4), rgba(100, 116, 139, 0.5));
 }
 
 .tag.tag-general.active {
-  background: light-dark(rgba(34, 197, 94, 0.25), rgba(34, 197, 94, 0.3));
-  border: 2px solid light-dark(#16a34a, #4ade80);
-  font-weight: 700;
-  box-shadow: light-dark(0 0 0 2px rgba(34, 197, 94, 0.2), 0 0 0 2px rgba(34, 197, 94, 0.3));
+  background: light-dark(rgba(100, 116, 139, 0.2), rgba(100, 116, 139, 0.2));
+  border-color: light-dark(rgba(100, 116, 139, 0.6), rgba(100, 116, 139, 0.6));
+  font-weight: 500;
 }
 
 /* Domain tags - most prominent */
 .tag.tag-domain {
-  background: light-dark(rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.15));
+  background: light-dark(rgba(37, 99, 235, 0.1), rgba(37, 99, 235, 0.12));
   color: light-dark(var(--color-primary), #60a5fa);
-  border: 1px solid light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.3));
-  font-weight: 400;
+  border: 1px solid light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.25));
+  font-weight: 500;
 }
 
 .tag.tag-domain:hover {
-  background: light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.25));
+  background: light-dark(rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.18));
   border-color: light-dark(rgba(37, 99, 235, 0.4), rgba(37, 99, 235, 0.5));
 }
 
 .tag.tag-domain.active {
-  background: light-dark(rgba(37, 99, 235, 0.25), rgba(37, 99, 235, 0.3));
-  border: 2px solid light-dark(var(--color-primary), #60a5fa);
-  font-weight: 700;
-  box-shadow: light-dark(0 0 0 2px rgba(37, 99, 235, 0.2), 0 0 0 2px rgba(37, 99, 235, 0.3));
+  background: light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.2));
+  border-color: light-dark(rgba(37, 99, 235, 0.7), rgba(37, 99, 235, 0.7));
+  font-weight: 600;
 }
 
 /* Topic tags - specific details */
 .tag.tag-topic {
-  background: light-dark(rgba(147, 51, 234, 0.1), rgba(147, 51, 234, 0.15));
-  color: light-dark(#9333ea, #c084fc);
-  border: 1px solid light-dark(rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.3));
+  background: light-dark(rgba(139, 92, 246, 0.1), rgba(139, 92, 246, 0.12));
+  color: light-dark(#8b5cf6, #a78bfa);
+  border: 1px solid light-dark(rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.25));
+  font-weight: 400;
   font-style: italic;
 }
 
 .tag.tag-topic:hover {
-  background: light-dark(rgba(147, 51, 234, 0.2), rgba(147, 51, 234, 0.25));
-  border-color: light-dark(rgba(147, 51, 234, 0.4), rgba(147, 51, 234, 0.5));
+  background: light-dark(rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.18));
+  border-color: light-dark(rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.5));
 }
 
 .tag.tag-topic.active {
-  background: light-dark(rgba(147, 51, 234, 0.25), rgba(147, 51, 234, 0.3));
-  border: 2px solid light-dark(#9333ea, #c084fc);
-  font-weight: 700;
-  box-shadow: light-dark(0 0 0 2px rgba(147, 51, 234, 0.2), 0 0 0 2px rgba(147, 51, 234, 0.3));
+  background: light-dark(rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.2));
+  border-color: light-dark(rgba(139, 92, 246, 0.6), rgba(139, 92, 246, 0.6));
+  font-weight: 500;
 }
 
 /* User notes styling */
@@ -722,7 +720,7 @@ body {
   padding: var(--spacing-sm);
   background: var(--notes-bg);
   border-left: 3px solid var(--notes-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 0.8125rem;
   color: var(--notes-text);
   display: flex;
@@ -778,7 +776,7 @@ body {
   background: transparent;
   border: none;
   color: var(--color-text-light);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.2s, background-color 0.2s;
@@ -801,7 +799,7 @@ body {
   background: transparent;
   border: none;
   color: var(--color-text-light);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
   transition: transform 0.2s, color 0.2s, opacity 0.2s;
   flex-shrink: 0;
@@ -997,7 +995,7 @@ body {
   gap: var(--spacing-xs);
   padding: var(--spacing-xs) var(--spacing-sm);
   background: var(--color-bg);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   font-size: 0.75rem;
 }
 
