@@ -80,17 +80,17 @@ describe('search-results', () => {
 
   describe('getFaviconUrl', () => {
     function getFaviconUrl(domain) {
-      return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+      return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
     }
 
-    it('should return Google favicon URL for domain', () => {
+    it('should return DuckDuckGo favicon URL for domain', () => {
       const result = getFaviconUrl('example.com');
-      expect(result).toBe('https://www.google.com/s2/favicons?domain=example.com&sz=64');
+      expect(result).toBe('https://icons.duckduckgo.com/ip3/example.com.ico');
     });
 
     it('should handle subdomains', () => {
       const result = getFaviconUrl('blog.example.com');
-      expect(result).toBe('https://www.google.com/s2/favicons?domain=blog.example.com&sz=64');
+      expect(result).toBe('https://icons.duckduckgo.com/ip3/blog.example.com.ico');
     });
   });
 

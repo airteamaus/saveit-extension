@@ -162,7 +162,7 @@ const Components = {
       <div class="saved-page-card" data-id="${page.id}" data-url="${this.escapeHtml(page.url)}">
         <div class="row-content">
           <div class="row-header">
-            ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
+            ${page.domain ? `<img class="favicon" src="https://icons.duckduckgo.com/ip3/${this.escapeHtml(page.domain)}.ico" alt="" width="20" height="20">` : ''}
             <h3 class="row-title">${this.escapeHtml(page.title)}</h3>
             <button class="btn-pin ${page.pinned ? 'pinned' : ''}" data-id="${page.id}" title="${page.pinned ? 'Unpin page' : 'Pin page'}">
               📌
