@@ -704,6 +704,7 @@ const API = {
         async () => {
           const params = {
             search_text: query,
+            search_type: 'hybrid',  // Use hybrid search (BM25 + vector)
             limit: limit.toString(),
             offset: offset.toString(),
             threshold: threshold.toString()
