@@ -66,15 +66,11 @@ class EventManager {
       dashboard.handleFilterChange();
     });
 
-    // Theme toggle buttons
-    document.querySelectorAll('.theme-option').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const theme = btn.dataset.theme;
-        localStorage.setItem('theme-preference', theme);
-        dashboard.themeManager.applyTheme(theme);
-        dashboard.themeManager.updateThemeButtons(theme);
-      });
-    });
+    // Theme toggle - inject into user dropdown
+    const themeToggleContainer = document.getElementById('theme-toggle-container');
+    if (themeToggleContainer) {
+      dashboard.themeManager.injectThemeToggle(themeToggleContainer);
+    }
 
     // Graph button - open knowledge graph in new tab
     const graphBtn = document.getElementById('graph-btn');

@@ -1,6 +1,8 @@
 // newtab-minimal.js - Minimal new tab with search navigation
 // Handles search form submission, Firebase auth, and Unsplash background
 
+/* global ThemeManager */
+
 import { unsplashAccessKey, getStorageAPI } from './config.js';
 
 const CACHE_KEY = 'newtab_background';
@@ -20,6 +22,21 @@ const userAvatar = document.getElementById('user-avatar');
 const userDropdown = document.getElementById('user-dropdown');
 const userEmailEl = document.getElementById('user-email');
 const signOutBtn = document.getElementById('sign-out-btn');
+
+/**
+ * Initialize theme from saved preference and inject toggle
+ */
+function initTheme() {
+  const themeManager = new ThemeManager();
+  const savedTheme = localStorage.getItem('theme-preference') || 'auto';
+  themeManager.applyTheme(savedTheme);
+
+  // Inject theme toggle into user dropdown
+  const themeToggleContainer = document.getElementById('theme-toggle-container');
+  if (themeToggleContainer) {
+    themeManager.injectThemeToggle(themeToggleContainer);
+  }
+}
 
 /**
  * Get user initials from name or email
@@ -105,7 +122,7 @@ function updateAuthUI(user) {
 function getFaviconUrl(url) {
   try {
     const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
   } catch {
     return null;
   }
@@ -425,6 +442,9 @@ document.addEventListener('click', (e) => {
     userDropdown.classList.add('hidden');
   }
 });
+
+// Initialize theme first (synchronous)
+initTheme();
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([
