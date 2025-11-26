@@ -114,7 +114,7 @@ describe('Components', () => {
       const html = Components.savedPageCard(page);
 
       expect(html).toContain('favicon');
-      expect(html).toContain('google.com/s2/favicons?domain=example.com');
+      expect(html).toContain('icons.duckduckgo.com/ip3/example.com.ico');
     });
 
     it('should render user notes', () => {

@@ -13,20 +13,20 @@ describe('newtab-minimal', () => {
     function getFaviconUrl(url) {
       try {
         const domain = new URL(url).hostname;
-        return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+        return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
       } catch {
         return null;
       }
     }
 
-    it('should return Google favicon URL for valid URL', () => {
+    it('should return DuckDuckGo favicon URL for valid URL', () => {
       const result = getFaviconUrl('https://example.com/page');
-      expect(result).toBe('https://www.google.com/s2/favicons?domain=example.com&sz=64');
+      expect(result).toBe('https://icons.duckduckgo.com/ip3/example.com.ico');
     });
 
     it('should handle URLs with subdomains', () => {
       const result = getFaviconUrl('https://blog.example.com/post');
-      expect(result).toBe('https://www.google.com/s2/favicons?domain=blog.example.com&sz=64');
+      expect(result).toBe('https://icons.duckduckgo.com/ip3/blog.example.com.ico');
     });
 
     it('should return null for invalid URL', () => {
