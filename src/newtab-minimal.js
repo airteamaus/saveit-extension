@@ -4,7 +4,7 @@
 import { unsplashAccessKey, getStorageAPI } from './config.js';
 
 const CACHE_KEY = 'newtab_background';
-const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
+const CACHE_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours
 
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
