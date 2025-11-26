@@ -127,6 +127,53 @@ body {
   color: var(--color-text-light);
 }
 
+/* Compact Theme Toggle (for dropdown menus) */
+.theme-toggle-compact {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.theme-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-light);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.theme-option-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+.theme-option-icon:hover {
+  color: var(--color-text);
+  background: var(--color-bg);
+  border-color: var(--color-text-light);
+}
+
+.theme-option-icon.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.theme-option-icon:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .logo {
   display: flex;
   align-items: center;

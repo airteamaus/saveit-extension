@@ -1,6 +1,8 @@
 // search-results.js - Minimal search results page functionality
 // Handles semantic search via API and result rendering
 
+/* global ThemeManager */
+
 // State
 let currentQuery = '';
 let currentOffset = 0;
@@ -31,7 +33,7 @@ const signOutBtn = document.getElementById('sign-out-btn');
  * @returns {string} Favicon URL
  */
 function getFaviconUrl(domain) {
-  return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+  return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
 }
 
 /**
@@ -417,6 +419,21 @@ document.addEventListener('click', (e) => {
     userDropdown.classList.add('hidden');
   }
 });
+
+// Initialize theme
+function initTheme() {
+  const themeManager = new ThemeManager();
+  const savedTheme = localStorage.getItem('theme-preference') || 'auto';
+  themeManager.applyTheme(savedTheme);
+
+  // Inject theme toggle into user dropdown
+  const themeToggleContainer = document.getElementById('theme-toggle-container');
+  if (themeToggleContainer) {
+    themeManager.injectThemeToggle(themeToggleContainer);
+  }
+}
+
+initTheme();
 
 // Initialize
 init();
