@@ -286,7 +286,7 @@ async function fetchUnsplashPhoto() {
     const photo = await response.json();
 
     return {
-      imageUrl: photo.urls.regular,
+      imageUrl: photo.urls.full,
       photographerName: photo.user.name,
       photographerUrl: `${photo.user.links.html}?utm_source=saveit&utm_medium=referral`
     };

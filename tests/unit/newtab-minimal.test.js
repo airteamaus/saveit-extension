@@ -239,7 +239,7 @@ describe('newtab-minimal', () => {
   describe('Unsplash response parsing', () => {
     function parseUnsplashPhoto(photo) {
       return {
-        imageUrl: photo.urls.regular,
+        imageUrl: photo.urls.full,
         photographerName: photo.user.name,
         photographerUrl: `${photo.user.links.html}?utm_source=saveit&utm_medium=referral`
       };
@@ -247,7 +247,7 @@ describe('newtab-minimal', () => {
 
     it('should parse Unsplash API response correctly', () => {
       const mockResponse = {
-        urls: { regular: 'https://images.unsplash.com/photo-123' },
+        urls: { full: 'https://images.unsplash.com/photo-123' },
         user: {
           name: 'John Doe',
           links: { html: 'https://unsplash.com/@johndoe' }
