@@ -163,11 +163,14 @@ describe('API - Utility Functions', () => {
         headers: { 'X-Custom': 'header' }
       });
 
-      // Current implementation has options.headers override Authorization
+      // Should include BOTH Authorization header AND custom headers
       expect(global.fetch).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
-          headers: { 'X-Custom': 'header' },
+          headers: {
+            'Authorization': 'Bearer test-token',
+            'X-Custom': 'header'
+          },
           method: 'GET'
         })
       );

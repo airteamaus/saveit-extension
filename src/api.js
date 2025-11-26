@@ -158,13 +158,17 @@ const API = {
       url = `${url}?${searchParams}`;
     }
 
+    // Destructure to exclude headers from options spread (avoid overwriting merged headers)
+    // eslint-disable-next-line no-unused-vars
+    const { headers: _, ...fetchOptions } = options;
+
     const response = await fetch(url, {
+      ...fetchOptions,
       method: options.method || 'GET',
       headers: {
         'Authorization': `Bearer ${idToken}`,
         ...options.headers
-      },
-      ...options
+      }
     });
 
     if (!response.ok) {
