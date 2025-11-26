@@ -27,15 +27,7 @@ const signOutBtn = document.getElementById('sign-out-btn');
  * Initialize theme from saved preference and inject toggle
  */
 function initTheme() {
-  const themeManager = new ThemeManager();
-  const savedTheme = localStorage.getItem('theme-preference') || 'auto';
-  themeManager.applyTheme(savedTheme);
-
-  // Inject theme toggle into user dropdown
-  const themeToggleContainer = document.getElementById('theme-toggle-container');
-  if (themeToggleContainer) {
-    themeManager.injectThemeToggle(themeToggleContainer);
-  }
+  ThemeManager.init();
 }
 
 /**

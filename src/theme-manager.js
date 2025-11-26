@@ -16,6 +16,22 @@ class ThemeManager {
   }
 
   /**
+   * Static factory: Initialize theme and optionally inject toggle
+   * Single entry point for pages that just need theme support
+   * @param {string} [toggleContainerId='theme-toggle-container'] - ID of container for toggle buttons
+   * @returns {ThemeManager} The initialized instance
+   */
+  static init(toggleContainerId = 'theme-toggle-container') {
+    const manager = new ThemeManager();
+    manager.initTheme();
+    const container = document.getElementById(toggleContainerId);
+    if (container) {
+      manager.injectThemeToggle(container);
+    }
+    return manager;
+  }
+
+  /**
    * Initialize theme from localStorage and apply to UI
    * Called during dashboard initialization
    */
@@ -23,6 +39,37 @@ class ThemeManager {
     const savedTheme = localStorage.getItem('theme-preference') || 'auto';
     this.applyTheme(savedTheme);
     this.updateThemeButtons(savedTheme);
+    this.initCrossTabSync();
+    this.initSystemPreferenceListener();
+  }
+
+  /**
+   * Listen for theme changes from other tabs via localStorage
+   * Ensures all open pages stay in sync when user changes theme
+   */
+  initCrossTabSync() {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'theme-preference') {
+        const newTheme = e.newValue || 'auto';
+        this.applyTheme(newTheme);
+        this.updateThemeButtons(newTheme);
+      }
+    });
+  }
+
+  /**
+   * Listen for system color scheme changes when theme is 'auto'
+   * Triggers CSS recalculation when OS switches light/dark mode
+   */
+  initSystemPreferenceListener() {
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    mediaQuery.addEventListener('change', () => {
+      const currentTheme = localStorage.getItem('theme-preference') || 'auto';
+      if (currentTheme === 'auto') {
+        // Re-apply to trigger any JS-based theme updates
+        this.applyTheme('auto');
+      }
+    });
   }
 
   /**

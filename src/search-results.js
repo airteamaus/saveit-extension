@@ -422,15 +422,7 @@ document.addEventListener('click', (e) => {
 
 // Initialize theme
 function initTheme() {
-  const themeManager = new ThemeManager();
-  const savedTheme = localStorage.getItem('theme-preference') || 'auto';
-  themeManager.applyTheme(savedTheme);
-
-  // Inject theme toggle into user dropdown
-  const themeToggleContainer = document.getElementById('theme-toggle-container');
-  if (themeToggleContainer) {
-    themeManager.injectThemeToggle(themeToggleContainer);
-  }
+  ThemeManager.init();
 }
 
 initTheme();
