@@ -405,7 +405,7 @@ body {
 /* Main Content */
 .main {
   flex: 1;
-  max-width: 900px;
+  max-width: 1200px;
   width: 100%;
   margin: 0 auto;
   padding: var(--spacing-lg);
@@ -413,11 +413,8 @@ body {
 
 /* Tag Bar - Navigation bar for hierarchical tag browsing */
 .tag-bar {
-  background: light-dark(var(--color-surface), rgba(26, 26, 26, 0.8));
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid var(--color-border);
   padding: var(--spacing-sm) var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
 }
 
 .tag-bar-header {
@@ -476,7 +473,7 @@ body {
 .tag-bar-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-sm);
+  gap: var(--spacing-md);
   padding: 0;
   margin: 0;
 }
@@ -601,8 +598,24 @@ body {
 .row-tags {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--spacing-xs);
+  gap: var(--spacing-md);
   flex: 1;
+}
+
+/* Card tags - link style (lighter, no borders) */
+.row-tags .tag {
+  background: transparent;
+  border: none;
+  padding: 0;
+  font-weight: 400;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.row-tags .tag:hover {
+  opacity: 0.7;
+  text-decoration: underline;
 }
 
 .row-meta {
@@ -632,6 +645,7 @@ body {
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
   font-weight: 500;
+  color-scheme: light dark;
 }
 
 /* AI-generated tags get distinct styling
@@ -713,6 +727,20 @@ body {
   background: light-dark(rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.2));
   border-color: light-dark(rgba(139, 92, 246, 0.6), rgba(139, 92, 246, 0.6));
   font-weight: 500;
+}
+
+/* Card-specific overrides - link style for tags in cards */
+.row-tags .tag.tag-general {
+  color: light-dark(#64748b, #94a3b8);
+}
+
+.row-tags .tag.tag-domain {
+  color: light-dark(var(--color-primary), #60a5fa);
+}
+
+.row-tags .tag.tag-topic {
+  color: light-dark(#8b5cf6, #a78bfa);
+  font-style: italic;
 }
 
 /* User notes styling */
@@ -805,6 +833,10 @@ body {
   flex-shrink: 0;
   margin-left: auto;
   line-height: 1;
+  opacity: 0;
+}
+
+.saved-page-card:hover .btn-pin {
   opacity: 0.4;
 }
 

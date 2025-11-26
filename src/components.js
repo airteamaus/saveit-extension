@@ -49,12 +49,26 @@ const Components = {
    * Supports multi-level classifications and primary_classification_label fallback
    *
    * @param {Page} page - Page data object
+   * @param {boolean} [topOnly=false] - If true, only show highest confidence tag from each type
    * @returns {string} HTML string of classification tags
    */
-  renderClassifications(page) {
+  renderClassifications(page, topOnly = false) {
     // Use new classifications if available
     if (page.classifications && page.classifications.length > 0) {
-      return page.classifications
+      let classifications = page.classifications;
+
+      // If topOnly, filter to highest confidence per type
+      if (topOnly) {
+        const byType = {};
+        classifications.forEach(c => {
+          if (!byType[c.type] || c.confidence > byType[c.type].confidence) {
+            byType[c.type] = c;
+          }
+        });
+        classifications = Object.values(byType);
+      }
+
+      return classifications
         .map(c => {
           const typeClass = `tag-${c.type}`; // tag-general, tag-domain, tag-topic
           return `<span class="tag ai-tag ${typeClass}" data-type="${this.escapeHtml(c.type)}" data-label="${this.escapeHtml(c.label)}" title="AI-generated ${c.type} (confidence: ${Math.round(c.confidence * 100)}%)">${this.escapeHtml(c.label)}</span>`;
@@ -103,7 +117,7 @@ const Components = {
 
     return `
       <div class="row-tags">
-        ${this.renderClassifications(page)}
+        ${this.renderClassifications(page, true)}
         ${page.manual_tags && page.manual_tags.length > 0 ?
           page.manual_tags.map(tag => `<span class="tag">${this.escapeHtml(tag)}</span>`).join('')
         : ''}
