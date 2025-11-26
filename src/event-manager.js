@@ -111,6 +111,15 @@ class EventManager {
         return;
       }
 
+      // Pin button - handle and stop propagation
+      const pinBtn = e.target.closest('.btn-pin');
+      if (pinBtn) {
+        e.stopPropagation();
+        const id = pinBtn.dataset.id;
+        dashboard.togglePin(id);
+        return;
+      }
+
       // Tag click - handle tags anywhere (tag bar OR search results)
       const tag = e.target.closest('.tag.ai-tag');
       if (tag) {

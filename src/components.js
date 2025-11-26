@@ -133,6 +133,9 @@ const Components = {
           <div class="row-header">
             ${page.domain ? `<img class="favicon" src="https://www.google.com/s2/favicons?domain=${this.escapeHtml(page.domain)}&sz=32" alt="" width="20" height="20">` : ''}
             <h3 class="row-title">${this.escapeHtml(page.title)}</h3>
+            <button class="btn-pin" data-id="${page.id}" title="${page.pinned ? 'Unpin page' : 'Pin page'}">
+              ${page.pinned ? '⭐' : '☆'}
+            </button>
           </div>
 
           ${page.ai_summary_brief ? `

@@ -795,6 +795,29 @@ body {
   color: white;
 }
 
+.btn-pin {
+  padding: var(--spacing-xs);
+  font-size: 1.125rem;
+  background: transparent;
+  border: none;
+  color: var(--color-text-light);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: transform 0.2s, color 0.2s;
+  flex-shrink: 0;
+  margin-left: auto;
+  line-height: 1;
+}
+
+.btn-pin:hover {
+  transform: scale(1.1);
+  color: #f59e0b;
+}
+
+.btn-pin:active {
+  transform: scale(0.95);
+}
+
 /* Empty State */
 .empty-state,
 .loading-state,

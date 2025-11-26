@@ -438,6 +438,46 @@ class SaveItDashboard {
   }
 
   /**
+   * Toggle pin status for a saved page
+   */
+  async togglePin(id) {
+    // Find the page to get current pin status
+    const page = this.allPages.find(p => p.id === id);
+    if (!page) {
+      console.error('Page not found:', id);
+      return;
+    }
+
+    const newPinnedState = !page.pinned;
+
+    // Optimistic update - update UI immediately
+    page.pinned = newPinnedState;
+    const pageInFiltered = this.pages.find(p => p.id === id);
+    if (pageInFiltered) {
+      pageInFiltered.pinned = newPinnedState;
+    }
+
+    // Re-render to show updated pin state
+    this.render();
+
+    try {
+      await API.pinPage(id, newPinnedState);
+      this.showToast(newPinnedState ? 'Page pinned' : 'Page unpinned');
+    } catch (error) {
+      console.error('Failed to toggle pin:', error);
+
+      // Rollback on error
+      page.pinned = !newPinnedState;
+      if (pageInFiltered) {
+        pageInFiltered.pinned = !newPinnedState;
+      }
+      this.render();
+
+      this.showToast('Failed to update pin status. Please try again.', 'error');
+    }
+  }
+
+  /**
    * Show about dialog
    */
   showAbout() {

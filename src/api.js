@@ -448,6 +448,43 @@ const API = {
   },
 
   /**
+   * Pin or unpin a saved page
+   * @param {string} id - Page ID
+   * @param {boolean} pinned - Whether to pin (true) or unpin (false)
+   * @returns {Promise<Object>} Result object
+   */
+  async pinPage(id, pinned) {
+    if (this.isExtension) {
+      return this._executeWithErrorHandling(
+        async () => {
+          const response = await this._fetchWithAuth('/pin', null, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ id, pinned })
+          });
+
+          // Invalidate cache after successful pin/unpin
+          await this.invalidateCache();
+
+          return response;
+        },
+        'pinPage',
+        { id, pinned }
+      );
+    } else {
+      debug('Mock pin:', id, pinned);
+      const page = MOCK_DATA.find(p => p.id === id);
+      if (page) {
+        page.pinned = pinned;
+        return { success: true };
+      }
+      throw new Error('Page not found');
+    }
+  },
+
+  /**
    * Fetch tag search from Cloud Function (extension mode only)
    * @private
    * @param {string} label - Tag label to search for
