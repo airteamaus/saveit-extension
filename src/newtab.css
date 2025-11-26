@@ -603,18 +603,20 @@ body {
 }
 
 /* Card tags - link style (lighter, no borders) */
-.row-tags .tag {
+.row-tags .tag,
+.row-meta-inline .tag {
   background: transparent;
   border: none;
   padding: 0;
   font-weight: 400;
   text-decoration: none;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: filter 0.2s, text-decoration 0.2s;
 }
 
-.row-tags .tag:hover {
-  opacity: 0.7;
+.row-tags .tag:hover,
+.row-meta-inline .tag:hover {
+  filter: brightness(1.3);
   text-decoration: underline;
 }
 
@@ -624,6 +626,21 @@ body {
   gap: var(--spacing-md);
   font-size: 0.75rem;
   color: var(--color-text-light);
+}
+
+.row-meta-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  font-size: 0.75rem;
+  color: var(--color-text-light);
+  flex: 1;
+}
+
+.meta-separator {
+  color: var(--color-text-lighter);
+  font-size: 0.5rem;
+  opacity: 0.5;
 }
 
 /* Metadata bullet separator pattern (CSS-based, not JS)
@@ -677,11 +694,11 @@ body {
   border: 1px solid light-dark(rgba(100, 116, 139, 0.2), rgba(100, 116, 139, 0.25));
   font-size: var(--font-size-xs);
   font-weight: 400;
+  transition: filter 0.2s;
 }
 
 .tag.tag-general:hover {
-  background: light-dark(rgba(100, 116, 139, 0.15), rgba(100, 116, 139, 0.18));
-  border-color: light-dark(rgba(100, 116, 139, 0.4), rgba(100, 116, 139, 0.5));
+  filter: brightness(1.3);
 }
 
 .tag.tag-general.active {
@@ -696,11 +713,11 @@ body {
   color: light-dark(var(--color-primary), #60a5fa);
   border: 1px solid light-dark(rgba(37, 99, 235, 0.2), rgba(37, 99, 235, 0.25));
   font-weight: 500;
+  transition: filter 0.2s;
 }
 
 .tag.tag-domain:hover {
-  background: light-dark(rgba(37, 99, 235, 0.15), rgba(37, 99, 235, 0.18));
-  border-color: light-dark(rgba(37, 99, 235, 0.4), rgba(37, 99, 235, 0.5));
+  filter: brightness(1.3);
 }
 
 .tag.tag-domain.active {
@@ -716,11 +733,11 @@ body {
   border: 1px solid light-dark(rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.25));
   font-weight: 400;
   font-style: italic;
+  transition: filter 0.2s;
 }
 
 .tag.tag-topic:hover {
-  background: light-dark(rgba(139, 92, 246, 0.15), rgba(139, 92, 246, 0.18));
-  border-color: light-dark(rgba(139, 92, 246, 0.4), rgba(139, 92, 246, 0.5));
+  filter: brightness(1.3);
 }
 
 .tag.tag-topic.active {
@@ -730,17 +747,34 @@ body {
 }
 
 /* Card-specific overrides - link style for tags in cards */
-.row-tags .tag.tag-general {
+.row-tags .tag.tag-general,
+.row-meta-inline .tag.tag-general {
   color: light-dark(#64748b, #94a3b8);
+  background: transparent;
+  border: none;
+  font-weight: 400;
+  font-style: normal;
+  font-size: var(--font-size-sm);
 }
 
-.row-tags .tag.tag-domain {
+.row-tags .tag.tag-domain,
+.row-meta-inline .tag.tag-domain {
   color: light-dark(var(--color-primary), #60a5fa);
+  background: transparent;
+  border: none;
+  font-weight: 400;
+  font-style: normal;
+  font-size: var(--font-size-sm);
 }
 
-.row-tags .tag.tag-topic {
+.row-tags .tag.tag-topic,
+.row-meta-inline .tag.tag-topic {
   color: light-dark(#8b5cf6, #a78bfa);
-  font-style: italic;
+  background: transparent;
+  border: none;
+  font-weight: 400;
+  font-style: normal;
+  font-size: var(--font-size-sm);
 }
 
 /* User notes styling */

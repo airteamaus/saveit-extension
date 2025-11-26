@@ -139,7 +139,24 @@ const Components = {
    * @returns {string} HTML string
    */
   savedPageCard(page) {
-    const metaItems = this._buildMetadataItems(page);
+    // Build consolidated metadata row: domain • tags • reading_time
+    const metaParts = [];
+
+    // Add domain first
+    if (page.domain) {
+      metaParts.push(`<span class="meta-item">${this.escapeHtml(page.domain)}</span>`);
+    }
+
+    // Add tags (will be rendered inline)
+    const tagsHtml = this.renderClassifications(page, true);
+    if (tagsHtml) {
+      metaParts.push(tagsHtml);
+    }
+
+    // Add reading time last
+    if (page.reading_time_minutes) {
+      metaParts.push(`<span class="meta-item">${page.reading_time_minutes} min read</span>`);
+    }
 
     return `
       <div class="saved-page-card" data-id="${page.id}" data-url="${this.escapeHtml(page.url)}">
@@ -158,16 +175,28 @@ const Components = {
             <p class="row-summary">${this.escapeHtml(this.truncate(page.description, 200))}</p>
           ` : '')}
 
-          <div class="row-footer">
-            ${this._renderTagsFooterSection(page)}
-
-            <button class="btn-delete" data-id="${page.id}" title="Delete page">
-              <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="3 6 5 6 21 6"></polyline>
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-              </svg>
-            </button>
-          </div>
+          ${metaParts.length > 0 ? `
+            <div class="row-footer">
+              <div class="row-meta-inline">
+                ${metaParts.join(' <span class="meta-separator">⏺</span> ')}
+              </div>
+              <button class="btn-delete" data-id="${page.id}" title="Delete page">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          ` : `
+            <div class="row-footer">
+              <button class="btn-delete" data-id="${page.id}" title="Delete page">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                </svg>
+              </button>
+            </div>
+          `}
 
           ${page.user_notes ? `
             <div class="row-notes">
@@ -179,12 +208,6 @@ const Components = {
             </div>
           ` : ''}
         </div>
-
-        ${metaItems.length > 0 ? `
-          <div class="row-meta">
-            ${metaItems.map(item => `<span class="meta-item">${item}</span>`).join('')}
-          </div>
-        ` : ''}
       </div>
     `;
   },

@@ -143,10 +143,10 @@ describe('Components', () => {
 
       const html = Components.savedPageCard(page);
 
-      expect(html).toContain('row-meta');
+      expect(html).toContain('row-meta-inline');
       expect(html).toContain('5 min read');
-      expect(html).toContain('John Doe');
       expect(html).toContain('example.com');
+      expect(html).toContain('meta-separator');
     });
 
     it('should escape XSS in title', () => {
