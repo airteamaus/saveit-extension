@@ -270,7 +270,7 @@ async function fetchUnsplashPhoto() {
 
   try {
     const response = await fetch(
-      'https://api.unsplash.com/photos/random?orientation=landscape&topics=nature',
+      'https://api.unsplash.com/photos/random?orientation=landscape&topics=architecture,textures,wallpapers',
       {
         headers: {
           'Authorization': `Client-ID ${unsplashAccessKey}`
