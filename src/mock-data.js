@@ -278,10 +278,25 @@ function filterMockData(data, options) {
     );
   }
 
+  // Sort by pinned first (if pinnedFirst is true or undefined, default to true for backwards compatibility)
+  const pinnedFirst = options.pinnedFirst !== false;
+
   if (options.sort === 'newest') {
-    filtered.sort((a, b) => new Date(b.saved_at) - new Date(a.saved_at));
+    filtered.sort((a, b) => {
+      if (pinnedFirst) {
+        // Sort by pinned first, then by saved_at
+        if (a.pinned !== b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      }
+      return new Date(b.saved_at) - new Date(a.saved_at);
+    });
   } else if (options.sort === 'oldest') {
-    filtered.sort((a, b) => new Date(a.saved_at) - new Date(b.saved_at));
+    filtered.sort((a, b) => {
+      if (pinnedFirst) {
+        // Sort by pinned first, then by saved_at
+        if (a.pinned !== b.pinned) return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      }
+      return new Date(a.saved_at) - new Date(b.saved_at);
+    });
   }
 
   // In standalone mode, return all data on initial load (no pagination)

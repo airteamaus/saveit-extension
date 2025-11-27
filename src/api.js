@@ -259,6 +259,11 @@ const API = {
       sort: options.sort || 'newest'
     };
 
+    // Add pinnedFirst parameter if explicitly set
+    if (options.pinnedFirst !== undefined) {
+      params.pinnedFirst = options.pinnedFirst;
+    }
+
     const data = await this._fetchWithAuth('', params);
     debug('[getSavedPages] Raw JSON response:', data);
     return data;

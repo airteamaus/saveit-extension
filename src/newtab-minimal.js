@@ -268,7 +268,7 @@ async function initFavorites() {
       return null;
     }
 
-    const response = await API.getSavedPages({ limit: 6, sort: 'newest' });
+    const response = await API.getSavedPages({ limit: 6, sort: 'newest', pinnedFirst: true });
     if (response && response.pages) {
       renderFavorites(response.pages);
       return response.pagination;
