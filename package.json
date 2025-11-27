@@ -18,7 +18,7 @@
     "upload-chrome": "node scripts/upload-chrome.js",
     "upload-chrome:publish": "node scripts/upload-chrome.js --publish",
     "upload-chrome:testers": "node scripts/upload-chrome.js --publish --target trustedTesters",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "keywords": [
     "browser-extension",

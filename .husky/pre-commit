@@ -2,14 +2,14 @@ echo "🔍 Running pre-commit checks..."
 
 # Run linter
 echo "  → Linting..."
-npm run lint || {
-  echo "❌ Linting failed. Run 'npm run lint:fix' to fix issues."
+pnpm run lint || {
+  echo "❌ Linting failed. Run 'pnpm run lint:fix' to fix issues."
   exit 1
 }
 
-# Validate manifest (uses same exclusions as npm run validate)
+# Validate manifest (uses same exclusions as pnpm run validate)
 echo "  → Validating manifest..."
-npm run validate || {
+pnpm run validate || {
   echo "❌ Manifest validation failed (warnings OK for now)."
   # Don't fail on warnings - web-ext lint has many false positives
   true
@@ -17,7 +17,7 @@ npm run validate || {
 
 # Run tests
 echo "  → Running tests..."
-npm test || {
+pnpm test || {
   echo "❌ Tests failed. Fix tests before committing."
   exit 1
 }

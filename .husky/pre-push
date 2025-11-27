@@ -31,14 +31,14 @@ fi
 
 # Run tests with coverage
 echo "  → Running tests with coverage..."
-npm run test:coverage || {
+pnpm run test:coverage || {
   echo "❌ Tests or coverage failed. Fix before pushing."
   exit 1
 }
 
 # Verify build works
 echo "  → Verifying build..."
-node scripts/bundle-firebase.js && npx web-ext build --overwrite-dest > /dev/null 2>&1 || {
+node scripts/bundle-firebase.js && pnpm exec web-ext build --overwrite-dest > /dev/null 2>&1 || {
   echo "❌ Build failed. Fix before pushing."
   exit 1
 }
