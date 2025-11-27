@@ -508,6 +508,43 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
     this.notificationManager.showToast(message);
   }
 
+  /**
+   * Refresh background image (for newtab-minimal.html compatibility)
+   * Note: Main dashboard (newtab.html) doesn't have background image by default,
+   * but this method is called from event-manager.js when refresh button is clicked
+   */
+  async refreshBackground() {
+    // Check if we're on a page that has background elements
+    const backgroundEl = document.getElementById('background');
+    const photographerLinkEl = document.getElementById('photographer-link');
+    const photoCreditEl = document.getElementById('photo-credit');
+
+    // Only refresh if background elements exist (newtab-minimal.html)
+    if (!backgroundEl) {
+      console.log('[Dashboard] Background refresh not applicable on this page');
+      return;
+    }
+
+    try {
+      // Import config for background functionality
+      const { unsplashAccessKey, getStorageAPI } = await import('./config.js');
+
+      const config = {
+        cacheKey: 'newtab_background',
+        cacheDurationMs: 3 * 60 * 60 * 1000, // 3 hours
+        storage: getStorageAPI(),
+        unsplashAccessKey: unsplashAccessKey,
+        backgroundEl: backgroundEl,
+        photographerLinkEl: photographerLinkEl,
+        photoCreditEl: photoCreditEl
+      };
+
+      await this.themeManager.refreshBackground(config);
+    } catch (error) {
+      console.error('[Dashboard] Failed to refresh background:', error);
+    }
+  }
+
 }
 
 async function initDashboard() {

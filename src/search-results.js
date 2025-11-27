@@ -26,6 +26,7 @@ const userAvatar = document.getElementById('user-avatar');
 const userDropdown = document.getElementById('user-dropdown');
 const userEmail = document.getElementById('user-email');
 const signOutBtn = document.getElementById('sign-out-btn');
+const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
 
 /**
  * Get favicon URL for a domain
@@ -412,6 +413,11 @@ searchInput.addEventListener('input', handleInputChange);
 loadMoreBtn.addEventListener('click', () => executeSearch(currentQuery, true));
 userAvatarBtn.addEventListener('click', toggleUserDropdown);
 signOutBtn.addEventListener('click', handleSignOut);
+refreshBackgroundBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  // Search results page doesn't have background image - no-op
+  console.log('[search-results] Background refresh not applicable on search results page');
+});
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {

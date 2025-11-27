@@ -22,6 +22,7 @@ const userAvatar = document.getElementById('user-avatar');
 const userDropdown = document.getElementById('user-dropdown');
 const userEmailEl = document.getElementById('user-email');
 const signOutBtn = document.getElementById('sign-out-btn');
+const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
 
 /**
  * Initialize theme from saved preference and inject toggle
@@ -224,127 +225,35 @@ async function handleSignIn() {
 }
 
 /**
- * Get cached background data from browser storage
- * @returns {Promise<Object|null>} Cached background data or null
+ * Get background config for ThemeManager
+ * @returns {Object} Configuration object for background management
  */
-async function getCachedBackground() {
-  const storage = getStorageAPI();
-  if (!storage) return null;
-
-  try {
-    const result = await storage.get(CACHE_KEY);
-    const cached = result[CACHE_KEY];
-
-    if (!cached) return null;
-
-    // Check if cache is expired
-    const age = Date.now() - cached.cachedAt;
-    if (age > CACHE_DURATION_MS) {
-      await storage.remove(CACHE_KEY);
-      return null;
-    }
-
-    return cached;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Save background data to browser storage
- * @param {Object} data - Background data to cache
- */
-async function cacheBackground(data) {
-  const storage = getStorageAPI();
-  if (!storage) return;
-
-  try {
-    await storage.set({
-      [CACHE_KEY]: {
-        ...data,
-        cachedAt: Date.now()
-      }
-    });
-  } catch (error) {
-    console.error('[newtab-minimal] Failed to cache background:', error);
-  }
-}
-
-/**
- * Fetch random photo from Unsplash API
- * @returns {Promise<Object|null>} Photo data or null on failure
- */
-async function fetchUnsplashPhoto() {
-  if (!unsplashAccessKey) return null;
-
-  try {
-    const response = await fetch(
-      'https://api.unsplash.com/photos/random?orientation=landscape&topics=architecture,textures,wallpapers',
-      {
-        headers: {
-          'Authorization': `Client-ID ${unsplashAccessKey}`
-        }
-      }
-    );
-
-    if (!response.ok) {
-      console.error('[newtab-minimal] Unsplash API error:', response.status);
-      return null;
-    }
-
-    const photo = await response.json();
-
-    return {
-      imageUrl: photo.urls.full,
-      photographerName: photo.user.name,
-      photographerUrl: `${photo.user.links.html}?utm_source=saveit&utm_medium=referral`
-    };
-  } catch (error) {
-    console.error('[newtab-minimal] Failed to fetch Unsplash photo:', error);
-    return null;
-  }
-}
-
-/**
- * Apply background image and show photo credit
- * @param {Object} data - Background data with imageUrl, photographerName, photographerUrl
- */
-function applyBackground(data) {
-  if (!data || !data.imageUrl) return;
-
-  // Preload image before displaying
-  const img = new Image();
-  img.onload = () => {
-    backgroundEl.style.backgroundImage = `url(${data.imageUrl})`;
-    backgroundEl.classList.add('loaded');
-    document.body.classList.add('has-background');
-
-    // Update photo credit
-    photographerLinkEl.textContent = data.photographerName;
-    photographerLinkEl.href = data.photographerUrl;
-    photoCreditEl.classList.remove('hidden');
+function getBackgroundConfig() {
+  return {
+    cacheKey: CACHE_KEY,
+    cacheDurationMs: CACHE_DURATION_MS,
+    storage: getStorageAPI(),
+    unsplashAccessKey: unsplashAccessKey,
+    backgroundEl: backgroundEl,
+    photographerLinkEl: photographerLinkEl,
+    photoCreditEl: photoCreditEl
   };
-  img.src = data.imageUrl;
 }
 
 /**
  * Initialize background image from cache or Unsplash
  */
 async function initBackground() {
-  // Try cache first
-  let backgroundData = await getCachedBackground();
+  const themeManager = new ThemeManager();
+  await themeManager.initBackground(getBackgroundConfig());
+}
 
-  if (backgroundData) {
-    applyBackground(backgroundData);
-    return;
-  }
-
-  // Fetch new photo
-  backgroundData = await fetchUnsplashPhoto();
-  if (backgroundData) {
-    await cacheBackground(backgroundData);
-    applyBackground(backgroundData);
-  }
+/**
+ * Refresh background image (fetch new photo)
+ */
+async function refreshBackground() {
+  const themeManager = new ThemeManager();
+  await themeManager.refreshBackground(getBackgroundConfig());
 }
 
 /**
@@ -427,6 +336,7 @@ searchForm.addEventListener('submit', handleSearch);
 signInBtn.addEventListener('click', handleSignIn);
 userAvatarBtn.addEventListener('click', toggleUserDropdown);
 signOutBtn.addEventListener('click', handleSignOut);
+refreshBackgroundBtn.addEventListener('click', refreshBackground);
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {

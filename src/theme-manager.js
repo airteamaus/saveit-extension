@@ -199,4 +199,184 @@ class ThemeManager {
       }
     }
   }
+
+  /**
+   * Background image management for minimal new tab
+   * Fetches from Unsplash and caches for 3 hours
+   */
+
+  /**
+   * Get cached background data from browser storage
+   * @param {string} cacheKey - Storage key for background data
+   * @param {number} cacheDurationMs - Cache duration in milliseconds
+   * @param {Object} storage - Storage API (browser.storage.local or chrome.storage.local)
+   * @returns {Promise<Object|null>} Cached background data or null
+   */
+  async getCachedBackground(cacheKey, cacheDurationMs, storage) {
+    if (!storage) return null;
+
+    try {
+      const result = await storage.get(cacheKey);
+      const cached = result[cacheKey];
+
+      if (!cached) return null;
+
+      // Check if cache is expired
+      const age = Date.now() - cached.cachedAt;
+      if (age > cacheDurationMs) {
+        await storage.remove(cacheKey);
+        return null;
+      }
+
+      return cached;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Save background data to browser storage
+   * @param {Object} data - Background data to cache
+   * @param {string} cacheKey - Storage key for background data
+   * @param {Object} storage - Storage API (browser.storage.local or chrome.storage.local)
+   */
+  async cacheBackground(data, cacheKey, storage) {
+    if (!storage) return;
+
+    try {
+      await storage.set({
+        [cacheKey]: {
+          ...data,
+          cachedAt: Date.now()
+        }
+      });
+    } catch (error) {
+      console.error('[ThemeManager] Failed to cache background:', error);
+    }
+  }
+
+  /**
+   * Fetch random photo from Unsplash API
+   * @param {string} unsplashAccessKey - Unsplash API access key
+   * @returns {Promise<Object|null>} Photo data or null on failure
+   */
+  async fetchUnsplashPhoto(unsplashAccessKey) {
+    if (!unsplashAccessKey) return null;
+
+    try {
+      const response = await fetch(
+        'https://api.unsplash.com/photos/random?orientation=landscape&topics=architecture,textures,wallpapers',
+        {
+          headers: {
+            'Authorization': `Client-ID ${unsplashAccessKey}`
+          }
+        }
+      );
+
+      if (!response.ok) {
+        console.error('[ThemeManager] Unsplash API error:', response.status);
+        return null;
+      }
+
+      const photo = await response.json();
+
+      return {
+        imageUrl: photo.urls.full,
+        photographerName: photo.user.name,
+        photographerUrl: `${photo.user.links.html}?utm_source=saveit&utm_medium=referral`
+      };
+    } catch (error) {
+      console.error('[ThemeManager] Failed to fetch Unsplash photo:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Apply background image and show photo credit
+   * @param {Object} data - Background data with imageUrl, photographerName, photographerUrl
+   * @param {HTMLElement} backgroundEl - Background container element
+   * @param {HTMLElement} photographerLinkEl - Photographer link element
+   * @param {HTMLElement} photoCreditEl - Photo credit container element
+   */
+  applyBackground(data, backgroundEl, photographerLinkEl, photoCreditEl) {
+    if (!data || !data.imageUrl) return;
+
+    // Preload image before displaying
+    const img = new Image();
+    img.onload = () => {
+      if (backgroundEl) {
+        backgroundEl.style.backgroundImage = `url(${data.imageUrl})`;
+        backgroundEl.classList.add('loaded');
+        document.body.classList.add('has-background');
+      }
+
+      // Update photo credit
+      if (photographerLinkEl && photoCreditEl) {
+        photographerLinkEl.textContent = data.photographerName;
+        photographerLinkEl.href = data.photographerUrl;
+        photoCreditEl.classList.remove('hidden');
+      }
+    };
+    img.src = data.imageUrl;
+  }
+
+  /**
+   * Initialize background image from cache or Unsplash
+   * @param {Object} config - Configuration object
+   * @param {string} config.cacheKey - Storage key for background data
+   * @param {number} config.cacheDurationMs - Cache duration in milliseconds
+   * @param {Object} config.storage - Storage API
+   * @param {string} config.unsplashAccessKey - Unsplash API access key
+   * @param {HTMLElement} config.backgroundEl - Background container element
+   * @param {HTMLElement} config.photographerLinkEl - Photographer link element
+   * @param {HTMLElement} config.photoCreditEl - Photo credit container element
+   */
+  async initBackground(config) {
+    // Try cache first
+    let backgroundData = await this.getCachedBackground(
+      config.cacheKey,
+      config.cacheDurationMs,
+      config.storage
+    );
+
+    if (backgroundData) {
+      this.applyBackground(
+        backgroundData,
+        config.backgroundEl,
+        config.photographerLinkEl,
+        config.photoCreditEl
+      );
+      return;
+    }
+
+    // Fetch new photo
+    backgroundData = await this.fetchUnsplashPhoto(config.unsplashAccessKey);
+    if (backgroundData) {
+      await this.cacheBackground(backgroundData, config.cacheKey, config.storage);
+      this.applyBackground(
+        backgroundData,
+        config.backgroundEl,
+        config.photographerLinkEl,
+        config.photoCreditEl
+      );
+    }
+  }
+
+  /**
+   * Refresh background image (fetch new photo and apply immediately)
+   * @param {Object} config - Configuration object (same as initBackground)
+   */
+  async refreshBackground(config) {
+    // Fetch new photo (ignore cache)
+    const backgroundData = await this.fetchUnsplashPhoto(config.unsplashAccessKey);
+    if (backgroundData) {
+      await this.cacheBackground(backgroundData, config.cacheKey, config.storage);
+      this.applyBackground(
+        backgroundData,
+        config.backgroundEl,
+        config.photographerLinkEl,
+        config.photoCreditEl
+      );
+    }
+  }
 }

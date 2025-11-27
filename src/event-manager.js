@@ -39,6 +39,15 @@ class EventManager {
       signOutBtn.addEventListener('click', () => dashboard.authUIManager.handleSignOut(() => dashboard.showSignInPrompt()));
     }
 
+    // Refresh background button
+    const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
+    if (refreshBackgroundBtn) {
+      refreshBackgroundBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        await dashboard.refreshBackground();
+      });
+    }
+
     // Close dropdown when clicking outside
     document.addEventListener('click', (e) => {
       const dropdown = document.getElementById('user-dropdown');

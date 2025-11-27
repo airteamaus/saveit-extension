@@ -95,6 +95,7 @@ function initUserMenu() {
   const userAvatarBtn = document.getElementById('user-avatar-btn');
   const userDropdown = document.getElementById('user-dropdown');
   const signOutBtn = document.getElementById('sign-out-btn');
+  const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
 
   if (userAvatarBtn && userDropdown) {
     // Toggle dropdown on avatar click
@@ -119,6 +120,14 @@ function initUserMenu() {
       } catch (error) {
         console.error('Sign out failed:', error);
       }
+    });
+  }
+
+  if (refreshBackgroundBtn) {
+    refreshBackgroundBtn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      // Graph page doesn't have background image - no-op
+      console.log('[graph] Background refresh not applicable on graph page');
     });
   }
 }
