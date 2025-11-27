@@ -7,9 +7,9 @@ npm run lint || {
   exit 1
 }
 
-# Validate manifest
+# Validate manifest (uses same exclusions as npm run validate)
 echo "  → Validating manifest..."
-npx web-ext lint --source-dir=. --ignore-files="node_modules/**" --ignore-files="scripts/**" --ignore-files="tests/**" --ignore-files="coverage/**" || {
+npm run validate || {
   echo "❌ Manifest validation failed (warnings OK for now)."
   # Don't fail on warnings - web-ext lint has many false positives
   true
