@@ -144,7 +144,7 @@ echo "9️⃣  Manual testing checklist..."
 echo ""
 echo "Please manually verify the following:"
 echo ""
-echo "  □ Standalone mode works (open src/newtab.html in browser)"
+echo "  □ Standalone mode works (open src/database.html in browser)"
 read -p "    Does standalone mode work correctly? (y/n) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then

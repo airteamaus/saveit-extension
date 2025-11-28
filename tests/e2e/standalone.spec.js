@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
+const newtabPath = path.resolve(__dirname, '../../src/database.html');
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {

@@ -245,6 +245,7 @@ From this exploration, key principles emerged:
 
 ## Related Documents
 
-- Current implementation: `src/newtab.html`, `src/newtab.js`
+- Current new tab: `src/newtab.html`, `src/newtab.js`
+- Full database view: `src/database.html`, `src/database.js`
 - Component library: `src/components.js`
 - API endpoints: `src/api.js`

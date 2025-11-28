@@ -1,5 +1,5 @@
 // mock-data.js - Sample saved pages for development/testing
-// This data is only used when running newtab.html standalone (not in extension mode)
+// This data is only used when running database.html standalone (not in extension mode)
 
 const MOCK_DATA = [
   {
