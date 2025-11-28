@@ -5,61 +5,120 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.5.3] - 2025-11-23
-
-### ♻️ Refactoring
-
-- **test:** reduce test complexity and improve maintainability (a8e945d)
-
-### ✅ Tests
-
-- improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
-- improve coverage from 0.72% to 17.5% (24x increase) (f124db3)
-
-## [1.5.2] - 2025-11-22
+## [1.7.1] - 2025-11-28
 
 No notable changes.
 
-## [1.5.1] - 2025-11-22
+## [1.7.0] - 2025-11-28
+
+### ✨ Features
+
+- add pinnedFirst parameter to control pinned item sorting (1683350)
+- add background refresh option to profile menu (4321d7b)
+
+## [1.6.6] - 2025-11-27
+
+### 🐛 Bug Fixes
+
+- address web-ext linting warnings (5204993)
+- sync theme changes across tabs and respond to OS preference (621a743)
+
+## [1.6.5] - 2025-11-27
+
+### 🐛 Bug Fixes
+
+- address web-ext linting warnings (821c61b)
+- sync theme changes across tabs and respond to OS preference (8b74238)
+
+## [1.6.4] - 2025-11-27
+
+### ✨ Features
+
+- add theme toggle to search-results page (65ad6e8)
+- move theme toggle into user profile dropdown menu (b058728)
+
+### 🐛 Bug Fixes
+
+- add data-theme CSS rules for manual theme override (aaa8021)
+- use monitor icon for auto theme to differentiate from light (7e21deb)
+
+### ♻️ Refactoring
+
+- switch favicon provider from Google to DuckDuckGo (d2453c3)
+
+## [1.6.3] - 2025-11-27
+
+### ✨ Features
+
+- add theme toggle to search-results page (148fd23)
+- move theme toggle into user profile dropdown menu (81aec59)
+
+### 🐛 Bug Fixes
+
+- add data-theme CSS rules for manual theme override (18c121c)
+- use monitor icon for auto theme to differentiate from light (3eb05ca)
+
+### ♻️ Refactoring
+
+- switch favicon provider from Google to DuckDuckGo (b580aed)
+
+## [1.6.2] - 2025-11-26
+
+### ✨ Features
+
+- enable hybrid search by default (05728b7)
+- add pin feature UI and API integration (9a698d4)
+- use full resolution Unsplash images for better quality (d5a121d)
+- filter Unsplash backgrounds to exclude people and animals (d693818)
+
+### 🐛 Bug Fixes
+
+- auth header bug and update pin icon to pushpin (5162cb0)
+
+### ⚡ Performance
+
+- reduce Unsplash image cache from 24h to 3h (1b20002)
+
+### ♻️ Refactoring
+
+- consolidate card metadata into single row with inline tags (aa720f2)
+
+## [1.6.1] - 2025-11-25
+
+### ✨ Features
+
+- add header with logo and user menu to graph page (18dede3)
+
+### ✅ Tests
+
+- improve coverage from 22% to 33% with 90 new tests (84c893b)
+
+## [1.6.0] - 2025-11-25
+
+### ✨ Features
+
+- improve semantic search and add user avatars (0f8e603)
+- add semantic search results page (bbaf4e1)
+- polish minimal new tab layout and styling (7b0abc1)
+- add stats counter to minimal new tab (9e73c5f)
+- add favorites row to minimal new tab (5a3b3a4)
+- add Unsplash background to minimal new tab (37ee3a1)
+- add minimal search-forward new tab (730f992)
+
+### 🐛 Bug Fixes
+
+- align favicon with first line of title in search results (10a3ad8)
+- wait for auth before search and lower threshold to 0.65 (76886c0)
+
+### ✅ Tests
+
+- add newtab-minimal tests and adjust coverage thresholds (3a3ce5a)
+
+## [1.5.3] - 2025-11-23
 
 ### ✨ Features
 
 - **graph:** update focus button to use toggleFocus (a6c96bc)
-
-## [1.5.0] - 2025-11-22
-
-### ✨ Features
-
-- **graph:** update focus button to use toggleFocus (b4ba1ec)
-
-## [1.4.5] - 2025-11-22
-
-### ♻️ Refactoring
-
-- upgrade Zod v3 to v4 with full API modernization (697fa70)
-
-## [1.4.4] - 2025-11-22
-
-### ♻️ Refactoring
-
-- upgrade Zod v3 to v4 with full API modernization (1a1b2b0)
-
-## [1.4.3] - 2025-11-22
-
-No notable changes.
-
-## [1.4.2] - 2025-11-22
-
-No notable changes.
-
-## [1.4.1] - 2025-11-22
-
-No notable changes.
-
-## [1.4.0] - 2025-11-21
-
-### ✨ Features
-
 - integrate similar pages and clickable navigation in knowledge graph (187046b)
 - **build:** enable source maps and fix CI bundle generation (399d274)
 - add Sentry error tracking to browser extension (ebae714)
@@ -179,6 +238,8 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- **test:** reduce test complexity and improve maintainability (a8e945d)
+- upgrade Zod v3 to v4 with full API modernization (697fa70)
 - improve tag system and similarity search accuracy (5bebbff)
 - consolidate tag extraction and similarity result methods (d2f11af)
 - consolidate browser API detection in config.js (e61ee3b)
@@ -228,6 +289,8 @@ No notable changes.
 
 ### ✅ Tests
 
+- improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
+- improve coverage from 0.72% to 17.5% (24x increase) (f124db3)
 - remove deprecated dewey_primary_label test cases (50a83c3)
 - **discovery:** add manual test page for semantic search mock (2239f51)
 - **components:** add unit tests for utility functions (751d465)

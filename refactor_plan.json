@@ -1,0 +1,284 @@
+{
+  "project": "Minimal Search Results with Semantic Content Search",
+  "created": "2025-11-25",
+  "status": "in_progress",
+  "current_phase": "phase-1",
+  "current_task": "task-1-1",
+
+  "summary": "Add semantic content search to SaveIt. Backend: add content_embedding field to things collection, generate embeddings during enrichment, create search endpoint. Frontend: create minimal search results page matching newtab-minimal aesthetic.",
+
+  "phases": [
+    {
+      "id": "phase-1",
+      "name": "Backend - Content Embeddings Infrastructure",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-1-1",
+          "type": "implement",
+          "description": "Add content_embedding field to Firestore things schema",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/contracts/firestore-things-schema.js"
+          ],
+          "completion_criteria": [
+            "content_embedding field defined as 768-dimensional vector",
+            "Field marked as optional (for backwards compat during backfill)"
+          ]
+        },
+        {
+          "id": "task-1-2",
+          "type": "implement",
+          "description": "Modify enrichment pipeline to generate content embedding from title + summaries",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/cloud-function-enrich/enrichment-core.js",
+            "/Users/rich/Code/saveit-backend/cloud-function-enrich/firestore-writers.js"
+          ],
+          "completion_criteria": [
+            "generateContentEmbedding() function created",
+            "Embedding generated from: title + ai_summary_brief + ai_summary_extended",
+            "Embedding written to things document alongside existing fields",
+            "Handles case where summaries are empty (skip embedding)"
+          ]
+        },
+        {
+          "id": "task-1-3",
+          "type": "implement",
+          "description": "Create Firestore composite index for content_embedding vector search",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/firestore.indexes.json"
+          ],
+          "completion_criteria": [
+            "Vector index defined: user_id + deleted + content_embedding",
+            "Index deployed to Firestore"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-2",
+      "name": "Backend - Search Endpoint",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-2-1",
+          "type": "implement",
+          "description": "Add searchByContent function to firestore-search.js",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/cloud-function/firestore-search.js"
+          ],
+          "completion_criteria": [
+            "searchByContentFirestore({ query, user_id, limit, offset, threshold }) function",
+            "Generates embedding for search query",
+            "Uses findNearest() on content_embedding field",
+            "Returns results sorted by similarity, filtered by threshold",
+            "Includes pagination metadata"
+          ]
+        },
+        {
+          "id": "task-2-2",
+          "type": "implement",
+          "description": "Add /?search_text=X endpoint handler to cloud function",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/cloud-function/index.js"
+          ],
+          "completion_criteria": [
+            "handleSearchByContent handler function",
+            "Route: GET /?search_text=X&limit=N&offset=N&threshold=N",
+            "Returns: { results: [...], pagination: {...}, query: string }",
+            "Authenticated via Firebase token"
+          ]
+        },
+        {
+          "id": "task-2-3",
+          "type": "implement",
+          "description": "Deploy and test search endpoint",
+          "status": "pending",
+          "completion_criteria": [
+            "Endpoint deployed to Cloud Functions",
+            "Manual test with curl confirms semantic search works",
+            "Returns relevant results for test queries"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-3",
+      "name": "Backend - Backfill Existing Pages",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-3-1",
+          "type": "implement",
+          "description": "Create backfill script for content embeddings",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-backend/scripts/backfill-content-embeddings.js"
+          ],
+          "completion_criteria": [
+            "Script queries all things without content_embedding",
+            "Generates embedding from title + ai_summary_brief + ai_summary_extended",
+            "Updates Firestore document with content_embedding",
+            "Rate-limited to avoid Vertex AI quota issues",
+            "Logs progress and handles errors gracefully"
+          ]
+        },
+        {
+          "id": "task-3-2",
+          "type": "implement",
+          "description": "Run backfill for existing pages",
+          "status": "pending",
+          "completion_criteria": [
+            "All existing pages with AI summaries have content_embedding",
+            "Verified via Firestore console query"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-4",
+      "name": "Frontend - API Integration",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-4-1",
+          "type": "implement",
+          "description": "Add API.searchContent() method to api.js",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/src/api.js"
+          ],
+          "completion_criteria": [
+            "searchContent(query, { limit, offset, threshold }) method",
+            "Calls /?search_text=X endpoint",
+            "Returns { results: [...], pagination: {...} }",
+            "Mock implementation for standalone mode"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-5",
+      "name": "Frontend - Search Results Page",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-5-1",
+          "type": "implement",
+          "description": "Create search-results.html with minimal layout",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/src/search-results.html"
+          ],
+          "completion_criteria": [
+            "Logo top-left (SaveIt branding)",
+            "Search input near top (pre-filled with query)",
+            "Results container below",
+            "Footer with link to full dashboard",
+            "No background image",
+            "Minimal script dependencies"
+          ]
+        },
+        {
+          "id": "task-5-2",
+          "type": "implement",
+          "description": "Create search-results.css with minimal styling",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/src/search-results.css"
+          ],
+          "completion_criteria": [
+            "Matches newtab-minimal aesthetic (clean, uncluttered)",
+            "Light/dark mode support via light-dark()",
+            "Result cards: favicon, title, summary, domain/time",
+            "No tags, no delete buttons, no notes",
+            "Responsive design",
+            "Loading skeleton styles",
+            "Empty state styles"
+          ]
+        },
+        {
+          "id": "task-5-3",
+          "type": "implement",
+          "description": "Create search-results.js with core functionality",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/src/search-results.js"
+          ],
+          "completion_criteria": [
+            "Parse ?q= query parameter",
+            "Call API.searchContent() on load",
+            "Render result cards (click to open in new tab)",
+            "Handle pagination (load more button or infinite scroll)",
+            "Empty state: 'No results for X'",
+            "Loading state: skeleton cards",
+            "Error state: graceful message",
+            "Search input submits new search (updates URL)"
+          ]
+        },
+        {
+          "id": "task-5-4",
+          "type": "implement",
+          "description": "Update newtab-minimal.js to navigate to search-results.html",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/src/newtab-minimal.js"
+          ],
+          "completion_criteria": [
+            "Search form navigates to search-results.html?q=X instead of newtab.html?search=X"
+          ]
+        },
+        {
+          "id": "task-5-5",
+          "type": "implement",
+          "description": "Add search-results.html to manifest.json web_accessible_resources",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/manifest.json"
+          ],
+          "completion_criteria": [
+            "search-results.html accessible as extension page"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "phase-6",
+      "name": "Testing & Polish",
+      "status": "pending",
+      "tasks": [
+        {
+          "id": "task-6-1",
+          "type": "implement",
+          "description": "Add unit tests for search-results components",
+          "status": "pending",
+          "files_to_modify": [
+            "/Users/rich/Code/saveit-extension/tests/unit/search-results.test.js"
+          ],
+          "completion_criteria": [
+            "Tests for result card rendering",
+            "Tests for empty/loading/error states",
+            "Tests for query parameter parsing"
+          ]
+        },
+        {
+          "id": "task-6-2",
+          "type": "implement",
+          "description": "Manual E2E testing",
+          "status": "pending",
+          "completion_criteria": [
+            "Search from newtab-minimal navigates to results",
+            "Results display correctly with real data",
+            "Pagination works",
+            "Click opens page in new tab",
+            "Empty searches handled gracefully"
+          ]
+        }
+      ]
+    }
+  ]
+}

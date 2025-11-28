@@ -278,7 +278,7 @@ function handleSearch(e) {
  * Handle clear search button click - navigate back to new tab page
  */
 function handleClearSearch() {
-  window.location.href = 'newtab-minimal.html';
+  window.location.href = 'newtab.html';
 }
 
 /**

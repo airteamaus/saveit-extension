@@ -69,7 +69,7 @@ export {
 
 async function buildDashboardBundle() {
   const entryContent = `
-// Firebase bundle for dashboard (newtab.html)
+// Firebase bundle for dashboard (database.html + newtab.html)
 import { initializeApp } from 'firebase/app';
 import {
   initializeAuth,

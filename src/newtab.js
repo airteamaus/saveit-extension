@@ -1,592 +1,383 @@
-// newtab.js - Main dashboard logic
-// Handles page loading, filtering, and user interactions
-//
-// Security Note: This file uses innerHTML for rendering UI components.
-// All user-provided data is sanitized via Components.escapeHtml() which uses
-// textContent to prevent XSS attacks. See components.js:204 for implementation.
-
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager, PageLoaderManager */
-
-class SaveItDashboard {
-  constructor() {
-    this.pages = [];
-    this.allPages = []; // Keep unfiltered copy for client-side filtering
-    this.totalPages = 0; // Total count from backend (all user's pages)
-    this.currentFilter = {
-      search: '',
-      sort: 'newest',
-      category: '',
-      offset: 0,
-      limit: 50, // Pages per batch for infinite scroll
-      pinnedFirst: false // Main dashboard uses chronological order, not pinned-first
-    };
-    this.debounceTimer = null;
-
-    // Infinite scroll state
-    this.isLoadingMore = false;
-    this.hasMorePages = true;
-    this.nextCursor = null;
-
-    // Initialization state
-    this.isInitialized = false;
-
-    // Initialize managers
-    this.tagManager = new TagManager();
-    this.searchManager = new SearchManager();
-    this.scrollManager = new ScrollManager();
-    this.authUIManager = new AuthUIManager();
-    this.discoveryManager = new DiscoveryManager(API, Components, this.tagManager);
-    this.themeManager = new ThemeManager();
-    this.tagInteractionManager = new TagInteractionManager(API, this.tagManager, Components);
-    this.statsManager = new StatsManager();
-    this.notificationManager = new NotificationManager();
-    this.eventManager = new EventManager();
-    this.firebaseAuthManager = new FirebaseAuthManager();
-    this.pageLoaderManager = new PageLoaderManager();
-  }
-
-  /**
-   * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
-   * @returns {Object|null} browser.runtime or chrome.runtime
-   */
-  getBrowserRuntime() {
-    return window.getBrowserRuntime();
-  }
-
-  /**
-   * Initialize the dashboard
-   */
-  async init() {
-    this.themeManager.initTheme();
-    this.showLoading();
-    this.themeManager.updateModeIndicator(API.isExtension);
-    this.themeManager.updateVersionIndicator(() => this.getBrowserRuntime());
-
-    // Clean up legacy cache (migration for v0.13.5+)
-    await API.cleanupLegacyCache();
-
-    // Initialize Firebase auth
-    await this.firebaseAuthManager.initAuth(this);
-
-    // Load pages and render based on auth state
-    if (!API.isExtension || this.getCurrentUser()) {
-      // Standalone mode OR authenticated user
-      await this.loadPages();
-      this.render();
-      if (API.isExtension && this.getCurrentUser()) {
-        this.refreshInBackground();
-      }
-    } else {
-      // Extension mode with no authenticated user
-      this.showSignInPrompt();
-    }
-
-    try {
-      this.setupEventListeners();
-    } catch (error) {
-      console.error('[init] Failed to setup event listeners:', error);
-      // Continue anyway - dashboard may still be partially usable
-    }
-
-    // Handle ?search= URL parameter (from minimal new tab)
-    this.applySearchFromURL();
-
-    // Mark initialization complete
-    this.isInitialized = true;
-    debug('[Dashboard] Initialization complete');
-  }
-
-  /**
-   * Apply search filter from URL parameter
-   * Handles navigation from minimal new tab with ?search=query
-   */
-  applySearchFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchQuery = urlParams.get('search');
-
-    if (searchQuery) {
-      const searchInput = document.getElementById('search');
-      const clearSearch = document.getElementById('clear-search');
-
-      // Pre-fill search input
-      if (searchInput) {
-        searchInput.value = searchQuery;
-      }
-
-      // Show clear button
-      if (clearSearch) {
-        clearSearch.style.display = 'block';
-      }
-
-      // Set filter and trigger search
-      this.currentFilter.search = searchQuery;
-      this.handleFilterChange();
-
-      debug('[Dashboard] Applied search from URL:', searchQuery);
-    }
-  }
-
-  /**
-   * Get current Firebase user
-   */
-  getCurrentUser() {
-    return this.firebaseAuthManager.getCurrentUser();
-  }
-
-
-  showLoading() {
-    const content = document.getElementById('content');
-    content.innerHTML = Components.loadingState();
-  }
-
-  showError(error) {
-    const content = document.getElementById('content');
-    content.innerHTML = Components.errorState(error);
-
-    // Capture error in Sentry
-    window.SentryHelpers?.captureError(error, { context: 'showError' });
-  }
-
-  /**
-   * Load pages from API
-   */
-  async loadPages() {
-    await this.pageLoaderManager.loadPages(this);
-  }
-
-  /**
-   * Refresh data in background (after showing cached data)
-   */
-  async refreshInBackground() {
-    await this.pageLoaderManager.refreshInBackground(this);
-  }
-
-
-  /**
-   * Update stats display
-   */
-  updateStats() {
-    this.statsManager.updateStats(this.totalPages, this.pages.length);
-  }
-
-
-
-
-
-
-
-
-
-  /**
-   * Render tag bar with hierarchical selection
-   */
-  renderTagBar() {
-    this.tagInteractionManager.renderTagBar(this.allPages, this.pages);
-  }
-
-  /**
-   * Handle tag click in hierarchical selection mode
-   * Uses async similarity search to find related pages
-   * @param {string} type - Classification type (general/domain/topic)
-   * @param {string} label - Tag label
-   */
-  async handleTagClick(type, label) {
-    try {
-      const result = await this.tagInteractionManager.handleTagClick(
-        type,
-        label,
-        this.allPages,
-        this.pages,
-        () => this.showLoading(),
-        (error) => this.showError(error)
-      );
-
-      if (!result) return;
-
-      // Update pages from result
-      this.pages = result.pages;
-
-      // Apply search filter if active
-      if (this.currentFilter.search) {
-        this.pages = this.searchManager.applySearchFilter(this.pages, this.currentFilter.search);
-      }
-
-      this.updateStats();
-      this.render();
-    } catch {
-      // Error already handled by tagInteractionManager
-    }
-  }
-
-
-  /**
-   * Render empty search state (search active but no matches)
-   * @private
-   * @param {HTMLElement} container - Content container element
-   * @param {HTMLElement} sentinel - Scroll sentinel element
-   */
-  renderEmptySearchState(container, sentinel) {
-    container.innerHTML = `
-      <div class="empty-state">
-        <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="11" cy="11" r="8"></circle>
-          <path d="m21 21-4.35-4.35"></path>
-        </svg>
-        <h2>No matching pages</h2>
-        <p>Try adjusting your search</p>
-      </div>
-    `;
-
-    // Re-append sentinel
-    if (sentinel) {
-      container.appendChild(sentinel);
-    }
-    this.updateStats();
-  }
-
-  /**
-   * Render empty state (no pages at all)
-   * @private
-   * @param {HTMLElement} container - Content container element
-   * @param {HTMLElement} sentinel - Scroll sentinel element
-   */
-  renderEmptyState(container, sentinel) {
-    // Check if user is authenticated before showing empty state
-    if (API.isExtension) {
-      const user = this.getCurrentUser();
-
-      if (user) {
-        container.innerHTML = Components.emptyState();
-      } else {
-        container.innerHTML = Components.signInState();
-      }
-    } else {
-      // In standalone mode, always show empty state (mock data)
-      container.innerHTML = Components.emptyState();
-    }
-
-    // Re-append sentinel
-    if (sentinel) {
-      container.appendChild(sentinel);
-    }
-    this.updateStats();
-  }
-
-  /**
-   * Render pages to DOM
-   */
-  render() {
-    // Render tag bar first
-    this.renderTagBar();
-
-    const container = document.getElementById('content');
-    const sentinel = document.getElementById('scroll-sentinel');
-
-    // Handle empty states
-    if (this.pages.length === 0) {
-      if (this.currentFilter.search) {
-        this.renderEmptySearchState(container, sentinel);
-      } else {
-        this.renderEmptyState(container, sentinel);
-      }
-      return;
-    }
-
-    // Render page cards
-    const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
-    container.innerHTML = cardsHtml;
-
-    // Re-append sentinel
-    if (sentinel) {
-      container.appendChild(sentinel);
-    }
-
-    this.updateStats();
-  }
-
-  /**
-   * Show sign-in prompt
-   */
-  showSignInPrompt() {
-    const content = document.getElementById('content');
-    content.innerHTML = Components.signInState();
-  }
-
-
-  /**
-   * Reset all filters and return to default view
-   */
-  resetToDefaultView() {
-    // Clear search
-    const searchInput = document.getElementById('search');
-    const clearSearch = document.getElementById('clear-search');
-    if (searchInput) {
-      searchInput.value = '';
-    }
-    if (clearSearch) {
-      clearSearch.style.display = 'none';
-    }
-
-    // Reset all filter state
-    this.currentFilter.search = '';
-    this.tagInteractionManager.clearSelection();
-    this.discoveryManager.exit();
-
-    // Restore pages to show all items (unfiltered)
-    this.pages = [...this.allPages];
-
-    // Re-render the view
-    this.render();
-  }
-
-  /**
-   * Setup all event listeners
-   */
-  setupEventListeners() {
-    this.eventManager.setupEventListeners(this);
-  }
-
-  /**
-   * Handle filter changes (search box)
-   * Applies search filter on top of tag-filtered results
-   */
-  handleFilterChange() {
-    // Get currently displayed pages (either similarity results or all pages)
-    const basePages = this.pages.length > 0 ? this.pages : [...this.allPages];
-
-    if (this.currentFilter.search) {
-      // Apply search filter using SearchManager
-      this.pages = this.searchManager.applySearchFilter(basePages, this.currentFilter.search);
-    } else {
-      // No search - restore base pages
-      const activeLabel = this.tagInteractionManager.getActiveLabel();
-      if (!activeLabel) {
-        // No tag selected either - show all
-        this.pages = [...this.allPages];
-      }
-      // If tag is selected, pages already contains similarity results
-    }
-
-    this.updateStats();
-    this.render();
-  }
-
-  /**
-   * Setup infinite scroll using Intersection Observer
-   */
-  setupInfiniteScroll() {
-    this.scrollManager.setupInfiniteScroll(
-      () => this.loadMorePages(),
-      () => ({
-        hasMorePages: this.hasMorePages,
-        isLoading: this.isLoadingMore
-      })
-    );
-  }
-
-  /**
-   * Load more pages (infinite scroll)
-   */
-  async loadMorePages() {
-    await this.pageLoaderManager.loadMorePages(this);
-  }
-
-
-  /**
-   * Open a saved page in the same tab
-   */
-  openPage(url) {
-    window.location.href = url;
-  }
-
-  /**
-   * Delete a saved page
-   */
-  async deletePage(id) {
-    if (!confirm('Delete this saved page? This cannot be undone.')) {
-      return;
-    }
-
-    // Find the row element and add transition class
-    const row = document.querySelector(`.saved-page-card[data-id="${id}"]`);
-    if (row) {
-      row.classList.add('deleting');
-
-      // Wait for transition to complete before removing from DOM
-      await new Promise(resolve => setTimeout(resolve, 300));
-    }
-
-    try {
-      await API.deletePage(id);
-
-      // Remove from both allPages and pages
-      this.allPages = this.allPages.filter(p => p.id !== id);
-      this.pages = this.pages.filter(p => p.id !== id);
-
-      this.updateStats();
-      this.render();
-      this.showToast('Page deleted successfully');
-    } catch (error) {
-      console.error('Failed to delete page:', error);
-
-      // Remove transition class on error to restore row
-      if (row) {
-        row.classList.remove('deleting');
-      }
-
-      alert('Failed to delete page. Please try again.');
-    }
-  }
-
-  /**
-   * Toggle pin status for a saved page
-   */
-  async togglePin(id) {
-    // Find the page to get current pin status
-    const page = this.allPages.find(p => p.id === id);
-    if (!page) {
-      console.error('Page not found:', id);
-      return;
-    }
-
-    const newPinnedState = !page.pinned;
-
-    // Optimistic update - update UI immediately
-    page.pinned = newPinnedState;
-    const pageInFiltered = this.pages.find(p => p.id === id);
-    if (pageInFiltered) {
-      pageInFiltered.pinned = newPinnedState;
-    }
-
-    // Re-render to show updated pin state
-    this.render();
-
-    try {
-      await API.pinPage(id, newPinnedState);
-      this.showToast(newPinnedState ? 'Page pinned' : 'Page unpinned');
-    } catch (error) {
-      console.error('Failed to toggle pin:', error);
-
-      // Rollback on error
-      page.pinned = !newPinnedState;
-      if (pageInFiltered) {
-        pageInFiltered.pinned = !newPinnedState;
-      }
-      this.render();
-
-      this.showToast('Failed to update pin status. Please try again.', 'error');
-    }
-  }
-
-  /**
-   * Show about dialog
-   */
-  showAbout() {
-    const mode = API.isExtension ? 'Extension' : 'Development';
-    const runtime = this.getBrowserRuntime();
-    const version = runtime ? runtime.getManifest().version : 'standalone';
-    const message = `SaveIt
-
-SaveIt uses AI to read and semantically index the subject of each page based on its content. This lets you recall saved pages through similarity of subject matter, as opposed to having to remember the domain name, title, or URL.
-
-When you save a page, the extension:
-• Extracts and analyzes the page content
-• Generates a semantic classification of the subject matter
-• Creates vector embeddings for similarity search
-• Provides AI-generated summaries
-
-You can then discover related pages by browsing through automatically-generated topic hierarchies, or by searching for pages similar to a given topic—even if you never explicitly tagged them.
-
-Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently viewing mock data. Load as browser extension to see your saved pages.' : ''}`;
-
-    alert(message);
-  }
-
-  /**
-   * Show toast notification
-   */
-  showToast(message) {
-    this.notificationManager.showToast(message);
-  }
-
-  /**
-   * Refresh background image (for newtab-minimal.html compatibility)
-   * Note: Main dashboard (newtab.html) doesn't have background image by default,
-   * but this method is called from event-manager.js when refresh button is clicked
-   */
-  async refreshBackground() {
-    // Check if we're on a page that has background elements
-    const backgroundEl = document.getElementById('background');
-    const photographerLinkEl = document.getElementById('photographer-link');
-    const photoCreditEl = document.getElementById('photo-credit');
-
-    // Only refresh if background elements exist (newtab-minimal.html)
-    if (!backgroundEl) {
-      console.log('[Dashboard] Background refresh not applicable on this page');
-      return;
-    }
-
-    try {
-      // Import config for background functionality
-      const { unsplashAccessKey, getStorageAPI } = await import('./config.js');
-
-      const config = {
-        cacheKey: 'newtab_background',
-        cacheDurationMs: 3 * 60 * 60 * 1000, // 3 hours
-        storage: getStorageAPI(),
-        unsplashAccessKey: unsplashAccessKey,
-        backgroundEl: backgroundEl,
-        photographerLinkEl: photographerLinkEl,
-        photoCreditEl: photoCreditEl
-      };
-
-      await this.themeManager.refreshBackground(config);
-    } catch (error) {
-      console.error('[Dashboard] Failed to refresh background:', error);
-    }
-  }
-
+// newtab-minimal.js - Minimal new tab with search navigation
+// Handles search form submission, Firebase auth, and Unsplash background
+
+/* global ThemeManager */
+
+import { unsplashAccessKey, getStorageAPI } from './config.js';
+
+const CACHE_KEY = 'newtab_background';
+const CACHE_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+const searchForm = document.getElementById('search-form');
+const searchInput = document.getElementById('search-input');
+const signInBtn = document.getElementById('sign-in-btn');
+const backgroundEl = document.getElementById('background');
+const photoCreditEl = document.getElementById('photo-credit');
+const photographerLinkEl = document.getElementById('photographer-link');
+const favoritesRow = document.getElementById('favorites-row');
+const statsCount = document.getElementById('stats-count');
+const userMenu = document.getElementById('user-menu');
+const userAvatarBtn = document.getElementById('user-avatar-btn');
+const userAvatar = document.getElementById('user-avatar');
+const userDropdown = document.getElementById('user-dropdown');
+const userEmailEl = document.getElementById('user-email');
+const signOutBtn = document.getElementById('sign-out-btn');
+const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
+
+/**
+ * Initialize theme from saved preference and inject toggle
+ */
+function initTheme() {
+  ThemeManager.init();
 }
 
-async function initDashboard() {
+/**
+ * Get user initials from name or email
+ * @param {Object} user - Firebase user object
+ * @returns {string} Initials (1-2 characters)
+ */
+function getUserInitials(user) {
+  if (user.displayName) {
+    const parts = user.displayName.trim().split(/\s+/);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
+  }
+  if (user.email) {
+    return user.email[0].toUpperCase();
+  }
+  return '?';
+}
+
+/**
+ * Update user avatar display
+ * @param {Object} user - Firebase user object
+ */
+function updateUserAvatar(user) {
+  if (!userAvatar || !userMenu) return;
+
+  if (user) {
+    userMenu.classList.remove('hidden');
+    if (user.photoURL) {
+      userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
+    } else {
+      userAvatar.textContent = getUserInitials(user);
+    }
+    if (userEmailEl) {
+      userEmailEl.textContent = user.email || '';
+    }
+  } else {
+    userMenu.classList.add('hidden');
+  }
+}
+
+/**
+ * Toggle user dropdown
+ */
+function toggleUserDropdown() {
+  if (!userDropdown) return;
+  userDropdown.classList.toggle('hidden');
+}
+
+/**
+ * Handle sign out
+ */
+async function handleSignOut() {
   try {
-    window.dashboard = new SaveItDashboard();
-    await window.dashboard.init();
-
-    // Signal that dashboard is fully initialized (for E2E tests)
-    window.dashboardReady = true;
-  } catch (error) {
-    console.error('Fatal error during dashboard initialization:', error.message || error);
-    console.error('Stack trace:', error.stack);
-    window.dashboardReady = false;
-
-    // Capture fatal error in Sentry
-    window.SentryHelpers?.captureError(error, { context: 'initDashboard', fatal: true });
-
-    // Show user-friendly error message
-    const content = document.getElementById('content');
-    if (content) {
-      content.innerHTML = `
-        <div class="error-state">
-          <svg class="error-icon" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <line x1="12" y1="8" x2="12" y2="12"></line>
-            <line x1="12" y1="16" x2="12.01" y2="16"></line>
-          </svg>
-          <h2>Failed to initialize dashboard</h2>
-          <p>${error.message || 'An unexpected error occurred'}</p>
-          <button class="btn btn-primary" onclick="location.reload()">Reload</button>
-        </div>
-      `;
+    if (window.firebaseAuth && window.firebaseSignOut) {
+      await window.firebaseSignOut(window.firebaseAuth);
+      // Auth state listener will update UI
     }
+  } catch (error) {
+    console.error('[newtab-minimal] Sign out failed:', error);
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initDashboard);
-} else {
-  initDashboard();
+/**
+ * Update UI based on authentication state
+ * @param {Object|null} user - User object with email and displayName, or null
+ */
+function updateAuthUI(user) {
+  updateUserAvatar(user);
+  if (user) {
+    signInBtn.classList.add('hidden');
+  } else {
+    signInBtn.classList.remove('hidden');
+  }
 }
 
-// Expose API for debugging in console
-window.API = API;
+/**
+ * Get favicon URL for a page
+ * @param {string} url - Page URL
+ * @returns {string} Favicon URL via Google's service
+ */
+function getFaviconUrl(url) {
+  try {
+    const domain = new URL(url).hostname;
+    return `https://icons.duckduckgo.com/ip3/${domain}.ico`;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create a favorite item element
+ * @param {Object} page - Page object with url, title
+ * @returns {HTMLElement} Favorite item anchor element
+ */
+function createFavoriteItem(page) {
+  const item = document.createElement('a');
+  item.className = 'favorite-item';
+  item.href = page.url;
+
+  const iconContainer = document.createElement('div');
+  iconContainer.className = 'favorite-icon';
+
+  const faviconUrl = getFaviconUrl(page.url);
+  if (faviconUrl) {
+    const img = document.createElement('img');
+    img.src = faviconUrl;
+    img.alt = '';
+    img.onerror = () => {
+      // Fallback to bookmark icon on error
+      iconContainer.innerHTML = `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+        </svg>
+      `;
+    };
+    iconContainer.appendChild(img);
+  } else {
+    iconContainer.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
+      </svg>
+    `;
+  }
+
+  const title = document.createElement('span');
+  title.className = 'favorite-title';
+  title.textContent = page.title || new URL(page.url).hostname;
+  title.title = page.title || page.url;
+
+  item.appendChild(iconContainer);
+  item.appendChild(title);
+
+  return item;
+}
+
+/**
+ * Render favorites row with recent saves
+ * @param {Array} pages - Array of page objects
+ */
+function renderFavorites(pages) {
+  if (!pages || pages.length === 0) {
+    favoritesRow.classList.add('hidden');
+    return;
+  }
+
+  // Take up to 6 most recent
+  const favorites = pages.slice(0, 6);
+
+  favoritesRow.innerHTML = '';
+  favorites.forEach(page => {
+    favoritesRow.appendChild(createFavoriteItem(page));
+  });
+
+  favoritesRow.classList.remove('hidden');
+}
+
+/**
+ * Handle search form submission - navigate to search results page
+ * @param {Event} e - Form submit event
+ */
+function handleSearch(e) {
+  e.preventDefault();
+  const query = searchInput.value.trim();
+  if (query) {
+    // Navigate to minimal search results page
+    window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
+  } else {
+    // Empty search navigates to full dashboard to browse all
+    window.location.href = 'database.html';
+  }
+}
+
+/**
+ * Handle sign-in button click
+ */
+async function handleSignIn() {
+  try {
+    // In extension mode, send message to background script
+    if (typeof browser !== 'undefined' && browser.runtime) {
+      await browser.runtime.sendMessage({ action: 'signIn' });
+    } else if (typeof chrome !== 'undefined' && chrome.runtime) {
+      await chrome.runtime.sendMessage({ action: 'signIn' });
+    } else {
+      // Standalone mode - show message
+      alert('Sign in is only available when running as a browser extension.');
+    }
+  } catch (error) {
+    console.error('Sign-in failed:', error);
+    alert('Failed to sign in. Please try again.');
+  }
+}
+
+/**
+ * Get background config for ThemeManager
+ * @returns {Object} Configuration object for background management
+ */
+function getBackgroundConfig() {
+  return {
+    cacheKey: CACHE_KEY,
+    cacheDurationMs: CACHE_DURATION_MS,
+    storage: getStorageAPI(),
+    unsplashAccessKey: unsplashAccessKey,
+    backgroundEl: backgroundEl,
+    photographerLinkEl: photographerLinkEl,
+    photoCreditEl: photoCreditEl
+  };
+}
+
+/**
+ * Initialize background image from cache or Unsplash
+ */
+async function initBackground() {
+  const themeManager = new ThemeManager();
+  await themeManager.initBackground(getBackgroundConfig());
+}
+
+/**
+ * Refresh background image (fetch new photo)
+ */
+async function refreshBackground() {
+  const themeManager = new ThemeManager();
+  await themeManager.refreshBackground(getBackgroundConfig());
+}
+
+/**
+ * Fetch and display favorites (recent saves)
+ * Returns pagination data for stats display
+ * @returns {Promise<Object|null>} Pagination object or null
+ */
+async function initFavorites() {
+  try {
+    // Check if API is available (extension mode)
+    if (typeof API === 'undefined' || !API.getSavedPages) {
+      return null;
+    }
+
+    const response = await API.getSavedPages({ limit: 6, sort: 'newest', pinnedFirst: true });
+    if (response && response.pages) {
+      renderFavorites(response.pages);
+      return response.pagination;
+    }
+  } catch (error) {
+    console.error('[newtab-minimal] Failed to load favorites:', error);
+  }
+  return null;
+}
+
+/**
+ * Update stats counter display
+ * @param {Object|null} pagination - Pagination object with total count
+ */
+function updateStats(pagination) {
+  if (!pagination || typeof pagination.total !== 'number') {
+    statsCount.classList.add('hidden');
+    return;
+  }
+
+  const total = pagination.total;
+  statsCount.textContent = `${total} ${total === 1 ? 'thing' : 'things'} saved`;
+  statsCount.classList.remove('hidden');
+}
+
+/**
+ * Initialize Firebase auth listener
+ */
+async function initAuth() {
+  // Wait for Firebase to be ready in extension mode
+  if (window.firebaseReady) {
+    try {
+      await window.firebaseReady;
+
+      if (window.firebaseAuth && window.firebaseOnAuthStateChanged) {
+        // Listen for auth state changes
+        window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
+          updateAuthUI(user);
+          if (user) {
+            // User is signed in, load favorites and stats
+            const pagination = await initFavorites();
+            updateStats(pagination);
+          } else {
+            // User signed out, hide favorites and stats
+            favoritesRow.classList.add('hidden');
+            statsCount.classList.add('hidden');
+          }
+        });
+      } else {
+        // Firebase not available (standalone mode)
+        updateAuthUI(null);
+      }
+    } catch (error) {
+      console.error('[newtab-minimal] Firebase init failed:', error);
+      updateAuthUI(null);
+    }
+  } else {
+    // Standalone mode - show sign-in button
+    updateAuthUI(null);
+  }
+}
+
+/**
+ * Update version indicator in footer
+ */
+function updateVersionIndicator() {
+  const versionNumberEl = document.getElementById('version-number');
+  if (!versionNumberEl) return;
+
+  try {
+    // Try to get version from browser extension API
+    if (typeof browser !== 'undefined' && browser.runtime) {
+      const version = browser.runtime.getManifest().version;
+      versionNumberEl.textContent = version;
+    } else if (typeof chrome !== 'undefined' && chrome.runtime) {
+      const version = chrome.runtime.getManifest().version;
+      versionNumberEl.textContent = version;
+    } else {
+      // Standalone mode
+      versionNumberEl.textContent = 'standalone';
+    }
+  } catch (error) {
+    console.error('[newtab-minimal] Failed to get version:', error);
+    versionNumberEl.textContent = 'unknown';
+  }
+}
+
+// Event listeners
+searchForm.addEventListener('submit', handleSearch);
+signInBtn.addEventListener('click', handleSignIn);
+userAvatarBtn.addEventListener('click', toggleUserDropdown);
+signOutBtn.addEventListener('click', handleSignOut);
+refreshBackgroundBtn.addEventListener('click', refreshBackground);
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  if (userMenu && !userMenu.contains(e.target)) {
+    userDropdown.classList.add('hidden');
+  }
+});
+
+// Initialize theme first (synchronous)
+initTheme();
+
+// Update version indicator
+updateVersionIndicator();
+
+// Initialize (background and auth can run in parallel)
+await Promise.all([
+  initBackground(),
+  initAuth()
+]);

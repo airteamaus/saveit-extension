@@ -1,5 +1,5 @@
 // sentry-init.js - Initialize Sentry and expose functions as globals
-// Loaded as a regular script in newtab.html before api.js
+// Loaded as a regular script in database.html before api.js
 
 import { initSentry, setUser, setRequestId, captureError, clearUser } from './sentry.js';
 

@@ -220,7 +220,7 @@ Auto-detects from extension version:
 |------|---------|-------|
 | **Development** |
 | Show all tasks | `just` | Lists available commands |
-| Preview standalone | `just preview` | Opens newtab.html in browser |
+| Preview standalone | `just preview` | Opens database.html in browser |
 | Run in Firefox | `just run` | Auto-reload enabled (recommended) |
 | Run in Chrome | `just run-chrome` | Chrome testing |
 | Install in Firefox | `just install` | Persistent installation |
@@ -296,8 +296,8 @@ node scripts/bundle-graph.js     # Build graph-viz bundle only
 **Development:**
 ```bash
 # Fastest iteration (standalone mode)
-just preview                    # Or: open src/newtab.html
-# Edit src/newtab.css, src/newtab.js, src/components.js
+just preview                    # Or: open src/database.html
+# Edit src/database.css, src/database.js, src/components.js
 # Refresh browser (Cmd+R)
 
 # Extension mode (for OAuth, real data testing)
@@ -363,7 +363,7 @@ oauthClientId: 'xxx.apps.googleusercontent.com'
 
 - Firebase SDK bundled via esbuild (`scripts/bundle-firebase.js`)
 - webextension-polyfill for cross-browser compatibility
-- Zero-config standalone mode: open `src/newtab.html` (uses mock data)
+- Zero-config standalone mode: open `src/database.html` (uses mock data)
 - Client-side filtering for instant feedback
 - Auto-updates via `updates.json`
 

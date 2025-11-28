@@ -212,7 +212,7 @@ describe('newtab-minimal', () => {
       if (trimmed) {
         return `search-results.html?q=${encodeURIComponent(trimmed)}`;
       }
-      return 'newtab.html';
+      return 'database.html';
     }
 
     it('should navigate to search-results page with query', () => {
@@ -225,14 +225,14 @@ describe('newtab-minimal', () => {
       expect(result).toBe('search-results.html?q=test%20%26%20query');
     });
 
-    it('should return plain newtab.html for empty query', () => {
+    it('should return plain database.html for empty query', () => {
       const result = getSearchUrl('');
-      expect(result).toBe('newtab.html');
+      expect(result).toBe('database.html');
     });
 
-    it('should trim whitespace and return plain newtab.html', () => {
+    it('should trim whitespace and return plain database.html', () => {
       const result = getSearchUrl('   ');
-      expect(result).toBe('newtab.html');
+      expect(result).toBe('database.html');
     });
   });
 

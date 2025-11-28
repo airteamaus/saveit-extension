@@ -259,9 +259,9 @@ cat manifest.json | python3 -m json.tool > /dev/null
 
 **Frontend (saveit-extension):**
 - `src/components.js` - Row renderer with AI field display
-- `src/newtab.js` - Row click and delete event handlers
-- `src/newtab.css` - Row layout styles
-- `src/newtab.html` - Inlined CSS synchronized
+- `src/database.js` - Row click and delete event handlers
+- `src/database.css` - Row layout styles
+- `src/database.html` - Inlined CSS synchronized
 - `src/mock-data.js` - AI fields added for development
 
 ## Success Criteria
