@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.2] - 2025-11-28
+
+### ♻️ Refactoring
+
+- improve footer layout with grid-based alignment (c7f594f)
+
 ## [1.7.1] - 2025-11-28
 
 No notable changes.
@@ -104,20 +110,6 @@ No notable changes.
 - add favorites row to minimal new tab (5a3b3a4)
 - add Unsplash background to minimal new tab (37ee3a1)
 - add minimal search-forward new tab (730f992)
-
-### 🐛 Bug Fixes
-
-- align favicon with first line of title in search results (10a3ad8)
-- wait for auth before search and lower threshold to 0.65 (76886c0)
-
-### ✅ Tests
-
-- add newtab-minimal tests and adjust coverage thresholds (3a3ce5a)
-
-## [1.5.3] - 2025-11-23
-
-### ✨ Features
-
 - **graph:** update focus button to use toggleFocus (a6c96bc)
 - integrate similar pages and clickable navigation in knowledge graph (187046b)
 - **build:** enable source maps and fix CI bundle generation (399d274)
@@ -167,6 +159,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- align favicon with first line of title in search results (10a3ad8)
+- wait for auth before search and lower threshold to 0.65 (76886c0)
 - add debug output to backend cleanup step (e61f25b)
 - use glob patterns to properly exclude backend files from validation (37d1ec6)
 - use .web-ext-ignore instead of command-line ignore flags (20de54f)
@@ -289,6 +283,7 @@ No notable changes.
 
 ### ✅ Tests
 
+- add newtab-minimal tests and adjust coverage thresholds (3a3ce5a)
 - improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
 - improve coverage from 0.72% to 17.5% (24x increase) (f124db3)
 - remove deprecated dewey_primary_label test cases (50a83c3)
