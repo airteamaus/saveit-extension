@@ -31,24 +31,24 @@
   "license": "ISC",
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@playwright/test": "^1.48.0",
-    "@vitest/coverage-v8": "^4.0.8",
-    "@vitest/ui": "^4.0.8",
+    "@playwright/test": "^1.57.0",
+    "@vitest/coverage-v8": "^4.0.15",
+    "@vitest/ui": "^4.0.15",
     "chokidar": "^4.0.3",
     "chrome-webstore-upload": "^4.0.3",
     "dotenv": "^17.2.3",
-    "esbuild": "^0.27.0",
-    "eslint": "^9.15.0",
+    "esbuild": "^0.27.1",
+    "eslint": "^9.39.1",
     "globals": "^16.5.0",
-    "happy-dom": "^20.0.10",
+    "happy-dom": "^20.0.11",
     "husky": "^9.1.7",
-    "vitest": "^4.0.8",
-    "web-ext": "^9.1.0",
+    "vitest": "^4.0.15",
+    "web-ext": "^9.2.0",
     "webextension-polyfill": "^0.12.0",
-    "zod": "^4.0.0"
+    "zod": "^4.1.13"
   },
   "dependencies": {
-    "@sentry/browser": "^8.0.0",
-    "firebase": "^12.5.0"
+    "@sentry/browser": "^8.55.0",
+    "firebase": "^12.6.0"
   }
 }
