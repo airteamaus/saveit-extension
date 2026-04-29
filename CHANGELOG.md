@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] - 2026-04-29
+
+No notable changes.
+
 ## [1.7.2] - 2025-11-28
 
 ### ♻️ Refactoring
@@ -94,15 +98,6 @@ No notable changes.
 ### ✨ Features
 
 - add header with logo and user menu to graph page (18dede3)
-
-### ✅ Tests
-
-- improve coverage from 22% to 33% with 90 new tests (84c893b)
-
-## [1.6.0] - 2025-11-25
-
-### ✨ Features
-
 - improve semantic search and add user avatars (0f8e603)
 - add semantic search results page (bbaf4e1)
 - polish minimal new tab layout and styling (7b0abc1)
@@ -283,6 +278,7 @@ No notable changes.
 
 ### ✅ Tests
 
+- improve coverage from 22% to 33% with 90 new tests (84c893b)
 - add newtab-minimal tests and adjust coverage thresholds (3a3ce5a)
 - improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
 - improve coverage from 0.72% to 17.5% (24x increase) (f124db3)
