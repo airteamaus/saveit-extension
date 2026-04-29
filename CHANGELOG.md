@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.1] - 2026-04-29
+
+No notable changes.
+
 ## [1.8.0] - 2026-04-29
 
 No notable changes.
@@ -80,23 +84,6 @@ No notable changes.
 - add pin feature UI and API integration (9a698d4)
 - use full resolution Unsplash images for better quality (d5a121d)
 - filter Unsplash backgrounds to exclude people and animals (d693818)
-
-### 🐛 Bug Fixes
-
-- auth header bug and update pin icon to pushpin (5162cb0)
-
-### ⚡ Performance
-
-- reduce Unsplash image cache from 24h to 3h (1b20002)
-
-### ♻️ Refactoring
-
-- consolidate card metadata into single row with inline tags (aa720f2)
-
-## [1.6.1] - 2025-11-25
-
-### ✨ Features
-
 - add header with logo and user menu to graph page (18dede3)
 - improve semantic search and add user avatars (0f8e603)
 - add semantic search results page (bbaf4e1)
@@ -154,6 +141,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- auth header bug and update pin icon to pushpin (5162cb0)
 - align favicon with first line of title in search results (10a3ad8)
 - wait for auth before search and lower threshold to 0.65 (76886c0)
 - add debug output to backend cleanup step (e61f25b)
@@ -223,10 +211,12 @@ No notable changes.
 
 ### ⚡ Performance
 
+- reduce Unsplash image cache from 24h to 3h (1b20002)
 - remove unused webServer from E2E test config (832e705)
 
 ### ♻️ Refactoring
 
+- consolidate card metadata into single row with inline tags (aa720f2)
 - **test:** reduce test complexity and improve maintainability (a8e945d)
 - upgrade Zod v3 to v4 with full API modernization (697fa70)
 - improve tag system and similarity search accuracy (5bebbff)
