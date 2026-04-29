@@ -109,7 +109,6 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 *UI Layer (presentation):*
 - `src/components.js` - Pure UI builders
 - `src/newtab.js` - Main dashboard controller
-- `src/graph.js` / `graph.html` - 3D knowledge graph (Three.js + GraphViz)
 
 *Manager Layer (business logic):*
 - `src/tag-manager.js` - Tag hierarchy & classification
@@ -140,12 +139,6 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 2. `page-loader-manager.js` fetches via `api.js`
 3. Managers render cards, tags, stats
 4. Infinite scroll loads more on demand
-
-*Graph Visualization:*
-1. `graph.js` fetches from `/graph-data` API
-2. GraphViz renders 3D force-directed graph (Three.js)
-3. HUD panel shows node details + similar pages
-4. Viewfinder minimap for navigation
 
 **OAuth caching:** Permanent after first auth. Clear: `browser.storage.local.clear()`
 
@@ -226,7 +219,7 @@ Auto-detects from extension version:
 | Install in Firefox | `just install` | Persistent installation |
 | Install dependencies | `just install-deps` | npm install + setup |
 | **Building** |
-| Build all bundles | `just build` | Firebase + graph-viz bundles |
+| Build all bundles | `just build` | Firebase bundles + package extension |
 | Build Firebase only | `just build-firebase` | Firebase SDK bundles |
 | Build extension (Firefox) | `just build` | Requires AMO_JWT |
 | Build extension (Chrome) | `just build-chrome` | Universal build |
@@ -268,21 +261,17 @@ Auto-detects from extension version:
 2. `firebase-dashboard.js` - Firebase SDK for dashboard (100KB)
 3. `background-bundle.js` - Background script with polyfill (186KB)
 4. `sentry-init.js` - Sentry error tracking (70KB, prod only)
-5. `graph-viz.js` - Graph visualization library (1.5MB, includes Viewfinder + Three.js)
-6. `browser-polyfill.min.js` - WebExtension API polyfill (10KB, copied from node_modules)
-7. `*.js.map` - Source maps for debugging (~10MB total)
+5. `browser-polyfill.min.js` - WebExtension API polyfill (10KB, copied from node_modules)
+6. `*.js.map` - Source maps for debugging (~10MB total)
 
 **Build commands:**
 ```bash
 npm run build                    # Build all bundles + package extension
-npm run build:graph              # Build graph-viz bundle only
 node scripts/bundle-firebase.js  # Build Firebase bundles only
-node scripts/bundle-graph.js     # Build graph-viz bundle only
 ```
 
 **Build scripts:**
 - `scripts/bundle-firebase.js` - Bundles Firebase SDK (esbuild, target: Firefox 115+, Chrome 120+)
-- `scripts/bundle-graph.js` - Bundles graph-viz from `../saveit-backend/graph-viz/src/`
 
 **Build configuration:**
 - Tool: esbuild v0.27.0
@@ -350,7 +339,6 @@ oauthClientId: 'xxx.apps.googleusercontent.com'
 **Permissions:** `activeTab`, `notifications`, `identity`, `storage`, `https://*.run.app/*`, `https://www.googleapis.com/*`
 
 **Features:**
-- Knowledge graph: `src/graph.html` (3D visualization, Neo4j-powered)
 - Error tracking: Sentry (production only, auto-configured from environment)
 
 **Cross-Browser Manifest:**

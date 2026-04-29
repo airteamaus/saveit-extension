@@ -7,8 +7,19 @@
   <link rel="icon" type="image/png" href="icon.png">
   <link rel="stylesheet" href="newtab.css">
 </head>
-<body>
+  <body>
   <div id="background" class="background"></div>
+
+  <button
+    id="dashboard-toggle-btn"
+    class="dashboard-toggle-btn"
+    type="button"
+    aria-label="Open saved pages"
+    aria-expanded="false"
+    title="Open saved pages"
+  >
+    <span id="dashboard-toggle-icon" aria-hidden="true">+</span>
+  </button>
 
   <!-- User menu (top-right corner) -->
   <div id="hero-user-menu" class="user-menu hidden">
@@ -83,7 +94,7 @@
   </div>
 
   <footer class="minimal-footer">
-    <a id="open-dashboard-link" href="newtab.html?drawer=dashboard">Open database</a>
+    <span class="footer-spacer" aria-hidden="true"></span>
     <span id="hero-version-indicator">v<span id="hero-version-number">...</span></span>
     <span id="photo-credit" class="photo-credit hidden">
       Photo by <a id="photographer-link" href="#"></a> on <a href="https://unsplash.com/?utm_source=saveit&utm_medium=referral">Unsplash</a>
@@ -95,12 +106,6 @@
     <aside class="dashboard-drawer-panel" aria-label="Saved pages drawer">
       <div class="dashboard-drawer-header">
         <span class="dashboard-drawer-title">Saved pages</span>
-        <button id="close-dashboard-btn" class="dashboard-drawer-close" type="button" aria-label="Close dashboard">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
       </div>
       <iframe
         id="dashboard-drawer-frame"

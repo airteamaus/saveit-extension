@@ -665,32 +665,6 @@ const API = {
   },
 
   /**
-   * Fetch graph data from Cloud Function
-   * @private
-   * @returns {Promise<Object>} Graph data with nodes and edges
-   */
-  async _fetchGraphFromCloudFunction() {
-    return await this._fetchWithAuth('', { graph: 'true' });
-  },
-
-  /**
-   * Get graph data for knowledge graph visualization
-   * Returns nodes (generals, domains, topics) and edges (relationships)
-   * @returns {Promise<Object>} Graph data { nodes: [], edges: [] }
-   */
-  async getGraphData() {
-    if (this.isExtension) {
-      return this._executeWithErrorHandling(
-        async () => this._fetchGraphFromCloudFunction(),
-        'getGraphData'
-      );
-    } else {
-      // Mock data returned by graph.js getMockGraphData()
-      throw new Error('Use getMockGraphData() in standalone mode');
-    }
-  },
-
-  /**
    * Search for things by semantic content similarity
    * Uses vector search on content_embedding field
    *

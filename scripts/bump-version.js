@@ -112,11 +112,14 @@ try {
 }
 
 // Git commit
-try {
-  execSync('git add manifest.json package.json', { stdio: 'inherit' });
-  execSync(`git commit -m "Bump version to ${newVersion}"`, { stdio: 'inherit' });
-  console.log('✓ Committed version bump');
-} catch (err) {
+ try {
+   execSync('git add manifest.json package.json', { stdio: 'inherit' });
+   execSync(
+     `git commit -m "Bump version to ${newVersion}" -m "Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>"`,
+     { stdio: 'inherit' }
+   );
+   console.log('✓ Committed version bump');
+ } catch (err) {
   console.error('Error committing changes:', err.message);
   process.exit(1);
 }

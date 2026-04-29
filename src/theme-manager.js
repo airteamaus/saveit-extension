@@ -5,6 +5,19 @@
  * ThemeManager - Manages theme preferences and footer indicators
  * Handles light/dark/auto theme switching and displays mode/version info
  */
+const UNSPLASH_BACKGROUND_QUERIES = [
+  'architecture',
+  'japan',
+  'scenic landscape',
+  'mountain lake',
+  'forest mist',
+  'coastal cliffs',
+  'city skyline',
+  'modern interior',
+  'temple street',
+  'desert dunes'
+];
+
 /* eslint-disable-next-line no-unused-vars */
 class ThemeManager {
   /**
@@ -264,14 +277,18 @@ class ThemeManager {
     if (!unsplashAccessKey) return null;
 
     try {
-      const response = await fetch(
-        'https://api.unsplash.com/photos/random?orientation=landscape&topics=architecture,textures,wallpapers',
-        {
-          headers: {
-            'Authorization': `Client-ID ${unsplashAccessKey}`
-          }
+      const query = UNSPLASH_BACKGROUND_QUERIES[
+        Math.floor(Math.random() * UNSPLASH_BACKGROUND_QUERIES.length)
+      ];
+      const url = new URL('https://api.unsplash.com/photos/random');
+      url.searchParams.set('orientation', 'landscape');
+      url.searchParams.set('query', query);
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Authorization': `Client-ID ${unsplashAccessKey}`
         }
-      );
+      });
 
       if (!response.ok) {
         console.error('[ThemeManager] Unsplash API error:', response.status);

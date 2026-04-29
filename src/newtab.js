@@ -22,10 +22,10 @@ const userDropdown = document.getElementById('hero-user-dropdown');
 const userEmailEl = document.getElementById('hero-user-email');
 const signOutBtn = document.getElementById('hero-sign-out-btn');
 const refreshBackgroundBtn = document.getElementById('hero-refresh-background-btn');
-const openDashboardLink = document.getElementById('open-dashboard-link');
+const dashboardToggleBtn = document.getElementById('dashboard-toggle-btn');
+const dashboardToggleIcon = document.getElementById('dashboard-toggle-icon');
 const dashboardDrawer = document.getElementById('dashboard-drawer');
 const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdrop');
-const closeDashboardBtn = document.getElementById('close-dashboard-btn');
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
@@ -206,13 +206,23 @@ function updateDrawerUrl(isOpen) {
   window.history.replaceState({}, '', url);
 }
 
+function setDrawerToggleState(isOpen) {
+  if (!dashboardToggleBtn || !dashboardToggleIcon) return;
+
+  dashboardToggleBtn.setAttribute('aria-expanded', String(isOpen));
+  dashboardToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
+  dashboardToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
+  dashboardToggleIcon.textContent = isOpen ? 'x' : '+';
+}
+
 function openDashboardDrawer({ syncUrl = true } = {}) {
   if (!dashboardDrawer) return;
 
   dashboardDrawer.classList.remove('hidden');
   dashboardDrawer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('dashboard-drawer-open');
-  closeDashboardBtn?.focus();
+  setDrawerToggleState(true);
+  dashboardToggleBtn?.focus();
 
   if (syncUrl) {
     updateDrawerUrl(true);
@@ -225,6 +235,7 @@ function closeDashboardDrawer({ syncUrl = true } = {}) {
   dashboardDrawer.classList.add('hidden');
   dashboardDrawer.setAttribute('aria-hidden', 'true');
   document.body.classList.remove('dashboard-drawer-open');
+  setDrawerToggleState(false);
 
   if (syncUrl) {
     updateDrawerUrl(false);
@@ -232,12 +243,14 @@ function closeDashboardDrawer({ syncUrl = true } = {}) {
 }
 
 function initDashboardDrawer() {
-  openDashboardLink?.addEventListener('click', (e) => {
-    e.preventDefault();
-    openDashboardDrawer();
+  dashboardToggleBtn?.addEventListener('click', () => {
+    if (dashboardDrawer?.classList.contains('hidden')) {
+      openDashboardDrawer();
+    } else {
+      closeDashboardDrawer();
+    }
   });
 
-  closeDashboardBtn?.addEventListener('click', () => closeDashboardDrawer());
   dashboardDrawerBackdrop?.addEventListener('click', () => closeDashboardDrawer());
 
   document.addEventListener('keydown', (e) => {
@@ -249,6 +262,8 @@ function initDashboardDrawer() {
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get(DASHBOARD_DRAWER_PARAM) === DASHBOARD_DRAWER_VALUE) {
     openDashboardDrawer({ syncUrl: false });
+  } else {
+    setDrawerToggleState(false);
   }
 }
 

@@ -81,22 +81,6 @@ class EventManager {
       dashboard.themeManager.injectThemeToggle(themeToggleContainer);
     }
 
-    // Graph button - open knowledge graph in new tab
-    const graphBtn = document.getElementById('graph-btn');
-    if (graphBtn) {
-      graphBtn.addEventListener('click', () => {
-        // Get extension URL for graph.html
-        const runtime = dashboard.getBrowserRuntime();
-        if (runtime) {
-          const graphUrl = runtime.getURL('src/graph.html');
-          window.location.href = graphUrl;
-        } else {
-          // Standalone mode - try relative path
-          window.location.href = 'graph.html';
-        }
-      });
-    }
-
     // Card actions (event delegation)
     document.getElementById('content').addEventListener('click', (e) => {
       // Welcome sign-in button

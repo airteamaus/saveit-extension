@@ -353,9 +353,4 @@ describe('API - Standalone Mode Methods', () => {
     });
   });
 
-  describe('getGraphData (standalone)', () => {
-    it('should throw error suggesting mock method in standalone mode', async () => {
-      await expect(API.getGraphData()).rejects.toThrow('Use getMockGraphData() in standalone mode');
-    });
-  });
 });

@@ -37,3 +37,7 @@ npm-debug.log*
 *.tmp
 *.swp
 chrome-dev-key.pem
+
+# Code review reports
+code_review-*.md
+code_review-*.pdf
