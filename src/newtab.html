@@ -88,8 +88,34 @@
       </button>
     </div>
 
-    <div id="favorites-row" class="favorites-row hidden">
-      <!-- Populated by JS with up to 16 recent saves -->
+    <div id="favorites-section" class="favorites-section hidden">
+      <div class="favorites-pager">
+        <button
+          id="favorites-prev-btn"
+          class="favorites-nav favorites-nav-prev"
+          type="button"
+          aria-label="Show previous favorites"
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+
+        <div id="favorites-viewport" class="favorites-viewport">
+          <div id="favorites-row" class="favorites-row">
+            <!-- Populated by JS with a page of recent saves -->
+          </div>
+        </div>
+
+        <button
+          id="favorites-next-btn"
+          class="favorites-nav favorites-nav-next"
+          type="button"
+          aria-label="Show next favorites"
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+      </div>
+
+      <div id="favorites-dots" class="favorites-dots" aria-label="Favorites pages"></div>
     </div>
   </div>
 
