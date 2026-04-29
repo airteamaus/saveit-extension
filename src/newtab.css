@@ -97,19 +97,74 @@ body.has-background .sign-in-btn {
   background: rgba(37, 99, 235, 0.9);
 }
 
-/* Favorites row - up to 16 recent saves */
-.favorites-row {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  justify-content: center;
+/* Favorites pager */
+.favorites-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: var(--spacing-sm);
-  width: fit-content;
-  max-width: 100%;
-  margin: 0 auto;
+  width: min(100%, var(--favorites-grid-width, 640px));
 }
 
-.favorites-row.hidden {
-  display: none;
+.favorites-pager {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) 40px;
+  align-items: center;
+  gap: var(--spacing-sm);
+  width: 100%;
+}
+
+.favorites-viewport {
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+.favorites-viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.favorites-row {
+  display: grid;
+  grid-template-columns: repeat(var(--favorites-columns, 6), minmax(0, var(--favorites-tile-width, 84px)));
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.favorites-nav {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  transition: transform 0.2s ease, opacity 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.favorites-nav:hover:not(:disabled) {
+  transform: translateY(-1px);
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.favorites-nav:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.favorites-nav-hidden {
+  visibility: hidden;
+}
+
+.favorites-nav span {
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .favorite-item {
@@ -117,7 +172,8 @@ body.has-background .sign-in-btn {
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: var(--spacing-sm);
+  width: var(--favorites-tile-width, 84px);
+  padding: 8px 6px;
   text-decoration: none;
   color: var(--color-text);
   border-radius: var(--radius-md);
@@ -130,8 +186,8 @@ body.has-background .sign-in-btn {
 }
 
 .favorite-icon {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: var(--radius-md);
   background: var(--color-surface);
   display: flex;
@@ -142,20 +198,20 @@ body.has-background .sign-in-btn {
 }
 
 .favorite-icon img {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
 }
 
 .favorite-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   color: var(--color-text-light);
 }
 
 .favorite-title {
-  font-size: 0.75rem;
+  font-size: 0.6875rem;
   text-align: center;
-  width: 100px;
+  width: var(--favorites-tile-width, 84px);
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -178,6 +234,49 @@ body.has-background .favorite-icon {
 body.has-background .favorite-title {
   color: rgba(255, 255, 255, 0.8);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+body.has-background .favorites-nav {
+  background: rgba(0, 0, 0, 0.4);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.favorites-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 12px;
+}
+
+.favorite-dot {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-text-light) 35%, transparent);
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.favorite-dot:hover {
+  transform: scale(1.1);
+}
+
+.favorite-dot.active {
+  background: var(--color-primary);
+  transform: scale(1.1);
+}
+
+body.has-background .favorite-dot {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+body.has-background .favorite-dot.active {
+  background: rgba(255, 255, 255, 0.95);
 }
 
 body {
@@ -682,12 +781,6 @@ body.has-background .minimal-footer a:hover {
 }
 
 /* Responsive */
-@media (max-width: 1024px) {
-  .favorites-row {
-    grid-template-columns: repeat(4, 1fr);
-  }
-}
-
 @media (max-width: 640px) {
   .minimal-container {
     padding: var(--spacing-md);
@@ -711,29 +804,28 @@ body.has-background .minimal-footer a:hover {
     transform: translateX(-100%);
   }
 
-  .favorites-row {
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--spacing-sm);
-    padding: var(--spacing-sm);
+  .favorites-pager {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    gap: 6px;
   }
 
-  .favorites-row .favorite-item:nth-child(n+9) {
-    display: none; /* Show up to 8 items on mobile */
+  .favorites-nav {
+    width: 36px;
+    height: 36px;
   }
-
   .favorite-icon {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
   }
 
   .favorite-icon img,
   .favorite-icon svg {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
   }
 
   .favorite-title {
-    max-width: 80px;
+    width: var(--favorites-tile-width, 76px);
   }
 
   .minimal-logo {

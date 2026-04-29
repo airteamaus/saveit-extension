@@ -158,6 +158,20 @@ describe('newtab-minimal', () => {
 
   describe('renderFavorites logic', () => {
     let mockFavoritesRow;
+    const FAVORITES_MAX_ITEMS = 60;
+    const FAVORITES_MAX_COLUMNS = 10;
+    const FAVORITES_MIN_COLUMNS = 6;
+    const FAVORITES_MOBILE_COLUMNS = 4;
+    const FAVORITES_MOBILE_ROWS = 2;
+    const FAVORITES_DEFAULT_ROWS = 2;
+    const FAVORITES_TALL_SCREEN_ROWS = 3;
+    const FAVORITES_TALL_SCREEN_HEIGHT = 860;
+    const FAVORITES_WIDE_SCREEN_THREE_ROW_WIDTH = 1280;
+    const FAVORITES_DESKTOP_TILE_WIDTH = 88;
+    const FAVORITES_MOBILE_TILE_WIDTH = 80;
+    const FAVORITES_TILE_GAP = 12;
+    const FAVORITES_WIDTH_PADDING = 220;
+    const FAVORITES_MAX_GRID_WIDTH = 1008;
 
     beforeEach(() => {
       mockFavoritesRow = {
@@ -175,9 +189,50 @@ describe('newtab-minimal', () => {
       return pages && pages.length > 0;
     }
 
-    function getFavoritesToRender(pages) {
-      if (!pages || pages.length === 0) return [];
-      return pages.slice(0, 16);
+    function getFavoritesLayout(viewportWidth, viewportHeight) {
+      if (viewportWidth <= 640) {
+        const columns = FAVORITES_MOBILE_COLUMNS;
+        const rows = FAVORITES_MOBILE_ROWS;
+        const tileWidth = FAVORITES_MOBILE_TILE_WIDTH;
+        return {
+          columns,
+          rows,
+          tileWidth,
+          pageSize: columns * rows,
+          gridWidth: (columns * tileWidth) + ((columns - 1) * FAVORITES_TILE_GAP)
+        };
+      }
+
+      const availableWidth = Math.min(
+        Math.max(viewportWidth - FAVORITES_WIDTH_PADDING, FAVORITES_MIN_COLUMNS * (FAVORITES_DESKTOP_TILE_WIDTH + FAVORITES_TILE_GAP)),
+        FAVORITES_MAX_GRID_WIDTH
+      );
+      const calculatedColumns = Math.floor(
+        (availableWidth + FAVORITES_TILE_GAP) / (FAVORITES_DESKTOP_TILE_WIDTH + FAVORITES_TILE_GAP)
+      );
+      const columns = Math.max(FAVORITES_MIN_COLUMNS, Math.min(FAVORITES_MAX_COLUMNS, calculatedColumns));
+      const rows = viewportWidth >= FAVORITES_WIDE_SCREEN_THREE_ROW_WIDTH || viewportHeight >= FAVORITES_TALL_SCREEN_HEIGHT
+        ? FAVORITES_TALL_SCREEN_ROWS
+        : FAVORITES_DEFAULT_ROWS;
+
+      return {
+        columns,
+        rows,
+        tileWidth: FAVORITES_DESKTOP_TILE_WIDTH,
+        pageSize: columns * rows,
+        gridWidth: (columns * FAVORITES_DESKTOP_TILE_WIDTH) + ((columns - 1) * FAVORITES_TILE_GAP)
+      };
+    }
+
+    function paginateFavorites(pages, pageSize) {
+      const favorites = Array.isArray(pages) ? pages.slice(0, FAVORITES_MAX_ITEMS) : [];
+      if (favorites.length === 0 || pageSize <= 0) return [];
+
+      const pagedFavorites = [];
+      for (let i = 0; i < favorites.length; i += pageSize) {
+        pagedFavorites.push(favorites.slice(i, i + pageSize));
+      }
+      return pagedFavorites;
     }
 
     it('should not render when pages is null', () => {
@@ -192,19 +247,70 @@ describe('newtab-minimal', () => {
       expect(shouldRenderFavorites([{ url: 'https://example.com' }])).toBeTruthy();
     });
 
-    it('should limit to 16 favorites', () => {
-      const pages = Array(20).fill({ url: 'https://example.com', title: 'Test' });
-      const result = getFavoritesToRender(pages);
-      expect(result).toHaveLength(16);
+    it('should use 30 favorites on a large desktop viewport', () => {
+      const result = getFavoritesLayout(1440, 900);
+      expect(result.columns).toBe(10);
+      expect(result.rows).toBe(3);
+      expect(result.pageSize).toBe(30);
     });
 
-    it('should return all pages if less than 16', () => {
-      const pages = [
-        { url: 'https://example1.com', title: 'Test 1' },
-        { url: 'https://example2.com', title: 'Test 2' }
-      ];
-      const result = getFavoritesToRender(pages);
+    it('should use 8 favorites on mobile', () => {
+      const result = getFavoritesLayout(640, 900);
+      expect(result.columns).toBe(4);
+      expect(result.rows).toBe(2);
+      expect(result.pageSize).toBe(8);
+    });
+
+    it('should use 30 favorites on a wide maximized desktop viewport', () => {
+      const result = getFavoritesLayout(1440, 780);
+      expect(result.columns).toBe(10);
+      expect(result.rows).toBe(3);
+      expect(result.pageSize).toBe(30);
+    });
+
+    it('should use fewer rows on narrower desktop viewports', () => {
+      const result = getFavoritesLayout(1200, 800);
+      expect(result.columns).toBe(9);
+      expect(result.rows).toBe(2);
+      expect(result.pageSize).toBe(18);
+    });
+
+    it('should paginate responsive desktop favorites into pages', () => {
+      const pages = Array.from({ length: 45 }, (_, index) => ({
+        url: `https://example${index}.com`,
+        title: `Test ${index}`
+      }));
+      const layout = getFavoritesLayout(1440, 900);
+      const result = paginateFavorites(pages, layout.pageSize);
+
       expect(result).toHaveLength(2);
+      expect(result[0]).toHaveLength(30);
+      expect(result[1]).toHaveLength(15);
+    });
+
+    it('should paginate mobile favorites into pages', () => {
+      const pages = Array.from({ length: 20 }, (_, index) => ({
+        url: `https://example${index}.com`,
+        title: `Test ${index}`
+      }));
+      const layout = getFavoritesLayout(640, 900);
+      const result = paginateFavorites(pages, layout.pageSize);
+
+      expect(result).toHaveLength(3);
+      expect(result[0]).toHaveLength(8);
+      expect(result[1]).toHaveLength(8);
+      expect(result[2]).toHaveLength(4);
+    });
+
+    it('should cap favorites history used for paging', () => {
+      const pages = Array.from({ length: 100 }, (_, index) => ({
+        url: `https://example${index}.com`,
+        title: `Test ${index}`
+      }));
+      const layout = getFavoritesLayout(1440, 900);
+      const result = paginateFavorites(pages, layout.pageSize);
+
+      expect(result.flat()).toHaveLength(FAVORITES_MAX_ITEMS);
     });
   });
 

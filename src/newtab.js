@@ -14,7 +14,12 @@ const signInBtn = document.getElementById('hero-sign-in-btn');
 const backgroundEl = document.getElementById('background');
 const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
+const favoritesSection = document.getElementById('favorites-section');
+const favoritesViewport = document.getElementById('favorites-viewport');
 const favoritesRow = document.getElementById('favorites-row');
+const favoritesPrevBtn = document.getElementById('favorites-prev-btn');
+const favoritesNextBtn = document.getElementById('favorites-next-btn');
+const favoritesDots = document.getElementById('favorites-dots');
 const userMenu = document.getElementById('hero-user-menu');
 const userAvatarBtn = document.getElementById('hero-user-avatar-btn');
 const userAvatar = document.getElementById('hero-user-avatar');
@@ -29,6 +34,38 @@ const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdr
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
+const FAVORITES_MAX_ITEMS = 60;
+const FAVORITES_DRAG_THRESHOLD = 40;
+const FAVORITES_MAX_COLUMNS = 10;
+const FAVORITES_MIN_COLUMNS = 6;
+const FAVORITES_MOBILE_COLUMNS = 4;
+const FAVORITES_MOBILE_ROWS = 2;
+const FAVORITES_DEFAULT_ROWS = 2;
+const FAVORITES_TALL_SCREEN_ROWS = 3;
+const FAVORITES_TALL_SCREEN_HEIGHT = 860;
+const FAVORITES_WIDE_SCREEN_THREE_ROW_WIDTH = 1280;
+const FAVORITES_DESKTOP_TILE_WIDTH = 88;
+const FAVORITES_MOBILE_TILE_WIDTH = 80;
+const FAVORITES_TILE_GAP = 12;
+const FAVORITES_WIDTH_PADDING = 220;
+const FAVORITES_MAX_GRID_WIDTH = 1008;
+
+const favoritesState = {
+  allPages: [],
+  pagedPages: [],
+  currentPage: 0,
+  pageSize: 12,
+  columns: 6,
+  rows: 2,
+  tileWidth: FAVORITES_DESKTOP_TILE_WIDTH,
+  pointerActive: false,
+  pointerStartX: 0,
+  pointerStartY: 0,
+  pointerDeltaX: 0,
+  pointerDeltaY: 0,
+  dragging: false,
+  suppressClick: false
+};
 
 /**
  * Initialize theme from saved preference and inject toggle
@@ -138,24 +175,262 @@ function createFavoriteItem(page) {
 }
 
 /**
- * Render favorites row with recent saves
- * @param {Array} pages - Array of page objects
+ * Get responsive favorites layout for current viewport
+ * @param {number} viewportWidth - Viewport width
+ * @param {number} viewportHeight - Viewport height
+ * @returns {{pageSize:number, columns:number, rows:number, tileWidth:number, gridWidth:number}} Layout data
  */
-function renderFavorites(pages) {
-  if (!pages || pages.length === 0) {
-    favoritesRow.classList.add('hidden');
-    return;
+function getFavoritesLayout(viewportWidth = window.innerWidth, viewportHeight = window.innerHeight) {
+  if (viewportWidth <= 640) {
+    const columns = FAVORITES_MOBILE_COLUMNS;
+    const rows = FAVORITES_MOBILE_ROWS;
+    const tileWidth = FAVORITES_MOBILE_TILE_WIDTH;
+    return {
+      columns,
+      rows,
+      tileWidth,
+      pageSize: columns * rows,
+      gridWidth: (columns * tileWidth) + ((columns - 1) * FAVORITES_TILE_GAP)
+    };
   }
 
-  // Take up to 16 most recent (2 rows of 8 on desktop)
-  const favorites = pages.slice(0, 16);
+  const availableWidth = Math.min(
+    Math.max(viewportWidth - FAVORITES_WIDTH_PADDING, FAVORITES_MIN_COLUMNS * (FAVORITES_DESKTOP_TILE_WIDTH + FAVORITES_TILE_GAP)),
+    FAVORITES_MAX_GRID_WIDTH
+  );
+  const calculatedColumns = Math.floor(
+    (availableWidth + FAVORITES_TILE_GAP) / (FAVORITES_DESKTOP_TILE_WIDTH + FAVORITES_TILE_GAP)
+  );
+  const columns = Math.max(FAVORITES_MIN_COLUMNS, Math.min(FAVORITES_MAX_COLUMNS, calculatedColumns));
+  const rows = viewportWidth >= FAVORITES_WIDE_SCREEN_THREE_ROW_WIDTH || viewportHeight >= FAVORITES_TALL_SCREEN_HEIGHT
+    ? FAVORITES_TALL_SCREEN_ROWS
+    : FAVORITES_DEFAULT_ROWS;
+  const tileWidth = FAVORITES_DESKTOP_TILE_WIDTH;
 
+  return {
+    columns,
+    rows,
+    tileWidth,
+    pageSize: columns * rows,
+    gridWidth: (columns * tileWidth) + ((columns - 1) * FAVORITES_TILE_GAP)
+  };
+}
+
+/**
+ * Paginate favorites into pages
+ * @param {Array} pages - Array of page objects
+ * @param {number} pageSize - Number of favorites per page
+ * @returns {Array<Array>} Chunked favorites
+ */
+function paginateFavorites(pages, pageSize) {
+  const favorites = Array.isArray(pages) ? pages.slice(0, FAVORITES_MAX_ITEMS) : [];
+  if (favorites.length === 0 || pageSize <= 0) return [];
+
+  const pagedFavorites = [];
+  for (let i = 0; i < favorites.length; i += pageSize) {
+    pagedFavorites.push(favorites.slice(i, i + pageSize));
+  }
+  return pagedFavorites;
+}
+
+function updateFavoritesNav() {
+  const totalPages = favoritesState.pagedPages.length;
+  const hasMultiplePages = totalPages > 1;
+
+  favoritesPrevBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
+  favoritesNextBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
+
+  if (favoritesPrevBtn) {
+    favoritesPrevBtn.disabled = !hasMultiplePages || favoritesState.currentPage === 0;
+  }
+
+  if (favoritesNextBtn) {
+    favoritesNextBtn.disabled = !hasMultiplePages || favoritesState.currentPage === totalPages - 1;
+  }
+
+  if (!favoritesDots) return;
+
+  favoritesDots.innerHTML = '';
+  favoritesDots.classList.toggle('hidden', !hasMultiplePages);
+
+  if (!hasMultiplePages) return;
+
+  favoritesState.pagedPages.forEach((_, index) => {
+    const dot = document.createElement('button');
+    dot.type = 'button';
+    dot.className = 'favorite-dot';
+    dot.setAttribute('aria-label', `Show favorites page ${index + 1}`);
+    dot.setAttribute('aria-pressed', String(index === favoritesState.currentPage));
+    if (index === favoritesState.currentPage) {
+      dot.classList.add('active');
+    }
+    dot.addEventListener('click', () => goToFavoritesPage(index));
+    favoritesDots.appendChild(dot);
+  });
+}
+
+function applyFavoritesLayout(layout) {
+  favoritesState.pageSize = layout.pageSize;
+  favoritesState.columns = layout.columns;
+  favoritesState.rows = layout.rows;
+  favoritesState.tileWidth = layout.tileWidth;
+
+  favoritesSection?.style.setProperty('--favorites-grid-width', `${layout.gridWidth}px`);
+  favoritesRow?.style.setProperty('--favorites-columns', String(layout.columns));
+  favoritesRow?.style.setProperty('--favorites-tile-width', `${layout.tileWidth}px`);
+}
+
+function renderFavoritesPage() {
+  if (!favoritesRow || !favoritesSection) return;
+
+  const favorites = favoritesState.pagedPages[favoritesState.currentPage] || [];
   favoritesRow.innerHTML = '';
+
   favorites.forEach(page => {
     favoritesRow.appendChild(createFavoriteItem(page));
   });
 
-  favoritesRow.classList.remove('hidden');
+  favoritesSection.classList.toggle('hidden', favorites.length === 0);
+  updateFavoritesNav();
+}
+
+function goToFavoritesPage(pageIndex) {
+  if (!favoritesState.pagedPages.length) return;
+
+  favoritesState.currentPage = Math.max(
+    0,
+    Math.min(pageIndex, favoritesState.pagedPages.length - 1)
+  );
+  renderFavoritesPage();
+}
+
+function resetFavorites() {
+  favoritesState.allPages = [];
+  favoritesState.pagedPages = [];
+  favoritesState.currentPage = 0;
+  applyFavoritesLayout(getFavoritesLayout());
+
+  if (favoritesRow) favoritesRow.innerHTML = '';
+  if (favoritesDots) favoritesDots.innerHTML = '';
+  favoritesSection?.classList.add('hidden');
+}
+
+/**
+ * Render favorites pager with recent saves
+ * @param {Array} pages - Array of page objects
+ */
+function renderFavorites(pages) {
+  if (!pages || pages.length === 0) {
+    resetFavorites();
+    return;
+  }
+
+  favoritesState.allPages = pages.slice(0, FAVORITES_MAX_ITEMS);
+  const layout = getFavoritesLayout();
+  applyFavoritesLayout(layout);
+  favoritesState.pagedPages = paginateFavorites(favoritesState.allPages, layout.pageSize);
+  favoritesState.currentPage = Math.min(
+    favoritesState.currentPage,
+    favoritesState.pagedPages.length - 1
+  );
+  renderFavoritesPage();
+}
+
+function handleFavoritesResize() {
+  if (!favoritesState.allPages.length) return;
+
+  const layout = getFavoritesLayout();
+  if (
+    layout.pageSize === favoritesState.pageSize &&
+    layout.columns === favoritesState.columns &&
+    layout.tileWidth === favoritesState.tileWidth
+  ) return;
+
+  const firstVisibleIndex = favoritesState.currentPage * favoritesState.pageSize;
+  applyFavoritesLayout(layout);
+  favoritesState.pagedPages = paginateFavorites(favoritesState.allPages, layout.pageSize);
+  goToFavoritesPage(Math.floor(firstVisibleIndex / layout.pageSize));
+}
+
+function clearFavoritesPointerState() {
+  favoritesState.pointerActive = false;
+  favoritesState.pointerDeltaX = 0;
+  favoritesState.pointerDeltaY = 0;
+  favoritesState.dragging = false;
+  favoritesViewport?.classList.remove('is-dragging');
+}
+
+function handleFavoritesPointerDown(event) {
+  if (!favoritesState.pagedPages.length) return;
+  if (event.pointerType === 'mouse' && event.button !== 0) return;
+
+  favoritesState.pointerActive = true;
+  favoritesState.pointerStartX = event.clientX;
+  favoritesState.pointerStartY = event.clientY;
+  favoritesState.pointerDeltaX = 0;
+  favoritesState.pointerDeltaY = 0;
+  favoritesState.dragging = false;
+}
+
+function handleFavoritesPointerMove(event) {
+  if (!favoritesState.pointerActive) return;
+
+  favoritesState.pointerDeltaX = event.clientX - favoritesState.pointerStartX;
+  favoritesState.pointerDeltaY = event.clientY - favoritesState.pointerStartY;
+
+  if (
+    Math.abs(favoritesState.pointerDeltaX) > 10 &&
+    Math.abs(favoritesState.pointerDeltaX) > Math.abs(favoritesState.pointerDeltaY)
+  ) {
+    favoritesState.dragging = true;
+    favoritesViewport?.classList.add('is-dragging');
+  }
+}
+
+function handleFavoritesPointerUp() {
+  if (!favoritesState.pointerActive) return;
+
+  const shouldPage =
+    favoritesState.dragging &&
+    Math.abs(favoritesState.pointerDeltaX) >= FAVORITES_DRAG_THRESHOLD &&
+    Math.abs(favoritesState.pointerDeltaX) > Math.abs(favoritesState.pointerDeltaY);
+
+  if (shouldPage) {
+    const targetPage = favoritesState.pointerDeltaX < 0
+      ? favoritesState.currentPage + 1
+      : favoritesState.currentPage - 1;
+    goToFavoritesPage(targetPage);
+
+    favoritesState.suppressClick = true;
+    window.setTimeout(() => {
+      favoritesState.suppressClick = false;
+    }, 150);
+  }
+
+  clearFavoritesPointerState();
+}
+
+function initFavoritesPager() {
+  favoritesPrevBtn?.addEventListener('click', () => goToFavoritesPage(favoritesState.currentPage - 1));
+  favoritesNextBtn?.addEventListener('click', () => goToFavoritesPage(favoritesState.currentPage + 1));
+
+  favoritesViewport?.addEventListener('pointerdown', handleFavoritesPointerDown);
+  favoritesViewport?.addEventListener('pointermove', handleFavoritesPointerMove);
+  favoritesViewport?.addEventListener('pointerup', handleFavoritesPointerUp);
+  favoritesViewport?.addEventListener('pointercancel', clearFavoritesPointerState);
+  favoritesViewport?.addEventListener('pointerleave', (event) => {
+    if (favoritesState.pointerActive && event.pointerType === 'mouse') {
+      handleFavoritesPointerUp();
+    }
+  });
+  favoritesViewport?.addEventListener('click', (event) => {
+    if (!favoritesState.suppressClick) return;
+    event.preventDefault();
+    event.stopPropagation();
+    favoritesState.suppressClick = false;
+  }, true);
+
+  window.addEventListener('resize', handleFavoritesResize);
 }
 
 /**
@@ -311,7 +586,7 @@ async function initFavorites() {
       return null;
     }
 
-    const options = { limit: 16, sort: 'newest', pinnedFirst: true };
+    const options = { limit: FAVORITES_MAX_ITEMS, sort: 'newest', pinnedFirst: true };
 
     // 1. Try cache (or fresh if no cache)
     const response = await API.getSavedPages(options);
@@ -386,7 +661,7 @@ async function initAuth() {
             updateStats(pagination);
           } else {
             // User signed out, hide favorites and stats
-            favoritesRow.classList.add('hidden');
+            favoritesSection?.classList.add('hidden');
             updateStats(null);
           }
         });
@@ -435,6 +710,7 @@ signInBtn.addEventListener('click', handleSignIn);
 userAvatarBtn.addEventListener('click', toggleUserDropdown);
 signOutBtn.addEventListener('click', handleSignOut);
 refreshBackgroundBtn.addEventListener('click', refreshBackground);
+initFavoritesPager();
 
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
