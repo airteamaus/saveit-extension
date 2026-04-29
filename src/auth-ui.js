@@ -5,6 +5,7 @@
  * AuthUIManager - Manages authentication UI components
  * Handles user profile display, sign-in/out buttons, and dropdown menu
  */
+/* global AuthMenu */
 /* eslint-disable-next-line no-unused-vars */
 class AuthUIManager {
   constructor() {
@@ -17,17 +18,7 @@ class AuthUIManager {
    * @returns {string} Initials (1-2 characters)
    */
   getUserInitials(user) {
-    if (user.name) {
-      const parts = user.name.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-      }
-      return parts[0][0].toUpperCase();
-    }
-    if (user.email) {
-      return user.email[0].toUpperCase();
-    }
-    return '?';
+    return AuthMenu.getUserInitials(user);
   }
 
   /**
@@ -39,36 +30,13 @@ class AuthUIManager {
     const userProfile = document.getElementById('user-profile');
 
     if (!signInBtn || !userProfile) return;
-
-    if (user) {
-      // User is signed in - hide sign-in button, show profile
-      signInBtn.style.display = 'none';
-      userProfile.style.display = 'block';
-
-      // Update user info
-      const userName = document.getElementById('user-name');
-      const userEmail = document.getElementById('user-email');
-      const userAvatar = document.getElementById('user-avatar');
-
-      if (userName && user.name) {
-        userName.textContent = user.name.split(' ')[0]; // First name only
-      }
-      if (userEmail && user.email) {
-        userEmail.textContent = user.email;
-      }
-      // Update avatar (photo or initials)
-      if (userAvatar) {
-        if (user.photoURL) {
-          userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
-        } else {
-          userAvatar.textContent = this.getUserInitials(user);
-        }
-      }
-    } else {
-      // User is signed out - show sign-in button, hide profile
-      signInBtn.style.display = 'flex';
-      userProfile.style.display = 'none';
-    }
+    AuthMenu.updateProfileMenu({
+      signInBtn,
+      userProfile,
+      userNameEl: document.getElementById('user-name'),
+      userEmailEl: document.getElementById('user-email'),
+      avatarEl: document.getElementById('user-avatar')
+    }, user);
   }
 
   /**
@@ -78,12 +46,7 @@ class AuthUIManager {
    */
   async handleSignIn(getBrowserRuntime) {
     try {
-      // Send message to background script to trigger sign-in
-      const runtime = getBrowserRuntime();
-      if (!runtime) {
-        throw new Error('Browser runtime not available');
-      }
-      await runtime.sendMessage({ action: 'signIn' });
+      await AuthMenu.signIn(getBrowserRuntime);
       // Auth state listener will handle UI updates
     } catch (error) {
       console.error('Sign-in failed:', error);
@@ -97,14 +60,12 @@ class AuthUIManager {
    */
   async handleSignOut(onSignOutComplete) {
     try {
-      if (window.firebaseAuth && window.firebaseSignOut) {
-        await window.firebaseSignOut(window.firebaseAuth);
-        this.updateSignInButton(null);
+      await AuthMenu.signOut();
+      this.updateSignInButton(null);
 
-        // Call back to dashboard to show sign-in prompt
-        if (onSignOutComplete) {
-          onSignOutComplete();
-        }
+      // Call back to dashboard to show sign-in prompt
+      if (onSignOutComplete) {
+        onSignOutComplete();
       }
     } catch (error) {
       console.error('Sign-out failed:', error);
@@ -117,9 +78,6 @@ class AuthUIManager {
    */
   toggleUserDropdown() {
     const dropdown = document.getElementById('user-dropdown');
-    if (!dropdown) return;
-
-    const isVisible = dropdown.style.display === 'block';
-    dropdown.style.display = isVisible ? 'none' : 'block';
+    AuthMenu.toggleDropdown(dropdown);
   }
 }

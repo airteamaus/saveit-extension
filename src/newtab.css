@@ -85,6 +85,7 @@ body.has-background .favorites-row {
   -webkit-backdrop-filter: blur(8px);
   border-radius: var(--radius-lg);
   padding: var(--spacing-md);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 body.has-background .minimal-logo {
@@ -96,15 +97,19 @@ body.has-background .sign-in-btn {
   background: rgba(37, 99, 235, 0.9);
 }
 
-/* Favorites row - 6 recent saves, positioned near bottom */
+/* Favorites row - up to 16 recent saves */
 .favorites-row {
-  position: fixed;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
   justify-content: center;
-  gap: var(--spacing-md);
+  gap: var(--spacing-sm);
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.favorites-row.hidden {
+  display: none;
 }
 
 .favorite-item {
@@ -186,6 +191,10 @@ body {
   justify-content: center;
 }
 
+body.dashboard-drawer-open {
+  overflow: hidden;
+}
+
 /* Main container - positioned toward top */
 .minimal-container {
   display: flex;
@@ -193,9 +202,9 @@ body {
   align-items: center;
   gap: var(--spacing-xl);
   padding: var(--spacing-lg);
-  margin-top: -25vh; /* Higher up on screen */
+  margin-top: -15vh; /* Balanced for taller container */
   width: 100%;
-  max-width: 600px;
+  max-width: 1100px;
 }
 
 /* Logo */
@@ -223,6 +232,7 @@ body {
 /* Hero search */
 .search-container {
   width: 100%;
+  max-width: 600px;
 }
 
 .search-form {
@@ -497,12 +507,6 @@ body.has-background .dropdown-item:hover {
   font-weight: 500;
 }
 
-/* Stats counter */
-.stats-count {
-  font-size: 0.9375rem;
-  color: var(--color-text-light);
-}
-
 /* Footer */
 .minimal-footer {
   position: fixed;
@@ -516,7 +520,7 @@ body.has-background .dropdown-item:hover {
   color: var(--color-text-light);
 }
 
-#version-indicator {
+#hero-version-indicator {
   text-align: center;
 }
 
@@ -558,19 +562,103 @@ body.has-background .minimal-footer a:hover {
   color: #ffffff;
 }
 
+.dashboard-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+}
+
+.dashboard-drawer.hidden {
+  display: none;
+}
+
+.dashboard-drawer-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.dashboard-drawer-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: min(1100px, 100%);
+  height: 100%;
+  background: var(--color-bg);
+  box-shadow: -12px 0 32px rgba(15, 23, 42, 0.2);
+  display: flex;
+  flex-direction: column;
+}
+
+.dashboard-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.dashboard-drawer-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.dashboard-drawer-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dashboard-drawer-close:hover {
+  color: var(--color-text);
+  border-color: var(--color-primary);
+}
+
+.dashboard-drawer-frame {
+  flex: 1;
+  width: 100%;
+  border: 0;
+  background: var(--color-bg);
+}
+
 /* Responsive */
+@media (max-width: 1024px) {
+  .favorites-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
 @media (max-width: 640px) {
   .minimal-container {
     padding: var(--spacing-md);
-    margin-top: -15vh;
+    margin-top: -10vh;
+  }
+
+  .dashboard-drawer-panel {
+    width: 100%;
   }
 
   .favorites-row {
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--spacing-sm);
+    padding: var(--spacing-sm);
   }
 
-  .favorites-row .favorite-item:nth-child(n+4) {
-    display: none;
+  .favorites-row .favorite-item:nth-child(n+9) {
+    display: none; /* Show up to 8 items on mobile */
   }
 
   .favorite-icon {

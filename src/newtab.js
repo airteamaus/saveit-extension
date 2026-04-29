@@ -1,7 +1,7 @@
 // newtab-minimal.js - Minimal new tab with search navigation
 // Handles search form submission, Firebase auth, and Unsplash background
 
-/* global ThemeManager */
+/* global ThemeManager, AuthMenu */
 
 import { unsplashAccessKey, getStorageAPI } from './config.js';
 
@@ -10,44 +10,31 @@ const CACHE_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours
 
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
-const signInBtn = document.getElementById('sign-in-btn');
+const signInBtn = document.getElementById('hero-sign-in-btn');
 const backgroundEl = document.getElementById('background');
 const photoCreditEl = document.getElementById('photo-credit');
 const photographerLinkEl = document.getElementById('photographer-link');
 const favoritesRow = document.getElementById('favorites-row');
-const statsCount = document.getElementById('stats-count');
-const userMenu = document.getElementById('user-menu');
-const userAvatarBtn = document.getElementById('user-avatar-btn');
-const userAvatar = document.getElementById('user-avatar');
-const userDropdown = document.getElementById('user-dropdown');
-const userEmailEl = document.getElementById('user-email');
-const signOutBtn = document.getElementById('sign-out-btn');
-const refreshBackgroundBtn = document.getElementById('refresh-background-btn');
+const userMenu = document.getElementById('hero-user-menu');
+const userAvatarBtn = document.getElementById('hero-user-avatar-btn');
+const userAvatar = document.getElementById('hero-user-avatar');
+const userDropdown = document.getElementById('hero-user-dropdown');
+const userEmailEl = document.getElementById('hero-user-email');
+const signOutBtn = document.getElementById('hero-sign-out-btn');
+const refreshBackgroundBtn = document.getElementById('hero-refresh-background-btn');
+const openDashboardLink = document.getElementById('open-dashboard-link');
+const dashboardDrawer = document.getElementById('dashboard-drawer');
+const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdrop');
+const closeDashboardBtn = document.getElementById('close-dashboard-btn');
+
+const DASHBOARD_DRAWER_PARAM = 'drawer';
+const DASHBOARD_DRAWER_VALUE = 'dashboard';
 
 /**
  * Initialize theme from saved preference and inject toggle
  */
 function initTheme() {
-  ThemeManager.init();
-}
-
-/**
- * Get user initials from name or email
- * @param {Object} user - Firebase user object
- * @returns {string} Initials (1-2 characters)
- */
-function getUserInitials(user) {
-  if (user.displayName) {
-    const parts = user.displayName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
-  }
-  if (user.email) {
-    return user.email[0].toUpperCase();
-  }
-  return '?';
+  ThemeManager.init('hero-theme-toggle-container');
 }
 
 /**
@@ -55,29 +42,14 @@ function getUserInitials(user) {
  * @param {Object} user - Firebase user object
  */
 function updateUserAvatar(user) {
-  if (!userAvatar || !userMenu) return;
-
-  if (user) {
-    userMenu.classList.remove('hidden');
-    if (user.photoURL) {
-      userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
-    } else {
-      userAvatar.textContent = getUserInitials(user);
-    }
-    if (userEmailEl) {
-      userEmailEl.textContent = user.email || '';
-    }
-  } else {
-    userMenu.classList.add('hidden');
-  }
+  AuthMenu.updateCompactMenu({ menuRoot: userMenu, avatarEl: userAvatar, userEmailEl }, user);
 }
 
 /**
  * Toggle user dropdown
  */
 function toggleUserDropdown() {
-  if (!userDropdown) return;
-  userDropdown.classList.toggle('hidden');
+  AuthMenu.toggleDropdown(userDropdown);
 }
 
 /**
@@ -85,10 +57,8 @@ function toggleUserDropdown() {
  */
 async function handleSignOut() {
   try {
-    if (window.firebaseAuth && window.firebaseSignOut) {
-      await window.firebaseSignOut(window.firebaseAuth);
-      // Auth state listener will update UI
-    }
+    await AuthMenu.signOut();
+    // Auth state listener will update UI
   } catch (error) {
     console.error('[newtab-minimal] Sign out failed:', error);
   }
@@ -177,8 +147,8 @@ function renderFavorites(pages) {
     return;
   }
 
-  // Take up to 6 most recent
-  const favorites = pages.slice(0, 6);
+  // Take up to 16 most recent (2 rows of 8 on desktop)
+  const favorites = pages.slice(0, 16);
 
   favoritesRow.innerHTML = '';
   favorites.forEach(page => {
@@ -199,8 +169,7 @@ function handleSearch(e) {
     // Navigate to minimal search results page
     window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
   } else {
-    // Empty search navigates to full dashboard to browse all
-    window.location.href = 'database.html';
+    openDashboardDrawer();
   }
 }
 
@@ -209,18 +178,77 @@ function handleSearch(e) {
  */
 async function handleSignIn() {
   try {
-    // In extension mode, send message to background script
-    if (typeof browser !== 'undefined' && browser.runtime) {
-      await browser.runtime.sendMessage({ action: 'signIn' });
-    } else if (typeof chrome !== 'undefined' && chrome.runtime) {
-      await chrome.runtime.sendMessage({ action: 'signIn' });
-    } else {
-      // Standalone mode - show message
-      alert('Sign in is only available when running as a browser extension.');
-    }
+    await AuthMenu.signIn(() => {
+      if (typeof browser !== 'undefined' && browser.runtime) {
+        return browser.runtime;
+      }
+      if (typeof chrome !== 'undefined' && chrome.runtime) {
+        return chrome.runtime;
+      }
+      return null;
+    });
   } catch (error) {
     console.error('Sign-in failed:', error);
-    alert('Failed to sign in. Please try again.');
+    const message = error.message === 'Browser runtime not available'
+      ? 'Sign in is only available when running as a browser extension.'
+      : 'Failed to sign in. Please try again.';
+    alert(message);
+  }
+}
+
+function updateDrawerUrl(isOpen) {
+  const url = new URL(window.location.href);
+  if (isOpen) {
+    url.searchParams.set(DASHBOARD_DRAWER_PARAM, DASHBOARD_DRAWER_VALUE);
+  } else {
+    url.searchParams.delete(DASHBOARD_DRAWER_PARAM);
+  }
+  window.history.replaceState({}, '', url);
+}
+
+function openDashboardDrawer({ syncUrl = true } = {}) {
+  if (!dashboardDrawer) return;
+
+  dashboardDrawer.classList.remove('hidden');
+  dashboardDrawer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('dashboard-drawer-open');
+  closeDashboardBtn?.focus();
+
+  if (syncUrl) {
+    updateDrawerUrl(true);
+  }
+}
+
+function closeDashboardDrawer({ syncUrl = true } = {}) {
+  if (!dashboardDrawer) return;
+
+  dashboardDrawer.classList.add('hidden');
+  dashboardDrawer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('dashboard-drawer-open');
+
+  if (syncUrl) {
+    updateDrawerUrl(false);
+  }
+}
+
+function initDashboardDrawer() {
+  openDashboardLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openDashboardDrawer();
+  });
+
+  closeDashboardBtn?.addEventListener('click', () => closeDashboardDrawer());
+  dashboardDrawerBackdrop?.addEventListener('click', () => closeDashboardDrawer());
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+      closeDashboardDrawer();
+    }
+  });
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get(DASHBOARD_DRAWER_PARAM) === DASHBOARD_DRAWER_VALUE) {
+    openDashboardDrawer({ syncUrl: false });
   }
 }
 
@@ -268,11 +296,28 @@ async function initFavorites() {
       return null;
     }
 
-    const response = await API.getSavedPages({ limit: 6, sort: 'newest', pinnedFirst: true });
+    const options = { limit: 16, sort: 'newest', pinnedFirst: true };
+
+    // 1. Try cache (or fresh if no cache)
+    const response = await API.getSavedPages(options);
     if (response && response.pages) {
       renderFavorites(response.pages);
-      return response.pagination;
+      updateStats(response.pagination);
     }
+
+    // 2. Background refresh if in extension mode (to avoid cold start delay for user)
+    if (API.isExtension) {
+      API.getSavedPages({ ...options, skipCache: true })
+        .then(freshResponse => {
+          if (freshResponse && freshResponse.pages) {
+            renderFavorites(freshResponse.pages);
+            updateStats(freshResponse.pagination);
+          }
+        })
+        .catch(err => console.debug('[newtab-minimal] Background refresh failed:', err));
+    }
+
+    return response ? response.pagination : null;
   } catch (error) {
     console.error('[newtab-minimal] Failed to load favorites:', error);
   }
@@ -284,14 +329,27 @@ async function initFavorites() {
  * @param {Object|null} pagination - Pagination object with total count
  */
 function updateStats(pagination) {
+  const versionIndicator = document.getElementById('hero-version-indicator');
+  if (!versionIndicator) return;
+
+  let statsSpan = versionIndicator.querySelector('.footer-stats');
+
   if (!pagination || typeof pagination.total !== 'number') {
-    statsCount.classList.add('hidden');
+    if (statsSpan) statsSpan.remove();
     return;
   }
 
   const total = pagination.total;
-  statsCount.textContent = `${total} ${total === 1 ? 'thing' : 'things'} saved`;
-  statsCount.classList.remove('hidden');
+  const statsText = `(${total} ${total === 1 ? 'thing' : 'things'} saved)`;
+
+  if (!statsSpan) {
+    statsSpan = document.createElement('span');
+    statsSpan.className = 'footer-stats';
+    statsSpan.style.marginLeft = '4px';
+    statsSpan.style.opacity = '0.7';
+    versionIndicator.appendChild(statsSpan);
+  }
+  statsSpan.textContent = statsText;
 }
 
 /**
@@ -314,7 +372,7 @@ async function initAuth() {
           } else {
             // User signed out, hide favorites and stats
             favoritesRow.classList.add('hidden');
-            statsCount.classList.add('hidden');
+            updateStats(null);
           }
         });
       } else {
@@ -335,7 +393,7 @@ async function initAuth() {
  * Update version indicator in footer
  */
 function updateVersionIndicator() {
-  const versionNumberEl = document.getElementById('version-number');
+  const versionNumberEl = document.getElementById('hero-version-number');
   if (!versionNumberEl) return;
 
   try {
@@ -366,7 +424,7 @@ refreshBackgroundBtn.addEventListener('click', refreshBackground);
 // Close dropdown when clicking outside
 document.addEventListener('click', (e) => {
   if (userMenu && !userMenu.contains(e.target)) {
-    userDropdown.classList.add('hidden');
+    AuthMenu.hideDropdown(userDropdown);
   }
 });
 
@@ -375,6 +433,9 @@ initTheme();
 
 // Update version indicator
 updateVersionIndicator();
+
+// Drawer controls
+initDashboardDrawer();
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([

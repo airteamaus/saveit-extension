@@ -1,7 +1,7 @@
 // search-results.js - Minimal search results page functionality
 // Handles semantic search via API and result rendering
 
-/* global ThemeManager */
+/* global ThemeManager, AuthMenu */
 
 // State
 let currentQuery = '';
@@ -292,53 +292,15 @@ function handleInputChange() {
   }
 }
 
-/**
- * Get user initials from name or email
- * @param {Object} user - Firebase user object
- * @returns {string} Initials (1-2 characters)
- */
-function getUserInitials(user) {
-  if (user.displayName) {
-    const parts = user.displayName.trim().split(/\s+/);
-    if (parts.length >= 2) {
-      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    }
-    return parts[0][0].toUpperCase();
-  }
-  if (user.email) {
-    return user.email[0].toUpperCase();
-  }
-  return '?';
-}
-
-/**
- * Update user avatar display
- * @param {Object} user - Firebase user object
- */
 function updateUserAvatar(user) {
-  if (!userAvatar || !userMenu) return;
-
-  if (user) {
-    userMenu.classList.remove('hidden');
-    if (user.photoURL) {
-      userAvatar.innerHTML = `<img src="${user.photoURL}" alt="Profile">`;
-    } else {
-      userAvatar.textContent = getUserInitials(user);
-    }
-    if (userEmail) {
-      userEmail.textContent = user.email || '';
-    }
-  } else {
-    userMenu.classList.add('hidden');
-  }
+  AuthMenu.updateCompactMenu({ menuRoot: userMenu, avatarEl: userAvatar, userEmailEl: userEmail }, user);
 }
 
 /**
  * Toggle user dropdown
  */
 function toggleUserDropdown() {
-  if (!userDropdown) return;
-  userDropdown.classList.toggle('hidden');
+  AuthMenu.toggleDropdown(userDropdown);
 }
 
 /**
@@ -346,10 +308,8 @@ function toggleUserDropdown() {
  */
 async function handleSignOut() {
   try {
-    if (window.firebaseAuth && window.firebaseSignOut) {
-      await window.firebaseSignOut(window.firebaseAuth);
-      // Auth state listener will update UI
-    }
+    await AuthMenu.signOut();
+    // Auth state listener will update UI
   } catch (error) {
     console.error('[search-results] Sign out failed:', error);
   }

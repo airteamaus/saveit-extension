@@ -7,9 +7,9 @@
  *   node scripts/bump-version.js [patch|minor|major]
  *
  * This script:
- * 1. Reads the current version from manifest.json
+ * 1. Reads the current version from manifest.json and package.json
  * 2. Increments the version (patch/minor/major)
- * 3. Updates manifest.json
+ * 3. Updates manifest.json and package.json
  * 4. Commits the change
  * 5. Creates a git tag
  * 6. Provides instructions for pushing
@@ -24,6 +24,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const MANIFEST_PATH = path.join(__dirname, '..', 'manifest.json');
+const PACKAGE_PATH = path.join(__dirname, '..', 'package.json');
 
 // Parse version bump type
 const bumpType = process.argv[2] || 'patch';
@@ -32,16 +33,26 @@ if (!['patch', 'minor', 'major'].includes(bumpType)) {
   process.exit(1);
 }
 
-// Read manifest
+// Read manifest and package.json
 let manifest;
+let packageJson;
 try {
   manifest = JSON.parse(fs.readFileSync(MANIFEST_PATH, 'utf8'));
+  packageJson = JSON.parse(fs.readFileSync(PACKAGE_PATH, 'utf8'));
 } catch (err) {
-  console.error('Error reading manifest.json:', err.message);
+  console.error('Error reading version files:', err.message);
   process.exit(1);
 }
 
 const currentVersion = manifest.version;
+if (packageJson.version !== currentVersion) {
+  console.error(
+    `Error: version mismatch detected. manifest.json=${currentVersion}, package.json=${packageJson.version}`
+  );
+  console.error('Resolve the mismatch before running the bump script.');
+  process.exit(1);
+}
+
 console.log(`Current version: ${currentVersion}`);
 
 // Parse current version
@@ -72,22 +83,27 @@ switch (bumpType) {
 const newVersion = `${major}.${minor}.${patch}`;
 console.log(`New version: ${newVersion}`);
 
-// Update manifest
+// Update manifest and package.json
 manifest.version = newVersion;
+packageJson.version = newVersion;
 fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2) + '\n');
-console.log('✓ Updated manifest.json');
+fs.writeFileSync(PACKAGE_PATH, JSON.stringify(packageJson, null, 2) + '\n');
+console.log('✓ Updated manifest.json and package.json');
 
-// Check if there are uncommitted changes (other than manifest.json)
+// Check if there are uncommitted changes (other than version files)
 try {
   const status = execSync('git status --porcelain', { encoding: 'utf8' });
   const otherChanges = status
     .split('\n')
-    .filter(line => line && !line.includes('manifest.json'))
+    .filter(line => line &&
+      !line.includes('manifest.json') &&
+      !line.includes('package.json')
+    )
     .length > 0;
 
   if (otherChanges) {
     console.warn('\nWarning: You have other uncommitted changes.');
-    console.warn('This script will only commit manifest.json');
+    console.warn('This script will only commit manifest.json and package.json');
     console.warn('Commit or stash other changes first if desired.\n');
   }
 } catch (err) {
@@ -97,7 +113,7 @@ try {
 
 // Git commit
 try {
-  execSync('git add manifest.json', { stdio: 'inherit' });
+  execSync('git add manifest.json package.json', { stdio: 'inherit' });
   execSync(`git commit -m "Bump version to ${newVersion}"`, { stdio: 'inherit' });
   console.log('✓ Committed version bump');
 } catch (err) {

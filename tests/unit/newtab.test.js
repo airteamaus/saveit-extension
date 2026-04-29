@@ -41,55 +41,57 @@ describe('newtab-minimal', () => {
   });
 
   describe('updateStats', () => {
-    let mockStatsCount;
+    let mockStatsSpan;
+    let mockVersionIndicator;
 
     beforeEach(() => {
-      mockStatsCount = {
-        classList: {
-          add: vi.fn(),
-          remove: vi.fn()
-        },
+      mockStatsSpan = {
         textContent: ''
+      };
+      mockVersionIndicator = {
+        querySelector: vi.fn(() => mockStatsSpan),
+        appendChild: vi.fn()
       };
     });
 
     // Inline implementation to test
-    function updateStats(pagination, statsCount) {
+    function updateStats(pagination, versionIndicator) {
+      const statsSpan = versionIndicator.querySelector('.footer-stats');
+
       if (!pagination || typeof pagination.total !== 'number') {
-        statsCount.classList.add('hidden');
+        if (statsSpan) {
+          statsSpan.removed = true;
+        }
         return;
       }
+
       const total = pagination.total;
-      statsCount.textContent = `${total} ${total === 1 ? 'thing' : 'things'} saved`;
-      statsCount.classList.remove('hidden');
+      statsSpan.textContent = `(${total} ${total === 1 ? 'thing' : 'things'} saved)`;
     }
 
     it('should hide stats when pagination is null', () => {
-      updateStats(null, mockStatsCount);
-      expect(mockStatsCount.classList.add).toHaveBeenCalledWith('hidden');
+      updateStats(null, mockVersionIndicator);
+      expect(mockStatsSpan.removed).toBe(true);
     });
 
     it('should hide stats when pagination.total is not a number', () => {
-      updateStats({ total: 'not a number' }, mockStatsCount);
-      expect(mockStatsCount.classList.add).toHaveBeenCalledWith('hidden');
+      updateStats({ total: 'not a number' }, mockVersionIndicator);
+      expect(mockStatsSpan.removed).toBe(true);
     });
 
     it('should show singular "thing" for 1 item', () => {
-      updateStats({ total: 1 }, mockStatsCount);
-      expect(mockStatsCount.textContent).toBe('1 thing saved');
-      expect(mockStatsCount.classList.remove).toHaveBeenCalledWith('hidden');
+      updateStats({ total: 1 }, mockVersionIndicator);
+      expect(mockStatsSpan.textContent).toBe('(1 thing saved)');
     });
 
     it('should show plural "things" for multiple items', () => {
-      updateStats({ total: 42 }, mockStatsCount);
-      expect(mockStatsCount.textContent).toBe('42 things saved');
-      expect(mockStatsCount.classList.remove).toHaveBeenCalledWith('hidden');
+      updateStats({ total: 42 }, mockVersionIndicator);
+      expect(mockStatsSpan.textContent).toBe('(42 things saved)');
     });
 
     it('should show plural "things" for 0 items', () => {
-      updateStats({ total: 0 }, mockStatsCount);
-      expect(mockStatsCount.textContent).toBe('0 things saved');
-      expect(mockStatsCount.classList.remove).toHaveBeenCalledWith('hidden');
+      updateStats({ total: 0 }, mockVersionIndicator);
+      expect(mockStatsSpan.textContent).toBe('(0 things saved)');
     });
   });
 
@@ -175,7 +177,7 @@ describe('newtab-minimal', () => {
 
     function getFavoritesToRender(pages) {
       if (!pages || pages.length === 0) return [];
-      return pages.slice(0, 6);
+      return pages.slice(0, 16);
     }
 
     it('should not render when pages is null', () => {
@@ -190,13 +192,13 @@ describe('newtab-minimal', () => {
       expect(shouldRenderFavorites([{ url: 'https://example.com' }])).toBeTruthy();
     });
 
-    it('should limit to 6 favorites', () => {
-      const pages = Array(10).fill({ url: 'https://example.com', title: 'Test' });
+    it('should limit to 16 favorites', () => {
+      const pages = Array(20).fill({ url: 'https://example.com', title: 'Test' });
       const result = getFavoritesToRender(pages);
-      expect(result).toHaveLength(6);
+      expect(result).toHaveLength(16);
     });
 
-    it('should return all pages if less than 6', () => {
+    it('should return all pages if less than 16', () => {
       const pages = [
         { url: 'https://example1.com', title: 'Test 1' },
         { url: 'https://example2.com', title: 'Test 2' }
@@ -212,7 +214,7 @@ describe('newtab-minimal', () => {
       if (trimmed) {
         return `search-results.html?q=${encodeURIComponent(trimmed)}`;
       }
-      return 'database.html';
+      return 'newtab.html?drawer=dashboard';
     }
 
     it('should navigate to search-results page with query', () => {
@@ -225,14 +227,14 @@ describe('newtab-minimal', () => {
       expect(result).toBe('search-results.html?q=test%20%26%20query');
     });
 
-    it('should return plain database.html for empty query', () => {
+    it('should return drawer URL for empty query', () => {
       const result = getSearchUrl('');
-      expect(result).toBe('database.html');
+      expect(result).toBe('newtab.html?drawer=dashboard');
     });
 
-    it('should trim whitespace and return plain database.html', () => {
+    it('should trim whitespace and return drawer URL', () => {
       const result = getSearchUrl('   ');
-      expect(result).toBe('database.html');
+      expect(result).toBe('newtab.html?drawer=dashboard');
     });
   });
 
