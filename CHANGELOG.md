@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.2] - 2026-04-29
+
+No notable changes.
+
 ## [1.8.1] - 2026-04-29
 
 No notable changes.
@@ -66,20 +70,6 @@ No notable changes.
 
 - add theme toggle to search-results page (148fd23)
 - move theme toggle into user profile dropdown menu (81aec59)
-
-### 🐛 Bug Fixes
-
-- add data-theme CSS rules for manual theme override (18c121c)
-- use monitor icon for auto theme to differentiate from light (3eb05ca)
-
-### ♻️ Refactoring
-
-- switch favicon provider from Google to DuckDuckGo (b580aed)
-
-## [1.6.2] - 2025-11-26
-
-### ✨ Features
-
 - enable hybrid search by default (05728b7)
 - add pin feature UI and API integration (9a698d4)
 - use full resolution Unsplash images for better quality (d5a121d)
@@ -141,6 +131,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- add data-theme CSS rules for manual theme override (18c121c)
+- use monitor icon for auto theme to differentiate from light (3eb05ca)
 - auth header bug and update pin icon to pushpin (5162cb0)
 - align favicon with first line of title in search results (10a3ad8)
 - wait for auth before search and lower threshold to 0.65 (76886c0)
@@ -216,6 +208,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- switch favicon provider from Google to DuckDuckGo (b580aed)
 - consolidate card metadata into single row with inline tags (aa720f2)
 - **test:** reduce test complexity and improve maintainability (a8e945d)
 - upgrade Zod v3 to v4 with full API modernization (697fa70)
