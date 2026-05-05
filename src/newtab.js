@@ -35,8 +35,6 @@ const dashboardDrawerSearchForm = document.getElementById('dashboard-drawer-sear
 const dashboardDrawerSearchInput = document.getElementById('dashboard-drawer-search-input');
 const dashboardDrawerClearBtn = document.getElementById('dashboard-drawer-clear-btn');
 const dashboardDrawerResults = document.getElementById('dashboard-drawer-results');
-const dashboardDrawerFooter = document.getElementById('dashboard-drawer-footer');
-const dashboardDrawerLoadMoreBtn = document.getElementById('dashboard-drawer-load-more-btn');
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
@@ -56,7 +54,7 @@ const FAVORITES_TILE_GAP = 12;
 const FAVORITES_WIDTH_PADDING = 220;
 const FAVORITES_MAX_GRID_WIDTH = 1008;
 const DRAWER_SEARCH_DEBOUNCE_MS = 250;
-const DRAWER_PAGE_LIMIT = 50;
+const DRAWER_PAGE_LIMIT = FAVORITES_MAX_ITEMS;
 const DRAWER_SEMANTIC_THRESHOLD = 0.58;
 
 let drawerSearchDebounceTimer = null;
@@ -586,8 +584,41 @@ function renderDrawerCard(page) {
   return `
     <a class="dashboard-drawer-card" href="${escapeHtml(page.url || '#')}">
       <div class="dashboard-drawer-card-header">
-        ${domain ? `<img class="dashboard-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
-        <h3 class="dashboard-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+        <div class="dashboard-drawer-card-heading">
+          ${domain ? `<img class="dashboard-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
+          <h3 class="dashboard-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+        </div>
+        <div class="dashboard-drawer-card-actions">
+          <button
+            class="dashboard-drawer-action-btn dashboard-drawer-pin-btn ${page.pinned ? 'is-active' : ''}"
+            type="button"
+            data-action="pin"
+            data-id="${escapeHtml(page.id)}"
+            title="${page.pinned ? 'Unpin page' : 'Pin page'}"
+            aria-label="${page.pinned ? 'Unpin page' : 'Pin page'}"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M12 17v5"></path>
+              <path d="M8 3h8l-1 5 3 3v2H6v-2l3-3-1-5z"></path>
+            </svg>
+          </button>
+          <button
+            class="dashboard-drawer-action-btn dashboard-drawer-delete-btn"
+            type="button"
+            data-action="delete"
+            data-id="${escapeHtml(page.id)}"
+            title="Delete page"
+            aria-label="Delete page"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+              <path d="M3 6h18"></path>
+              <path d="M8 6V4h8v2"></path>
+              <path d="M19 6l-1 14H6L5 6"></path>
+              <path d="M10 11v6"></path>
+              <path d="M14 11v6"></path>
+            </svg>
+          </button>
+        </div>
       </div>
       ${summary ? `<p class="dashboard-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
       <div class="dashboard-drawer-card-footer">
@@ -598,15 +629,9 @@ function renderDrawerCard(page) {
   `;
 }
 
-function renderDrawerState(html, { showFooter = false, loadMoreLabel = 'Load more', disableLoadMore = false } = {}) {
+function renderDrawerState(html) {
   if (dashboardDrawerResults) {
     dashboardDrawerResults.innerHTML = html;
-  }
-
-  if (dashboardDrawerFooter && dashboardDrawerLoadMoreBtn) {
-    dashboardDrawerLoadMoreBtn.textContent = loadMoreLabel;
-    dashboardDrawerLoadMoreBtn.disabled = disableLoadMore;
-    dashboardDrawerFooter.classList.toggle('hidden', !showFooter);
   }
 }
 
@@ -616,7 +641,7 @@ function renderDrawerLoadingState(message = 'Loading saved pages...') {
       <div class="loading-spinner"></div>
       <p>${escapeHtml(message)}</p>
     </div>
-  `, { disableLoadMore: true });
+  `);
 }
 
 function renderDrawerErrorState(message) {
@@ -657,57 +682,68 @@ function renderDrawerResults() {
     return;
   }
 
-  renderDrawerState(
-    drawerState.pages.map(renderDrawerCard).join(''),
-    {
-      showFooter: drawerState.hasMore,
-      loadMoreLabel: drawerState.isLoading ? 'Loading...' : 'Load more',
-      disableLoadMore: drawerState.isLoading
-    }
-  );
+  renderDrawerState(drawerState.pages.map(renderDrawerCard).join(''));
 }
 
-function applyDrawerResponse(response, { append = false, mode = 'list', query = '' } = {}) {
+function applyDrawerResponse(response, { mode = 'list', query = '' } = {}) {
   const pages = mode === 'semantic'
     ? (response.results || []).map(result => result.thing_data).filter(Boolean)
     : (response.pages || []);
 
-  drawerState.pages = append ? [...drawerState.pages, ...pages] : pages;
+  drawerState.pages = pages;
   drawerState.total = response.pagination?.total || 0;
-  drawerState.hasMore = mode === 'semantic'
-    ? drawerState.semanticOffset < drawerState.total
-    : Boolean(response.pagination?.hasNextPage);
-  drawerState.nextCursor = mode === 'semantic' ? null : (response.pagination?.nextCursor || null);
-  drawerState.paginationStateFromCache = mode === 'list' && Boolean(response.meta?.fromCache);
+  drawerState.hasMore = false;
+  drawerState.nextCursor = null;
+  drawerState.paginationStateFromCache = false;
   drawerState.hasInitialized = true;
   drawerState.query = query;
   drawerState.mode = mode;
 }
 
-async function refreshDrawerCachedList(requestId) {
-  const response = await API.getSavedPages({
-    limit: DRAWER_PAGE_LIMIT,
-    sort: 'newest',
-    pinnedFirst: false,
-    skipCache: true
-  });
-
-  if (requestId !== drawerState.requestId) {
-    return false;
-  }
-
-  drawerState.paginationStateFromCache = false;
-  applyDrawerResponse(response, { mode: 'list', query: '' });
-  return true;
+function findDrawerPage(id) {
+  return drawerState.pages.find(page => page.id === id) || null;
 }
 
-async function loadDrawerResults(query = '', { append = false, syncUrl = true } = {}) {
-  const trimmedQuery = query.trim();
-  let shouldRenderResults = false;
-
-  if (append && (drawerState.isLoading || !drawerState.hasMore)) {
+async function handleDrawerDelete(id) {
+  if (!id || !confirm('Delete this saved page? This cannot be undone.')) {
     return;
   }
+
+  try {
+    await API.deletePage(id);
+    drawerState.pages = drawerState.pages.filter(page => page.id !== id);
+    drawerState.total = Math.max(0, drawerState.total - 1);
+    drawerState.hasMore = false;
+    renderDrawerResults();
+  } catch (error) {
+    console.error('[newtab-minimal] Failed to delete page:', error);
+    alert('Failed to delete page. Please try again.');
+  }
+}
+
+async function handleDrawerPin(id) {
+  const page = findDrawerPage(id);
+  if (!page) {
+    return;
+  }
+
+  const nextPinnedState = !page.pinned;
+  page.pinned = nextPinnedState;
+  renderDrawerResults();
+
+  try {
+    await API.pinPage(id, nextPinnedState);
+  } catch (error) {
+    page.pinned = !nextPinnedState;
+    renderDrawerResults();
+    console.error('[newtab-minimal] Failed to update pin:', error);
+    alert('Failed to update pin status. Please try again.');
+  }
+}
+
+async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
+  const trimmedQuery = query.trim();
+  let shouldRenderResults = false;
 
   drawerState.isLoading = true;
   const requestId = ++drawerState.requestId;
@@ -726,26 +762,20 @@ async function loadDrawerResults(query = '', { append = false, syncUrl = true } 
     return;
   }
 
-  if (!append) {
-    renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
-  } else {
-    renderDrawerResults();
-  }
+  renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
 
   try {
     if (trimmedQuery) {
-      const offset = append ? drawerState.semanticOffset : 0;
       const response = await API.searchContent(trimmedQuery, {
         limit: DRAWER_PAGE_LIMIT,
-        offset,
+        offset: 0,
         threshold: DRAWER_SEMANTIC_THRESHOLD
       });
 
       if (requestId !== drawerState.requestId) return;
 
-      drawerState.semanticOffset = offset + (response.results?.length || 0);
+      drawerState.semanticOffset = response.results?.length || 0;
       applyDrawerResponse(response, {
-        append,
         mode: 'semantic',
         query: trimmedQuery
       });
@@ -754,31 +784,15 @@ async function loadDrawerResults(query = '', { append = false, syncUrl = true } 
     }
 
     drawerState.semanticOffset = 0;
-
-    if (append && drawerState.paginationStateFromCache) {
-      const refreshed = await refreshDrawerCachedList(requestId);
-      if (!refreshed) return;
-
-      if (!drawerState.hasMore || !drawerState.nextCursor) {
-        shouldRenderResults = true;
-        return;
-      }
-    }
-
     const response = await API.getSavedPages({
       limit: DRAWER_PAGE_LIMIT,
       sort: 'newest',
-      pinnedFirst: false,
-      ...(append ? {
-        cursor: drawerState.nextCursor,
-        skipCache: true
-      } : {})
+      pinnedFirst: false
     });
 
     if (requestId !== drawerState.requestId) return;
 
     applyDrawerResponse(response, {
-      append,
       mode: 'list',
       query: ''
     });
@@ -863,8 +877,24 @@ function initDashboardDrawer() {
     dashboardDrawerSearchInput?.focus();
   });
 
-  dashboardDrawerLoadMoreBtn?.addEventListener('click', () => {
-    void loadDrawerResults(drawerState.query, { append: true });
+  dashboardDrawerResults?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-action]');
+    if (!actionButton) {
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const { action, id } = actionButton.dataset;
+    if (action === 'pin') {
+      void handleDrawerPin(id);
+      return;
+    }
+
+    if (action === 'delete') {
+      void handleDrawerDelete(id);
+    }
   });
 
   document.addEventListener('keydown', (e) => {

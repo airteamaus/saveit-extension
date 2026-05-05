@@ -565,35 +565,6 @@ body.has-background .minimal-footer a:hover {
   gap: 12px;
 }
 
-.dashboard-drawer-footer {
-  padding: 0 20px 18px;
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
-}
-
-.dashboard-drawer-load-more-btn {
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid var(--color-border);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  color: var(--color-text);
-  font: inherit;
-  cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
-}
-
-.dashboard-drawer-load-more-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 8%);
-}
-
-.dashboard-drawer-load-more-btn:disabled {
-  cursor: default;
-  opacity: 0.7;
-}
-
 .dashboard-drawer-state {
   min-height: 100%;
 }
@@ -619,9 +590,18 @@ body.has-background .minimal-footer a:hover {
 
 .dashboard-drawer-card-header {
   display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.dashboard-drawer-card-heading {
+  display: flex;
   align-items: center;
   gap: 10px;
   min-width: 0;
+  flex: 1;
 }
 
 .dashboard-drawer-card-favicon {
@@ -636,6 +616,50 @@ body.has-background .minimal-footer a:hover {
   font-size: 1rem;
   line-height: 1.35;
   color: var(--color-text);
+}
+
+.dashboard-drawer-card-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.dashboard-drawer-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+.dashboard-drawer-action-btn:hover {
+  transform: translateY(-1px);
+  color: var(--color-text);
+  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 6%);
+}
+
+.dashboard-drawer-action-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dashboard-drawer-pin-btn.is-active {
+  color: var(--color-primary);
+  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+}
+
+.dashboard-drawer-delete-btn:hover {
+  color: var(--color-danger, #dc2626);
+  border-color: color-mix(in srgb, #dc2626 32%, var(--color-border));
+  background: color-mix(in srgb, var(--color-surface) 90%, #dc2626 5%);
 }
 
 .dashboard-drawer-card-summary {
@@ -704,22 +728,6 @@ body.has-background .dashboard-drawer-close-btn:hover {
   color: #ffffff;
 }
 
-body.has-background .dashboard-drawer-footer {
-  background: rgba(2, 6, 23, 0.42);
-  border-top-color: rgba(255, 255, 255, 0.16);
-}
-
-body.has-background .dashboard-drawer-load-more-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.18);
-  color: rgba(255, 255, 255, 0.9);
-}
-
-body.has-background .dashboard-drawer-load-more-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.16);
-  border-color: rgba(255, 255, 255, 0.28);
-}
-
 body.has-background .dashboard-drawer-card {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.12);
@@ -732,6 +740,29 @@ body.has-background .dashboard-drawer-card:hover {
 
 body.has-background .dashboard-drawer-card-title {
   color: #ffffff;
+}
+
+body.has-background .dashboard-drawer-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+body.has-background .dashboard-drawer-action-btn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+body.has-background .dashboard-drawer-pin-btn.is-active {
+  color: rgba(255, 255, 255, 0.96);
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+body.has-background .dashboard-drawer-delete-btn:hover {
+  color: #fecaca;
+  border-color: rgba(252, 165, 165, 0.34);
+  background: rgba(127, 29, 29, 0.28);
 }
 
 body.has-background .dashboard-drawer-card-summary,

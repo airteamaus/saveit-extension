@@ -323,6 +323,7 @@ test.describe('Standalone Mode', () => {
     await page.click('#dashboard-toggle-btn');
     await expect(page.locator('#dashboard-drawer')).toBeVisible();
     await expect(page.locator('#dashboard-drawer-frame')).toHaveCount(0);
+    await expect(page.locator('#dashboard-drawer-load-more-btn')).toHaveCount(0);
 
     await page.evaluate(() => {
       window.__drawerSearchCalls = [];
@@ -361,7 +362,7 @@ test.describe('Standalone Mode', () => {
       {
         query: 'semantic result',
         options: {
-          limit: 50,
+          limit: 300,
           offset: 0,
           threshold: 0.58
         }
