@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>new tab</title>
+  <title>Saved pages - SaveIt</title>
   <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="shared-ui.css">
   <link rel="stylesheet" href="database.css">
 </head>
 <body>
@@ -30,10 +31,10 @@
             type="text"
             id="search"
             class="search-input"
-            placeholder="Search saved pages..."
+            placeholder="Search your saved pages..."
             autocomplete="off"
           >
-          <button id="clear-search" class="clear-search" title="Clear search" style="display: none;">
+          <button id="clear-search" class="clear-search hidden" title="Clear search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -41,40 +42,40 @@
           </button>
         </div>
 
-        <button id="sign-in-btn" class="sign-in-btn" title="Sign in with Google" style="display: none;">
+        <button id="sign-in-btn" class="sign-in-btn hidden" title="Sign in with Google">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <polyline points="10 17 15 12 10 7"></polyline>
             <line x1="15" y1="12" x2="3" y2="12"></line>
           </svg>
-          Sign In
+          Sign in
         </button>
 
-        <div id="user-profile" class="user-profile" style="display: none;">
-          <button id="user-profile-btn" class="user-profile-btn">
+        <div id="user-profile" class="user-menu hidden">
+          <button id="user-profile-btn" class="user-menu-trigger">
             <span id="user-avatar" class="user-avatar"></span>
             <span id="user-name">User</span>
           </button>
-          <div id="user-dropdown" class="user-dropdown" style="display: none;">
+          <div id="user-dropdown" class="user-dropdown hidden" data-dropdown-mode="class">
             <div id="theme-toggle-container"></div>
             <div class="user-info">
               <div id="user-email" class="user-email">user@example.com</div>
             </div>
-            <button id="refresh-background-btn" class="sign-out-btn">
+            <button id="refresh-background-btn" class="dropdown-item">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="23 4 23 10 17 10"></polyline>
                 <polyline points="1 20 1 14 7 14"></polyline>
                 <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
               </svg>
-              background
+              Refresh background
             </button>
-            <button id="sign-out-btn" class="sign-out-btn">
+            <button id="sign-out-btn" class="dropdown-item dropdown-item-danger">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
                 <polyline points="16 17 21 12 16 7"></polyline>
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
-              sign out
+              Sign out
             </button>
           </div>
         </div>

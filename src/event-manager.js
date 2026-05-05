@@ -1,5 +1,6 @@
 // event-manager.js - Event listener management for dashboard
 // Handles all DOM event binding and delegation
+/* global AuthMenu */
 
 class EventManager {
   constructor() {
@@ -53,7 +54,7 @@ class EventManager {
       const dropdown = document.getElementById('user-dropdown');
       const userProfile = document.getElementById('user-profile');
       if (dropdown && userProfile && !userProfile.contains(e.target)) {
-        dropdown.style.display = 'none';
+        AuthMenu.hideDropdown(dropdown);
       }
     });
 
@@ -63,7 +64,7 @@ class EventManager {
 
     searchInput.addEventListener('input', (e) => {
       dashboard.currentFilter.search = e.target.value;
-      clearSearch.style.display = e.target.value ? 'block' : 'none';
+      clearSearch.classList.toggle('hidden', !e.target.value);
       clearTimeout(dashboard.debounceTimer);
       dashboard.debounceTimer = setTimeout(() => dashboard.handleFilterChange(), 300);
     });
@@ -71,7 +72,7 @@ class EventManager {
     clearSearch.addEventListener('click', () => {
       searchInput.value = '';
       dashboard.currentFilter.search = '';
-      clearSearch.style.display = 'none';
+      clearSearch.classList.add('hidden');
       dashboard.handleFilterChange();
     });
 

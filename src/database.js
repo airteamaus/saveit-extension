@@ -115,7 +115,7 @@ class SaveItDashboard {
 
       // Show clear button
       if (clearSearch) {
-        clearSearch.style.display = 'block';
+        clearSearch.classList.remove('hidden');
       }
 
       // Set filter and trigger search
@@ -324,7 +324,7 @@ class SaveItDashboard {
       searchInput.value = '';
     }
     if (clearSearch) {
-      clearSearch.style.display = 'none';
+      clearSearch.classList.add('hidden');
     }
 
     // Reset all filter state

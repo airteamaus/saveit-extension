@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>new tab</title>
+  <title>SaveIt</title>
   <link rel="icon" type="image/png" href="icon.png">
+  <link rel="stylesheet" href="shared-ui.css">
   <link rel="stylesheet" href="newtab.css">
 </head>
   <body>
@@ -22,7 +23,7 @@
   </button>
 
   <!-- User menu (top-right corner) -->
-  <div id="hero-user-menu" class="user-menu hidden">
+  <div id="hero-user-menu" class="user-menu user-menu-fixed hidden">
     <button id="hero-user-avatar-btn" class="user-avatar-btn" title="Account">
       <span id="hero-user-avatar" class="user-avatar"></span>
     </button>
@@ -31,27 +32,27 @@
       <div class="user-info">
         <span id="hero-user-email" class="user-email"></span>
       </div>
-      <button id="hero-refresh-background-btn" class="dropdown-item">
+        <button id="hero-refresh-background-btn" class="dropdown-item">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <polyline points="23 4 23 10 17 10"></polyline>
           <polyline points="1 20 1 14 7 14"></polyline>
           <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
         </svg>
-        background
-      </button>
-      <button id="hero-sign-out-btn" class="dropdown-item">
+          Refresh background
+        </button>
+        <button id="hero-sign-out-btn" class="dropdown-item dropdown-item-danger">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
           <polyline points="16 17 21 12 16 7"></polyline>
           <line x1="21" y1="12" x2="9" y2="12"></line>
         </svg>
-        sign out
-      </button>
+          Sign out
+        </button>
     </div>
   </div>
 
   <div class="minimal-container">
-    <a href="newtab.html" class="minimal-logo">
+    <a href="newtab.html" class="logo logo-hero">
       <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
       </svg>
@@ -59,7 +60,7 @@
     </a>
 
     <div class="search-container">
-      <form id="search-form" class="search-form">
+      <form id="search-form" class="search-form search-form-hero">
         <span class="search-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"></circle>
@@ -69,7 +70,7 @@
         <input
           type="text"
           id="search-input"
-          class="hero-search"
+          class="search-input search-input-hero"
           placeholder="Search your saved pages..."
           autocomplete="off"
           autofocus
@@ -84,7 +85,7 @@
           <polyline points="10 17 15 12 10 7"></polyline>
           <line x1="15" y1="12" x2="3" y2="12"></line>
         </svg>
-        Sign In
+        Sign in
       </button>
     </div>
 

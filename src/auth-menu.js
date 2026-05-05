@@ -60,8 +60,8 @@ const AuthMenu = {
     if (!signInBtn || !userProfile || !avatarEl) return;
 
     if (user) {
-      signInBtn.style.display = 'none';
-      userProfile.style.display = 'block';
+      signInBtn.classList.add('hidden');
+      userProfile.classList.remove('hidden');
       if (userNameEl) {
         const displayName = this.getDisplayName(user);
         userNameEl.textContent = displayName ? displayName.split(' ')[0] : 'User';
@@ -71,8 +71,8 @@ const AuthMenu = {
       }
       this.setAvatarContent(avatarEl, user);
     } else {
-      signInBtn.style.display = 'flex';
-      userProfile.style.display = 'none';
+      signInBtn.classList.remove('hidden');
+      userProfile.classList.add('hidden');
       if (userEmailEl) {
         userEmailEl.textContent = '';
       }
