@@ -1,5 +1,9 @@
 // Global test setup
 import { vi } from 'vitest';
+import '../src/cache-manager.js';
+import '../src/api-core.js';
+import '../src/api-pages.js';
+import '../src/api-search.js';
 
 // Mock browser API
 global.browser = {

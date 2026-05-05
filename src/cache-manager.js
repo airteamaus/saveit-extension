@@ -221,7 +221,9 @@ class CacheManager {
 }
 
 // Export for use in api.js
-const CacheManager_Export = CacheManager; // eslint-disable-line no-unused-vars
+const CacheManager_Export = CacheManager;
+globalThis.CacheManager_Export = CacheManager_Export;
+globalThis.CacheManager_Export = CacheManager_Export;
 
 // Export for testing
 /* eslint-disable no-undef */
