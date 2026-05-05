@@ -11,7 +11,8 @@ describe('PageLoaderManager', () => {
     // Mock API
     mockAPI = {
       isExtension: false,
-      getSavedPages: vi.fn()
+      getSavedPages: vi.fn(),
+      searchContent: vi.fn()
     };
     global.API = mockAPI;
 
@@ -40,6 +41,7 @@ describe('PageLoaderManager', () => {
 
   describe('loadPages', () => {
     it('should load pages and update dashboard state', async () => {
+      mockDashboard.currentFilter.search = 'bookmarks';
       const mockResponse = {
         pages: [
           { id: '1', title: 'Page 1' },
@@ -55,7 +57,10 @@ describe('PageLoaderManager', () => {
 
       await manager.loadPages(mockDashboard);
 
-      expect(mockAPI.getSavedPages).toHaveBeenCalledWith(mockDashboard.currentFilter);
+      expect(mockAPI.getSavedPages).toHaveBeenCalledWith({
+        ...mockDashboard.currentFilter,
+        search: ''
+      });
       expect(mockDashboard.allPages).toEqual(mockResponse.pages);
       expect(mockDashboard.pages).toEqual(mockResponse.pages);
       expect(mockDashboard.totalPages).toBe(10);
@@ -135,6 +140,7 @@ describe('PageLoaderManager', () => {
     });
 
     it('should fetch fresh data with skipCache', async () => {
+      mockDashboard.currentFilter.search = 'react';
       const mockResponse = {
         pages: [{ id: '1', title: 'Fresh' }],
         pagination: { total: 1 }
@@ -149,6 +155,7 @@ describe('PageLoaderManager', () => {
 
       expect(mockAPI.getSavedPages).toHaveBeenCalledWith({
         ...mockDashboard.currentFilter,
+        search: '',
         skipCache: true
       });
     });
@@ -248,14 +255,69 @@ describe('PageLoaderManager', () => {
       mockAPI.isExtension = true;
       mockDashboard.getCurrentUser.mockReturnValue(null);
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-1';
 
       await manager.loadMorePages(mockDashboard);
 
       expect(mockAPI.getSavedPages).not.toHaveBeenCalled();
     });
 
+    it('should not load more when local search is active', async () => {
+      mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-1';
+      mockDashboard.currentFilter.search = 'react';
+
+      await manager.loadMorePages(mockDashboard);
+
+      expect(mockAPI.getSavedPages).not.toHaveBeenCalled();
+    });
+
+    it('should not load more when tag filtering is active', async () => {
+      mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-1';
+      mockDashboard.tagInteractionManager.getActiveLabel.mockReturnValue('JavaScript');
+
+      await manager.loadMorePages(mockDashboard);
+
+      expect(mockAPI.getSavedPages).not.toHaveBeenCalled();
+    });
+
+    it('should load more semantic drawer search results via searchContent', async () => {
+      mockDashboard.hasMorePages = true;
+      mockDashboard.currentFilter.search = 'semantic bookmarks';
+      mockDashboard.pages = [{ id: 'existing-1' }];
+      mockDashboard.semanticSearchOffset = 1;
+      mockDashboard.totalPages = 3;
+      mockDashboard.isDrawerEmbedded.mockReturnValue(true);
+
+      mockAPI.searchContent.mockResolvedValue({
+        results: [
+          { thing_id: '2', similarity: 0.8, thing_data: { id: '2', title: 'Result 2' } },
+          { thing_id: '3', similarity: 0.7, thing_data: { id: '3', title: 'Result 3' } }
+        ],
+        pagination: { total: 3, has_more: false }
+      });
+
+      await manager.loadMorePages(mockDashboard);
+
+      expect(mockAPI.searchContent).toHaveBeenCalledWith('semantic bookmarks', {
+        limit: mockDashboard.currentFilter.limit,
+        offset: 1,
+        threshold: mockDashboard.semanticSearchThreshold
+      });
+      expect(mockAPI.getSavedPages).not.toHaveBeenCalled();
+      expect(mockDashboard.pages).toEqual([
+        { id: 'existing-1' },
+        { id: '2', title: 'Result 2' },
+        { id: '3', title: 'Result 3' }
+      ]);
+      expect(mockDashboard.semanticSearchOffset).toBe(3);
+      expect(mockDashboard.hasMorePages).toBe(false);
+    });
+
     it('should set loading state and show indicator', async () => {
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-2';
       const mockResponse = {
         pages: [{ id: '3' }],
         pagination: { total: 3, hasNextPage: false }
@@ -284,12 +346,15 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.currentFilter.cursor).toBeNull();
       expect(mockAPI.getSavedPages).toHaveBeenCalledWith({
         ...mockDashboard.currentFilter,
-        cursor: 'cursor-50'
+        search: '',
+        cursor: 'cursor-50',
+        skipCache: true
       });
     });
 
     it('should append new pages to existing', async () => {
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-2';
       mockDashboard.allPages = [{ id: '1' }, { id: '2' }];
       mockDashboard.pages = [{ id: '1' }, { id: '2' }];
 
@@ -311,6 +376,7 @@ describe('PageLoaderManager', () => {
 
     it('should update pagination state', async () => {
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-50';
 
       const mockResponse = {
         pages: [{ id: '51' }],
@@ -331,6 +397,7 @@ describe('PageLoaderManager', () => {
 
     it('should call updateStats and render', async () => {
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-2';
 
       const mockResponse = {
         pages: [{ id: '3' }],
@@ -347,6 +414,7 @@ describe('PageLoaderManager', () => {
     it('should handle errors and show to user', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-2';
 
       const error = new Error('Load failed');
       mockAPI.getSavedPages.mockRejectedValue(error);
@@ -362,6 +430,7 @@ describe('PageLoaderManager', () => {
     it('should reset loading state even on error', async () => {
       vi.spyOn(console, 'error').mockImplementation(() => {});
       mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'cursor-2';
       mockAPI.getSavedPages.mockRejectedValue(new Error('Fail'));
 
       await manager.loadMorePages(mockDashboard);
@@ -370,6 +439,40 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.scrollManager.hideLoadingIndicator).toHaveBeenCalled();
 
       console.error.mockRestore();
+    });
+
+    it('should refresh cached pagination before loading more', async () => {
+      mockDashboard.hasMorePages = true;
+      mockDashboard.nextCursor = 'stale-cursor';
+      mockDashboard.paginationStateFromCache = true;
+      mockDashboard.allPages = [{ id: 'cached-1' }];
+      mockDashboard.pages = [{ id: 'cached-1' }];
+
+      mockAPI.getSavedPages
+        .mockResolvedValueOnce({
+          pages: [{ id: 'fresh-1' }],
+          pagination: { total: 2, hasNextPage: true, nextCursor: 'fresh-cursor' }
+        })
+        .mockResolvedValueOnce({
+          pages: [{ id: 'fresh-2' }],
+          pagination: { total: 2, hasNextPage: false, nextCursor: null }
+        });
+
+      await manager.loadMorePages(mockDashboard);
+
+      expect(mockAPI.getSavedPages).toHaveBeenNthCalledWith(1, {
+        ...mockDashboard.currentFilter,
+        search: '',
+        skipCache: true
+      });
+      expect(mockAPI.getSavedPages).toHaveBeenNthCalledWith(2, {
+        ...mockDashboard.currentFilter,
+        search: '',
+        cursor: 'fresh-cursor',
+        skipCache: true
+      });
+      expect(mockDashboard.allPages).toEqual([{ id: 'fresh-1' }, { id: 'fresh-2' }]);
+      expect(mockDashboard.paginationStateFromCache).toBe(false);
     });
   });
 });

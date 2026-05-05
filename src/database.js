@@ -7,6 +7,8 @@
 
 /* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager, PageLoaderManager */
 
+const SEMANTIC_SEARCH_THRESHOLD = 0.58;
+
 class SaveItDashboard {
   constructor() {
     this.pages = [];
@@ -26,6 +28,10 @@ class SaveItDashboard {
     this.isLoadingMore = false;
     this.hasMorePages = true;
     this.nextCursor = null;
+    this.paginationStateFromCache = false;
+    this.semanticSearchOffset = 0;
+    this.semanticSearchThreshold = SEMANTIC_SEARCH_THRESHOLD;
+    this.semanticSearchRequestId = 0;
 
     // Initialization state
     this.isInitialized = false;
@@ -45,6 +51,11 @@ class SaveItDashboard {
     this.pageLoaderManager = new PageLoaderManager();
   }
 
+  isDrawerEmbedded() {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('embedded') === 'drawer';
+  }
+
   /**
    * Get browser runtime API (works with both Firefox and Chrome/Brave/Edge)
    * @returns {Object|null} browser.runtime or chrome.runtime
@@ -57,6 +68,7 @@ class SaveItDashboard {
    * Initialize the dashboard
    */
   async init() {
+    document.body.classList.toggle('drawer-embedded', this.isDrawerEmbedded());
     this.themeManager.initTheme();
     this.showLoading();
     this.themeManager.updateModeIndicator(API.isExtension);
@@ -159,6 +171,60 @@ class SaveItDashboard {
    */
   async refreshInBackground() {
     await this.pageLoaderManager.refreshInBackground(this);
+  }
+
+  async performDrawerSemanticSearch(query, { append = false } = {}) {
+    const trimmedQuery = query.trim();
+    const requestId = ++this.semanticSearchRequestId;
+
+    this.discoveryManager.exit();
+    this.tagInteractionManager.clearSelection();
+
+    if (!trimmedQuery) {
+      this.semanticSearchOffset = 0;
+      await this.loadPages();
+      this.render();
+      return;
+    }
+
+    if (!append) {
+      this.showLoading();
+      this.semanticSearchOffset = 0;
+    }
+
+    const offset = append ? this.semanticSearchOffset : 0;
+
+    try {
+      const response = await API.searchContent(trimmedQuery, {
+        limit: this.currentFilter.limit,
+        offset,
+        threshold: this.semanticSearchThreshold
+      });
+
+      if (requestId !== this.semanticSearchRequestId) {
+        return;
+      }
+
+      const resultPages = (response.results || [])
+        .map(result => result.thing_data)
+        .filter(Boolean);
+
+      this.semanticSearchOffset = offset + resultPages.length;
+      this.totalPages = response.pagination?.total || 0;
+      this.hasMorePages = this.semanticSearchOffset < this.totalPages;
+      this.nextCursor = null;
+      this.paginationStateFromCache = false;
+      this.pages = append ? [...this.pages, ...resultPages] : resultPages;
+
+      this.render();
+    } catch (error) {
+      if (requestId !== this.semanticSearchRequestId) {
+        return;
+      }
+
+      console.error('[performDrawerSemanticSearch] Search failed:', error);
+      this.showError(error);
+    }
   }
 
 
@@ -350,7 +416,12 @@ class SaveItDashboard {
    * Handle filter changes (search box)
    * Applies search filter on top of tag-filtered results
    */
-  handleFilterChange() {
+  async handleFilterChange() {
+    if (this.isDrawerEmbedded()) {
+      await this.performDrawerSemanticSearch(this.currentFilter.search);
+      return;
+    }
+
     // Get currently displayed pages (either similarity results or all pages)
     const basePages = this.pages.length > 0 ? this.pages : [...this.allPages];
 
@@ -378,7 +449,7 @@ class SaveItDashboard {
     this.scrollManager.setupInfiniteScroll(
       () => this.loadMorePages(),
       () => ({
-        hasMorePages: this.hasMorePages,
+        hasMorePages: this.hasMorePages && !this.pageLoaderManager.hasActiveLocalFilter(this),
         isLoading: this.isLoadingMore
       })
     );

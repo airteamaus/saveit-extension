@@ -28,10 +28,15 @@ const userEmailEl = document.getElementById('hero-user-email');
 const signOutBtn = document.getElementById('hero-sign-out-btn');
 const refreshBackgroundBtn = document.getElementById('hero-refresh-background-btn');
 const dashboardToggleBtn = document.getElementById('dashboard-toggle-btn');
-const dashboardToggleIcon = document.getElementById('dashboard-toggle-icon');
 const dashboardDrawer = document.getElementById('dashboard-drawer');
 const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdrop');
-const dashboardDrawerFrame = document.getElementById('dashboard-drawer-frame');
+const dashboardDrawerCloseBtn = document.getElementById('dashboard-drawer-close-btn');
+const dashboardDrawerSearchForm = document.getElementById('dashboard-drawer-search-form');
+const dashboardDrawerSearchInput = document.getElementById('dashboard-drawer-search-input');
+const dashboardDrawerClearBtn = document.getElementById('dashboard-drawer-clear-btn');
+const dashboardDrawerResults = document.getElementById('dashboard-drawer-results');
+const dashboardDrawerFooter = document.getElementById('dashboard-drawer-footer');
+const dashboardDrawerLoadMoreBtn = document.getElementById('dashboard-drawer-load-more-btn');
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
@@ -50,6 +55,11 @@ const FAVORITES_MOBILE_TILE_WIDTH = 80;
 const FAVORITES_TILE_GAP = 12;
 const FAVORITES_WIDTH_PADDING = 220;
 const FAVORITES_MAX_GRID_WIDTH = 1008;
+const DRAWER_SEARCH_DEBOUNCE_MS = 250;
+const DRAWER_PAGE_LIMIT = 50;
+const DRAWER_SEMANTIC_THRESHOLD = 0.58;
+
+let drawerSearchDebounceTimer = null;
 
 const favoritesState = {
   allPages: [],
@@ -66,6 +76,20 @@ const favoritesState = {
   pointerDeltaY: 0,
   dragging: false,
   suppressClick: false
+};
+
+const drawerState = {
+  hasInitialized: false,
+  isLoading: false,
+  query: '',
+  mode: 'list',
+  pages: [],
+  total: 0,
+  hasMore: false,
+  nextCursor: null,
+  paginationStateFromCache: false,
+  semanticOffset: 0,
+  requestId: 0
 };
 
 /**
@@ -467,15 +491,6 @@ async function handleSignIn() {
   }
 }
 
-function getDashboardDrawerSrc(searchQuery = '') {
-  const trimmedQuery = searchQuery.trim();
-  if (!trimmedQuery) {
-    return 'database.html';
-  }
-
-  return `database.html?search=${encodeURIComponent(trimmedQuery)}`;
-}
-
 function updateDrawerUrl(isOpen, searchQuery = '') {
   const url = new URL(window.location.href);
   if (isOpen) {
@@ -493,32 +508,313 @@ function updateDrawerUrl(isOpen, searchQuery = '') {
 }
 
 function setDrawerToggleState(isOpen) {
-  if (!dashboardToggleBtn || !dashboardToggleIcon) return;
+  if (!dashboardToggleBtn) return;
 
   dashboardToggleBtn.setAttribute('aria-expanded', String(isOpen));
   dashboardToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
   dashboardToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
-  dashboardToggleIcon.textContent = isOpen ? 'x' : '+';
+  dashboardToggleBtn.classList.toggle('is-active', isOpen);
+}
+
+function setDrawerSearchValue(query = '') {
+  if (!dashboardDrawerSearchInput || !dashboardDrawerClearBtn) return;
+  dashboardDrawerSearchInput.value = query;
+  dashboardDrawerClearBtn.classList.toggle('hidden', !query.trim());
+}
+
+function getDrawerCurrentUser() {
+  return window.firebaseAuth?.currentUser || null;
+}
+
+function escapeHtml(text = '') {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function truncateText(text = '', maxLength = 180) {
+  if (!text || text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
+}
+
+function renderDrawerTags(page) {
+  const tags = [];
+
+  if (page.classifications?.length) {
+    page.classifications.slice(0, 2).forEach(classification => {
+      tags.push(
+        `<span class="tag ai-tag tag-${escapeHtml(classification.type)}">${escapeHtml(classification.label)}</span>`
+      );
+    });
+  } else if (page.primary_classification_label) {
+    tags.push(`<span class="tag ai-tag">${escapeHtml(page.primary_classification_label)}</span>`);
+  }
+
+  if (page.manual_tags?.length) {
+    page.manual_tags.slice(0, 1).forEach(tag => {
+      tags.push(`<span class="tag">${escapeHtml(tag)}</span>`);
+    });
+  }
+
+  return tags.join('');
+}
+
+function renderDrawerCard(page) {
+  let derivedDomain = '';
+  if (page.url) {
+    try {
+      derivedDomain = new URL(page.url).hostname;
+    } catch {
+      derivedDomain = '';
+    }
+  }
+
+  const domain = page.domain || derivedDomain;
+  const summary = page.ai_summary_brief || page.description || '';
+  const meta = [];
+
+  if (domain) {
+    meta.push(`<span>${escapeHtml(domain)}</span>`);
+  }
+
+  if (page.reading_time_minutes) {
+    meta.push(`<span>${page.reading_time_minutes} min read</span>`);
+  }
+
+  const tagsHtml = renderDrawerTags(page);
+
+  return `
+    <a class="dashboard-drawer-card" href="${escapeHtml(page.url || '#')}">
+      <div class="dashboard-drawer-card-header">
+        ${domain ? `<img class="dashboard-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
+        <h3 class="dashboard-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+      </div>
+      ${summary ? `<p class="dashboard-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
+      <div class="dashboard-drawer-card-footer">
+        ${meta.length ? `<div class="dashboard-drawer-card-meta">${meta.join('<span class="dashboard-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
+        ${tagsHtml ? `<div class="dashboard-drawer-card-tags">${tagsHtml}</div>` : ''}
+      </div>
+    </a>
+  `;
+}
+
+function renderDrawerState(html, { showFooter = false, loadMoreLabel = 'Load more', disableLoadMore = false } = {}) {
+  if (dashboardDrawerResults) {
+    dashboardDrawerResults.innerHTML = html;
+  }
+
+  if (dashboardDrawerFooter && dashboardDrawerLoadMoreBtn) {
+    dashboardDrawerLoadMoreBtn.textContent = loadMoreLabel;
+    dashboardDrawerLoadMoreBtn.disabled = disableLoadMore;
+    dashboardDrawerFooter.classList.toggle('hidden', !showFooter);
+  }
+}
+
+function renderDrawerLoadingState(message = 'Loading saved pages...') {
+  renderDrawerState(`
+    <div class="loading-state dashboard-drawer-state">
+      <div class="loading-spinner"></div>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `, { disableLoadMore: true });
+}
+
+function renderDrawerErrorState(message) {
+  renderDrawerState(`
+    <div class="error-state dashboard-drawer-state">
+      <h2>Something went wrong</h2>
+      <p>${escapeHtml(message)}</p>
+    </div>
+  `);
+}
+
+function renderDrawerEmptyState(query = '') {
+  const title = query ? `No results for "${escapeHtml(query)}"` : 'No saved pages yet';
+  const description = query
+    ? 'Try different words or clear the search.'
+    : 'Save a page to see it here.';
+
+  renderDrawerState(`
+    <div class="empty-state dashboard-drawer-state">
+      <h2>${title}</h2>
+      <p>${description}</p>
+    </div>
+  `);
+}
+
+function renderDrawerSignInState() {
+  renderDrawerState(`
+    <div class="empty-state dashboard-drawer-state">
+      <h2>Sign in to browse saved pages</h2>
+      <p>Your drawer is available once you are signed in.</p>
+    </div>
+  `);
+}
+
+function renderDrawerResults() {
+  if (!drawerState.pages.length) {
+    renderDrawerEmptyState(drawerState.query);
+    return;
+  }
+
+  renderDrawerState(
+    drawerState.pages.map(renderDrawerCard).join(''),
+    {
+      showFooter: drawerState.hasMore,
+      loadMoreLabel: drawerState.isLoading ? 'Loading...' : 'Load more',
+      disableLoadMore: drawerState.isLoading
+    }
+  );
+}
+
+function applyDrawerResponse(response, { append = false, mode = 'list', query = '' } = {}) {
+  const pages = mode === 'semantic'
+    ? (response.results || []).map(result => result.thing_data).filter(Boolean)
+    : (response.pages || []);
+
+  drawerState.pages = append ? [...drawerState.pages, ...pages] : pages;
+  drawerState.total = response.pagination?.total || 0;
+  drawerState.hasMore = mode === 'semantic'
+    ? drawerState.semanticOffset < drawerState.total
+    : Boolean(response.pagination?.hasNextPage);
+  drawerState.nextCursor = mode === 'semantic' ? null : (response.pagination?.nextCursor || null);
+  drawerState.paginationStateFromCache = mode === 'list' && Boolean(response.meta?.fromCache);
+  drawerState.hasInitialized = true;
+  drawerState.query = query;
+  drawerState.mode = mode;
+}
+
+async function refreshDrawerCachedList(requestId) {
+  const response = await API.getSavedPages({
+    limit: DRAWER_PAGE_LIMIT,
+    sort: 'newest',
+    pinnedFirst: false,
+    skipCache: true
+  });
+
+  if (requestId !== drawerState.requestId) {
+    return false;
+  }
+
+  drawerState.paginationStateFromCache = false;
+  applyDrawerResponse(response, { mode: 'list', query: '' });
+  return true;
+}
+
+async function loadDrawerResults(query = '', { append = false, syncUrl = true } = {}) {
+  const trimmedQuery = query.trim();
+  let shouldRenderResults = false;
+
+  if (append && (drawerState.isLoading || !drawerState.hasMore)) {
+    return;
+  }
+
+  drawerState.isLoading = true;
+  const requestId = ++drawerState.requestId;
+  setDrawerSearchValue(trimmedQuery);
+
+  if (syncUrl && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+    updateDrawerUrl(true, trimmedQuery);
+  }
+
+  if (API.isExtension && !getDrawerCurrentUser()) {
+    drawerState.isLoading = false;
+    drawerState.hasInitialized = true;
+    drawerState.pages = [];
+    drawerState.hasMore = false;
+    renderDrawerSignInState();
+    return;
+  }
+
+  if (!append) {
+    renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
+  } else {
+    renderDrawerResults();
+  }
+
+  try {
+    if (trimmedQuery) {
+      const offset = append ? drawerState.semanticOffset : 0;
+      const response = await API.searchContent(trimmedQuery, {
+        limit: DRAWER_PAGE_LIMIT,
+        offset,
+        threshold: DRAWER_SEMANTIC_THRESHOLD
+      });
+
+      if (requestId !== drawerState.requestId) return;
+
+      drawerState.semanticOffset = offset + (response.results?.length || 0);
+      applyDrawerResponse(response, {
+        append,
+        mode: 'semantic',
+        query: trimmedQuery
+      });
+      shouldRenderResults = true;
+      return;
+    }
+
+    drawerState.semanticOffset = 0;
+
+    if (append && drawerState.paginationStateFromCache) {
+      const refreshed = await refreshDrawerCachedList(requestId);
+      if (!refreshed) return;
+
+      if (!drawerState.hasMore || !drawerState.nextCursor) {
+        shouldRenderResults = true;
+        return;
+      }
+    }
+
+    const response = await API.getSavedPages({
+      limit: DRAWER_PAGE_LIMIT,
+      sort: 'newest',
+      pinnedFirst: false,
+      ...(append ? {
+        cursor: drawerState.nextCursor,
+        skipCache: true
+      } : {})
+    });
+
+    if (requestId !== drawerState.requestId) return;
+
+    applyDrawerResponse(response, {
+      append,
+      mode: 'list',
+      query: ''
+    });
+    shouldRenderResults = true;
+  } catch (error) {
+    if (requestId !== drawerState.requestId) return;
+
+    console.error('[newtab-minimal] Drawer load failed:', error);
+    renderDrawerErrorState(error.message || 'Failed to load saved pages.');
+  } finally {
+    if (requestId === drawerState.requestId) {
+      drawerState.isLoading = false;
+      if (shouldRenderResults) {
+        renderDrawerResults();
+      }
+    }
+  }
 }
 
 function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
   if (!dashboardDrawer) return;
 
-  if (dashboardDrawerFrame) {
-    const nextSrc = getDashboardDrawerSrc(searchQuery);
-    if (dashboardDrawerFrame.getAttribute('src') !== nextSrc) {
-      dashboardDrawerFrame.setAttribute('src', nextSrc);
-    }
-  }
-
+  setDrawerSearchValue(searchQuery);
   dashboardDrawer.classList.remove('hidden');
   dashboardDrawer.setAttribute('aria-hidden', 'false');
   document.body.classList.add('dashboard-drawer-open');
   setDrawerToggleState(true);
-  dashboardToggleBtn?.focus();
 
   if (syncUrl) {
     updateDrawerUrl(true, searchQuery);
+  }
+
+  if (!drawerState.hasInitialized || drawerState.query !== searchQuery.trim()) {
+    void loadDrawerResults(searchQuery, { syncUrl: false });
+  } else {
+    renderDrawerResults();
   }
 }
 
@@ -545,6 +841,31 @@ function initDashboardDrawer() {
   });
 
   dashboardDrawerBackdrop?.addEventListener('click', () => closeDashboardDrawer());
+  dashboardDrawerCloseBtn?.addEventListener('click', () => closeDashboardDrawer());
+
+  dashboardDrawerSearchForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void loadDrawerResults(dashboardDrawerSearchInput?.value || '');
+  });
+
+  dashboardDrawerSearchInput?.addEventListener('input', (event) => {
+    const query = event.target.value;
+    setDrawerSearchValue(query);
+    window.clearTimeout(drawerSearchDebounceTimer);
+    drawerSearchDebounceTimer = window.setTimeout(() => {
+      void loadDrawerResults(query);
+    }, DRAWER_SEARCH_DEBOUNCE_MS);
+  });
+
+  dashboardDrawerClearBtn?.addEventListener('click', () => {
+    window.clearTimeout(drawerSearchDebounceTimer);
+    void loadDrawerResults('');
+    dashboardDrawerSearchInput?.focus();
+  });
+
+  dashboardDrawerLoadMoreBtn?.addEventListener('click', () => {
+    void loadDrawerResults(drawerState.query, { append: true });
+  });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
@@ -680,10 +1001,28 @@ async function initAuth() {
             // User is signed in, load favorites and stats
             const pagination = await initFavorites();
             updateStats(pagination);
+            if (dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+              void loadDrawerResults(dashboardDrawerSearchInput?.value || '', { syncUrl: false });
+            }
           } else {
             // User signed out, hide favorites and stats
             favoritesSection?.classList.add('hidden');
             updateStats(null);
+            Object.assign(drawerState, {
+              hasInitialized: false,
+              isLoading: false,
+              query: '',
+              mode: 'list',
+              pages: [],
+              total: 0,
+              hasMore: false,
+              nextCursor: null,
+              paginationStateFromCache: false,
+              semanticOffset: 0
+            });
+            if (dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+              renderDrawerSignInState();
+            }
           }
         });
       } else {

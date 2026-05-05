@@ -19,7 +19,10 @@
     aria-expanded="false"
     title="Open saved pages"
   >
-    <span id="dashboard-toggle-icon" aria-hidden="true">+</span>
+    <svg id="dashboard-toggle-icon" class="dashboard-toggle-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M7 2a2 2 0 0 0-2 2v17l7-4.6 7 4.6V4a2 2 0 0 0-2-2z"></path>
+    </svg>
+    <span class="dashboard-toggle-label">Saved pages</span>
   </button>
 
   <!-- User menu (top-right corner) -->
@@ -132,15 +135,42 @@
     <div id="dashboard-drawer-backdrop" class="dashboard-drawer-backdrop"></div>
     <aside class="dashboard-drawer-panel" aria-label="Saved pages drawer">
       <div class="dashboard-drawer-header">
-        <span class="dashboard-drawer-title">Saved pages</span>
+        <form id="dashboard-drawer-search-form" class="search-form dashboard-drawer-search" role="search">
+          <span class="search-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.35-4.35"></path>
+            </svg>
+          </span>
+          <input
+            type="text"
+            id="dashboard-drawer-search-input"
+            class="search-input dashboard-drawer-search-input"
+            placeholder="Search your saved pages..."
+            autocomplete="off"
+          >
+          <button id="dashboard-drawer-clear-btn" class="clear-search hidden" type="button" title="Clear search">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </form>
+        <button id="dashboard-drawer-close-btn" class="dashboard-drawer-close-btn" type="button" aria-label="Close saved pages">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-      <iframe
-        id="dashboard-drawer-frame"
-        class="dashboard-drawer-frame"
-        src="database.html"
-        title="SaveIt dashboard"
-        loading="lazy"
-      ></iframe>
+      <div id="dashboard-drawer-body" class="dashboard-drawer-body">
+        <div id="dashboard-drawer-results" class="dashboard-drawer-results" aria-live="polite"></div>
+        <div id="dashboard-drawer-footer" class="dashboard-drawer-footer hidden">
+          <button id="dashboard-drawer-load-more-btn" class="dashboard-drawer-load-more-btn" type="button">
+            Load more
+          </button>
+        </div>
+      </div>
     </aside>
   </div>
 
@@ -148,6 +178,7 @@
   <script src="polyfill-loader.js"></script>
   <script type="module" src="config-loader.js"></script>
   <script type="module" src="firebase-init-dashboard.js"></script>
+  <script src="mock-data.js"></script>
   <script src="cache-manager.js"></script>
   <script src="api-core.js"></script>
   <script src="api-pages.js"></script>

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const newtabPath = path.resolve(__dirname, '../../src/database.html');
+const heroPath = path.resolve(__dirname, '../../src/newtab.html');
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
@@ -233,5 +234,138 @@ test.describe('Standalone Mode', () => {
 
     await page.click('#about-link');
     await page.waitForTimeout(500);
+  });
+
+  test('should refresh cached cursor before loading more pages', async ({ page }) => {
+    await page.waitForSelector('.saved-page-card');
+
+    await page.evaluate(() => {
+      const dashboard = window.dashboard;
+      window.__loadMoreCalls = [];
+
+      window.API.getSavedPages = async (options = {}) => {
+        window.__loadMoreCalls.push({ ...options });
+
+        if (options.skipCache && !options.cursor) {
+          return {
+            pages: [
+              {
+                id: 'fresh-1',
+                title: 'Fresh page 1',
+                url: 'https://example.com/fresh-1',
+                saved_at: '2026-01-02T00:00:00.000Z'
+              }
+            ],
+            pagination: {
+              total: 2,
+              hasNextPage: true,
+              nextCursor: 'fresh-cursor'
+            },
+            meta: { fromCache: false }
+          };
+        }
+
+        if (options.skipCache && options.cursor === 'fresh-cursor') {
+          return {
+            pages: [
+              {
+                id: 'fresh-2',
+                title: 'Fresh page 2',
+                url: 'https://example.com/fresh-2',
+                saved_at: '2026-01-01T00:00:00.000Z'
+              }
+            ],
+            pagination: {
+              total: 2,
+              hasNextPage: false,
+              nextCursor: null
+            },
+            meta: { fromCache: false }
+          };
+        }
+
+        throw new Error(`Unexpected load-more options: ${JSON.stringify(options)}`);
+      };
+
+      dashboard.currentFilter.search = '';
+      dashboard.allPages = [
+        {
+          id: 'cached-1',
+          title: 'Cached page',
+          url: 'https://example.com/cached-1',
+          saved_at: '2025-01-01T00:00:00.000Z'
+        }
+      ];
+      dashboard.pages = [...dashboard.allPages];
+      dashboard.totalPages = 2;
+      dashboard.hasMorePages = true;
+      dashboard.nextCursor = 'stale-cursor';
+      dashboard.paginationStateFromCache = true;
+      dashboard.render();
+    });
+
+    await page.evaluate(() => window.dashboard.loadMorePages());
+
+    await expect(page.locator('.saved-page-card')).toHaveCount(2);
+    await expect(page.locator('.saved-page-card').first()).toContainText('Fresh page 1');
+    await expect(page.locator('.saved-page-card').nth(1)).toContainText('Fresh page 2');
+
+    const calls = await page.evaluate(() => window.__loadMoreCalls);
+    expect(calls).toEqual([
+      { search: '', sort: 'newest', category: '', cursor: null, limit: 50, pinnedFirst: false, skipCache: true },
+      { search: '', sort: 'newest', category: '', cursor: 'fresh-cursor', limit: 50, pinnedFirst: false, skipCache: true }
+    ]);
+  });
+
+  test('should use semantic API search inside the drawer', async ({ page }) => {
+    await page.goto(`file://${heroPath}`);
+
+    await page.click('#dashboard-toggle-btn');
+    await expect(page.locator('#dashboard-drawer')).toBeVisible();
+    await expect(page.locator('#dashboard-drawer-frame')).toHaveCount(0);
+
+    await page.evaluate(() => {
+      window.__drawerSearchCalls = [];
+
+      API.searchContent = async (query, options = {}) => {
+        window.__drawerSearchCalls.push({ query, options });
+        return {
+          results: [
+            {
+              thing_id: 'semantic-1',
+              similarity: 0.92,
+              thing_data: {
+                id: 'semantic-1',
+                title: 'Semantic result',
+                url: 'https://example.com/semantic-result',
+                saved_at: '2026-01-02T00:00:00.000Z'
+              }
+            }
+          ],
+          pagination: {
+            total: 1,
+            has_more: false
+          }
+        };
+      };
+    });
+
+    await page.fill('#dashboard-drawer-search-input', 'semantic result');
+    await page.waitForTimeout(700);
+
+    await expect(page.locator('.dashboard-drawer-card')).toHaveCount(1);
+    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('Semantic result');
+
+    const calls = await page.evaluate(() => window.__drawerSearchCalls);
+    expect(calls).toEqual([
+      {
+        query: 'semantic result',
+        options: {
+          limit: 50,
+          offset: 0,
+          threshold: 0.58
+        }
+      }
+    ]);
   });
 });

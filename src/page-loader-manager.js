@@ -6,6 +6,47 @@ class PageLoaderManager {
     // Manager state is stored in dashboard instance
   }
 
+  getRemoteListOptions(dashboard, overrides = {}) {
+    return {
+      ...dashboard.currentFilter,
+      search: '',
+      ...overrides
+    };
+  }
+
+  isDrawerSemanticSearchActive(dashboard) {
+    return Boolean(
+      dashboard.isDrawerEmbedded?.()
+      && dashboard.currentFilter.search?.trim()
+    );
+  }
+
+  hasActiveLocalFilter(dashboard) {
+    if (this.isDrawerSemanticSearchActive(dashboard)) {
+      return false;
+    }
+
+    const hasSearch = Boolean(dashboard.currentFilter.search?.trim());
+    const hasActiveTag = Boolean(dashboard.tagInteractionManager.getActiveLabel());
+    return hasSearch || hasActiveTag;
+  }
+
+  async refreshCachedPaginationState(dashboard) {
+    const freshResponse = await API.getSavedPages(this.getRemoteListOptions(dashboard, {
+      skipCache: true
+    }));
+
+    dashboard.allPages = freshResponse.pages || [];
+    dashboard.totalPages = freshResponse.pagination?.total || 0;
+    dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
+    dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
+    dashboard.paginationStateFromCache = false;
+
+    dashboard.pages = [...dashboard.allPages];
+    dashboard.updateStats();
+    dashboard.render();
+  }
+
   /**
    * Load pages from API
    * @param {Object} dashboard - Dashboard instance
@@ -13,13 +54,14 @@ class PageLoaderManager {
   async loadPages(dashboard) {
     try {
       dashboard.currentFilter.cursor = null;
-      const response = await API.getSavedPages(dashboard.currentFilter);
+      const response = await API.getSavedPages(this.getRemoteListOptions(dashboard));
 
       // API always returns {pages, pagination} format
       dashboard.allPages = response.pages || [];
       dashboard.totalPages = response.pagination?.total || 0;
       dashboard.hasMorePages = response.pagination?.hasNextPage || false;
       dashboard.nextCursor = response.pagination?.nextCursor || null;
+      dashboard.paginationStateFromCache = Boolean(response.meta?.fromCache);
 
       // Initially show all pages (no tag selected)
       dashboard.pages = [...dashboard.allPages];
@@ -43,10 +85,9 @@ class PageLoaderManager {
       // Wait a bit to avoid competing with initial render
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      const freshResponse = await API.getSavedPages({
-        ...dashboard.currentFilter,
+      const freshResponse = await API.getSavedPages(this.getRemoteListOptions(dashboard, {
         skipCache: true
-      });
+      }));
 
       const freshPages = freshResponse.pages || [];
 
@@ -56,6 +97,7 @@ class PageLoaderManager {
         dashboard.totalPages = freshResponse.pagination?.total || 0;
         dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
         dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
+        dashboard.paginationStateFromCache = false;
 
         // If a tag is selected, re-run similarity search to update results
         const activeLabel = dashboard.tagInteractionManager.getActiveLabel();
@@ -85,13 +127,47 @@ class PageLoaderManager {
     // Don't try to load more if user isn't signed in
     if (API.isExtension && !dashboard.getCurrentUser()) return;
 
+    if (this.hasActiveLocalFilter(dashboard)) return;
+
     dashboard.isLoadingMore = true;
     dashboard.scrollManager.showLoadingIndicator();
 
     try {
+      if (this.isDrawerSemanticSearchActive(dashboard)) {
+        const response = await API.searchContent(dashboard.currentFilter.search, {
+          limit: dashboard.currentFilter.limit,
+          offset: dashboard.semanticSearchOffset,
+          threshold: dashboard.semanticSearchThreshold
+        });
+
+        const newPages = (response.results || [])
+          .map(result => result.thing_data)
+          .filter(Boolean);
+
+        dashboard.semanticSearchOffset += newPages.length;
+        dashboard.totalPages = response.pagination?.total || dashboard.totalPages;
+        dashboard.hasMorePages = dashboard.semanticSearchOffset < dashboard.totalPages;
+        dashboard.nextCursor = null;
+        dashboard.paginationStateFromCache = false;
+        dashboard.pages = [...dashboard.pages, ...newPages];
+
+        dashboard.updateStats();
+        dashboard.render();
+        return;
+      }
+
+      if (dashboard.paginationStateFromCache) {
+        await this.refreshCachedPaginationState(dashboard);
+      }
+
+      if (!dashboard.hasMorePages || !dashboard.nextCursor) {
+        return;
+      }
+
       const response = await API.getSavedPages({
-        ...dashboard.currentFilter,
-        cursor: dashboard.nextCursor
+        ...this.getRemoteListOptions(dashboard),
+        cursor: dashboard.nextCursor,
+        skipCache: true
       });
 
       // API always returns {pages, pagination} format
@@ -99,6 +175,7 @@ class PageLoaderManager {
       dashboard.totalPages = response.pagination?.total || dashboard.totalPages; // Update total (should be same)
       dashboard.hasMorePages = response.pagination?.hasNextPage || false;
       dashboard.nextCursor = response.pagination?.nextCursor || null;
+      dashboard.paginationStateFromCache = false;
 
       // Append new pages to existing
       dashboard.allPages = [...dashboard.allPages, ...newPages];

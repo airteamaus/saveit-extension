@@ -51,6 +51,52 @@
   padding: var(--spacing-lg);
 }
 
+body.drawer-embedded {
+  background: light-dark(rgba(248, 250, 252, 0.76), rgba(255, 255, 255, 0.03));
+}
+
+body.drawer-embedded .header {
+  display: none;
+}
+
+body.drawer-embedded .main {
+  padding: 20px;
+  background: transparent;
+}
+
+body.drawer-embedded .tag-bar {
+  padding: 0;
+}
+
+body.drawer-embedded .footer {
+  display: none;
+}
+
+body.drawer-embedded .saved-page-card {
+  background: light-dark(rgba(241, 245, 249, 0.72), rgba(255, 255, 255, 0.05));
+  border: 1px solid light-dark(rgba(148, 163, 184, 0.18), rgba(255, 255, 255, 0.08));
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+}
+
+body.drawer-embedded .saved-page-card:hover {
+  background: light-dark(rgba(255, 255, 255, 0.94), rgba(255, 255, 255, 0.1));
+  border-color: light-dark(rgba(37, 99, 235, 0.18), rgba(255, 255, 255, 0.14));
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+body.drawer-embedded .row-summary {
+  color: light-dark(#334155, #d4d4d8);
+}
+
+body.drawer-embedded .row-meta-inline {
+  color: light-dark(#475569, #b3b3b3);
+}
+
+body.drawer-embedded .meta-separator {
+  color: light-dark(#64748b, #8a8a8a);
+  opacity: 0.75;
+}
+
 /* Tag Bar - Navigation bar for hierarchical tag browsing */
 .tag-bar {
   padding: var(--spacing-sm) var(--spacing-lg);
@@ -111,7 +157,7 @@
   background: transparent;
   padding: var(--spacing-md);
   border-radius: var(--radius-md);
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, border-color 0.2s, box-shadow 0.2s;
   display: block;
   cursor: pointer;
   text-decoration: none;
@@ -154,9 +200,9 @@
 
 .row-title {
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.4;
-  color: var(--color-text);
+  color: light-dark(#0f172a, #f8fafc);
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
@@ -164,6 +210,11 @@
   -webkit-box-orient: vertical;
   flex: 1;
   margin: 0;
+}
+
+.saved-page-card:visited .row-title,
+.saved-page-card:active .row-title {
+  color: light-dark(#0f172a, #f8fafc);
 }
 
 /* Row summary */

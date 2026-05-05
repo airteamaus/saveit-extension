@@ -11,11 +11,15 @@ export function createMockDashboard(overrides = {}) {
     totalPages: 0,
     hasMorePages: false,
     nextCursor: null,
+    paginationStateFromCache: false,
+    semanticSearchOffset: 0,
+    semanticSearchThreshold: 0.58,
     isLoadingMore: false,
     currentFilter: {
       limit: 50,
       cursor: null
     },
+    isDrawerEmbedded: vi.fn(() => false),
     showError: vi.fn(),
     render: vi.fn(),
     updateStats: vi.fn(),
