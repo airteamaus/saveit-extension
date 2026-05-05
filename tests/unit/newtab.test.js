@@ -314,6 +314,143 @@ describe('newtab-minimal', () => {
     });
   });
 
+  describe('favorite preview logic', () => {
+    const FAVORITES_TILE_GAP = 12;
+    const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
+    const FAVORITE_PREVIEW_MARGIN = 8;
+    const FAVORITE_PREVIEW_GAP = 14;
+
+    function truncateText(text = '', maxLength = 180) {
+      if (!text || text.length <= maxLength) return text;
+      return `${text.slice(0, maxLength).trim()}...`;
+    }
+
+    function getFavoritePreviewWidth(sectionWidth, tileWidth) {
+      const maxWidth = Math.max(160, sectionWidth - (FAVORITE_PREVIEW_MARGIN * 2));
+      return Math.min(
+        maxWidth,
+        (tileWidth * FAVORITE_PREVIEW_WIDTH_MULTIPLIER) + (FAVORITES_TILE_GAP * 3) + 28
+      );
+    }
+
+    function clampFavoritePreviewLeft(sectionWidth, preferredLeft, previewWidth) {
+      return Math.max(
+        FAVORITE_PREVIEW_MARGIN,
+        Math.min(preferredLeft, sectionWidth - previewWidth - FAVORITE_PREVIEW_MARGIN)
+      );
+    }
+
+    function clampFavoritePreviewTop(sectionHeight, preferredTop, previewHeight) {
+      return Math.max(
+        FAVORITE_PREVIEW_MARGIN,
+        Math.min(preferredTop, sectionHeight - previewHeight - FAVORITE_PREVIEW_MARGIN)
+      );
+    }
+
+    function getFavoritePreviewPlacement(sectionRect, itemRect, previewRect) {
+      const sectionWidth = sectionRect.width;
+      const sectionHeight = sectionRect.height;
+      const itemLeft = itemRect.left - sectionRect.left;
+      const itemRight = itemRect.right - sectionRect.left;
+      const itemTop = itemRect.top - sectionRect.top;
+      const itemBottom = itemRect.bottom - sectionRect.top;
+      const availableRight = sectionRect.right - itemRect.right - FAVORITE_PREVIEW_MARGIN;
+      const availableLeft = itemRect.left - sectionRect.left - FAVORITE_PREVIEW_MARGIN;
+
+      let placement = 'right';
+      let left = itemRight + FAVORITE_PREVIEW_GAP;
+      let top = clampFavoritePreviewTop(
+        sectionHeight,
+        (itemTop + (itemRect.height / 2)) - (previewRect.height / 2),
+        previewRect.height
+      );
+
+      if (availableRight < previewRect.width + FAVORITE_PREVIEW_GAP) {
+        if (availableLeft >= previewRect.width + FAVORITE_PREVIEW_GAP) {
+          placement = 'left';
+          left = itemLeft - previewRect.width - FAVORITE_PREVIEW_GAP;
+        } else {
+          const availableBelow = sectionRect.bottom - itemRect.bottom - FAVORITE_PREVIEW_MARGIN;
+          const availableAbove = itemRect.top - sectionRect.top - FAVORITE_PREVIEW_MARGIN;
+          left = clampFavoritePreviewLeft(
+            sectionWidth,
+            itemLeft + (itemRect.width / 2) - (previewRect.width / 2),
+            previewRect.width
+          );
+
+          if (availableBelow >= previewRect.height + FAVORITE_PREVIEW_GAP || availableBelow >= availableAbove) {
+            placement = 'below';
+            top = itemBottom + FAVORITE_PREVIEW_GAP;
+          } else {
+            placement = 'above';
+            top = itemTop - previewRect.height - FAVORITE_PREVIEW_GAP;
+          }
+        }
+      }
+
+      return {
+        placement,
+        left: clampFavoritePreviewLeft(sectionWidth, left, previewRect.width),
+        top: clampFavoritePreviewTop(sectionHeight, top, previewRect.height)
+      };
+    }
+
+    it('should cap preview title length to 256 characters', () => {
+      const title = 'a'.repeat(300);
+      const result = truncateText(title, 256);
+      expect(result.length).toBe(259);
+      expect(result.endsWith('...')).toBe(true);
+    });
+
+    it('should size preview to roughly four tile widths when space allows', () => {
+      const result = getFavoritePreviewWidth(900, 88);
+      expect(result).toBe((88 * 4) + (FAVORITES_TILE_GAP * 3) + 28);
+    });
+
+    it('should clamp preview inside the shaded area horizontally', () => {
+      const previewWidth = getFavoritePreviewWidth(500, 88);
+      expect(clampFavoritePreviewLeft(500, -40, previewWidth)).toBe(FAVORITE_PREVIEW_MARGIN);
+      expect(clampFavoritePreviewLeft(500, 999, previewWidth)).toBe(500 - previewWidth - FAVORITE_PREVIEW_MARGIN);
+    });
+
+    it('should shrink preview width on narrow sections', () => {
+      expect(getFavoritePreviewWidth(180, 88)).toBe(164);
+    });
+
+    it('should place preview to the right when space allows', () => {
+      const result = getFavoritePreviewPlacement(
+        { left: 0, top: 0, right: 700, bottom: 300, width: 700, height: 300 },
+        { left: 100, top: 80, right: 188, bottom: 168, width: 88, height: 88 },
+        { width: 220, height: 160 }
+      );
+
+      expect(result.placement).toBe('right');
+      expect(result.left).toBe(202);
+    });
+
+    it('should place preview to the left when right side is tight', () => {
+      const result = getFavoritePreviewPlacement(
+        { left: 0, top: 0, right: 500, bottom: 300, width: 500, height: 300 },
+        { left: 360, top: 80, right: 448, bottom: 168, width: 88, height: 88 },
+        { width: 220, height: 160 }
+      );
+
+      expect(result.placement).toBe('left');
+      expect(result.left).toBe(126);
+    });
+
+    it('should place preview below when neither side fits', () => {
+      const result = getFavoritePreviewPlacement(
+        { left: 0, top: 0, right: 320, bottom: 320, width: 320, height: 320 },
+        { left: 120, top: 70, right: 208, bottom: 158, width: 88, height: 88 },
+        { width: 260, height: 120 }
+      );
+
+      expect(result.placement).toBe('below');
+      expect(result.top).toBe(172);
+    });
+  });
+
   describe('search navigation logic', () => {
     function getSearchUrl(query) {
       const trimmed = query.trim();
