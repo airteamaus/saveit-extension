@@ -77,9 +77,7 @@ function getMockFavorites(options = {}) {
   const allPages = globalThis.filterMockData(MOCK_DATA, options);
   const limit = options.limit || 300;
   const pages = allPages.slice(0, limit).map(page => ({
-    id: page.id,
-    url: page.url,
-    title: page.title,
+    ...page,
     pinned: page.pinned ?? false,
     saved_at: page.saved_at || null
   }));

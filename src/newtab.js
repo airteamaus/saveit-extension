@@ -20,6 +20,8 @@ const favoritesRow = document.getElementById('favorites-row');
 const favoritesPrevBtn = document.getElementById('favorites-prev-btn');
 const favoritesNextBtn = document.getElementById('favorites-next-btn');
 const favoritesDots = document.getElementById('favorites-dots');
+const favoriteHoverConnector = document.getElementById('favorite-hover-connector');
+const favoriteHoverCard = document.getElementById('favorite-hover-card');
 const userMenu = document.getElementById('hero-user-menu');
 const userAvatarBtn = document.getElementById('hero-user-avatar-btn');
 const userAvatar = document.getElementById('hero-user-avatar');
@@ -56,6 +58,9 @@ const FAVORITES_MAX_GRID_WIDTH = 1008;
 const DRAWER_SEARCH_DEBOUNCE_MS = 250;
 const DRAWER_PAGE_LIMIT = FAVORITES_MAX_ITEMS;
 const DRAWER_SEMANTIC_THRESHOLD = 0.58;
+const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
+const FAVORITE_PREVIEW_MARGIN = 8;
+const FAVORITE_PREVIEW_GAP = 14;
 
 let drawerSearchDebounceTimer = null;
 
@@ -73,7 +78,8 @@ const favoritesState = {
   pointerDeltaX: 0,
   pointerDeltaY: 0,
   dragging: false,
-  suppressClick: false
+  suppressClick: false,
+  activePreviewId: null
 };
 
 const drawerState = {
@@ -151,6 +157,217 @@ function getFaviconUrl(url) {
   }
 }
 
+function getPageDomain(page) {
+  if (page.domain) {
+    return page.domain;
+  }
+
+  try {
+    return page.url ? new URL(page.url).hostname : '';
+  } catch {
+    return '';
+  }
+}
+
+function formatSavedDate(savedAt) {
+  if (!savedAt) return '';
+
+  try {
+    return new Date(savedAt).toLocaleDateString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
+  } catch {
+    return '';
+  }
+}
+
+function getFavoritePreviewWidth(sectionWidth, tileWidth) {
+  const maxWidth = Math.max(160, sectionWidth - (FAVORITE_PREVIEW_MARGIN * 2));
+  return Math.min(
+    maxWidth,
+    (tileWidth * FAVORITE_PREVIEW_WIDTH_MULTIPLIER) + (FAVORITES_TILE_GAP * 3) + 28
+  );
+}
+
+function clampFavoritePreviewLeft(sectionWidth, preferredLeft, previewWidth) {
+  return Math.max(
+    FAVORITE_PREVIEW_MARGIN,
+    Math.min(preferredLeft, sectionWidth - previewWidth - FAVORITE_PREVIEW_MARGIN)
+  );
+}
+
+function clampFavoritePreviewTop(sectionHeight, preferredTop, previewHeight) {
+  return Math.max(
+    FAVORITE_PREVIEW_MARGIN,
+    Math.min(preferredTop, sectionHeight - previewHeight - FAVORITE_PREVIEW_MARGIN)
+  );
+}
+
+function getFavoritePreviewPlacement(sectionRect, itemRect, previewRect) {
+  const sectionWidth = sectionRect.width;
+  const sectionHeight = sectionRect.height;
+  const itemLeft = itemRect.left - sectionRect.left;
+  const itemRight = itemRect.right - sectionRect.left;
+  const itemTop = itemRect.top - sectionRect.top;
+  const itemBottom = itemRect.bottom - sectionRect.top;
+  const availableRight = sectionRect.right - itemRect.right - FAVORITE_PREVIEW_MARGIN;
+  const availableLeft = itemRect.left - sectionRect.left - FAVORITE_PREVIEW_MARGIN;
+
+  let placement = 'right';
+  let left = itemRight + FAVORITE_PREVIEW_GAP;
+  let top = clampFavoritePreviewTop(
+    sectionHeight,
+    (itemTop + (itemRect.height / 2)) - (previewRect.height / 2),
+    previewRect.height
+  );
+
+  if (availableRight < previewRect.width + FAVORITE_PREVIEW_GAP) {
+    if (availableLeft >= previewRect.width + FAVORITE_PREVIEW_GAP) {
+      placement = 'left';
+      left = itemLeft - previewRect.width - FAVORITE_PREVIEW_GAP;
+    } else {
+      const availableBelow = sectionRect.bottom - itemRect.bottom - FAVORITE_PREVIEW_MARGIN;
+      const availableAbove = itemRect.top - sectionRect.top - FAVORITE_PREVIEW_MARGIN;
+      left = clampFavoritePreviewLeft(
+        sectionWidth,
+        itemLeft + (itemRect.width / 2) - (previewRect.width / 2),
+        previewRect.width
+      );
+
+      if (availableBelow >= previewRect.height + FAVORITE_PREVIEW_GAP || availableBelow >= availableAbove) {
+        placement = 'below';
+        top = itemBottom + FAVORITE_PREVIEW_GAP;
+      } else {
+        placement = 'above';
+        top = itemTop - previewRect.height - FAVORITE_PREVIEW_GAP;
+      }
+    }
+  }
+
+  left = clampFavoritePreviewLeft(sectionWidth, left, previewRect.width);
+  top = clampFavoritePreviewTop(sectionHeight, top, previewRect.height);
+
+  return { placement, left, top };
+}
+
+function renderFavoritePreviewTags(page) {
+  return renderDrawerTags(page);
+}
+
+function clearFavoritePreviewHighlight() {
+  document.querySelectorAll('.favorite-item.is-preview-active').forEach(item => {
+    item.classList.remove('is-preview-active');
+  });
+}
+
+function hideFavoriteConnector() {
+  if (!favoriteHoverConnector) return;
+
+  favoriteHoverConnector.classList.add('hidden');
+  favoriteHoverConnector.setAttribute('aria-hidden', 'true');
+}
+
+function showFavoriteConnector(itemRect, previewRect, sectionRect, placement) {
+  if (!favoriteHoverConnector) return;
+
+  const itemCenterX = (itemRect.left - sectionRect.left) + (itemRect.width / 2);
+  const itemCenterY = (itemRect.top - sectionRect.top) + (itemRect.height / 2);
+  let startX = itemCenterX;
+  let startY = itemCenterY;
+  let endX = previewRect.left - sectionRect.left;
+  let endY = (previewRect.top - sectionRect.top) + (previewRect.height / 2);
+
+  if (placement === 'right') {
+    startX = itemRect.right - sectionRect.left;
+  } else if (placement === 'left') {
+    startX = itemRect.left - sectionRect.left;
+    endX = (previewRect.right - sectionRect.left);
+  } else if (placement === 'below') {
+    startY = itemRect.bottom - sectionRect.top;
+    endX = (previewRect.left - sectionRect.left) + (previewRect.width / 2);
+    endY = previewRect.top - sectionRect.top;
+  } else if (placement === 'above') {
+    startY = itemRect.top - sectionRect.top;
+    endX = (previewRect.left - sectionRect.left) + (previewRect.width / 2);
+    endY = previewRect.bottom - sectionRect.top;
+  }
+
+  const deltaX = endX - startX;
+  const deltaY = endY - startY;
+  const length = Math.sqrt((deltaX ** 2) + (deltaY ** 2));
+  const angle = Math.atan2(deltaY, deltaX);
+
+  favoriteHoverConnector.style.left = `${startX}px`;
+  favoriteHoverConnector.style.top = `${startY}px`;
+  favoriteHoverConnector.style.width = `${length}px`;
+  favoriteHoverConnector.style.transform = `rotate(${angle}rad)`;
+  favoriteHoverConnector.classList.remove('hidden');
+  favoriteHoverConnector.setAttribute('aria-hidden', 'false');
+}
+
+function hideFavoritePreview() {
+  favoritesState.activePreviewId = null;
+  clearFavoritePreviewHighlight();
+  hideFavoriteConnector();
+  if (!favoriteHoverCard) return;
+
+  favoriteHoverCard.classList.add('hidden');
+  favoriteHoverCard.setAttribute('aria-hidden', 'true');
+}
+
+function showFavoritePreview(page, item) {
+  if (!favoriteHoverCard || !favoritesSection || !page || !item) {
+    return;
+  }
+
+  const title = truncateText(page.title || '', 256);
+  const domain = getPageDomain(page);
+  const summary = page.ai_summary_brief || page.description || '';
+  const savedDate = formatSavedDate(page.saved_at);
+  const tagsHtml = renderFavoritePreviewTags(page);
+  const meta = [];
+
+  if (domain) meta.push(`<span>${escapeHtml(domain)}</span>`);
+  if (savedDate) meta.push(`<span>Saved ${escapeHtml(savedDate)}</span>`);
+  if (page.reading_time_minutes) meta.push(`<span>${page.reading_time_minutes} min read</span>`);
+  if (page.pinned) meta.push('<span>Pinned</span>');
+
+  favoriteHoverCard.innerHTML = `
+    <div class="favorite-hover-card-header">
+      <div class="favorite-hover-card-icon">
+        ${domain ? `<img src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="22" height="22">` : ''}
+      </div>
+      <h3 class="favorite-hover-card-title">${escapeHtml(title)}</h3>
+    </div>
+    ${summary ? `<p class="favorite-hover-card-summary">${escapeHtml(truncateText(summary, 220))}</p>` : ''}
+    ${tagsHtml ? `<div class="favorite-hover-card-tags">${tagsHtml}</div>` : ''}
+    ${meta.length ? `<div class="favorite-hover-card-meta">${meta.join('<span class="favorite-hover-card-separator">•</span>')}</div>` : ''}
+  `;
+
+  const sectionRect = favoritesSection.getBoundingClientRect();
+  const itemRect = item.getBoundingClientRect();
+  const previewWidth = getFavoritePreviewWidth(sectionRect.width, favoritesState.tileWidth);
+
+  favoriteHoverCard.style.width = `${previewWidth}px`;
+  favoriteHoverCard.classList.remove('hidden');
+  favoriteHoverCard.setAttribute('aria-hidden', 'false');
+
+  const previewRect = favoriteHoverCard.getBoundingClientRect();
+  const { placement, left, top } = getFavoritePreviewPlacement(sectionRect, itemRect, previewRect);
+
+  favoriteHoverCard.style.left = `${left}px`;
+  favoriteHoverCard.style.top = `${top}px`;
+  favoriteHoverCard.dataset.placement = placement;
+  clearFavoritePreviewHighlight();
+  item.classList.add('is-preview-active');
+
+  const updatedPreviewRect = favoriteHoverCard.getBoundingClientRect();
+  showFavoriteConnector(itemRect, updatedPreviewRect, sectionRect, placement);
+  favoritesState.activePreviewId = page.id;
+}
+
 /**
  * Create a favorite item element
  * @param {Object} page - Page object with url, title
@@ -160,6 +377,7 @@ function createFavoriteItem(page) {
   const item = document.createElement('a');
   item.className = 'favorite-item';
   item.href = page.url;
+  item.dataset.pageId = page.id;
 
   const iconContainer = document.createElement('div');
   iconContainer.className = 'favorite-icon';
@@ -193,6 +411,11 @@ function createFavoriteItem(page) {
 
   item.appendChild(iconContainer);
   item.appendChild(title);
+
+  item.addEventListener('mouseenter', () => showFavoritePreview(page, item));
+  item.addEventListener('focus', () => showFavoritePreview(page, item));
+  item.addEventListener('mouseleave', hideFavoritePreview);
+  item.addEventListener('blur', hideFavoritePreview);
 
   return item;
 }
@@ -305,6 +528,7 @@ function applyFavoritesLayout(layout) {
 
 function renderFavoritesPage() {
   if (!favoritesRow || !favoritesSection) return;
+  hideFavoritePreview();
 
   const favorites = favoritesState.pagedPages[favoritesState.currentPage] || [];
   favoritesRow.innerHTML = '';
@@ -361,6 +585,7 @@ function renderFavorites(pages) {
 
 function handleFavoritesResize() {
   if (!favoritesState.allPages.length) return;
+  hideFavoritePreview();
 
   const layout = getFavoritesLayout();
   if (
@@ -386,6 +611,7 @@ function clearFavoritesPointerState() {
 function handleFavoritesPointerDown(event) {
   if (!favoritesState.pagedPages.length) return;
   if (event.pointerType === 'mouse' && event.button !== 0) return;
+  hideFavoritePreview();
 
   favoritesState.pointerActive = true;
   favoritesState.pointerStartX = event.clientX;
