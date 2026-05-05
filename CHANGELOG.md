@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] - 2026-05-05
+
+No notable changes.
+
 ## [1.9.0] - 2026-05-05
 
 No notable changes.
@@ -45,11 +49,6 @@ No notable changes.
 
 - add pinnedFirst parameter to control pinned item sorting (1683350)
 - add background refresh option to profile menu (4321d7b)
-
-## [1.6.6] - 2025-11-27
-
-### ✨ Features
-
 - add theme toggle to search-results page (65ad6e8)
 - move theme toggle into user profile dropdown menu (b058728)
 - enable hybrid search by default (05728b7)
