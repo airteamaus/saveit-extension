@@ -5,6 +5,10 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.3] - 2026-05-05
+
+No notable changes.
+
 ## [1.9.2] - 2026-05-05
 
 No notable changes.
@@ -38,12 +42,6 @@ No notable changes.
 No notable changes.
 
 ## [1.7.2] - 2025-11-28
-
-### ♻️ Refactoring
-
-- improve footer layout with grid-based alignment (c7f594f)
-
-## [1.7.1] - 2025-11-28
 
 ### ✨ Features
 
@@ -191,6 +189,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- improve footer layout with grid-based alignment (c7f594f)
 - switch favicon provider from Google to DuckDuckGo (d2453c3)
 - consolidate card metadata into single row with inline tags (aa720f2)
 - **test:** reduce test complexity and improve maintainability (a8e945d)
