@@ -16,7 +16,7 @@ class SaveItDashboard {
       search: '',
       sort: 'newest',
       category: '',
-      offset: 0,
+      cursor: null,
       limit: 50, // Pages per batch for infinite scroll
       pinnedFirst: false // Main dashboard uses chronological order, not pinned-first
     };

@@ -268,9 +268,9 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.scrollManager.hideLoadingIndicator).toHaveBeenCalled();
     });
 
-    it('should increment offset and load next batch', async () => {
+    it('should use nextCursor to load next batch', async () => {
       mockDashboard.hasMorePages = true;
-      mockDashboard.currentFilter.offset = 0;
+      mockDashboard.nextCursor = 'cursor-50';
       mockDashboard.currentFilter.limit = 50;
 
       const mockResponse = {
@@ -281,8 +281,11 @@ describe('PageLoaderManager', () => {
 
       await manager.loadMorePages(mockDashboard);
 
-      expect(mockDashboard.currentFilter.offset).toBe(50);
-      expect(mockAPI.getSavedPages).toHaveBeenCalledWith(mockDashboard.currentFilter);
+      expect(mockDashboard.currentFilter.cursor).toBeNull();
+      expect(mockAPI.getSavedPages).toHaveBeenCalledWith({
+        ...mockDashboard.currentFilter,
+        cursor: 'cursor-50'
+      });
     });
 
     it('should append new pages to existing', async () => {

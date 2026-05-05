@@ -15,13 +15,17 @@ describe('CacheManager', () => {
     const storageData = {};
     mockStorage = {
       get: vi.fn(async (key) => {
+        if (key === null) {
+          return { ...storageData };
+        }
         return { [key]: storageData[key] };
       }),
       set: vi.fn(async (obj) => {
         Object.assign(storageData, obj);
       }),
       remove: vi.fn(async (key) => {
-        delete storageData[key];
+        const keys = Array.isArray(key) ? key : [key];
+        keys.forEach(cacheKey => delete storageData[cacheKey]);
       }),
       clear: vi.fn(async () => {
         Object.keys(storageData).forEach(key => delete storageData[key]);
@@ -55,7 +59,7 @@ describe('CacheManager', () => {
   describe('getCacheKey', () => {
     it('should generate user-specific cache key', () => {
       const key = cacheManager.getCacheKey('user-abc');
-      expect(key).toBe('savedPages_cache_user-abc');
+      expect(key).toBe('savedPages_cache_user-abc_default');
     });
 
     it('should generate different keys for different users', () => {
@@ -91,8 +95,9 @@ describe('CacheManager', () => {
         pages: [{ id: '1', title: 'Test' }],
         pagination: { total: 1 }
       };
+      const cacheKey = cacheManager.getCacheKey('user-123');
 
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      mockStorage._testData[cacheKey] = {
         userId: 'user-123',
         response: mockResponse,
         timestamp: Date.now()
@@ -104,7 +109,7 @@ describe('CacheManager', () => {
 
     it('should return null when cache is expired', async () => {
       const expiredTimestamp = Date.now() - (6 * 60 * 1000); // 6 minutes ago
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
         userId: 'user-123',
         response: { pages: [] },
         timestamp: expiredTimestamp
@@ -115,7 +120,8 @@ describe('CacheManager', () => {
     });
 
     it('should invalidate cache when user ID mismatch', async () => {
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      const cacheKey = cacheManager.getCacheKey('user-123');
+      mockStorage._testData[cacheKey] = {
         userId: 'different-user',
         response: { pages: [] },
         timestamp: Date.now()
@@ -123,7 +129,7 @@ describe('CacheManager', () => {
 
       const result = await cacheManager.getCachedPages();
       expect(result).toBeNull();
-      expect(mockStorage.remove).toHaveBeenCalledWith('savedPages_cache_user-123');
+      expect(mockStorage.remove).toHaveBeenCalledWith(cacheKey);
     });
 
     it('should return null and log error on storage failure', async () => {
@@ -142,7 +148,7 @@ describe('CacheManager', () => {
         pages: [{ id: '1', title: 'Test' }]
       };
 
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
         response: mockResponse,
         timestamp: Date.now()
       };
@@ -176,7 +182,7 @@ describe('CacheManager', () => {
       await cacheManager.setCachedPages(mockResponse);
 
       expect(mockStorage.set).toHaveBeenCalled();
-      const cached = mockStorage._testData['savedPages_cache_user-123'];
+      const cached = mockStorage._testData[cacheManager.getCacheKey('user-123')];
       expect(cached.userId).toBe('user-123');
       expect(cached.response).toEqual(mockResponse);
       expect(cached.timestamp).toBeGreaterThan(Date.now() - 1000);
@@ -209,19 +215,26 @@ describe('CacheManager', () => {
     });
 
     it('should remove cache for current user', async () => {
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      const dashboardKey = cacheManager.getCacheKey('user-123', { surface: 'dashboard' });
+      const favoritesKey = cacheManager.getCacheKey('user-123', { surface: 'favorites' });
+      mockStorage._testData[dashboardKey] = {
+        userId: 'user-123',
+        response: { pages: [] },
+        timestamp: Date.now()
+      };
+      mockStorage._testData[favoritesKey] = {
         userId: 'user-123',
         response: { pages: [] },
         timestamp: Date.now()
       };
 
       await cacheManager.invalidateCache();
-      expect(mockStorage.remove).toHaveBeenCalledWith('savedPages_cache_user-123');
+      expect(mockStorage.remove).toHaveBeenCalledWith([dashboardKey, favoritesKey]);
     });
 
     it('should log error on storage failure', async () => {
       const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockStorage.remove.mockRejectedValue(new Error('Storage error'));
+      mockStorage.get.mockRejectedValue(new Error('Storage error'));
 
       await cacheManager.invalidateCache();
       expect(consoleErrorSpy).toHaveBeenCalled();
@@ -239,7 +252,7 @@ describe('CacheManager', () => {
     });
 
     it('should clear entire storage', async () => {
-      mockStorage._testData['savedPages_cache_user-123'] = { response: {} };
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = { response: {} };
       mockStorage._testData['other_key'] = { data: 'test' };
 
       await cacheManager.clearAllCache();
@@ -269,7 +282,10 @@ describe('CacheManager', () => {
       mockStorage._testData['savedPages_cache'] = { response: {} };
 
       await cacheManager.cleanupLegacyCache();
-      expect(mockStorage.remove).toHaveBeenCalledWith('savedPages_cache');
+      expect(mockStorage.remove).toHaveBeenCalledWith([
+        'savedPages_cache',
+        cacheManager.getCacheKey('user-123', {}).replace('_default', '')
+      ]);
     });
 
     it('should log error on storage failure', async () => {
@@ -309,7 +325,7 @@ describe('CacheManager', () => {
   describe('Cache Expiration', () => {
     it('should return fresh cache within expiration window', async () => {
       const recentTimestamp = Date.now() - (2 * 60 * 1000); // 2 minutes ago
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
         userId: 'user-123',
         response: { pages: [{ id: '1' }] },
         timestamp: recentTimestamp
@@ -322,7 +338,7 @@ describe('CacheManager', () => {
 
     it('should reject expired cache', async () => {
       const oldTimestamp = Date.now() - (10 * 60 * 1000); // 10 minutes ago
-      mockStorage._testData['savedPages_cache_user-123'] = {
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
         userId: 'user-123',
         response: { pages: [{ id: '1' }] },
         timestamp: oldTimestamp

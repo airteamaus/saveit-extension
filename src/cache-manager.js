@@ -16,12 +16,50 @@ class CacheManager {
   }
 
   /**
-   * Get cache key for current user
-   * Includes user_id to prevent cross-user data leakage
+   * Serialize cache scope into a deterministic string
    * @private
+   * @param {Object} scope - Request scope
+   * @returns {string} Serialized scope string
    */
-  getCacheKey(userId) {
-    return `${this.CACHE_KEY_PREFIX}_${userId}`;
+  serializeScope(scope = {}) {
+    const entries = Object.entries(scope)
+      .filter(([, value]) => value !== undefined && value !== null && value !== '')
+      .sort(([a], [b]) => a.localeCompare(b));
+
+    if (entries.length === 0) {
+      return 'default';
+    }
+
+    return entries
+      .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+      .join('&');
+  }
+
+  /**
+   * Get cache key for current user and request scope
+   * @private
+   * @param {string} userId - Current user ID
+   * @param {Object} [scope={}] - Request scope
+   * @returns {string} Cache key
+   */
+  getCacheKey(userId, scope = {}) {
+    return `${this.CACHE_KEY_PREFIX}_${userId}_${this.serializeScope(scope)}`;
+  }
+
+  /**
+   * Get all cache keys for current user
+   * @private
+   * @param {Object} storage - Browser storage API
+   * @param {string} userId - Current user ID
+   * @returns {Promise<string[]>} Matching cache keys
+   */
+  async getUserCacheKeys(storage, userId) {
+    const allItems = await storage.get(null);
+    const userPrefix = `${this.CACHE_KEY_PREFIX}_${userId}`;
+
+    return Object.keys(allItems).filter(key =>
+      key === userPrefix || key.startsWith(`${userPrefix}_`)
+    );
   }
 
   /**
@@ -29,7 +67,7 @@ class CacheManager {
    * Cache is isolated per user to prevent cross-user data leakage
    * Returns full response object with pagination metadata
    */
-  async getCachedPages() {
+  async getCachedPages(scope = {}) {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
@@ -40,7 +78,7 @@ class CacheManager {
       const storage = this.getStorage();
       if (!storage) return null;
 
-      const cacheKey = this.getCacheKey(userId);
+      const cacheKey = this.getCacheKey(userId, scope);
       const result = await storage.get(cacheKey);
       const cached = result[cacheKey];
 
@@ -83,7 +121,7 @@ class CacheManager {
    * Cache is isolated per user to prevent cross-user data leakage
    * Stores full response object with pagination metadata
    */
-  async setCachedPages(response) {
+  async setCachedPages(response, scope = {}) {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
@@ -94,7 +132,7 @@ class CacheManager {
       const storage = this.getStorage();
       if (!storage) return;
 
-      const cacheKey = this.getCacheKey(userId);
+      const cacheKey = this.getCacheKey(userId, scope);
       await storage.set({
         [cacheKey]: {
           userId: userId, // Store user_id for validation
@@ -115,7 +153,7 @@ class CacheManager {
    * Invalidate the cache (call after delete, update operations)
    * Clears cache for current user only
    */
-  async invalidateCache() {
+  async invalidateCache(scope = null) {
     try {
       const userId = this.getCurrentUserId();
       if (!userId) {
@@ -126,9 +164,16 @@ class CacheManager {
       const storage = this.getStorage();
       if (!storage) return;
 
-      const cacheKey = this.getCacheKey(userId);
-      await storage.remove(cacheKey);
-      debug('[invalidateCache] Cache invalidated for user:', userId);
+      if (scope) {
+        const cacheKey = this.getCacheKey(userId, scope);
+        await storage.remove(cacheKey);
+      } else {
+        const keys = await this.getUserCacheKeys(storage, userId);
+        if (keys.length > 0) {
+          await storage.remove(keys);
+        }
+      }
+      debug('[invalidateCache] Cache invalidated for user:', userId, { scope });
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
     }
@@ -156,12 +201,18 @@ class CacheManager {
    */
   async cleanupLegacyCache() {
     try {
+      const userId = this.getCurrentUserId();
       const storage = this.getStorage();
       if (!storage) return;
 
       // Remove old global cache key
       const legacyKey = 'savedPages_cache';
-      await storage.remove(legacyKey);
+      const keysToRemove = [legacyKey];
+      if (userId) {
+        keysToRemove.push(`${this.CACHE_KEY_PREFIX}_${userId}`);
+      }
+
+      await storage.remove(keysToRemove);
       debug('[cleanupLegacyCache] Removed legacy global cache');
     } catch (error) {
       console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);

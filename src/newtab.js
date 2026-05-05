@@ -31,10 +31,11 @@ const dashboardToggleBtn = document.getElementById('dashboard-toggle-btn');
 const dashboardToggleIcon = document.getElementById('dashboard-toggle-icon');
 const dashboardDrawer = document.getElementById('dashboard-drawer');
 const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdrop');
+const dashboardDrawerFrame = document.getElementById('dashboard-drawer-frame');
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
-const FAVORITES_MAX_ITEMS = 60;
+const FAVORITES_MAX_ITEMS = 300;
 const FAVORITES_DRAG_THRESHOLD = 40;
 const FAVORITES_MAX_COLUMNS = 10;
 const FAVORITES_MIN_COLUMNS = 6;
@@ -440,12 +441,7 @@ function initFavoritesPager() {
 function handleSearch(e) {
   e.preventDefault();
   const query = searchInput.value.trim();
-  if (query) {
-    // Navigate to minimal search results page
-    window.location.href = `search-results.html?q=${encodeURIComponent(query)}`;
-  } else {
-    openDashboardDrawer();
-  }
+  openDashboardDrawer({ searchQuery: query });
 }
 
 /**
@@ -471,12 +467,27 @@ async function handleSignIn() {
   }
 }
 
-function updateDrawerUrl(isOpen) {
+function getDashboardDrawerSrc(searchQuery = '') {
+  const trimmedQuery = searchQuery.trim();
+  if (!trimmedQuery) {
+    return 'database.html';
+  }
+
+  return `database.html?search=${encodeURIComponent(trimmedQuery)}`;
+}
+
+function updateDrawerUrl(isOpen, searchQuery = '') {
   const url = new URL(window.location.href);
   if (isOpen) {
     url.searchParams.set(DASHBOARD_DRAWER_PARAM, DASHBOARD_DRAWER_VALUE);
+    if (searchQuery.trim()) {
+      url.searchParams.set('search', searchQuery.trim());
+    } else {
+      url.searchParams.delete('search');
+    }
   } else {
     url.searchParams.delete(DASHBOARD_DRAWER_PARAM);
+    url.searchParams.delete('search');
   }
   window.history.replaceState({}, '', url);
 }
@@ -490,8 +501,15 @@ function setDrawerToggleState(isOpen) {
   dashboardToggleIcon.textContent = isOpen ? 'x' : '+';
 }
 
-function openDashboardDrawer({ syncUrl = true } = {}) {
+function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
   if (!dashboardDrawer) return;
+
+  if (dashboardDrawerFrame) {
+    const nextSrc = getDashboardDrawerSrc(searchQuery);
+    if (dashboardDrawerFrame.getAttribute('src') !== nextSrc) {
+      dashboardDrawerFrame.setAttribute('src', nextSrc);
+    }
+  }
 
   dashboardDrawer.classList.remove('hidden');
   dashboardDrawer.setAttribute('aria-hidden', 'false');
@@ -500,7 +518,7 @@ function openDashboardDrawer({ syncUrl = true } = {}) {
   dashboardToggleBtn?.focus();
 
   if (syncUrl) {
-    updateDrawerUrl(true);
+    updateDrawerUrl(true, searchQuery);
   }
 }
 
@@ -536,7 +554,10 @@ function initDashboardDrawer() {
 
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get(DASHBOARD_DRAWER_PARAM) === DASHBOARD_DRAWER_VALUE) {
-    openDashboardDrawer({ syncUrl: false });
+    openDashboardDrawer({
+      syncUrl: false,
+      searchQuery: urlParams.get('search') || ''
+    });
   } else {
     setDrawerToggleState(false);
   }
@@ -582,22 +603,22 @@ async function refreshBackground() {
 async function initFavorites() {
   try {
     // Check if API is available (extension mode)
-    if (typeof API === 'undefined' || !API.getSavedPages) {
+    if (typeof API === 'undefined' || !API.getFavorites) {
       return null;
     }
 
     const options = { limit: FAVORITES_MAX_ITEMS, sort: 'newest', pinnedFirst: true };
 
     // 1. Try cache (or fresh if no cache)
-    const response = await API.getSavedPages(options);
+    const response = await API.getFavorites(options);
     if (response && response.pages) {
       renderFavorites(response.pages);
       updateStats(response.pagination);
     }
 
-    // 2. Background refresh if in extension mode (to avoid cold start delay for user)
-    if (API.isExtension) {
-      API.getSavedPages({ ...options, skipCache: true })
+    // 2. Background refresh only when initial render used cached data
+    if (API.isExtension && response?.meta?.fromCache) {
+      API.getFavorites({ ...options, skipCache: true })
         .then(freshResponse => {
           if (freshResponse && freshResponse.pages) {
             renderFavorites(freshResponse.pages);
