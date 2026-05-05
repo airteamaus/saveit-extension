@@ -12,6 +12,7 @@ class PageLoaderManager {
    */
   async loadPages(dashboard) {
     try {
+      dashboard.currentFilter.cursor = null;
       const response = await API.getSavedPages(dashboard.currentFilter);
 
       // API always returns {pages, pagination} format
@@ -88,10 +89,10 @@ class PageLoaderManager {
     dashboard.scrollManager.showLoadingIndicator();
 
     try {
-      // Update offset for next batch
-      dashboard.currentFilter.offset += dashboard.currentFilter.limit;
-
-      const response = await API.getSavedPages(dashboard.currentFilter);
+      const response = await API.getSavedPages({
+        ...dashboard.currentFilter,
+        cursor: dashboard.nextCursor
+      });
 
       // API always returns {pages, pagination} format
       const newPages = response.pages || [];

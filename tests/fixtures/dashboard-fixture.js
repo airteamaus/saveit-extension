@@ -14,7 +14,7 @@ export function createMockDashboard(overrides = {}) {
     isLoadingMore: false,
     currentFilter: {
       limit: 50,
-      offset: 0
+      cursor: null
     },
     showError: vi.fn(),
     render: vi.fn(),

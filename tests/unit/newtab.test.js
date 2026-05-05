@@ -158,7 +158,7 @@ describe('newtab-minimal', () => {
 
   describe('renderFavorites logic', () => {
     let mockFavoritesRow;
-    const FAVORITES_MAX_ITEMS = 60;
+    const FAVORITES_MAX_ITEMS = 300;
     const FAVORITES_MAX_COLUMNS = 10;
     const FAVORITES_MIN_COLUMNS = 6;
     const FAVORITES_MOBILE_COLUMNS = 4;
@@ -303,7 +303,7 @@ describe('newtab-minimal', () => {
     });
 
     it('should cap favorites history used for paging', () => {
-      const pages = Array.from({ length: 100 }, (_, index) => ({
+      const pages = Array.from({ length: 400 }, (_, index) => ({
         url: `https://example${index}.com`,
         title: `Test ${index}`
       }));
@@ -318,19 +318,19 @@ describe('newtab-minimal', () => {
     function getSearchUrl(query) {
       const trimmed = query.trim();
       if (trimmed) {
-        return `search-results.html?q=${encodeURIComponent(trimmed)}`;
+        return `newtab.html?drawer=dashboard&search=${encodeURIComponent(trimmed)}`;
       }
       return 'newtab.html?drawer=dashboard';
     }
 
-    it('should navigate to search-results page with query', () => {
+    it('should navigate to drawer search with query', () => {
       const result = getSearchUrl('test query');
-      expect(result).toBe('search-results.html?q=test%20query');
+      expect(result).toBe('newtab.html?drawer=dashboard&search=test%20query');
     });
 
     it('should handle special characters', () => {
       const result = getSearchUrl('test & query');
-      expect(result).toBe('search-results.html?q=test%20%26%20query');
+      expect(result).toBe('newtab.html?drawer=dashboard&search=test%20%26%20query');
     });
 
     it('should return drawer URL for empty query', () => {

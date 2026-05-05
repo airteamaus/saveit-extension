@@ -74,7 +74,10 @@ describe('API - CRUD Operations', () => {
 
       const result = await API.getSavedPages();
 
-      expect(result).toEqual(cachedData);
+      expect(result).toEqual({
+        ...cachedData,
+        meta: { fromCache: true }
+      });
       expect(API._cacheManager.getCachedPages).toHaveBeenCalled();
     });
 

@@ -261,7 +261,7 @@ if (typeof window !== 'undefined' && !window.MOCK_DATA_EXTENDED) {
  * @param {string} options.search - Search query
  * @param {string} options.sort - Sort order ('newest' or 'oldest')
  * @param {number} options.limit - Max results
- * @param {number} options.offset - Pagination offset
+ * @param {string} [options.cursor] - Pagination cursor
  * @returns {Array} Filtered and sorted data
  */
 /* eslint-disable-next-line no-unused-vars */
@@ -301,14 +301,16 @@ function filterMockData(data, options) {
 
   // In standalone mode, return all data on initial load (no pagination)
   // This ensures tests see all mock data and stats show "X pages saved"
-  // Only apply pagination if explicitly loading more pages (offset > 0)
-  const offset = options.offset || 0;
-  if (offset === 0) {
+  // Only apply pagination if explicitly loading more pages via cursor
+  const cursor = options.cursor || null;
+  if (!cursor) {
     // Initial load - return all data
     return filtered;
   } else {
     // Infinite scroll - return paginated batch
     const limit = options.limit || 50;
+    const startIndex = filtered.findIndex(item => item.id === cursor);
+    const offset = startIndex === -1 ? 0 : startIndex + 1;
     return filtered.slice(offset, offset + limit);
   }
 }

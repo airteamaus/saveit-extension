@@ -51,6 +51,41 @@ const API = {
   },
 
   /**
+   * Build request-specific cache scope for page list queries
+   * @private
+   * @param {string} surface - Consumer surface name
+   * @param {Object} options - Query options
+   * @returns {Object} Cache scope descriptor
+   */
+  _buildListCacheScope(surface, options = {}) {
+    return {
+      surface,
+      limit: options.limit,
+      sort: options.sort || 'newest',
+      pinnedFirst: options.pinnedFirst,
+      search: options.search || '',
+      cursor: options.cursor || null
+    };
+  },
+
+  /**
+   * Attach cache metadata to a response
+   * @private
+   * @param {Object} response - Normalized response
+   * @param {boolean} fromCache - Whether the response came from cache
+   * @returns {Object} Response with metadata
+   */
+  _withCacheMetadata(response, fromCache) {
+    return {
+      ...response,
+      meta: {
+        ...(response.meta || {}),
+        fromCache
+      }
+    };
+  },
+
+  /**
    * Parse error response from HTTP fetch
    * Attempts to extract error message from JSON response, falls back to status text
    * @private
@@ -98,26 +133,26 @@ const API = {
    * Get cached response from browser storage (delegates to CacheManager)
    * @private
    */
-  async getCachedPages() {
+  async getCachedPages(scope = {}) {
     if (!this.isExtension) return null;
-    return await this.cacheManager.getCachedPages();
+    return await this.cacheManager.getCachedPages(scope);
   },
 
   /**
    * Store response in browser storage cache (delegates to CacheManager)
    * @private
    */
-  async setCachedPages(response) {
+  async setCachedPages(response, scope = {}) {
     if (!this.isExtension) return;
-    return await this.cacheManager.setCachedPages(response);
+    return await this.cacheManager.setCachedPages(response, scope);
   },
 
   /**
    * Invalidate the cache (delegates to CacheManager)
    */
-  async invalidateCache() {
+  async invalidateCache(scope = null) {
     if (!this.isExtension) return;
-    return await this.cacheManager.invalidateCache();
+    return await this.cacheManager.invalidateCache(scope);
   },
 
   /**
@@ -254,10 +289,13 @@ const API = {
 
     const params = {
       limit: options.limit || 50,
-      offset: options.offset || 0,
       search: options.search || '',
       sort: options.sort || 'newest'
     };
+
+    if (options.cursor) {
+      params.cursor = options.cursor;
+    }
 
     // Add pinnedFirst parameter if explicitly set
     if (options.pinnedFirst !== undefined) {
@@ -266,6 +304,34 @@ const API = {
 
     const data = await this._fetchWithAuth('', params);
     debug('[getSavedPages] Raw JSON response:', data);
+    return data;
+  },
+
+  /**
+   * Fetch lightweight favorites from Cloud Function (extension mode only)
+   * @private
+   * @param {Object} options - Favorites options
+   * @returns {Promise<Object>} Raw response data from Cloud Function
+   */
+  async _fetchFavoritesFromCloudFunction(options) {
+    debug('[getFavorites] Fetching favorites from Cloud Function...');
+
+    const params = {
+      favorites: 'true',
+      limit: options.limit || 300,
+      sort: options.sort || 'newest'
+    };
+
+    if (options.cursor) {
+      params.cursor = options.cursor;
+    }
+
+    if (options.pinnedFirst !== undefined) {
+      params.pinnedFirst = options.pinnedFirst;
+    }
+
+    const data = await this._fetchWithAuth('', params);
+    debug('[getFavorites] Raw JSON response:', data);
     return data;
   },
 
@@ -282,7 +348,8 @@ const API = {
         total: (data.pages || data).length,
         hasNextPage: false,
         nextCursor: null
-      }
+      },
+      meta: data.meta || {}
     };
 
     debug('[getSavedPages] Normalized response:', {
@@ -308,9 +375,38 @@ const API = {
       pages: filteredPages,
       pagination: {
         total: MOCK_DATA.length,
-        hasNextPage: (options.offset || 0) + filteredPages.length < MOCK_DATA.length,
+        hasNextPage: filteredPages.length < MOCK_DATA.length,
         nextCursor: null
-      }
+      },
+      meta: {}
+    };
+  },
+
+  /**
+   * Get lightweight mock favorites for standalone mode
+   * @private
+   * @param {Object} options - Favorites options
+   * @returns {Object} Normalized favorites response
+   */
+  _getMockFavorites(options = {}) {
+    const allPages = filterMockData(MOCK_DATA, options);
+    const limit = options.limit || 300;
+    const pages = allPages.slice(0, limit).map(page => ({
+      id: page.id,
+      url: page.url,
+      title: page.title,
+      pinned: page.pinned ?? false,
+      saved_at: page.saved_at || null
+    }));
+
+    return {
+      pages,
+      pagination: {
+        total: allPages.length,
+        hasNextPage: allPages.length > limit,
+        nextCursor: null
+      },
+      meta: {}
     };
   },
 
@@ -331,15 +427,17 @@ const API = {
     });
 
     if (this.isExtension) {
+      const cacheScope = this._buildListCacheScope('dashboard', options);
+
       // Try cache first (unless explicitly skipped)
       if (!options.skipCache) {
-        const cached = await this.getCachedPages();
+        const cached = await this.getCachedPages(cacheScope);
         if (cached) {
           debug('[getSavedPages] Returning cached data:', {
             count: cached.pages?.length,
             total: cached.pagination?.total
           });
-          return cached;
+          return this._withCacheMetadata(cached, true);
         }
       }
 
@@ -350,16 +448,56 @@ const API = {
           const normalized = this._normalizeResponse(data);
 
           // Cache and return
-          await this.setCachedPages(normalized);
-          return normalized;
+          await this.setCachedPages(normalized, cacheScope);
+          return this._withCacheMetadata(normalized, false);
         },
         'getSavedPages',
         { options }
       );
     } else {
       // Standalone mode: use mock data
-      return this._getMockData(options);
+      return this._withCacheMetadata(this._getMockData(options), false);
     }
+  },
+
+  /**
+   * Fetch lightweight favorites for the homepage
+   * @param {Object} options - Favorites options
+   * @param {number} options.limit - Max favorites to return
+   * @param {string} options.sort - Sort order ('newest' or 'oldest')
+   * @param {boolean} options.pinnedFirst - Sort pinned items first
+   * @param {boolean} options.skipCache - Force fresh fetch
+   * @returns {Promise<Object>} Favorites response object
+   */
+  async getFavorites(options = {}) {
+    debug('[getFavorites] START:', {
+      isExtension: this.isExtension,
+      skipCache: options.skipCache || false
+    });
+
+    if (this.isExtension) {
+      const cacheScope = this._buildListCacheScope('favorites', options);
+
+      if (!options.skipCache) {
+        const cached = await this.getCachedPages(cacheScope);
+        if (cached) {
+          return this._withCacheMetadata(cached, true);
+        }
+      }
+
+      return this._executeWithErrorHandling(
+        async () => {
+          const data = await this._fetchFavoritesFromCloudFunction(options);
+          const normalized = this._normalizeResponse(data);
+          await this.setCachedPages(normalized, cacheScope);
+          return this._withCacheMetadata(normalized, false);
+        },
+        'getFavorites',
+        { options }
+      );
+    }
+
+    return this._withCacheMetadata(this._getMockFavorites(options), false);
   },
 
   /**

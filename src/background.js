@@ -188,7 +188,13 @@ browser.action.onClicked.addListener(async (tab) => {
 
     // Invalidate cache so dashboard shows fresh data
     try {
-      await browser.storage.local.remove('savedPages_cache');
+      const allStorage = await browser.storage.local.get(null);
+      const cacheKeys = Object.keys(allStorage).filter(key =>
+        key === 'savedPages_cache' || key.startsWith('savedPages_cache_')
+      );
+      if (cacheKeys.length > 0) {
+        await browser.storage.local.remove(cacheKeys);
+      }
       console.log('Cache invalidated after save');
     } catch (cacheError) {
       console.error('Failed to invalidate cache:', cacheError);
