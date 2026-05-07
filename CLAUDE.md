@@ -222,7 +222,7 @@ Auto-detects from extension version:
 | Build all bundles | `just build` | Firebase bundles + package extension |
 | Build Firebase only | `just build-firebase` | Firebase SDK bundles |
 | Build extension (Firefox) | `just build` | Requires AMO_JWT |
-| Build extension (Chrome) | `just build-chrome` | Universal build |
+| Build extension (Chrome) | `just build-chrome` | Chrome Web Store package (strips Firefox manifest key) |
 | Build both browsers | `just build-all` | Firefox + Chrome |
 | Watch Firebase bundles | `just watch-firebase` | Auto-rebuild on changes |
 | Clean artifacts | `just clean` | Remove build outputs |

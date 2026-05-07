@@ -75,10 +75,9 @@ install:
 build:
     npm run build
 
-# Build extension for Chrome (universal build works for both browsers)
+# Build extension for Chrome Web Store upload
 build-chrome:
-    @just build-firebase
-    npx web-ext build --overwrite-dest
+    npm run build:chrome
 
 # Build for both Firefox and Chrome
 build-all:

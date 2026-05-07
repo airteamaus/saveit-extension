@@ -37,10 +37,7 @@ jobs:
         run: node scripts/bundle-firebase.js
 
       - name: Build Chrome extension (unsigned zip)
-        run: |
-          # Build creates universal package that works for both Firefox and Chrome
-          # Chrome will use service_worker, Firefox will use scripts array
-          npx web-ext build --overwrite-dest
+        run: node scripts/build-chrome-package.js
 
       - name: Build and sign Firefox extension
         env:
@@ -68,7 +65,11 @@ jobs:
       - name: Find and rename Chrome ZIP
         id: find_zip
         run: |
-          ZIP_PATH=$(find web-ext-artifacts -name "*.zip" -type f | head -n 1)
+          ZIP_PATH="web-ext-artifacts/saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
+          if [ ! -f "$ZIP_PATH" ]; then
+            echo "❌ Chrome ZIP not found: $ZIP_PATH"
+            exit 1
+          fi
           ZIP_NAME="saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
           mv "$ZIP_PATH" "$ZIP_NAME"
           echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT

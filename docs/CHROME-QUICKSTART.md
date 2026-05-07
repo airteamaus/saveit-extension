@@ -17,7 +17,7 @@ CHROME_REFRESH_TOKEN=1//your_refresh_token
 EOF
 
 # 3. Test upload
-npm run build
+npm run build:chrome
 npm run upload-chrome
 
 # Done! Extension uploaded to Chrome Web Store
@@ -70,7 +70,7 @@ EOF
 
 ```bash
 # Build extension
-npm run build
+npm run build:chrome
 
 # Upload (without publishing)
 npm run upload-chrome
@@ -127,15 +127,15 @@ Once setup is complete:
 
 ```bash
 # Upload new version
-npm run build
+npm run build:chrome
 npm run upload-chrome
 
 # Upload + auto-publish
-npm run build
+npm run build:chrome
 npm run upload-chrome:publish
 
 # Upload + publish to beta testers
-npm run build
+npm run build:chrome
 npm run upload-chrome:testers
 ```
 
@@ -158,6 +158,16 @@ npm run upload-chrome:testers
 - Ensure OAuth consent screen is configured
 - Check Chrome Web Store API is enabled
 - Try getting a new refresh token
+
+### "key field value in the manifest doesn't match the current item"
+
+**Solution**: Use the Chrome-specific package build:
+
+```bash
+npm run build:chrome
+```
+
+The Chrome package strips the Firefox manifest `key` before upload.
 
 ### "Extension not found"
 

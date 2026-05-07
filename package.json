@@ -12,6 +12,7 @@
     "lint": "eslint src/ --ext .js",
     "lint:fix": "eslint src/ --ext .js --fix",
     "build": "node scripts/bundle-firebase.js && web-ext build --overwrite-dest",
+    "build:chrome": "node scripts/bundle-firebase.js && node scripts/build-chrome-package.js",
     "validate": "web-ext lint --ignore-files 'saveit-backend/**' --ignore-files 'scripts/**' --ignore-files 'coverage/**' --ignore-files 'tests/**' --ignore-files 'test-*.html' --ignore-files 'firefox-dev-profile/**'",
     "dev": "web-ext run",
     "upload-chrome": "node scripts/upload-chrome.js",

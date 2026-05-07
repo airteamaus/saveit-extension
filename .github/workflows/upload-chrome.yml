@@ -42,8 +42,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build extension
-        run: npm run build
+      - name: Build Chrome extension
+        run: npm run build:chrome
 
       - name: Get version from manifest
         id: get-version

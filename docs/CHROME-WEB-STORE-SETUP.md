@@ -145,6 +145,9 @@ EOF
 # Add to .gitignore
 echo ".env.chrome" >> .gitignore
 
+# Build Chrome package
+npm run build:chrome
+
 # Test upload
 npm run upload-chrome
 ```

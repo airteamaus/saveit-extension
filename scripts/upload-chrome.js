@@ -23,9 +23,14 @@
  *   node scripts/upload-chrome.js --publish --target trustedTesters
  */
 
-const webStore = require('chrome-webstore-upload');
-const fs = require('fs');
-const path = require('path');
+import webStore from 'chrome-webstore-upload';
+import fs from 'fs';
+import path from 'path';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -35,7 +40,7 @@ const target = args.includes('--target')
   : 'default';
 
 // Load environment variables
-require('dotenv').config({ path: '.env.chrome' });
+dotenv.config({ path: '.env.chrome' });
 
 // Validate required environment variables
 const required = [
@@ -64,7 +69,7 @@ const zipPath = path.join(__dirname, '..', 'web-ext-artifacts', `saveit-chrome-$
 
 if (!fs.existsSync(zipPath)) {
   console.error(`❌ Chrome ZIP not found: ${zipPath}`);
-  console.error('\nRun "npm run build" first to create the package.');
+  console.error('\nRun "npm run build:chrome" first to create the package.');
   process.exit(1);
 }
 

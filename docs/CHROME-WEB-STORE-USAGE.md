@@ -17,8 +17,8 @@ Quick reference for uploading extensions to the Chrome Web Store after initial s
 Uploads the extension but does NOT auto-publish. You manually publish via Chrome Web Store dashboard.
 
 ```bash
-# Build the extension
-npm run build
+# Build the Chrome package
+npm run build:chrome
 
 # Upload to Chrome Web Store
 npm run upload-chrome
@@ -34,7 +34,7 @@ Uploads and immediately submits for review.
 
 ```bash
 # Build and upload + publish
-npm run build
+npm run build:chrome
 npm run upload-chrome:publish
 ```
 
@@ -48,7 +48,7 @@ Uploads and publishes to trusted testers (bypasses review).
 
 ```bash
 # Build and upload + publish to testers
-npm run build
+npm run build:chrome
 npm run upload-chrome:testers
 ```
 
@@ -120,8 +120,8 @@ open https://chrome.google.com/webstore/devconsole
 ### Production Release
 
 ```bash
-# 1. Build extension
-npm run build
+# 1. Build Chrome package
+npm run build:chrome
 
 # 2. Upload (but don't publish)
 npm run upload-chrome
@@ -136,8 +136,8 @@ npm run upload-chrome
 ### Quick Beta Release
 
 ```bash
-# 1. Build extension
-npm run build
+# 1. Build Chrome package
+npm run build:chrome
 
 # 2. Upload + publish to testers
 npm run upload-chrome:testers
@@ -179,8 +179,8 @@ cat .env.chrome
 
 **Solution**:
 ```bash
-# Ensure build ran successfully
-npm run build
+# Ensure Chrome build ran successfully
+npm run build:chrome
 
 # Verify ZIP exists
 ls -lh web-ext-artifacts/saveit-chrome-*.zip
@@ -195,6 +195,18 @@ ls -lh web-ext-artifacts/saveit-chrome-*.zip
 # Get correct ID from Chrome Web Store dashboard
 # Update CHROME_EXTENSION_ID in .env.chrome or GitHub Secrets
 ```
+
+### "key field value in the manifest doesn't match the current item"
+
+**Cause**: Uploading the generic extension zip instead of the Chrome Web Store package.
+
+**Solution**:
+```bash
+npm run build:chrome
+ls -lh web-ext-artifacts/saveit-chrome-*.zip
+```
+
+The Chrome package removes the Firefox-only manifest `key` before upload.
 
 ### "Quota exceeded" error
 
