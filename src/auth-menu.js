@@ -105,7 +105,12 @@ const AuthMenu = {
       throw new Error('Browser runtime not available');
     }
 
-    await runtime.sendMessage({ action: 'signIn' });
+    const response = await runtime.sendMessage({ action: 'signIn' });
+    if (response?.success === false) {
+      throw new Error(response.error || 'Sign-in failed');
+    }
+
+    return response;
   },
 
   async signOut() {

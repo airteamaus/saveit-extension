@@ -1,109 +1,71 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
-import {
-  initializeApp,
-  initializeAuth,
-  indexedDBLocalPersistence,
-  signInWithCredential,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  getIdToken,
-  signOut
-} from './bundles/firebase-background.js';
-import { initSentry, setUser, setRequestId, captureError } from './sentry.js';
-
-// Initialize Sentry before anything else
-initSentry();
+import { createBackgroundAuth } from './background-auth.js';
 
 console.log('SaveIt extension loaded!');
 console.log('Config:', CONFIG);
 
-// Initialize Firebase with IndexedDB persistence for service worker
-const app = initializeApp(CONFIG.firebase);
-const auth = initializeAuth(app, {
-  persistence: indexedDBLocalPersistence
-});
+const browserApi = globalThis.browser ?? globalThis.chrome;
 
-// Track when auth state is ready (loaded from IndexedDB)
-let authReady = false;
-const authReadyPromise = new Promise((resolve) => {
-  onAuthStateChanged(auth, (user) => {
-    if (!authReady) {
-      authReady = true;
-      console.log('Firebase auth state loaded from IndexedDB:', user ? user.email : 'not signed in');
-      resolve();
-    }
-    if (user) {
-      console.log('Firebase user signed in:', user.email);
-    } else {
-      console.log('Firebase user signed out');
-    }
-  });
-});
-
-/**
- * Sign in with Firebase using browser.identity OAuth flow
- * Returns Firebase user and ID token
- */
-async function signInWithFirebase() {
-  // Wait for auth to load from IndexedDB before checking currentUser
-  await authReadyPromise;
-
-  if (auth.currentUser) {
-    console.log('User already signed in, reusing auth');
-    const idToken = await getIdToken(auth.currentUser);
-    return {
-      user: auth.currentUser,
-      idToken
-    };
-  }
-
-  console.log('Launching OAuth flow...');
-  const redirectURL = browser.identity.getRedirectURL();
-
-  const authURL = new URL('https://accounts.google.com/o/oauth2/auth');
-  authURL.searchParams.set('client_id', CONFIG.oauthClientId);
-  authURL.searchParams.set('response_type', 'token id_token');
-  authURL.searchParams.set('redirect_uri', redirectURL);
-  authURL.searchParams.set('scope', 'openid email profile');
-  authURL.searchParams.set('prompt', 'select_account');
-
-  const responseURL = await browser.identity.launchWebAuthFlow({
-    interactive: true,
-    url: authURL.href
-  });
-
-  // Extract tokens from redirect URL
-  const urlParams = new URL(responseURL).hash.substring(1);
-  const params = new URLSearchParams(urlParams);
-  const accessToken = params.get('access_token');
-  const idToken = params.get('id_token');
-
-  if (!accessToken) {
-    throw new Error('No access token received from OAuth');
-  }
-
-  // Create Firebase credential from Google OAuth token
-  const credential = GoogleAuthProvider.credential(idToken, accessToken);
-
-  // Sign in to Firebase
-  const userCredential = await signInWithCredential(auth, credential);
-  const firebaseIdToken = await getIdToken(userCredential.user);
-
-  console.log('Firebase sign-in successful:', userCredential.user.email);
-
-  // Set Sentry user context
-  setUser(userCredential.user);
-
-  return {
-    user: userCredential.user,
-    idToken: firebaseIdToken
-  };
+if (!browserApi?.runtime) {
+  throw new Error('Browser runtime API not available in background context');
 }
+
+let sentryPromise = null;
+
+async function getSentry() {
+  if (!sentryPromise) {
+    sentryPromise = import('./sentry.js')
+      .then((sentry) => {
+        sentry.initSentry();
+        return sentry;
+      })
+      .catch((error) => {
+        sentryPromise = null;
+        throw error;
+      });
+  }
+
+  return sentryPromise;
+}
+
+async function setSentryUser(user) {
+  try {
+    const sentry = await getSentry();
+    sentry.setUser(user);
+  } catch (error) {
+    console.error('Failed to set Sentry user:', error);
+  }
+}
+
+async function setSentryRequestId(requestId) {
+  try {
+    const sentry = await getSentry();
+    sentry.setRequestId(requestId);
+  } catch (error) {
+    console.error('Failed to set Sentry request ID:', error);
+  }
+}
+
+async function captureBackgroundError(error, context) {
+  try {
+    const sentry = await getSentry();
+    sentry.captureError(error, context);
+  } catch (sentryError) {
+    console.error('Failed to capture error in Sentry:', sentryError);
+  }
+}
+
+const backgroundAuth = createBackgroundAuth({
+  config: CONFIG,
+  browserApi,
+  loadFirebase: () => import('./bundles/firebase-background.js'),
+  logger: console
+});
 
 // Export logout function for debugging
 globalThis.logout = async function() {
-  await signOut(auth);
+  await backgroundAuth.signOut();
   console.log('Logged out from Firebase');
 };
 
@@ -114,24 +76,25 @@ globalThis.logout = async function() {
  */
 async function showBadgeFeedback(type, duration = 2000) {
   if (type === 'success') {
-    await browser.action.setBadgeText({ text: '✓' });
-    await browser.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+    await browserApi.action.setBadgeText({ text: '✓' });
+    await browserApi.action.setBadgeBackgroundColor({ color: '#4CAF50' });
   } else if (type === 'error') {
-    await browser.action.setBadgeText({ text: '✗' });
-    await browser.action.setBadgeBackgroundColor({ color: '#F44336' });
+    await browserApi.action.setBadgeText({ text: '✗' });
+    await browserApi.action.setBadgeBackgroundColor({ color: '#F44336' });
   }
 
   // Clear badge after duration
   setTimeout(async () => {
-    await browser.action.setBadgeText({ text: '' });
+    await browserApi.action.setBadgeText({ text: '' });
   }, duration);
 }
 
 // Handle messages from dashboard (e.g., sign-in button)
-browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
+browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'signIn') {
-    signInWithFirebase()
-      .then(() => {
+    backgroundAuth.signIn()
+      .then(async ({ user }) => {
+        await setSentryUser(user);
         sendResponse({ success: true });
       })
       .catch((error) => {
@@ -143,16 +106,17 @@ browser.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Handle extension icon clicks
-browser.action.onClicked.addListener(async (tab) => {
+browserApi.action.onClicked.addListener(async (tab) => {
   console.log('Extension icon clicked!');
 
   // Show immediate feedback that click was registered
-  await browser.action.setBadgeText({ text: '...' });
-  await browser.action.setBadgeBackgroundColor({ color: '#64748b' });
+  await browserApi.action.setBadgeText({ text: '...' });
+  await browserApi.action.setBadgeBackgroundColor({ color: '#64748b' });
 
   try {
     // Sign in with Firebase (prompts OAuth if not signed in)
-    const { user, idToken } = await signInWithFirebase();
+    const { user, idToken } = await backgroundAuth.signIn();
+    await setSentryUser(user);
     console.log('Got Firebase user:', user.email);
 
     const pageData = {
@@ -183,17 +147,17 @@ browser.action.onClicked.addListener(async (tab) => {
 
     // Set request_id for error correlation
     if (data.request_id) {
-      setRequestId(data.request_id);
+      await setSentryRequestId(data.request_id);
     }
 
     // Invalidate cache so dashboard shows fresh data
     try {
-      const allStorage = await browser.storage.local.get(null);
+      const allStorage = await browserApi.storage.local.get(null);
       const cacheKeys = Object.keys(allStorage).filter(key =>
         key === 'savedPages_cache' || key.startsWith('savedPages_cache_')
       );
       if (cacheKeys.length > 0) {
-        await browser.storage.local.remove(cacheKeys);
+        await browserApi.storage.local.remove(cacheKeys);
       }
       console.log('Cache invalidated after save');
     } catch (cacheError) {
@@ -203,7 +167,7 @@ browser.action.onClicked.addListener(async (tab) => {
     // Show success feedback on icon (always visible)
     await showBadgeFeedback('success', 2000);
 
-    browser.notifications.create({
+    browserApi.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
       title: 'SaveIt',
@@ -214,7 +178,7 @@ browser.action.onClicked.addListener(async (tab) => {
     console.error('Error saving page:', error);
 
     // Capture error in Sentry with context
-    captureError(error, {
+    await captureBackgroundError(error, {
       context: 'save-page',
       url: tab.url,
       title: tab.title
@@ -237,7 +201,7 @@ browser.action.onClicked.addListener(async (tab) => {
       userMessage = 'Authentication failed. Please try again or check your Google account.';
     }
 
-    browser.notifications.create({
+    browserApi.notifications.create({
       type: 'basic',
       iconUrl: 'icon.png',
       title: 'SaveIt - Error',
