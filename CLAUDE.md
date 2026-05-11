@@ -222,7 +222,7 @@ Auto-detects from extension version:
 | Build all bundles | `just build` | Firebase bundles + package extension |
 | Build Firebase only | `just build-firebase` | Firebase SDK bundles |
 | Build extension (Firefox) | `just build` | Requires AMO_JWT |
-| Build extension (Chrome) | `just build-chrome` | Chrome Web Store package (strips Firefox manifest key) |
+| Build extension (Chrome) | `just build-chrome` | Chrome package with stable Store ID for sideload and upload |
 | Build both browsers | `just build-all` | Firefox + Chrome |
 | Watch Firebase bundles | `just watch-firebase` | Auto-rebuild on changes |
 | Clean artifacts | `just clean` | Remove build outputs |
@@ -333,8 +333,7 @@ oauthClientId: 'xxx.apps.googleusercontent.com'
 
 **OAuth redirect URIs** (must match Google Cloud Console):
 - Firefox: `https://<EXTENSION_ID>.extensions.allizom.org/` (ID: `saveit@airteam.com.au`)
-- Chrome (Store): `https://emiieedcdenibjicjfoekllgakpgekdk.chromiumapp.org/`
-- Chrome (Unpacked): `https://<generated-id>.chromiumapp.org/` (varies)
+- Chrome (Store + sideload): `https://emiieedcdenibjicjfoekllgakpgekdk.chromiumapp.org/`
 
 **Permissions:** `activeTab`, `notifications`, `identity`, `storage`, `https://*.run.app/*`, `https://www.googleapis.com/*`
 

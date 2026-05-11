@@ -58,6 +58,28 @@ export function captureError(error, context = {}) {
 }
 
 /**
+ * Capture a message with additional context
+ * @param {string} message - Message to capture
+ * @param {Object} context - Additional metadata for the message
+ * @param {'fatal' | 'error' | 'warning' | 'log' | 'info' | 'debug'} level - Sentry level
+ */
+export function captureMessage(message, context = {}, level = 'info') {
+  Sentry.captureMessage(message, {
+    level,
+    extra: sanitizeTelemetryContext(context)
+  });
+}
+
+/**
+ * Flush queued events before a control-flow handoff
+ * @param {number} timeout - Flush timeout in milliseconds
+ * @returns {Promise<boolean>}
+ */
+export function flush(timeout = 2000) {
+  return Sentry.flush(timeout);
+}
+
+/**
  * Clear user context (on sign out)
  */
 export function clearUser() {

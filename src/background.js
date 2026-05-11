@@ -65,11 +65,24 @@ async function captureBackgroundError(error, context) {
   }
 }
 
+async function captureBackgroundMessage(message, context, level = 'info', flushTimeout = 2000) {
+  try {
+    const sentry = await getSentry();
+    sentry.captureMessage(message, context, level);
+    await sentry.flush(flushTimeout);
+  } catch (sentryError) {
+    logger.error('Failed to capture message in Sentry', sentryError);
+  }
+}
+
 const backgroundAuth = createBackgroundAuth({
   config: CONFIG,
   browserApi,
   loadFirebase: () => import('./bundles/firebase-background.js'),
-  logger: authLogger
+  logger: authLogger,
+  telemetry: {
+    captureMessage: captureBackgroundMessage
+  }
 });
 
 // Export logout function for debugging

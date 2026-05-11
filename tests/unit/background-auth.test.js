@@ -9,6 +9,7 @@ describe('createBackgroundAuth', () => {
   let loadFirebase;
   let backgroundAuth;
   let logger;
+  let telemetry;
 
   beforeEach(() => {
     auth = { currentUser: null };
@@ -45,6 +46,9 @@ describe('createBackgroundAuth', () => {
       warn: vi.fn(),
       error: vi.fn()
     };
+    telemetry = {
+      captureMessage: vi.fn(async () => {})
+    };
 
     backgroundAuth = createBackgroundAuth({
       config: {
@@ -53,7 +57,8 @@ describe('createBackgroundAuth', () => {
       },
       browserApi,
       loadFirebase,
-      logger
+      logger,
+      telemetry
     });
   });
 
@@ -75,6 +80,14 @@ describe('createBackgroundAuth', () => {
     expect(firebase.signInWithCredential).toHaveBeenCalledTimes(1);
     expect(firstResult.idToken).toBe('token-for-test@example.com');
     expect(secondResult.idToken).toBe('token-for-test@example.com');
+    expect(telemetry.captureMessage).toHaveBeenCalledWith(
+      'OAuth flow launched',
+      expect.objectContaining({
+        context: 'sign-in-start',
+        redirectUri: 'https://extension-id.extensions.allizom.org/'
+      }),
+      'warning'
+    );
   });
 
   it('annotates OAuth launch failures with safe redirect context', async () => {
@@ -101,6 +114,14 @@ describe('createBackgroundAuth', () => {
       expect.objectContaining({
         redirectUri: 'https://extension-id.extensions.allizom.org/'
       })
+    );
+    expect(telemetry.captureMessage).toHaveBeenCalledWith(
+      'OAuth flow launched',
+      expect.objectContaining({
+        runtimeId: 'extension-runtime-id',
+        redirectUri: 'https://extension-id.extensions.allizom.org/'
+      }),
+      'warning'
     );
   });
 });

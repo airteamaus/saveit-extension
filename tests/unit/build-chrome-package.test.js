@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { createChromeStoreManifest } from '../../scripts/build-chrome-package.js';
 
 describe('createChromeStoreManifest', () => {
-  it('removes Firefox-only manifest fields for Chrome Web Store uploads', () => {
+  it('keeps a stable Chrome key while removing Firefox-only manifest fields', () => {
     const manifest = {
       manifest_version: 3,
       version: '1.9.5',
@@ -22,7 +22,7 @@ describe('createChromeStoreManifest', () => {
 
     const chromeManifest = createChromeStoreManifest(manifest);
 
-    expect(chromeManifest.key).toBeUndefined();
+    expect(chromeManifest.key).toBe('firefox-key');
     expect(chromeManifest.browser_specific_settings).toBeUndefined();
     expect(chromeManifest.background.scripts).toBeUndefined();
     expect(chromeManifest.background.service_worker).toBe('src/bundles/background-bundle.js');

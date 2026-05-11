@@ -1,6 +1,12 @@
 import { attachTelemetryContext, getSafeRedirectContext, getSafeResponseContext } from './telemetry.js';
 
-export function createBackgroundAuth({ config, browserApi, loadFirebase, logger = console }) {
+export function createBackgroundAuth({
+  config,
+  browserApi,
+  loadFirebase,
+  logger = console,
+  telemetry = {}
+}) {
   let authContextPromise = null;
 
   async function createAuthContext() {
@@ -68,6 +74,15 @@ export function createBackgroundAuth({ config, browserApi, loadFirebase, logger 
     };
 
     logger.log('Launching OAuth flow', authContext);
+    await telemetry.captureMessage?.(
+      'OAuth flow launched',
+      {
+        context: 'sign-in-start',
+        surface: 'extension',
+        ...authContext
+      },
+      'warning'
+    );
 
     const authURL = new URL('https://accounts.google.com/o/oauth2/auth');
     authURL.searchParams.set('client_id', config.oauthClientId);

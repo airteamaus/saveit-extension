@@ -14,7 +14,6 @@ const ARTIFACTS_DIR = path.join(REPO_ROOT, 'web-ext-artifacts');
 export function createChromeStoreManifest(manifest) {
   const chromeManifest = structuredClone(manifest);
 
-  delete chromeManifest.key;
   delete chromeManifest.browser_specific_settings;
 
   if (chromeManifest.background?.scripts) {
@@ -97,7 +96,7 @@ export function buildChromePackage() {
     );
 
     const chromeZipPath = renameBuiltZip(version, tempArtifactsDir);
-    console.log(`✅ Built Chrome Web Store package: ${path.basename(chromeZipPath)}`);
+    console.log(`✅ Built Chrome package: ${path.basename(chromeZipPath)}`);
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
