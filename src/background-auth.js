@@ -1,3 +1,5 @@
+import { attachTelemetryContext, getSafeRedirectContext, getSafeResponseContext } from './telemetry.js';
+
 export function createBackgroundAuth({ config, browserApi, loadFirebase, logger = console }) {
   let authContextPromise = null;
 
@@ -13,11 +15,15 @@ export function createBackgroundAuth({ config, browserApi, loadFirebase, logger 
       firebase.onAuthStateChanged(auth, (user) => {
         if (!authReady) {
           authReady = true;
-          logger.log('Firebase auth state loaded from IndexedDB:', user ? user.email : 'not signed in');
+          logger.log('Firebase auth state loaded from IndexedDB', {
+            hasCachedUser: Boolean(user)
+          });
           resolve();
         }
 
-        logger.log('Firebase user', user ? `signed in: ${user.email}` : 'signed out');
+        logger.log('Firebase user state changed', {
+          isSignedIn: Boolean(user)
+        });
       });
     });
 
@@ -53,8 +59,15 @@ export function createBackgroundAuth({ config, browserApi, loadFirebase, logger 
       };
     }
 
-    logger.log('Launching OAuth flow...');
     const redirectURL = browserApi.identity.getRedirectURL();
+    const authContext = {
+      authFlow: 'google-oauth',
+      interaction: 'interactive',
+      runtimeId: browserApi.runtime?.id || null,
+      ...getSafeRedirectContext(redirectURL)
+    };
+
+    logger.log('Launching OAuth flow', authContext);
 
     const authURL = new URL('https://accounts.google.com/o/oauth2/auth');
     authURL.searchParams.set('client_id', config.oauthClientId);
@@ -63,24 +76,55 @@ export function createBackgroundAuth({ config, browserApi, loadFirebase, logger 
     authURL.searchParams.set('scope', 'openid email profile');
     authURL.searchParams.set('prompt', 'select_account');
 
-    const responseURL = await browserApi.identity.launchWebAuthFlow({
-      interactive: true,
-      url: authURL.href
-    });
+    let responseURL;
+    try {
+      responseURL = await browserApi.identity.launchWebAuthFlow({
+        interactive: true,
+        url: authURL.href
+      });
+    } catch (error) {
+      const authError = attachTelemetryContext(error, authContext);
+      logger.error('OAuth flow failed', authError, authError.telemetryContext);
+      throw authError;
+    }
 
-    const params = new URLSearchParams(new URL(responseURL).hash.substring(1));
+    const responseContext = {
+      ...authContext,
+      ...getSafeResponseContext(responseURL)
+    };
+
+    let params;
+    try {
+      params = new URLSearchParams(new URL(responseURL).hash.substring(1));
+    } catch (error) {
+      const authError = attachTelemetryContext(error, responseContext);
+      logger.error('Failed to parse OAuth response', authError, authError.telemetryContext);
+      throw authError;
+    }
+
     const accessToken = params.get('access_token');
     const idToken = params.get('id_token');
 
     if (!accessToken) {
-      throw new Error('No access token received from OAuth');
+      const authError = attachTelemetryContext(
+        new Error('No access token received from OAuth'),
+        {
+          ...responseContext,
+          hasAccessToken: false,
+          hasIdToken: Boolean(idToken)
+        }
+      );
+      logger.warn('OAuth response missing access token', authError.telemetryContext);
+      throw authError;
     }
 
     const credential = firebase.GoogleAuthProvider.credential(idToken, accessToken);
     const userCredential = await firebase.signInWithCredential(auth, credential);
     const firebaseIdToken = await firebase.getIdToken(userCredential.user);
 
-    logger.log('Firebase sign-in successful:', userCredential.user.email);
+    logger.log('Firebase sign-in successful', {
+      hasUser: Boolean(userCredential.user?.uid)
+    });
 
     return {
       user: userCredential.user,

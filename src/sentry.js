@@ -1,21 +1,30 @@
 // sentry.js - Centralized Sentry error tracking for browser extension
-// Used by both background.js (service worker) and newtab.js (dashboard)
+// Used by both background.js (service worker) and dashboard pages
 
 import * as Sentry from '@sentry/browser';
+import { CONFIG } from './config.js';
+import { sanitizeTelemetryContext } from './telemetry.js';
 
 const SENTRY_DSN = 'https://e8cd12c46bbc58b4792f8d00cb861506@o1546.ingest.us.sentry.io/4510395640053760';
+let isInitialized = false;
 
 /**
  * Initialize Sentry SDK
  * Call at module load time in both background.js and newtab.js
  */
 export function initSentry() {
+  if (isInitialized || !CONFIG.enableErrorReporting) {
+    return;
+  }
+
   Sentry.init({
     dsn: SENTRY_DSN,
-    environment: 'production',
+    environment: CONFIG.environment,
     sampleRate: 1.0,
     tracesSampleRate: 0.1
   });
+
+  isInitialized = true;
 }
 
 /**
@@ -45,7 +54,7 @@ export function setRequestId(requestId) {
  * @param {Object} context - Additional context (url, operation, etc.)
  */
 export function captureError(error, context = {}) {
-  Sentry.captureException(error, { extra: context });
+  Sentry.captureException(error, { extra: sanitizeTelemetryContext(context) });
 }
 
 /**

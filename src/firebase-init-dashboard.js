@@ -37,6 +37,9 @@ window.firebaseReady = (async () => {
     }
   } catch (error) {
     console.error('[Firebase] Initialization failed:', error);
+    window.SentryHelpers?.captureError(error, {
+      context: 'firebase-init-dashboard'
+    });
     return false;
   }
 })();

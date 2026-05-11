@@ -8,6 +8,7 @@ describe('createBackgroundAuth', () => {
   let firebase;
   let loadFirebase;
   let backgroundAuth;
+  let logger;
 
   beforeEach(() => {
     auth = { currentUser: null };
@@ -39,6 +40,12 @@ describe('createBackgroundAuth', () => {
     };
 
     loadFirebase = vi.fn(async () => firebase);
+    logger = {
+      log: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn()
+    };
+
     backgroundAuth = createBackgroundAuth({
       config: {
         oauthClientId: 'test-client-id',
@@ -46,9 +53,7 @@ describe('createBackgroundAuth', () => {
       },
       browserApi,
       loadFirebase,
-      logger: {
-        log: vi.fn()
-      }
+      logger
     });
   });
 
@@ -70,5 +75,32 @@ describe('createBackgroundAuth', () => {
     expect(firebase.signInWithCredential).toHaveBeenCalledTimes(1);
     expect(firstResult.idToken).toBe('token-for-test@example.com');
     expect(secondResult.idToken).toBe('token-for-test@example.com');
+  });
+
+  it('annotates OAuth launch failures with safe redirect context', async () => {
+    browserApi.runtime = { id: 'extension-runtime-id' };
+    browserApi.identity.launchWebAuthFlow.mockRejectedValue(new Error('400 redirect_uri_mismatch'));
+
+    await expect(backgroundAuth.signIn()).rejects.toMatchObject({
+      message: '400 redirect_uri_mismatch',
+      telemetryContext: {
+        authFlow: 'google-oauth',
+        interaction: 'interactive',
+        runtimeId: 'extension-runtime-id',
+        redirectUri: 'https://extension-id.extensions.allizom.org/',
+        redirectOrigin: 'https://extension-id.extensions.allizom.org',
+        redirectPath: '/',
+        redirectScheme: 'https',
+        hasRedirectUri: true
+      }
+    });
+
+    expect(logger.error).toHaveBeenCalledWith(
+      'OAuth flow failed',
+      expect.objectContaining({ message: '400 redirect_uri_mismatch' }),
+      expect.objectContaining({
+        redirectUri: 'https://extension-id.extensions.allizom.org/'
+      })
+    );
   });
 });

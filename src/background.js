@@ -1,9 +1,15 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
+import { createLogger, getSafePageContext } from './telemetry.js';
 
-console.log('SaveIt extension loaded!');
-console.log('Config:', CONFIG);
+const logger = createLogger('background');
+const authLogger = createLogger('background-auth');
+
+logger.log('Extension loaded', {
+  environment: CONFIG.environment,
+  errorReportingEnabled: CONFIG.enableErrorReporting
+});
 
 const browserApi = globalThis.browser ?? globalThis.chrome;
 
@@ -34,7 +40,7 @@ async function setSentryUser(user) {
     const sentry = await getSentry();
     sentry.setUser(user);
   } catch (error) {
-    console.error('Failed to set Sentry user:', error);
+    logger.error('Failed to set Sentry user', error);
   }
 }
 
@@ -43,16 +49,19 @@ async function setSentryRequestId(requestId) {
     const sentry = await getSentry();
     sentry.setRequestId(requestId);
   } catch (error) {
-    console.error('Failed to set Sentry request ID:', error);
+    logger.error('Failed to set Sentry request ID', error);
   }
 }
 
 async function captureBackgroundError(error, context) {
   try {
     const sentry = await getSentry();
-    sentry.captureError(error, context);
+    sentry.captureError(error, {
+      ...(error?.telemetryContext || {}),
+      ...context
+    });
   } catch (sentryError) {
-    console.error('Failed to capture error in Sentry:', sentryError);
+    logger.error('Failed to capture error in Sentry', sentryError);
   }
 }
 
@@ -60,13 +69,13 @@ const backgroundAuth = createBackgroundAuth({
   config: CONFIG,
   browserApi,
   loadFirebase: () => import('./bundles/firebase-background.js'),
-  logger: console
+  logger: authLogger
 });
 
 // Export logout function for debugging
 globalThis.logout = async function() {
   await backgroundAuth.signOut();
-  console.log('Logged out from Firebase');
+  logger.log('Logged out from Firebase');
 };
 
 /**
@@ -97,8 +106,12 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await setSentryUser(user);
         sendResponse({ success: true });
       })
-      .catch((error) => {
-        console.error('Sign-in failed:', error);
+      .catch(async (error) => {
+        logger.error('Sign-in failed', error, error?.telemetryContext);
+        await captureBackgroundError(error, {
+          context: 'sign-in',
+          surface: 'dashboard'
+        });
         sendResponse({ success: false, error: error.message });
       });
     return true; // Keep channel open for async response
@@ -107,7 +120,7 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Handle extension icon clicks
 browserApi.action.onClicked.addListener(async (tab) => {
-  console.log('Extension icon clicked!');
+  logger.log('Extension icon clicked');
 
   // Show immediate feedback that click was registered
   await browserApi.action.setBadgeText({ text: '...' });
@@ -117,7 +130,9 @@ browserApi.action.onClicked.addListener(async (tab) => {
     // Sign in with Firebase (prompts OAuth if not signed in)
     const { user, idToken } = await backgroundAuth.signIn();
     await setSentryUser(user);
-    console.log('Got Firebase user:', user.email);
+    logger.log('Got Firebase user', {
+      hasUser: Boolean(user?.uid)
+    });
 
     const pageData = {
       url: tab.url,
@@ -125,7 +140,7 @@ browserApi.action.onClicked.addListener(async (tab) => {
       saved_at: new Date().toISOString()
     };
 
-    console.log('Sending to Cloud Function:', pageData);
+    logger.log('Sending page save request', getSafePageContext(tab.url, tab.title));
 
     const response = await fetch(CONFIG.cloudFunctionUrl, {
       method: 'POST',
@@ -143,7 +158,7 @@ browserApi.action.onClicked.addListener(async (tab) => {
     }
 
     const data = await response.json();
-    console.log('Page saved successfully!');
+    logger.log('Page saved successfully');
 
     // Set request_id for error correlation
     if (data.request_id) {
@@ -159,9 +174,11 @@ browserApi.action.onClicked.addListener(async (tab) => {
       if (cacheKeys.length > 0) {
         await browserApi.storage.local.remove(cacheKeys);
       }
-      console.log('Cache invalidated after save');
+      logger.log('Cache invalidated after save', {
+        cacheKeysRemoved: cacheKeys.length
+      });
     } catch (cacheError) {
-      console.error('Failed to invalidate cache:', cacheError);
+      logger.error('Failed to invalidate cache', cacheError);
     }
 
     // Show success feedback on icon (always visible)
@@ -175,13 +192,13 @@ browserApi.action.onClicked.addListener(async (tab) => {
     });
 
   } catch (error) {
-    console.error('Error saving page:', error);
+    logger.error('Error saving page', error, getSafePageContext(tab?.url, tab?.title));
 
     // Capture error in Sentry with context
     await captureBackgroundError(error, {
       context: 'save-page',
-      url: tab.url,
-      title: tab.title
+      surface: 'toolbar',
+      ...getSafePageContext(tab?.url, tab?.title)
     });
 
     // Show error feedback on icon (always visible)
