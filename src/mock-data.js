@@ -16,6 +16,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['travel', 'motorcycles', 'himalayas'],
+    project_ids: ['project-saveit-product', 'project-mobility-research'],
     ai_summary_brief: 'A first-person account of an extreme motorcycle expedition through high-altitude Himalayan passes, exploring remote territories and documenting the challenges of high-altitude riding.',
     classifications: [
       { type: 'general', label: 'Geography', confidence: 0.90 },
@@ -39,6 +40,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['technology', 'climate'],
+    project_ids: ['project-mobility-research'],
     ai_summary_brief: null,
     primary_classification_label: null,
     ai_enriched_at: null
@@ -57,6 +59,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['javascript', 'opensource'],
+    project_ids: ['project-saveit-product', 'project-dev-infra'],
     ai_summary_brief: 'A minimal JavaScript framework emphasizing performance and developer experience with zero external dependencies and comprehensive TypeScript integration.',
     classifications: [
       { type: 'general', label: 'Computer Science', confidence: 0.95 },
@@ -80,6 +83,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['design', 'minimalism'],
+    project_ids: ['project-saveit-product'],
     ai_summary_brief: null,
     primary_classification_label: null,
     ai_enriched_at: null
@@ -98,6 +102,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['ai', 'research', 'llm'],
+    project_ids: ['project-saveit-product', 'project-ai-radar'],
     ai_summary_brief: 'An academic investigation into chain-of-thought prompting methods for large language models, analyzing their effectiveness across various reasoning benchmarks and task categories.',
     classifications: [
       { type: 'general', label: 'Computer Science', confidence: 0.95 },
@@ -122,6 +127,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['cooking', 'bread'],
+    project_ids: [],
     ai_summary_brief: 'A comprehensive guide to baking artisan sourdough bread at home, covering fermentation science, starter maintenance, and techniques for achieving professional-quality crust and crumb.',
     primary_classification_label: 'Home & family management',
     ai_enriched_at: '2024-01-18T19:45:00Z'
@@ -140,6 +146,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['react', 'performance'],
+    project_ids: ['project-saveit-product', 'project-dev-infra'],
     ai_summary_brief: null,
     primary_classification_label: null,
     ai_enriched_at: null
@@ -158,6 +165,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['philosophy', 'physics'],
+    project_ids: [],
     ai_summary_brief: 'A philosophical examination of temporal ontology, contrasting presentist and eternalist perspectives on time while exploring implications from modern physics and special relativity.',
     primary_classification_label: 'Philosophy',
     ai_enriched_at: '2024-01-17T21:15:00Z'
@@ -176,6 +184,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['typescript', 'tutorial'],
+    project_ids: ['project-dev-infra'],
     ai_summary_brief: null,
     primary_classification_label: null,
     ai_enriched_at: null
@@ -194,6 +203,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['apple', 'vr', 'review'],
+    project_ids: ['project-ai-radar'],
     ai_summary_brief: 'A hands-on review of Apple Vision Pro after extended use, evaluating its spatial computing capabilities, user experience strengths and limitations, and overall value proposition at premium pricing.',
     primary_classification_label: 'Computer science, information, works',
     ai_enriched_at: '2024-01-15T20:45:00Z'
@@ -212,6 +222,7 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['career', 'philosophy'],
+    project_ids: ['project-saveit-product'],
     ai_summary_brief: null,
     primary_classification_label: null,
     ai_enriched_at: null
@@ -230,11 +241,59 @@ const MOCK_DATA = [
     user_email: 'rich@airteam.com.au',
     user_notes: null,
     manual_tags: ['ai', 'documentation'],
+    project_ids: ['project-saveit-product', 'project-ai-radar'],
     ai_summary_brief: 'Official API documentation for integrating Claude AI assistant into applications, including setup instructions, code examples, and best practices for implementation.',
     primary_classification_label: 'Computer programming, programs, data',
     ai_enriched_at: '2024-01-13T16:50:00Z'
   }
 ];
+
+globalThis.MOCK_DATA = MOCK_DATA;
+
+const MOCK_PROJECTS = [
+  {
+    id: 'project-saveit-product',
+    name: 'SaveIt product',
+    owner_user_id: 'rich@airteam.com.au',
+    visibility: 'company',
+    company_domain: 'airteam.com.au',
+    archived: false,
+    created_at: '2024-01-10T09:00:00Z',
+    updated_at: '2024-01-20T16:45:00Z'
+  },
+  {
+    id: 'project-mobility-research',
+    name: 'Mobility research',
+    owner_user_id: 'rich@airteam.com.au',
+    visibility: 'private',
+    company_domain: null,
+    archived: false,
+    created_at: '2024-01-09T09:00:00Z',
+    updated_at: '2024-01-20T14:30:00Z'
+  },
+  {
+    id: 'project-dev-infra',
+    name: 'Dev infrastructure',
+    owner_user_id: 'rich@airteam.com.au',
+    visibility: 'company',
+    company_domain: 'airteam.com.au',
+    archived: false,
+    created_at: '2024-01-08T09:00:00Z',
+    updated_at: '2024-01-19T11:20:00Z'
+  },
+  {
+    id: 'project-ai-radar',
+    name: 'AI radar',
+    owner_user_id: 'rich@airteam.com.au',
+    visibility: 'private',
+    company_domain: null,
+    archived: false,
+    created_at: '2024-01-07T09:00:00Z',
+    updated_at: '2024-01-18T22:10:00Z'
+  }
+];
+
+globalThis.MOCK_PROJECTS = MOCK_PROJECTS;
 
 // Extend mock data for infinite scroll testing (duplicate items with new IDs)
 // This gives us enough items to test pagination
@@ -267,6 +326,10 @@ if (typeof window !== 'undefined' && !window.MOCK_DATA_EXTENDED) {
 /* eslint-disable-next-line no-unused-vars */
 function filterMockData(data, options) {
   let filtered = [...data];
+
+  if (options.projectId) {
+    filtered = filtered.filter(item => item.project_ids?.includes(options.projectId));
+  }
 
   if (options.search) {
     const query = options.search.toLowerCase();
@@ -313,4 +376,83 @@ function filterMockData(data, options) {
     const offset = startIndex === -1 ? 0 : startIndex + 1;
     return filtered.slice(offset, offset + limit);
   }
+}
+
+function getMockProjectPageCount(projectId) {
+  return (globalThis.MOCK_DATA || [])
+    .filter(page => page.project_ids?.includes(projectId))
+    .length;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function getMockProjectsData(options = {}) {
+  const includeArchived = options.includeArchived === true;
+
+  return (globalThis.MOCK_PROJECTS || [])
+    .filter(project => includeArchived || !project.archived)
+    .map(project => ({
+      ...project,
+      page_count: getMockProjectPageCount(project.id)
+    }));
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function createMockProjectData(project) {
+  const now = new Date().toISOString();
+  const newProject = {
+    id: project.id || `project-${Date.now()}`,
+    name: project.name,
+    owner_user_id: project.owner_user_id || 'rich@airteam.com.au',
+    visibility: project.visibility || 'private',
+    company_domain: project.company_domain || null,
+    archived: false,
+    created_at: now,
+    updated_at: now
+  };
+
+  globalThis.MOCK_PROJECTS.push(newProject);
+
+  return {
+    ...newProject,
+    page_count: 0
+  };
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function updateMockProjectData(projectId, updates) {
+  const project = globalThis.MOCK_PROJECTS.find(entry => entry.id === projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  Object.assign(project, updates, { updated_at: new Date().toISOString() });
+
+  return {
+    ...project,
+    page_count: getMockProjectPageCount(project.id)
+  };
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function addPageToMockProjectData(projectId, pageId) {
+  const page = globalThis.MOCK_DATA.find(entry => entry.id === pageId);
+  if (!page) {
+    throw new Error('Page not found');
+  }
+
+  const projectIds = new Set(page.project_ids || []);
+  projectIds.add(projectId);
+  page.project_ids = Array.from(projectIds);
+  return page;
+}
+
+/* eslint-disable-next-line no-unused-vars */
+function removePageFromMockProjectData(projectId, pageId) {
+  const page = globalThis.MOCK_DATA.find(entry => entry.id === pageId);
+  if (!page) {
+    throw new Error('Page not found');
+  }
+
+  page.project_ids = (page.project_ids || []).filter(id => id !== projectId);
+  return page;
 }

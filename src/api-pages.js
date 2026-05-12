@@ -15,6 +15,10 @@ function buildSavedPagesParams(options) {
     params.pinnedFirst = options.pinnedFirst;
   }
 
+  if (options.projectId) {
+    params.projectId = options.projectId;
+  }
+
   return params;
 }
 
@@ -31,6 +35,10 @@ function buildFavoritesParams(options) {
 
   if (options.pinnedFirst !== undefined) {
     params.pinnedFirst = options.pinnedFirst;
+  }
+
+  if (options.projectId) {
+    params.projectId = options.projectId;
   }
 
   return params;
@@ -60,13 +68,14 @@ function normalizePagesResponse(data, context) {
 
 function getMockPages(options) {
   debug('[getSavedPages] Using mock data (standalone mode)');
+  const totalPages = globalThis.filterMockData(MOCK_DATA, { ...options, cursor: null });
   const filteredPages = globalThis.filterMockData(MOCK_DATA, options);
 
   return {
     pages: filteredPages,
     pagination: {
-      total: MOCK_DATA.length,
-      hasNextPage: filteredPages.length < MOCK_DATA.length,
+      total: totalPages.length,
+      hasNextPage: filteredPages.length < totalPages.length,
       nextCursor: null
     },
     meta: {}
@@ -74,9 +83,10 @@ function getMockPages(options) {
 }
 
 function getMockFavorites(options = {}) {
-  const allPages = globalThis.filterMockData(MOCK_DATA, options);
+  const allPages = globalThis.filterMockData(MOCK_DATA, { ...options, cursor: null });
+  const pagedPages = globalThis.filterMockData(MOCK_DATA, options);
   const limit = options.limit || 300;
-  const pages = allPages.slice(0, limit).map(page => ({
+  const pages = pagedPages.slice(0, limit).map(page => ({
     ...page,
     pinned: page.pinned ?? false,
     saved_at: page.saved_at || null
@@ -91,6 +101,94 @@ function getMockFavorites(options = {}) {
     },
     meta: {}
   };
+}
+
+function getStandaloneProjects(options = {}) {
+  if (typeof globalThis.getMockProjectsData === 'function') {
+    return globalThis.getMockProjectsData(options);
+  }
+
+  const projects = globalThis.MOCK_PROJECTS || [];
+  const pages = globalThis.MOCK_DATA || [];
+  const includeArchived = options.includeArchived === true;
+
+  return projects
+    .filter(project => includeArchived || !project.archived)
+    .map(project => ({
+      ...project,
+      page_count: pages.filter(page => page.project_ids?.includes(project.id)).length
+    }));
+}
+
+function createStandaloneProject(project) {
+  if (typeof globalThis.createMockProjectData === 'function') {
+    return globalThis.createMockProjectData(project);
+  }
+
+  const now = new Date().toISOString();
+  const newProject = {
+    id: project.id || `project-${Date.now()}`,
+    name: project.name,
+    owner_user_id: project.owner_user_id || 'standalone-user',
+    visibility: project.visibility || 'private',
+    company_domain: project.company_domain || null,
+    archived: false,
+    created_at: now,
+    updated_at: now
+  };
+
+  const projects = globalThis.MOCK_PROJECTS || [];
+  projects.push(newProject);
+  globalThis.MOCK_PROJECTS = projects;
+  return { ...newProject, page_count: 0 };
+}
+
+function updateStandaloneProject(projectId, updates) {
+  if (typeof globalThis.updateMockProjectData === 'function') {
+    return globalThis.updateMockProjectData(projectId, updates);
+  }
+
+  const projects = globalThis.MOCK_PROJECTS || [];
+  const project = projects.find(entry => entry.id === projectId);
+  if (!project) {
+    throw new Error('Project not found');
+  }
+
+  Object.assign(project, updates, { updated_at: new Date().toISOString() });
+  return {
+    ...project,
+    page_count: (globalThis.MOCK_DATA || []).filter(page => page.project_ids?.includes(projectId)).length
+  };
+}
+
+function addStandalonePageToProject(projectId, pageId) {
+  if (typeof globalThis.addPageToMockProjectData === 'function') {
+    return globalThis.addPageToMockProjectData(projectId, pageId);
+  }
+
+  const page = (globalThis.MOCK_DATA || []).find(entry => entry.id === pageId);
+  if (!page) {
+    throw new Error('Page not found');
+  }
+
+  const nextProjectIds = new Set(page.project_ids || []);
+  nextProjectIds.add(projectId);
+  page.project_ids = Array.from(nextProjectIds);
+  return page;
+}
+
+function removeStandalonePageFromProject(projectId, pageId) {
+  if (typeof globalThis.removePageFromMockProjectData === 'function') {
+    return globalThis.removePageFromMockProjectData(projectId, pageId);
+  }
+
+  const page = (globalThis.MOCK_DATA || []).find(entry => entry.id === pageId);
+  if (!page) {
+    throw new Error('Page not found');
+  }
+
+  page.project_ids = (page.project_ids || []).filter(id => id !== projectId);
+  return page;
 }
 
 async function getCachedOrFreshList(API, {
@@ -180,6 +278,115 @@ function applyApiPages(API) {
         fetcher: fetchOptions => this._fetchFavoritesFromCloudFunction(fetchOptions),
         mockFetcher: getMockFavorites
       });
+    },
+
+    async getProjects(options = {}) {
+      if (this.isExtension) {
+        return this._executeWithErrorHandling(
+          async () => {
+            const params = {};
+            if (options.includeArchived !== undefined) {
+              params.includeArchived = String(options.includeArchived);
+            }
+
+            return await this._fetchWithAuth('/projects', params);
+          },
+          'getProjects',
+          { options }
+        );
+      }
+
+      return getStandaloneProjects(options);
+    },
+
+    async createProject(project) {
+      if (this.isExtension) {
+        return this._executeWithErrorHandling(
+          async () => {
+            const response = await this._fetchWithAuth('/projects', null, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(project)
+            });
+
+            await this.invalidateCache();
+            return response;
+          },
+          'createProject',
+          { project }
+        );
+      }
+
+      return createStandaloneProject(project);
+    },
+
+    async updateProject(projectId, updates) {
+      if (this.isExtension) {
+        return this._executeWithErrorHandling(
+          async () => {
+            const response = await this._fetchWithAuth(`/projects/${encodeURIComponent(projectId)}`, null, {
+              method: 'PATCH',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(updates)
+            });
+
+            await this.invalidateCache();
+            return response;
+          },
+          'updateProject',
+          { projectId, updates }
+        );
+      }
+
+      return updateStandaloneProject(projectId, updates);
+    },
+
+    async addPageToProject(projectId, pageId) {
+      if (this.isExtension) {
+        return this._executeWithErrorHandling(
+          async () => {
+            const response = await this._fetchWithAuth(`/projects/${encodeURIComponent(projectId)}/pages`, null, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({ pageId })
+            });
+
+            await this.invalidateCache();
+            return response;
+          },
+          'addPageToProject',
+          { projectId, pageId }
+        );
+      }
+
+      return addStandalonePageToProject(projectId, pageId);
+    },
+
+    async removePageFromProject(projectId, pageId) {
+      if (this.isExtension) {
+        return this._executeWithErrorHandling(
+          async () => {
+            const response = await this._fetchWithAuth(
+              `/projects/${encodeURIComponent(projectId)}/pages/${encodeURIComponent(pageId)}`,
+              null,
+              { method: 'DELETE' }
+            );
+
+            await this.invalidateCache();
+            return response;
+          },
+          'removePageFromProject',
+          { projectId, pageId }
+        );
+      }
+
+      return removeStandalonePageFromProject(projectId, pageId);
     },
 
     async deletePage(id) {

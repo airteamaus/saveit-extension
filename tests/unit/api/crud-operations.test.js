@@ -24,6 +24,12 @@ describe('API - CRUD Operations', () => {
     // Mock global functions from config-loader
     global.getBrowserRuntime = vi.fn(() => null);
     global.getStorageAPI = vi.fn(() => null);
+    global.MOCK_PROJECTS = [];
+    global.getMockProjectsData = vi.fn(() => []);
+    global.createMockProjectData = vi.fn(project => ({ id: 'project-1', ...project, page_count: 0 }));
+    global.updateMockProjectData = vi.fn((projectId, updates) => ({ id: projectId, ...updates, page_count: 1 }));
+    global.addPageToMockProjectData = vi.fn((projectId, pageId) => ({ id: pageId, project_ids: [projectId] }));
+    global.removePageFromMockProjectData = vi.fn((projectId, pageId) => ({ id: pageId, project_ids: [] }));
 
     // Load API module
     const apiModule = await import('../../../src/api.js');
@@ -233,6 +239,75 @@ describe('API - CRUD Operations', () => {
 
       await expect(API.updatePage('nonexistent', { notes: 'test' }))
         .rejects.toThrow('Page not found');
+    });
+  });
+
+  describe('project operations', () => {
+    it('should return mock projects in standalone mode', async () => {
+      const projects = [{ id: 'project-1', name: 'SaveIt product' }];
+      global.getMockProjectsData = vi.fn(() => projects);
+
+      const result = await API.getProjects();
+
+      expect(result).toEqual(projects);
+      expect(global.getMockProjectsData).toHaveBeenCalled();
+    });
+
+    it('should create project in standalone mode', async () => {
+      const result = await API.createProject({ name: 'New project', visibility: 'private' });
+
+      expect(global.createMockProjectData).toHaveBeenCalledWith({
+        name: 'New project',
+        visibility: 'private'
+      });
+      expect(result.id).toBe('project-1');
+    });
+
+    it('should update project in standalone mode', async () => {
+      const result = await API.updateProject('project-1', { name: 'Renamed' });
+
+      expect(global.updateMockProjectData).toHaveBeenCalledWith('project-1', { name: 'Renamed' });
+      expect(result.id).toBe('project-1');
+      expect(result.name).toBe('Renamed');
+    });
+
+    it('should add page to project in standalone mode', async () => {
+      const result = await API.addPageToProject('project-1', 'page-123');
+
+      expect(global.addPageToMockProjectData).toHaveBeenCalledWith('project-1', 'page-123');
+      expect(result.project_ids).toEqual(['project-1']);
+    });
+
+    it('should remove page from project in standalone mode', async () => {
+      const result = await API.removePageFromProject('project-1', 'page-123');
+
+      expect(global.removePageFromMockProjectData).toHaveBeenCalledWith('project-1', 'page-123');
+      expect(result.project_ids).toEqual([]);
+    });
+
+    it('should call projects endpoint in extension mode', async () => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
+      global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        json: async () => ([{ id: 'project-1', name: 'Shared project' }])
+      }));
+
+      const result = await API.getProjects({ includeArchived: true });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test.run.app/projects?includeArchived=true',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            'Authorization': 'Bearer token'
+          })
+        })
+      );
+      expect(result).toHaveLength(1);
     });
   });
 

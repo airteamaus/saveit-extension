@@ -20,6 +20,7 @@
  * @property {string} [saved_at] - ISO timestamp when page was saved (TIMESTAMP)
  * @property {string} [user_notes] - User's personal notes about the page
  * @property {string[]} [manual_tags] - User-added tags (REPEATED field in BigQuery)
+ * @property {string[]} [project_ids] - IDs of dashboard projects this page belongs to
  *
  * INTERNAL FIELDS (not displayed in UI):
  * @property {boolean} [deleted] - Soft delete flag (default: false)

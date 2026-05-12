@@ -12,6 +12,20 @@ const ClassificationSchema = z.object({
 });
 
 /**
+ * Project schema - dashboard-defined collections for saved pages
+ */
+export const ProjectSchema = z.strictObject({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  owner_user_id: z.string().min(1),
+  visibility: z.enum(['private', 'company']).default('private'),
+  company_domain: z.string().nullable().optional().default(null),
+  archived: z.boolean().optional().default(false),
+  created_at: z.iso.datetime(),
+  updated_at: z.iso.datetime()
+});
+
+/**
  * Page/Thing schema - matches BigQuery table
  * Validates data returned from backend
  */
@@ -40,6 +54,7 @@ export const PageSchema = z.strictObject({
   // Zod v4: .default() applies to output, so parse({}) returns { manual_tags: [] }
   // This is safer than undefined - all usage sites handle empty arrays correctly
   manual_tags: z.array(z.string()).optional().default([]),
+  project_ids: z.array(z.string()).optional().default([]),
 
   // Internal fields
   deleted: z.boolean().optional().default(false),

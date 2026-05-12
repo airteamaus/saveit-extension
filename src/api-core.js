@@ -45,7 +45,8 @@ function applyApiCore(API) {
         sort: options.sort || 'newest',
         pinnedFirst: options.pinnedFirst,
         search: options.search || '',
-        cursor: options.cursor || null
+        cursor: options.cursor || null,
+        projectId: options.projectId || null
       };
     },
 
