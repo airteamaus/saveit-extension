@@ -84,7 +84,7 @@ class ProjectManager {
       return this.getScopedPages(dashboard, dashboard.allPages).length;
     }
 
-    return dashboard.totalPages;
+    return typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null;
   }
 
   getProjectMap(dashboard) {
@@ -131,7 +131,9 @@ class ProjectManager {
       return;
     }
 
-    const totalCount = dashboard.allItemsTotal || dashboard.totalPages || dashboard.allPages.length;
+    const totalCount = typeof dashboard.allItemsTotal === 'number'
+      ? dashboard.allItemsTotal
+      : (typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null);
     const selectedProject = this.getSelectedProject(dashboard);
     const projectRows = (dashboard.projects || [])
       .filter(project => !project.archived)
@@ -189,7 +191,7 @@ class ProjectManager {
             <span class="project-nav-name">All saved items</span>
             <span class="project-nav-visibility">Default feed</span>
           </span>
-          <span class="project-nav-count">${totalCount}</span>
+          ${typeof totalCount === 'number' ? `<span class="project-nav-count">${totalCount}</span>` : ''}
         </button>
 
         <div class="project-nav-section-label">My projects</div>

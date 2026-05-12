@@ -108,8 +108,8 @@ const drawerState = {
     pageId: null,
     query: ''
   },
-  total: 0,
-  allItemsTotal: 0,
+  total: null,
+  allItemsTotal: null,
   requestId: 0
 };
 
@@ -924,7 +924,7 @@ function applyDrawerFilters(query = drawerState.query) {
   const scopedPages = projectManager.getScopedPages(savedPagesView, drawerState.allPages);
   drawerState.total = drawerState.selectedProjectId
     ? scopedPages.length
-    : (drawerState.allItemsTotal || scopedPages.length);
+    : (typeof drawerState.allItemsTotal === 'number' ? drawerState.allItemsTotal : null);
 
   if (!trimmedQuery) {
     drawerState.pages = [...scopedPages];
@@ -1176,7 +1176,9 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
     }
 
     drawerState.allPages = response.pages || [];
-    drawerState.total = response.pagination?.total || drawerState.allPages.length;
+    drawerState.total = typeof response.pagination?.total === 'number'
+      ? response.pagination.total
+      : null;
     if (!drawerState.selectedProjectId) {
       drawerState.allItemsTotal = drawerState.total;
     }
@@ -1219,8 +1221,10 @@ async function handleDrawerDelete(id) {
     const deletedPage = findDrawerPage(id);
     drawerState.allPages = drawerState.allPages.filter(page => page.id !== id);
     drawerState.pages = drawerState.pages.filter(page => page.id !== id);
-    drawerState.total = Math.max(0, drawerState.total - 1);
-    if (!drawerState.selectedProjectId) {
+    if (typeof drawerState.total === 'number') {
+      drawerState.total = Math.max(0, drawerState.total - 1);
+    }
+    if (!drawerState.selectedProjectId && typeof drawerState.allItemsTotal === 'number') {
       drawerState.allItemsTotal = Math.max(0, drawerState.allItemsTotal - 1);
     }
     (deletedPage?.project_ids || []).forEach(projectId => {
@@ -1641,8 +1645,8 @@ async function initAuth() {
                 pageId: null,
                 query: ''
               },
-              total: 0,
-              allItemsTotal: 0
+              total: null,
+              allItemsTotal: null
             });
             if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
               renderDrawerSignInState();
