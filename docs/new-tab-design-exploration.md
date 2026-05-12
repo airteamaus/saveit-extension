@@ -246,6 +246,6 @@ From this exploration, key principles emerged:
 ## Related Documents
 
 - Current new tab: `src/newtab.html`, `src/newtab.js`
-- Full database view: `src/database.html`, `src/database.js`
+- Saved pages drawer: `src/newtab.html`, `src/newtab.js`, `src/newtab.css`
 - Component library: `src/components.js`
 - API endpoints: `src/api.js`

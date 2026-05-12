@@ -195,7 +195,7 @@ Runs before pushing:
 # Open in browser
 just preview
 # or
-open src/database.html
+open src/newtab.html
 ```
 
 - Uses mock data

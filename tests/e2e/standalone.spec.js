@@ -3,370 +3,92 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const newtabPath = path.resolve(__dirname, '../../src/database.html');
-const heroPath = path.resolve(__dirname, '../../src/newtab.html');
+const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
+
+async function openDrawer(page) {
+  await page.click('#dashboard-toggle-btn');
+  await expect(page.locator('#dashboard-drawer')).not.toHaveClass(/hidden/);
+  await page.waitForSelector('.dashboard-drawer-card');
+}
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
-    // Set up console logging to debug loading issues
-    page.on('console', msg => {
-      const type = msg.type();
-      const text = msg.text();
-      console.log(`[BROWSER ${type.toUpperCase()}]`, text);
-    });
-
-    page.on('pageerror', err => {
-      console.error('[PAGE ERROR]', err.message);
-      console.error(err.stack);
-    });
-
-    // Load standalone dashboard
     await page.goto(`file://${newtabPath}`);
-    // Note: networkidle is unreliable with file:// protocol, especially in parallel tests
-    // We rely on window.dashboardReady signal instead
-
-    // Wait for dashboard to fully initialize (critical for headless mode)
-    try {
-      await page.waitForFunction(() => window.dashboardReady === true, { timeout: 10000 });
-      console.log('[TEST] Dashboard ready signal received');
-    } catch (error) {
-      console.error('[TEST] Dashboard initialization timeout');
-
-      // Check if scripts loaded and mock data is available
-      const debugInfo = await page.evaluate(() => {
-        return {
-          hasBrowser: typeof browser !== 'undefined',
-          hasMockData: typeof MOCK_DATA !== 'undefined',
-          mockDataLength: typeof MOCK_DATA !== 'undefined' ? MOCK_DATA.length : 0,
-          hasAPI: typeof API !== 'undefined',
-          isExtension: typeof API !== 'undefined' ? API.isExtension : null,
-          hasComponents: typeof Components !== 'undefined',
-          hasSaveItDashboard: typeof SaveItDashboard !== 'undefined',
-          dashboardReady: window.dashboardReady,
-          dashboard: typeof window.dashboard !== 'undefined'
-        };
-      });
-      console.log('[DEBUG INFO]', debugInfo);
-      throw error;
-    }
+    await page.waitForSelector('#dashboard-toggle-btn');
   });
 
-  test('should display mock data', async ({ page }) => {
-    // Wait for cards to render
-    await page.waitForSelector('.saved-page-card', { timeout: 5000 });
-
-    // Check that cards are rendered
-    const cards = await page.locator('.saved-page-card').count();
-    expect(cards).toBeGreaterThan(0);
-
-    // Check stats
-    const stats = await page.locator('#stats').textContent();
-    expect(stats).toContain('pages saved');
+  test('should display the standalone new-tab shell', async ({ page }) => {
+    await expect(page.locator('.logo-hero')).toContainText('SaveIt');
+    await expect(page.locator('#search-input')).toBeVisible();
+    await expect(page.locator('#hero-sign-in-btn')).toBeVisible();
   });
 
-  test('should show mode indicator as Development Mode', async ({ page }) => {
-    const modeLabel = await page.locator('#mode-label').textContent();
-    expect(modeLabel).toContain('Development Mode');
-    expect(modeLabel).toContain('mock data');
+  test('should open the drawer with projects and saved pages', async ({ page }) => {
+    await openDrawer(page);
+
+    await expect(page.locator('#project-sidebar')).toContainText('Collections');
+    await expect(page.locator('#project-sidebar')).toContainText('SaveIt product');
+    await expect(page.locator('.dashboard-drawer-card').first()).toBeVisible();
   });
 
-  test('should allow searching pages', async ({ page }) => {
-    // Wait for initial render
-    await page.waitForSelector('.saved-page-card');
-    const initialCount = await page.locator('.saved-page-card').count();
+  test('should filter drawer results with search', async ({ page }) => {
+    await openDrawer(page);
 
-    // Search for specific term
-    await page.fill('#search', 'JavaScript');
-    await page.waitForTimeout(500); // Wait for debounce
+    await page.fill('#dashboard-drawer-search-input', 'JavaScript');
+    await page.waitForTimeout(400);
 
-    // Check filtered results
-    const filteredCount = await page.locator('.saved-page-card').count();
-    expect(filteredCount).toBeLessThanOrEqual(initialCount);
+    const filteredCount = await page.locator('.dashboard-drawer-card').count();
     expect(filteredCount).toBeGreaterThan(0);
-
-    // Verify search term appears in results
-    const firstCard = await page.locator('.saved-page-card').first();
-    const cardText = await firstCard.textContent();
+    const cardText = await page.locator('.dashboard-drawer-card').first().textContent();
     expect(cardText.toLowerCase()).toContain('javascript');
-  });
-
-  test('should clear search', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-
-    // Enter search
-    await page.fill('#search', 'Python');
-    await page.waitForTimeout(500);
-
-    // Clear search
-    await page.click('#clear-search');
-    await page.waitForTimeout(300);
-
-    // Verify search input is empty
-    const searchValue = await page.inputValue('#search');
-    expect(searchValue).toBe('');
-
-    // Verify clear button is hidden
-    const clearButton = page.locator('#clear-search');
-    await expect(clearButton).toHaveCSS('display', 'none');
-  });
-
-  test('should show empty state for no results', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-
-    // Search for non-existent term
-    await page.fill('#search', 'xyznonexistent12345');
-    await page.waitForTimeout(500);
-
-    // Check for empty state
-    const emptyState = page.locator('.empty-state');
-    await expect(emptyState).toBeVisible();
-    await expect(emptyState).toContainText('No matching pages');
-  });
-
-  test('should open page card in current tab', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-
-    const initialUrl = page.url();
-
-    // Click on first card
-    await page.locator('.saved-page-card').first().click();
-
-    await page.waitForLoadState();
-
-    // Standalone dashboard currently navigates in the same tab.
-    expect(page.url()).toBeTruthy();
-    expect(page.url()).not.toBe(initialUrl);
-    expect(page.url()).not.toBe('about:blank');
   });
 
   test('should switch themes', async ({ page }) => {
     await page.evaluate(() => {
-      const userProfile = document.getElementById('user-profile');
-      const userDropdown = document.getElementById('user-dropdown');
+      const userProfile = document.getElementById('hero-user-menu');
+      const userDropdown = document.getElementById('hero-user-dropdown');
 
-      if (userProfile) userProfile.style.display = 'block';
-      if (userDropdown) userDropdown.style.display = 'block';
+      if (userProfile) userProfile.classList.remove('hidden');
+      if (userDropdown) userDropdown.classList.remove('hidden');
     });
 
-    // Get theme buttons (use button selector to avoid matching html element)
     const lightButton = page.locator('button[data-theme="light"]');
     const darkButton = page.locator('button[data-theme="dark"]');
     const autoButton = page.locator('button[data-theme="auto"]');
 
-    // Switch to dark
     await darkButton.click();
-    const darkTheme = await page.locator('html').getAttribute('data-theme');
-    expect(darkTheme).toBe('dark');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await expect(darkButton).toHaveClass(/active/);
 
-    // Switch to light
     await lightButton.click();
-    const lightTheme = await page.locator('html').getAttribute('data-theme');
-    expect(lightTheme).toBe('light');
+    await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
     await expect(lightButton).toHaveClass(/active/);
 
-    // Switch to auto (removes attribute)
     await autoButton.click();
-    const autoTheme = await page.locator('html').getAttribute('data-theme');
-    expect(autoTheme).toBeFalsy();
+    await expect(page.locator('html')).not.toHaveAttribute('data-theme', /.+/);
     await expect(autoButton).toHaveClass(/active/);
   });
 
-  test('should filter by tag when clicking', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-    const initialCount = await page.locator('.saved-page-card').count();
+  test('should create and assign a project from the drawer editor', async ({ page }) => {
+    await openDrawer(page);
 
-    // Wait for AI tags to be visible and clickable
-    await page.waitForSelector('.ai-tag', { state: 'visible' });
+    await page.locator('.btn-projects').first().click();
+    await expect(page.locator('#project-editor-dialog')).not.toHaveClass(/hidden/);
 
-    // Click on an AI tag
-    const firstTag = page.locator('.ai-tag').first();
-    await firstTag.click();
+    await page.fill('#project-editor-search-input', 'Playwright project');
+    await page.getByRole('button', { name: 'Create "Playwright project"' }).click();
 
-    // Wait for tag to be marked as active
-    await expect(firstTag).toHaveClass(/active/);
-
-    // Wait for results to update (may take a moment for similarity search)
-    await page.waitForTimeout(500);
-
-    // Verify pages are still shown (similarity search should return results)
-    const filteredCount = await page.locator('.saved-page-card').count();
-    expect(filteredCount).toBeGreaterThan(0);
-
-    // Stats should show filtered count
-    const stats = await page.locator('#stats').textContent();
-    expect(stats).toMatch(/\d+ (of \d+ )?pages?/);
+    await expect(page.locator('#project-sidebar')).toContainText('Playwright project');
+    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('Playwright project');
   });
 
-  test('should clear tag filter when clicking tag again', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-    const initialCount = await page.locator('.saved-page-card').count();
+  test('should scope results when selecting a project', async ({ page }) => {
+    await openDrawer(page);
 
-    // Wait for AI tags and click one
-    await page.waitForSelector('.ai-tag', { state: 'visible' });
-    const firstTag = page.locator('.ai-tag').first();
-    await firstTag.click();
-    await page.waitForTimeout(500);
+    const projectButton = page.locator('.project-nav-item[data-project-id="project-saveit-product"]');
+    await projectButton.click();
 
-    // Tag should be active
-    await expect(firstTag).toHaveClass(/active/);
-
-    // Click tag again to clear filter
-    await firstTag.click();
-    await page.waitForTimeout(300);
-
-    // Tag should no longer be active
-    await expect(firstTag).not.toHaveClass(/active/);
-
-    // All cards should be shown again
-    const finalCount = await page.locator('.saved-page-card').count();
-    expect(finalCount).toBe(initialCount);
-  });
-
-  test('should show about dialog', async ({ page }) => {
-    page.on('dialog', async dialog => {
-      expect(dialog.type()).toBe('alert');
-      expect(dialog.message()).toContain('SaveIt');
-      expect(dialog.message()).toContain('Development');
-      expect(dialog.message()).toContain('AI to read and semantically index');
-      await dialog.accept();
-    });
-
-    await page.click('#about-link');
-    await page.waitForTimeout(500);
-  });
-
-  test('should refresh cached cursor before loading more pages', async ({ page }) => {
-    await page.waitForSelector('.saved-page-card');
-
-    await page.evaluate(() => {
-      const dashboard = window.dashboard;
-      window.__loadMoreCalls = [];
-
-      window.API.getSavedPages = async (options = {}) => {
-        window.__loadMoreCalls.push({ ...options });
-
-        if (options.skipCache && !options.cursor) {
-          return {
-            pages: [
-              {
-                id: 'fresh-1',
-                title: 'Fresh page 1',
-                url: 'https://example.com/fresh-1',
-                saved_at: '2026-01-02T00:00:00.000Z'
-              }
-            ],
-            pagination: {
-              total: 2,
-              hasNextPage: true,
-              nextCursor: 'fresh-cursor'
-            },
-            meta: { fromCache: false }
-          };
-        }
-
-        if (options.skipCache && options.cursor === 'fresh-cursor') {
-          return {
-            pages: [
-              {
-                id: 'fresh-2',
-                title: 'Fresh page 2',
-                url: 'https://example.com/fresh-2',
-                saved_at: '2026-01-01T00:00:00.000Z'
-              }
-            ],
-            pagination: {
-              total: 2,
-              hasNextPage: false,
-              nextCursor: null
-            },
-            meta: { fromCache: false }
-          };
-        }
-
-        throw new Error(`Unexpected load-more options: ${JSON.stringify(options)}`);
-      };
-
-      dashboard.currentFilter.search = '';
-      dashboard.allPages = [
-        {
-          id: 'cached-1',
-          title: 'Cached page',
-          url: 'https://example.com/cached-1',
-          saved_at: '2025-01-01T00:00:00.000Z'
-        }
-      ];
-      dashboard.pages = [...dashboard.allPages];
-      dashboard.totalPages = 2;
-      dashboard.hasMorePages = true;
-      dashboard.nextCursor = 'stale-cursor';
-      dashboard.paginationStateFromCache = true;
-      dashboard.render();
-    });
-
-    await page.evaluate(() => window.dashboard.loadMorePages());
-
-    await expect(page.locator('.saved-page-card')).toHaveCount(2);
-    await expect(page.locator('.saved-page-card').first()).toContainText('Fresh page 1');
-    await expect(page.locator('.saved-page-card').nth(1)).toContainText('Fresh page 2');
-
-    const calls = await page.evaluate(() => window.__loadMoreCalls);
-    expect(calls).toEqual([
-      { search: '', sort: 'newest', category: '', cursor: null, limit: 50, pinnedFirst: false, skipCache: true },
-      { search: '', sort: 'newest', category: '', cursor: 'fresh-cursor', limit: 50, pinnedFirst: false, skipCache: true }
-    ]);
-  });
-
-  test('should use semantic API search inside the drawer', async ({ page }) => {
-    await page.goto(`file://${heroPath}`);
-
-    await page.click('#dashboard-toggle-btn');
-    await expect(page.locator('#dashboard-drawer')).toBeVisible();
-    await expect(page.locator('#dashboard-drawer-frame')).toHaveCount(0);
-    await expect(page.locator('#dashboard-drawer-load-more-btn')).toHaveCount(0);
-
-    await page.evaluate(() => {
-      window.__drawerSearchCalls = [];
-
-      API.searchContent = async (query, options = {}) => {
-        window.__drawerSearchCalls.push({ query, options });
-        return {
-          results: [
-            {
-              thing_id: 'semantic-1',
-              similarity: 0.92,
-              thing_data: {
-                id: 'semantic-1',
-                title: 'Semantic result',
-                url: 'https://example.com/semantic-result',
-                saved_at: '2026-01-02T00:00:00.000Z'
-              }
-            }
-          ],
-          pagination: {
-            total: 1,
-            has_more: false
-          }
-        };
-      };
-    });
-
-    await page.fill('#dashboard-drawer-search-input', 'semantic result');
-    await page.waitForTimeout(700);
-
-    await expect(page.locator('.dashboard-drawer-card')).toHaveCount(1);
-    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('Semantic result');
-
-    const calls = await page.evaluate(() => window.__drawerSearchCalls);
-    expect(calls).toEqual([
-      {
-        query: 'semantic result',
-        options: {
-          limit: 300,
-          offset: 0,
-          threshold: 0.58
-        }
-      }
-    ]);
+    await expect(projectButton).toHaveClass(/is-active/);
+    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('SaveIt product');
   });
 });
