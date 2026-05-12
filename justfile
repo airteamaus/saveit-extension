@@ -101,9 +101,9 @@ changelog:
 release-notes version:
     @node scripts/generate-changelog.js release-notes {{version}}
 
-# Open database.html in browser for standalone testing
+# Open newtab.html in browser for standalone testing
 preview:
-    open src/database.html
+    open src/newtab.html
 
 # Validate manifest.json
 validate:

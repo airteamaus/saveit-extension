@@ -1,4 +1,4 @@
-// Firebase initialization wrapper for dashboard (database.html + newtab.html)
+// Firebase initialization wrapper for dashboard surfaces (newtab.html and related pages)
 // Makes Firebase available globally to non-module scripts
 
 import { getBrowserRuntime } from './config.js';
