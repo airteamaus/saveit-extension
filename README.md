@@ -2,7 +2,7 @@
 
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
-Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features an intelligent dashboard with semantic search and hierarchical topic navigation.
+Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features an intelligent dashboard with semantic search, hierarchical topic navigation, and project collections for grouping pages in the dashboard.
 
 ## For Testers
 
@@ -32,6 +32,7 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 3. **View dashboard**: Open a new tab - SaveIt automatically replaces your new tab page
 4. **Search & discover**: Use semantic search to find related content by topic
 5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
+6. **Organize projects**: Create dashboard projects, add pages to multiple projects, and share a project with your company domain when needed
 
 ### Known Limitations (Beta)
 

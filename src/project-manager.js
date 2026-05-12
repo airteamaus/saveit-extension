@@ -435,3 +435,9 @@ class ProjectManager {
 }
 
 window.ProjectManager = ProjectManager;
+
+/* eslint-disable no-undef */
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { ProjectManager };
+}
+/* eslint-enable no-undef */
