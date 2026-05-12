@@ -902,9 +902,6 @@ function getDrawerSearchableText(page) {
     page.domain,
     page.description,
     page.ai_summary_brief,
-    page.ai_summary_extended,
-    page.user_notes,
-    page.author,
     page.primary_classification_label,
     ...(page.manual_tags || []),
     ...(page.classifications || []).map(classification => classification.label)
