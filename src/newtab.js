@@ -1,7 +1,7 @@
 // newtab-minimal.js - Minimal new tab with search navigation
 // Handles search form submission, Firebase auth, and Unsplash background
 
-/* global ThemeManager, AuthMenu */
+/* global ThemeManager, AuthMenu, ProjectManager */
 
 import { unsplashAccessKey, getStorageAPI } from './config.js';
 
@@ -37,6 +37,9 @@ const dashboardDrawerSearchForm = document.getElementById('dashboard-drawer-sear
 const dashboardDrawerSearchInput = document.getElementById('dashboard-drawer-search-input');
 const dashboardDrawerClearBtn = document.getElementById('dashboard-drawer-clear-btn');
 const dashboardDrawerResults = document.getElementById('dashboard-drawer-results');
+const projectSidebar = document.getElementById('project-sidebar');
+const projectEditorBackdrop = document.getElementById('project-editor-backdrop');
+const projectEditorDialog = document.getElementById('project-editor-dialog');
 
 const DASHBOARD_DRAWER_PARAM = 'drawer';
 const DASHBOARD_DRAWER_VALUE = 'dashboard';
@@ -57,7 +60,6 @@ const FAVORITES_WIDTH_PADDING = 220;
 const FAVORITES_MAX_GRID_WIDTH = 1008;
 const DRAWER_SEARCH_DEBOUNCE_MS = 250;
 const DRAWER_PAGE_LIMIT = FAVORITES_MAX_ITEMS;
-const DRAWER_SEMANTIC_THRESHOLD = 0.58;
 const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
 const FAVORITE_PREVIEW_MARGIN = 8;
 const FAVORITE_PREVIEW_GAP = 14;
@@ -86,15 +88,25 @@ const drawerState = {
   hasInitialized: false,
   isLoading: false,
   query: '',
-  mode: 'list',
+  currentFilter: {
+    search: '',
+    projectId: null,
+    cursor: null
+  },
   pages: [],
+  allPages: [],
+  projects: [],
+  selectedProjectId: null,
+  projectEditorState: {
+    pageId: null,
+    query: ''
+  },
   total: 0,
-  hasMore: false,
-  nextCursor: null,
-  paginationStateFromCache: false,
-  semanticOffset: 0,
+  allItemsTotal: 0,
   requestId: 0
 };
+
+const projectManager = new ProjectManager(API, { escapeHtml });
 
 /**
  * Initialize theme from saved preference and inject toggle
@@ -761,6 +773,72 @@ function truncateText(text = '', maxLength = 180) {
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
+const drawerDashboard = {
+  get allPages() {
+    return drawerState.allPages;
+  },
+  set allPages(value) {
+    drawerState.allPages = Array.isArray(value) ? value : [];
+  },
+  get pages() {
+    return drawerState.pages;
+  },
+  set pages(value) {
+    drawerState.pages = Array.isArray(value) ? value : [];
+  },
+  get projects() {
+    return drawerState.projects;
+  },
+  set projects(value) {
+    drawerState.projects = Array.isArray(value) ? value : [];
+  },
+  get selectedProjectId() {
+    return drawerState.selectedProjectId;
+  },
+  set selectedProjectId(value) {
+    drawerState.selectedProjectId = value || null;
+  },
+  get projectEditorState() {
+    return drawerState.projectEditorState;
+  },
+  set projectEditorState(value) {
+    drawerState.projectEditorState = value || { pageId: null, query: '' };
+  },
+  get currentFilter() {
+    return drawerState.currentFilter;
+  },
+  get totalPages() {
+    return drawerState.total;
+  },
+  set totalPages(value) {
+    drawerState.total = value;
+  },
+  get allItemsTotal() {
+    return drawerState.allItemsTotal;
+  },
+  set allItemsTotal(value) {
+    drawerState.allItemsTotal = value;
+  },
+  getCurrentUser: getDrawerCurrentUser,
+  showLoading: renderDrawerLoadingState,
+  async loadPages() {
+    await loadDrawerBasePages({ query: drawerState.query, syncUrl: false });
+  },
+  async handleFilterChange() {
+    applyDrawerFilters(drawerState.currentFilter.search || '');
+    renderDrawerResults();
+  },
+  render() {
+    renderDrawerResults();
+  },
+  tagInteractionManager: {
+    clearSelection() {}
+  },
+  discoveryManager: {
+    exit() {}
+  }
+};
+
 function renderDrawerTags(page) {
   const tags = [];
 
@@ -781,6 +859,68 @@ function renderDrawerTags(page) {
   }
 
   return tags.join('');
+}
+
+function getDrawerProjectPills(page) {
+  return projectManager.getProjectPills(page, drawerDashboard);
+}
+
+function getProjectScopeLabel() {
+  const selectedProject = projectManager.getSelectedProject(drawerDashboard);
+  return selectedProject ? selectedProject.name : 'All saved items';
+}
+
+function getDrawerSearchableText(page) {
+  const fields = [
+    page.title,
+    page.url,
+    page.domain,
+    page.description,
+    page.ai_summary_brief,
+    page.ai_summary_extended,
+    page.user_notes,
+    page.author,
+    page.primary_classification_label,
+    ...(page.manual_tags || []),
+    ...(page.classifications || []).map(classification => classification.label)
+  ];
+
+  return fields
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+}
+
+function applyDrawerFilters(query = drawerState.query) {
+  const trimmedQuery = query.trim();
+  drawerState.query = trimmedQuery;
+  drawerState.currentFilter.search = trimmedQuery;
+
+  const scopedPages = projectManager.getScopedPages(drawerDashboard, drawerState.allPages);
+  drawerState.total = drawerState.selectedProjectId
+    ? scopedPages.length
+    : (drawerState.allItemsTotal || scopedPages.length);
+
+  if (!trimmedQuery) {
+    drawerState.pages = [...scopedPages];
+    return;
+  }
+
+  const loweredQuery = trimmedQuery.toLowerCase();
+  drawerState.pages = scopedPages.filter(page => getDrawerSearchableText(page).includes(loweredQuery));
+}
+
+function renderProjectSidebar() {
+  projectManager.renderSidebar(drawerDashboard);
+}
+
+function renderProjectEditor() {
+  projectManager.renderEditor(drawerDashboard);
+}
+
+function renderDrawerChrome() {
+  renderProjectSidebar();
+  renderProjectEditor();
 }
 
 function renderDrawerCard(page) {
@@ -806,6 +946,27 @@ function renderDrawerCard(page) {
   }
 
   const tagsHtml = renderDrawerTags(page);
+  const projectPills = getDrawerProjectPills(page);
+  const projectPillsHtml = projectPills.length
+    ? `
+      <div class="dashboard-drawer-card-projects">
+        ${projectPills.map(project => `
+          <span class="project-pill" title="${escapeHtml(project.name)}">
+            <span class="project-pill-label">${escapeHtml(project.name)}</span>
+            <button
+              class="project-pill-remove"
+              type="button"
+              data-action="remove-project"
+              data-id="${escapeHtml(page.id)}"
+              data-project-id="${escapeHtml(project.id)}"
+              title="Remove from ${escapeHtml(project.name)}"
+              aria-label="Remove from ${escapeHtml(project.name)}"
+            >×</button>
+          </span>
+        `).join('')}
+      </div>
+    `
+    : '';
 
   return `
     <a class="dashboard-drawer-card" href="${escapeHtml(page.url || '#')}">
@@ -829,6 +990,14 @@ function renderDrawerCard(page) {
             </svg>
           </button>
           <button
+            class="btn-projects"
+            type="button"
+            data-action="projects"
+            data-id="${escapeHtml(page.id)}"
+            title="Manage projects"
+            aria-label="Manage projects"
+          >Projects</button>
+          <button
             class="dashboard-drawer-action-btn dashboard-drawer-delete-btn"
             type="button"
             data-action="delete"
@@ -847,6 +1016,7 @@ function renderDrawerCard(page) {
         </div>
       </div>
       ${summary ? `<p class="dashboard-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
+      ${projectPillsHtml}
       <div class="dashboard-drawer-card-footer">
         ${meta.length ? `<div class="dashboard-drawer-card-meta">${meta.join('<span class="dashboard-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
         ${tagsHtml ? `<div class="dashboard-drawer-card-tags">${tagsHtml}</div>` : ''}
@@ -859,6 +1029,7 @@ function renderDrawerState(html) {
   if (dashboardDrawerResults) {
     dashboardDrawerResults.innerHTML = html;
   }
+  renderDrawerChrome();
 }
 
 function renderDrawerLoadingState(message = 'Loading saved pages...') {
@@ -880,10 +1051,13 @@ function renderDrawerErrorState(message) {
 }
 
 function renderDrawerEmptyState(query = '') {
-  const title = query ? `No results for "${escapeHtml(query)}"` : 'No saved pages yet';
+  const scopeLabel = escapeHtml(getProjectScopeLabel());
+  const title = query ? `No results for "${escapeHtml(query)}"` : `No pages in ${scopeLabel}`;
   const description = query
-    ? 'Try different words or clear the search.'
-    : 'Save a page to see it here.';
+    ? `Try different words or clear the search in ${scopeLabel}.`
+    : drawerState.selectedProjectId
+      ? 'Add pages to this project to see them here.'
+      : 'Save a page to see it here.';
 
   renderDrawerState(`
     <div class="empty-state dashboard-drawer-state">
@@ -911,23 +1085,78 @@ function renderDrawerResults() {
   renderDrawerState(drawerState.pages.map(renderDrawerCard).join(''));
 }
 
-function applyDrawerResponse(response, { mode = 'list', query = '' } = {}) {
-  const pages = mode === 'semantic'
-    ? (response.results || []).map(result => result.thing_data).filter(Boolean)
-    : (response.pages || []);
-
-  drawerState.pages = pages;
-  drawerState.total = response.pagination?.total || 0;
-  drawerState.hasMore = false;
-  drawerState.nextCursor = null;
-  drawerState.paginationStateFromCache = false;
-  drawerState.hasInitialized = true;
-  drawerState.query = query;
-  drawerState.mode = mode;
+function findDrawerPage(id) {
+  return drawerState.allPages.find(page => page.id === id) || null;
 }
 
-function findDrawerPage(id) {
-  return drawerState.pages.find(page => page.id === id) || null;
+function updateDrawerPageCollections(id, updater) {
+  drawerState.allPages = drawerState.allPages.map(page => (page.id === id ? updater(page) : page));
+  drawerState.pages = drawerState.pages.map(page => (page.id === id ? updater(page) : page));
+}
+
+async function ensureDrawerProjectsLoaded() {
+  if (!drawerState.projects.length) {
+    await projectManager.loadProjects(drawerDashboard);
+  }
+}
+
+async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true } = {}) {
+  const requestId = ++drawerState.requestId;
+  const trimmedQuery = query.trim();
+
+  drawerState.isLoading = true;
+  setDrawerSearchValue(trimmedQuery);
+
+  if (syncUrl && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+    updateDrawerUrl(true, trimmedQuery);
+  }
+
+  if (API.isExtension && !getDrawerCurrentUser()) {
+    drawerState.isLoading = false;
+    drawerState.hasInitialized = true;
+    drawerState.allPages = [];
+    drawerState.pages = [];
+    renderDrawerSignInState();
+    return;
+  }
+
+  renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
+
+  try {
+    await ensureDrawerProjectsLoaded();
+
+    const response = await API.getSavedPages({
+      limit: DRAWER_PAGE_LIMIT,
+      sort: 'newest',
+      pinnedFirst: false,
+      projectId: drawerState.selectedProjectId || undefined
+    });
+
+    if (requestId !== drawerState.requestId) {
+      return;
+    }
+
+    drawerState.allPages = response.pages || [];
+    drawerState.total = response.pagination?.total || drawerState.allPages.length;
+    if (!drawerState.selectedProjectId) {
+      drawerState.allItemsTotal = drawerState.total;
+    }
+    projectManager.refreshProjectCounts(drawerDashboard);
+    applyDrawerFilters(trimmedQuery);
+    drawerState.hasInitialized = true;
+    renderDrawerResults();
+  } catch (error) {
+    if (requestId !== drawerState.requestId) {
+      return;
+    }
+
+    console.error('[newtab-minimal] Drawer load failed:', error);
+    renderDrawerErrorState(error.message || 'Failed to load saved pages.');
+  } finally {
+    if (requestId === drawerState.requestId) {
+      drawerState.isLoading = false;
+    }
+  }
 }
 
 async function handleDrawerDelete(id) {
@@ -937,9 +1166,16 @@ async function handleDrawerDelete(id) {
 
   try {
     await API.deletePage(id);
+    const deletedPage = findDrawerPage(id);
+    drawerState.allPages = drawerState.allPages.filter(page => page.id !== id);
     drawerState.pages = drawerState.pages.filter(page => page.id !== id);
     drawerState.total = Math.max(0, drawerState.total - 1);
-    drawerState.hasMore = false;
+    if (!drawerState.selectedProjectId) {
+      drawerState.allItemsTotal = Math.max(0, drawerState.allItemsTotal - 1);
+    }
+    (deletedPage?.project_ids || []).forEach(projectId => {
+      projectManager.adjustProjectCount(drawerDashboard, projectId, -1);
+    });
     renderDrawerResults();
   } catch (error) {
     console.error('[newtab-minimal] Failed to delete page:', error);
@@ -954,13 +1190,13 @@ async function handleDrawerPin(id) {
   }
 
   const nextPinnedState = !page.pinned;
-  page.pinned = nextPinnedState;
+  updateDrawerPageCollections(id, entry => ({ ...entry, pinned: nextPinnedState }));
   renderDrawerResults();
 
   try {
     await API.pinPage(id, nextPinnedState);
   } catch (error) {
-    page.pinned = !nextPinnedState;
+    updateDrawerPageCollections(id, entry => ({ ...entry, pinned: !nextPinnedState }));
     renderDrawerResults();
     console.error('[newtab-minimal] Failed to update pin:', error);
     alert('Failed to update pin status. Please try again.');
@@ -969,73 +1205,19 @@ async function handleDrawerPin(id) {
 
 async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
   const trimmedQuery = query.trim();
-  let shouldRenderResults = false;
 
-  drawerState.isLoading = true;
-  const requestId = ++drawerState.requestId;
+  if (!drawerState.hasInitialized) {
+    await loadDrawerBasePages({ query: trimmedQuery, syncUrl });
+    return;
+  }
+
   setDrawerSearchValue(trimmedQuery);
-
   if (syncUrl && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
     updateDrawerUrl(true, trimmedQuery);
   }
 
-  if (API.isExtension && !getDrawerCurrentUser()) {
-    drawerState.isLoading = false;
-    drawerState.hasInitialized = true;
-    drawerState.pages = [];
-    drawerState.hasMore = false;
-    renderDrawerSignInState();
-    return;
-  }
-
-  renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
-
-  try {
-    if (trimmedQuery) {
-      const response = await API.searchContent(trimmedQuery, {
-        limit: DRAWER_PAGE_LIMIT,
-        offset: 0,
-        threshold: DRAWER_SEMANTIC_THRESHOLD
-      });
-
-      if (requestId !== drawerState.requestId) return;
-
-      drawerState.semanticOffset = response.results?.length || 0;
-      applyDrawerResponse(response, {
-        mode: 'semantic',
-        query: trimmedQuery
-      });
-      shouldRenderResults = true;
-      return;
-    }
-
-    drawerState.semanticOffset = 0;
-    const response = await API.getSavedPages({
-      limit: DRAWER_PAGE_LIMIT,
-      sort: 'newest',
-      pinnedFirst: false
-    });
-
-    if (requestId !== drawerState.requestId) return;
-
-    applyDrawerResponse(response, {
-      mode: 'list',
-      query: ''
-    });
-    shouldRenderResults = true;
-  } catch (error) {
-    if (requestId !== drawerState.requestId) return;
-
-    console.error('[newtab-minimal] Drawer load failed:', error);
-    renderDrawerErrorState(error.message || 'Failed to load saved pages.');
-  } finally {
-    if (requestId === drawerState.requestId) {
-      drawerState.isLoading = false;
-      if (shouldRenderResults) {
-        renderDrawerResults();
-      }
-    }
-  }
+  applyDrawerFilters(trimmedQuery);
+  renderDrawerResults();
 }
 
 function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
@@ -1052,7 +1234,7 @@ function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
   }
 
   if (!drawerState.hasInitialized || drawerState.query !== searchQuery.trim()) {
-    void loadDrawerResults(searchQuery, { syncUrl: false });
+    void loadDrawerBasePages({ query: searchQuery, syncUrl: false });
   } else {
     renderDrawerResults();
   }
@@ -1118,12 +1300,102 @@ function initDashboardDrawer() {
       return;
     }
 
+    if (action === 'projects') {
+      projectManager.openEditor(drawerDashboard, id);
+      return;
+    }
+
+    if (action === 'remove-project') {
+      void projectManager.togglePageProject(drawerDashboard, id, actionButton.dataset.projectId, false);
+      return;
+    }
+
     if (action === 'delete') {
       void handleDrawerDelete(id);
     }
   });
 
+  projectSidebar?.addEventListener('click', (event) => {
+    const createButton = event.target.closest('.project-sidebar-create');
+    if (createButton) {
+      void projectManager.promptCreateProject(drawerDashboard);
+      return;
+    }
+
+    const projectButton = event.target.closest('.project-nav-item');
+    if (projectButton) {
+      void projectManager.selectProject(drawerDashboard, projectButton.dataset.projectId || null);
+      return;
+    }
+
+    const renameButton = event.target.closest('.project-action-rename');
+    if (renameButton) {
+      void projectManager.renameProject(drawerDashboard, renameButton.dataset.projectId);
+      return;
+    }
+
+    const visibilityButton = event.target.closest('.project-action-visibility');
+    if (visibilityButton) {
+      void projectManager.toggleProjectVisibility(drawerDashboard, visibilityButton.dataset.projectId);
+      return;
+    }
+
+    const archiveButton = event.target.closest('.project-action-archive');
+    if (archiveButton) {
+      void projectManager.archiveProject(drawerDashboard, archiveButton.dataset.projectId);
+    }
+  });
+
+  projectEditorBackdrop?.addEventListener('click', () => {
+    projectManager.closeEditor(drawerDashboard);
+  });
+
+  projectEditorDialog?.addEventListener('click', (event) => {
+    const closeButton = event.target.closest('.project-editor-close');
+    if (closeButton) {
+      projectManager.closeEditor(drawerDashboard);
+      return;
+    }
+
+    const createButton = event.target.closest('.project-editor-create');
+    if (createButton) {
+      void projectManager.createProject(
+        drawerDashboard,
+        createButton.dataset.projectName || '',
+        createButton.dataset.pageId || null
+      );
+    }
+  });
+
+  projectEditorDialog?.addEventListener('change', (event) => {
+    const checkbox = event.target.closest('.project-editor-checkbox');
+    if (!checkbox) {
+      return;
+    }
+
+    void projectManager.togglePageProject(
+      drawerDashboard,
+      checkbox.dataset.pageId,
+      checkbox.dataset.projectId,
+      checkbox.checked
+    );
+  });
+
+  projectEditorDialog?.addEventListener('input', (event) => {
+    const input = event.target.closest('#project-editor-search-input');
+    if (!input) {
+      return;
+    }
+
+    projectManager.updateEditorQuery(drawerDashboard, input.value);
+  });
+
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !projectEditorDialog?.classList.contains('hidden')) {
+      projectManager.closeEditor(drawerDashboard);
+      return;
+    }
+
     if (e.key === 'Escape' && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
       closeDashboardDrawer();
     }
@@ -1268,13 +1540,21 @@ async function initAuth() {
               hasInitialized: false,
               isLoading: false,
               query: '',
-              mode: 'list',
+              currentFilter: {
+                search: '',
+                projectId: null,
+                cursor: null
+              },
               pages: [],
+              allPages: [],
+              projects: [],
+              selectedProjectId: null,
+              projectEditorState: {
+                pageId: null,
+                query: ''
+              },
               total: 0,
-              hasMore: false,
-              nextCursor: null,
-              paginationStateFromCache: false,
-              semanticOffset: 0
+              allItemsTotal: 0
             });
             if (dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
               renderDrawerSignInState();

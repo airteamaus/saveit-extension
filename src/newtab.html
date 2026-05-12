@@ -166,10 +166,22 @@
         </button>
       </div>
       <div id="dashboard-drawer-body" class="dashboard-drawer-body">
-        <div id="dashboard-drawer-results" class="dashboard-drawer-results" aria-live="polite"></div>
+        <aside id="project-sidebar" class="project-sidebar dashboard-drawer-project-sidebar" aria-label="Projects"></aside>
+        <div class="dashboard-drawer-content">
+          <div id="dashboard-drawer-results" class="dashboard-drawer-results" aria-live="polite"></div>
+        </div>
       </div>
     </aside>
   </div>
+
+  <div id="project-editor-backdrop" class="project-editor-backdrop hidden" aria-hidden="true"></div>
+  <div
+    id="project-editor-dialog"
+    class="project-editor-dialog hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="project-editor-title"
+  ></div>
 
   <!-- Minimal script dependencies -->
   <script src="polyfill-loader.js"></script>
@@ -182,6 +194,7 @@
   <script src="api-pages.js"></script>
   <script src="api-search.js"></script>
   <script src="api.js"></script>
+  <script src="project-manager.js"></script>
   <script src="auth-menu.js"></script>
   <script src="theme-manager.js"></script>
   <script type="module" src="newtab.js"></script>

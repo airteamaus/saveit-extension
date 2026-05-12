@@ -220,7 +220,7 @@ class ProjectManager {
       <div class="project-editor-header">
         <div>
           <p class="project-editor-eyebrow">Page projects</p>
-          <h2 class="project-editor-title">${this.components.escapeHtml(page.title || 'Saved page')}</h2>
+          <h2 id="project-editor-title" class="project-editor-title">${this.components.escapeHtml(page.title || 'Saved page')}</h2>
         </div>
         <button class="project-editor-close" type="button" aria-label="Close project editor">Close</button>
       </div>
@@ -370,9 +370,15 @@ class ProjectManager {
 
     if (dashboard.selectedProjectId === projectId) {
       dashboard.selectedProjectId = null;
+      if (dashboard.currentFilter) {
+        dashboard.currentFilter.projectId = null;
+        dashboard.currentFilter.cursor = null;
+      }
       dashboard.tagInteractionManager.clearSelection();
       dashboard.discoveryManager.exit();
-      dashboard.handleFilterChange();
+      dashboard.showLoading?.();
+      await dashboard.loadPages?.();
+      await dashboard.handleFilterChange();
       return project;
     }
 
