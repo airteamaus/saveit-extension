@@ -44,6 +44,67 @@ function buildFavoritesParams(options) {
   return params;
 }
 
+function createProjectsUnsupportedError() {
+  const error = new Error('Project collections are not supported by the connected backend yet.');
+  error.code = 'PROJECTS_UNSUPPORTED';
+  return error;
+}
+
+function isProjectRecord(project) {
+  return Boolean(
+    project &&
+    typeof project === 'object' &&
+    typeof project.id === 'string' &&
+    typeof project.name === 'string'
+  );
+}
+
+function normalizeProjectsResponse(data) {
+  if (!Array.isArray(data) || !data.every(isProjectRecord)) {
+    throw createProjectsUnsupportedError();
+  }
+
+  return data;
+}
+
+function buildCreateProjectPayload(project) {
+  const payload = {
+    name: project.name?.trim()
+  };
+
+  if (project.visibility === 'company') {
+    payload.visibility = 'company';
+  }
+
+  if (project.company_domain) {
+    payload.company_domain = project.company_domain;
+  }
+
+  return payload;
+}
+
+function buildUpdateProjectPayload(updates) {
+  const payload = {};
+
+  if (typeof updates.name === 'string' && updates.name.trim()) {
+    payload.name = updates.name.trim();
+  }
+
+  if (updates.visibility) {
+    payload.visibility = updates.visibility;
+  }
+
+  if (typeof updates.company_domain === 'string' && updates.company_domain.trim()) {
+    payload.company_domain = updates.company_domain.trim();
+  }
+
+  if (typeof updates.archived === 'boolean') {
+    payload.archived = updates.archived;
+  }
+
+  return payload;
+}
+
 function normalizePagesResponse(data, context) {
   const normalizedResponse = {
     pages: data.pages || data,
@@ -289,7 +350,8 @@ function applyApiPages(API) {
               params.includeArchived = String(options.includeArchived);
             }
 
-            return await this._fetchWithAuth('/projects', params);
+            const response = await this._fetchWithAuth('/projects', params);
+            return normalizeProjectsResponse(response);
           },
           'getProjects',
           { options }
@@ -303,12 +365,13 @@ function applyApiPages(API) {
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
+            const payload = buildCreateProjectPayload(project);
             const response = await this._fetchWithAuth('/projects', null, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(project)
+              body: JSON.stringify(payload)
             });
 
             await this.invalidateCache();
@@ -326,12 +389,13 @@ function applyApiPages(API) {
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
+            const payload = buildUpdateProjectPayload(updates);
             const response = await this._fetchWithAuth(`/projects/${encodeURIComponent(projectId)}`, null, {
               method: 'PATCH',
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify(updates)
+              body: JSON.stringify(payload)
             });
 
             await this.invalidateCache();

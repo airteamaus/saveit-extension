@@ -61,6 +61,7 @@ describe('API - Error Handling', () => {
       const mockResponse = {
         status: 404,
         statusText: 'Not Found',
+        text: vi.fn(async () => ''),
         json: vi.fn(async () => { throw new Error('Invalid JSON'); })
       };
 
@@ -72,11 +73,24 @@ describe('API - Error Handling', () => {
       const mockResponse = {
         status: 503,
         statusText: '',
+        text: vi.fn(async () => ''),
         json: vi.fn(async () => { throw new Error('Invalid JSON'); })
       };
 
       const error = await API.parseErrorResponse(mockResponse);
       expect(error).toBe('HTTP 503');
+    });
+
+    it('should return plain-text error bodies when JSON parsing fails', async () => {
+      const mockResponse = {
+        status: 400,
+        statusText: 'Error',
+        text: vi.fn(async () => 'Project name already exists'),
+        json: vi.fn(async () => { throw new Error('Invalid JSON'); })
+      };
+
+      const error = await API.parseErrorResponse(mockResponse);
+      expect(error).toBe('Project name already exists');
     });
   });
 

@@ -63,8 +63,18 @@ function applyApiCore(API) {
     async parseErrorResponse(response) {
       try {
         const data = await response.json();
-        return data.error || data.message || `HTTP ${response.status}`;
+        return data.message || data.error || `HTTP ${response.status}`;
       } catch {
+        if (typeof response.text === 'function') {
+          try {
+            const text = (await response.text()).trim();
+            if (text) {
+              return text;
+            }
+          } catch {
+            // Fall through to status text fallback.
+          }
+        }
         return response.statusText || `HTTP ${response.status}`;
       }
     },
@@ -154,7 +164,9 @@ function applyApiCore(API) {
 
       if (!response.ok) {
         const errorMessage = await this.parseErrorResponse(response);
-        throw new Error(errorMessage);
+        const error = new Error(errorMessage);
+        error.status = response.status;
+        throw error;
       }
 
       return await response.json();

@@ -263,12 +263,75 @@ describe('API - CRUD Operations', () => {
       expect(result.id).toBe('project-1');
     });
 
+    it('should send a minimal create payload in extension mode', async () => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
+      global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ id: 'project-1', name: 'New project', visibility: 'private' })
+      }));
+      API._cacheManager = {
+        invalidateCache: vi.fn()
+      };
+
+      await API.createProject({
+        name: '  New project  ',
+        owner_user_id: 'user123',
+        visibility: 'private',
+        company_domain: null
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test.run.app/projects',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer token'
+          }),
+          body: JSON.stringify({ name: 'New project' })
+        })
+      );
+      expect(API._cacheManager.invalidateCache).toHaveBeenCalled();
+    });
+
     it('should update project in standalone mode', async () => {
       const result = await API.updateProject('project-1', { name: 'Renamed' });
 
       expect(global.updateMockProjectData).toHaveBeenCalledWith('project-1', { name: 'Renamed' });
       expect(result.id).toBe('project-1');
       expect(result.name).toBe('Renamed');
+    });
+
+    it('should omit null company_domain in extension update payloads', async () => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
+      global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ id: 'project-1', visibility: 'private' })
+      }));
+      API._cacheManager = {
+        invalidateCache: vi.fn()
+      };
+
+      await API.updateProject('project-1', {
+        visibility: 'private',
+        company_domain: null
+      });
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test.run.app/projects/project-1',
+        expect.objectContaining({
+          method: 'PATCH',
+          body: JSON.stringify({ visibility: 'private' })
+        })
+      );
     });
 
     it('should add page to project in standalone mode', async () => {
@@ -308,6 +371,22 @@ describe('API - CRUD Operations', () => {
         })
       );
       expect(result).toHaveLength(1);
+    });
+
+    it('should treat non-project responses as unsupported project backends', async () => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
+      global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ pages: [{ id: 'page-1', title: 'A page' }] })
+      }));
+
+      await expect(API.getProjects()).rejects.toMatchObject({
+        code: 'PROJECTS_UNSUPPORTED'
+      });
     });
   });
 

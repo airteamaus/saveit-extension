@@ -4,6 +4,7 @@
 /* global ThemeManager, AuthMenu, ProjectManager */
 
 import { unsplashAccessKey, getStorageAPI } from './config.js';
+import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 
 const CACHE_KEY = 'newtab_background';
 const CACHE_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours
@@ -44,6 +45,7 @@ const projectEditorDialog = document.getElementById('project-editor-dialog');
 const SAVED_PAGES_DRAWER_PARAM = 'drawer';
 const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
 const FAVORITES_MAX_ITEMS = 300;
+const FAVORITES_INITIAL_FETCH_LIMIT = 36;
 const FAVORITES_DRAG_THRESHOLD = 40;
 const FAVORITES_MAX_COLUMNS = 10;
 const FAVORITES_MIN_COLUMNS = 6;
@@ -59,12 +61,13 @@ const FAVORITES_TILE_GAP = 12;
 const FAVORITES_WIDTH_PADDING = 220;
 const FAVORITES_MAX_GRID_WIDTH = 1008;
 const DRAWER_SEARCH_DEBOUNCE_MS = 250;
-const DRAWER_PAGE_LIMIT = FAVORITES_MAX_ITEMS;
+const DRAWER_INITIAL_FETCH_LIMIT = 50;
 const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
 const FAVORITE_PREVIEW_MARGIN = 8;
 const FAVORITE_PREVIEW_GAP = 14;
 
 let drawerSearchDebounceTimer = null;
+let savedPagesCacheRefreshTimer = null;
 
 const favoritesState = {
   allPages: [],
@@ -96,6 +99,8 @@ const drawerState = {
   pages: [],
   allPages: [],
   projects: [],
+  projectsAvailable: true,
+  projectsUnavailableMessage: '',
   selectedProjectId: null,
   projectEditorState: {
     pageId: null,
@@ -798,6 +803,18 @@ const savedPagesView = {
   set selectedProjectId(value) {
     drawerState.selectedProjectId = value || null;
   },
+  get projectsAvailable() {
+    return drawerState.projectsAvailable;
+  },
+  set projectsAvailable(value) {
+    drawerState.projectsAvailable = value !== false;
+  },
+  get projectsUnavailableMessage() {
+    return drawerState.projectsUnavailableMessage;
+  },
+  set projectsUnavailableMessage(value) {
+    drawerState.projectsUnavailableMessage = value || '';
+  },
   get projectEditorState() {
     return drawerState.projectEditorState;
   },
@@ -947,6 +964,7 @@ function renderDrawerCard(page) {
 
   const tagsHtml = renderDrawerTags(page);
   const projectPills = getDrawerProjectPills(page);
+  const projectsUnavailable = savedPagesView.projectsAvailable === false;
   const projectPillsHtml = projectPills.length
     ? `
       <div class="saved-pages-drawer-card-projects">
@@ -994,9 +1012,10 @@ function renderDrawerCard(page) {
             type="button"
             data-action="projects"
             data-id="${escapeHtml(page.id)}"
+            ${projectsUnavailable ? 'disabled' : ''}
             title="Manage projects"
             aria-label="Manage projects"
-          >Projects</button>
+          >${projectsUnavailable ? 'Projects unavailable' : 'Projects'}</button>
           <button
             class="saved-pages-drawer-action-btn saved-pages-drawer-delete-btn"
             type="button"
@@ -1126,7 +1145,7 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
     await ensureDrawerProjectsLoaded();
 
     const response = await API.getSavedPages({
-      limit: DRAWER_PAGE_LIMIT,
+      limit: DRAWER_INITIAL_FETCH_LIMIT,
       sort: 'newest',
       pinnedFirst: false,
       projectId: drawerState.selectedProjectId || undefined
@@ -1251,6 +1270,41 @@ function closeSavedPagesDrawer({ syncUrl = true } = {}) {
   if (syncUrl) {
     updateDrawerUrl(false);
   }
+}
+
+function syncSavedPagesAfterCacheInvalidation() {
+  window.clearTimeout(savedPagesCacheRefreshTimer);
+  savedPagesCacheRefreshTimer = window.setTimeout(() => {
+    drawerState.hasInitialized = false;
+
+    if (!getDrawerCurrentUser()) {
+      return;
+    }
+
+    void initFavorites();
+
+    if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
+      void loadDrawerBasePages({
+        query: savedPagesDrawerSearchInput?.value || drawerState.query,
+        syncUrl: false
+      });
+    }
+  }, 50);
+}
+
+function initSavedPagesCacheSync() {
+  const browserApi = globalThis.browser ?? globalThis.chrome;
+  if (!browserApi?.storage?.onChanged?.addListener) {
+    return;
+  }
+
+  browserApi.storage.onChanged.addListener((changes, areaName) => {
+    if (!isSavedPagesCacheInvalidation(changes, areaName)) {
+      return;
+    }
+
+    syncSavedPagesAfterCacheInvalidation();
+  });
 }
 
 function initSavedPagesDrawer() {
@@ -1456,7 +1510,7 @@ async function initFavorites() {
       return null;
     }
 
-    const options = { limit: FAVORITES_MAX_ITEMS, sort: 'newest', pinnedFirst: true };
+    const options = { limit: FAVORITES_INITIAL_FETCH_LIMIT, sort: 'newest', pinnedFirst: true };
 
     // 1. Try cache (or fresh if no cache)
     const response = await API.getFavorites(options);
@@ -1548,6 +1602,8 @@ async function initAuth() {
               pages: [],
               allPages: [],
               projects: [],
+              projectsAvailable: true,
+              projectsUnavailableMessage: '',
               selectedProjectId: null,
               projectEditorState: {
                 pageId: null,
@@ -1623,6 +1679,7 @@ updateVersionIndicator();
 
 // Drawer controls
 initSavedPagesDrawer();
+initSavedPagesCacheSync();
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([

@@ -6,13 +6,31 @@ class ProjectManager {
     this.htmlUtils = htmlUtils;
   }
 
+  isProjectsUnavailable(dashboard) {
+    return dashboard.projectsAvailable === false;
+  }
+
+  getProjectsUnavailableMessage(dashboard) {
+    return dashboard.projectsUnavailableMessage ||
+      'Project collections are not supported by the connected backend yet.';
+  }
+
   async loadProjects(dashboard) {
     try {
       dashboard.projects = await this.api.getProjects();
+      dashboard.projectsAvailable = true;
+      dashboard.projectsUnavailableMessage = '';
       this.refreshProjectCounts(dashboard);
     } catch (error) {
       console.error('Failed to load projects:', error);
       dashboard.projects = [];
+      if (error?.code === 'PROJECTS_UNSUPPORTED') {
+        dashboard.projectsAvailable = false;
+        dashboard.projectsUnavailableMessage = error.message;
+      } else {
+        dashboard.projectsAvailable = true;
+        dashboard.projectsUnavailableMessage = '';
+      }
     }
   }
 
@@ -83,6 +101,19 @@ class ProjectManager {
   renderSidebar(dashboard) {
     const container = document.getElementById('project-sidebar');
     if (!container) {
+      return;
+    }
+
+    if (this.isProjectsUnavailable(dashboard)) {
+      container.innerHTML = `
+        <div class="project-sidebar-header">
+          <div>
+            <p class="project-sidebar-eyebrow">Projects</p>
+            <h2 class="project-sidebar-title">Collections</h2>
+          </div>
+        </div>
+        <p class="project-sidebar-empty">${this.htmlUtils.escapeHtml(this.getProjectsUnavailableMessage(dashboard))}</p>
+      `;
       return;
     }
 
@@ -157,6 +188,22 @@ class ProjectManager {
     const backdrop = document.getElementById('project-editor-backdrop');
     const dialog = document.getElementById('project-editor-dialog');
     if (!backdrop || !dialog) {
+      return;
+    }
+
+    if (this.isProjectsUnavailable(dashboard)) {
+      backdrop.classList.remove('hidden');
+      dialog.classList.remove('hidden');
+      dialog.innerHTML = `
+        <div class="project-editor-header">
+          <div>
+            <p class="project-editor-eyebrow">Page projects</p>
+            <h2 id="project-editor-title" class="project-editor-title">Projects unavailable</h2>
+          </div>
+          <button class="project-editor-close" type="button" aria-label="Close project editor">Close</button>
+        </div>
+        <p class="project-editor-empty">${this.htmlUtils.escapeHtml(this.getProjectsUnavailableMessage(dashboard))}</p>
+      `;
       return;
     }
 
@@ -255,6 +302,11 @@ class ProjectManager {
   }
 
   openEditor(dashboard, pageId) {
+    if (this.isProjectsUnavailable(dashboard)) {
+      alert(this.getProjectsUnavailableMessage(dashboard));
+      return;
+    }
+
     dashboard.projectEditorState = {
       pageId,
       query: ''
@@ -286,6 +338,11 @@ class ProjectManager {
   }
 
   async promptCreateProject(dashboard, initialName = '', autoAssignPageId = null) {
+    if (this.isProjectsUnavailable(dashboard)) {
+      alert(this.getProjectsUnavailableMessage(dashboard));
+      return null;
+    }
+
     const proposedName = prompt('Project name', initialName);
     const name = proposedName?.trim();
     if (!name) {
@@ -296,24 +353,32 @@ class ProjectManager {
   }
 
   async createProject(dashboard, name, autoAssignPageId = null) {
-    const currentUser = dashboard.getCurrentUser();
-    const newProject = await this.api.createProject({
-      name,
-      owner_user_id: currentUser?.uid || currentUser?.email || 'standalone-user',
-      visibility: 'private',
-      company_domain: null
-    });
-
-    dashboard.projects = [...dashboard.projects, { ...newProject, page_count: newProject.page_count || 0 }];
-    if (autoAssignPageId) {
-      await this.togglePageProject(dashboard, autoAssignPageId, newProject.id, true);
-      dashboard.projectEditorState.query = '';
-    } else {
-      this.refreshProjectCounts(dashboard);
-      dashboard.render();
+    if (this.isProjectsUnavailable(dashboard)) {
+      alert(this.getProjectsUnavailableMessage(dashboard));
+      return null;
     }
 
-    return newProject;
+    try {
+      const newProject = await this.api.createProject({
+        name,
+        visibility: 'private'
+      });
+
+      dashboard.projects = [...dashboard.projects, { ...newProject, page_count: newProject.page_count || 0 }];
+      if (autoAssignPageId) {
+        await this.togglePageProject(dashboard, autoAssignPageId, newProject.id, true);
+        dashboard.projectEditorState.query = '';
+      } else {
+        this.refreshProjectCounts(dashboard);
+        dashboard.render();
+      }
+
+      return newProject;
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      alert(error.message || 'Failed to create project. Please try again.');
+      return null;
+    }
   }
 
   async renameProject(dashboard, projectId) {

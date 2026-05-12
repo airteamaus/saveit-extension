@@ -40,6 +40,7 @@ describe('ProjectManager', () => {
     };
 
     manager = new ProjectManager(api, htmlUtils);
+    vi.stubGlobal('alert', vi.fn());
     dashboard = {
       allPages: [
         { id: '1', title: 'Page one', project_ids: ['project-1'] },
@@ -55,6 +56,8 @@ describe('ProjectManager', () => {
         { id: 'project-1', name: 'SaveIt product', visibility: 'private', page_count: 2 },
         { id: 'project-2', name: 'AI radar', visibility: 'company', page_count: 2 }
       ],
+      projectsAvailable: true,
+      projectsUnavailableMessage: '',
       allItemsTotal: 3,
       totalPages: 3,
       selectedProjectId: null,
@@ -134,5 +137,34 @@ describe('ProjectManager', () => {
     expect(dialog.textContent).toContain('Page three');
     expect(dialog.textContent).toContain('SaveIt product');
     expect(dialog.textContent).toContain('Create "save"');
+  });
+
+  it('alerts instead of throwing when project creation fails', async () => {
+    api.createProject.mockRejectedValueOnce(new Error('Project name already exists'));
+
+    const result = await manager.createProject(dashboard, 'Duplicate name');
+
+    expect(result).toBeNull();
+    expect(global.alert).toHaveBeenCalledWith('Project name already exists');
+  });
+
+  it('renders an unavailable message when the backend does not support projects', () => {
+    dashboard.projectsAvailable = false;
+    dashboard.projectsUnavailableMessage = 'Project collections are not supported by the connected backend yet.';
+
+    manager.renderSidebar(dashboard);
+
+    const sidebar = document.getElementById('project-sidebar');
+    expect(sidebar.textContent).toContain('not supported by the connected backend');
+    expect(sidebar.textContent).not.toContain('New');
+  });
+
+  it('alerts immediately when opening projects while unsupported', () => {
+    dashboard.projectsAvailable = false;
+    dashboard.projectsUnavailableMessage = 'Project collections are not supported by the connected backend yet.';
+
+    manager.openEditor(dashboard, '1');
+
+    expect(global.alert).toHaveBeenCalledWith('Project collections are not supported by the connected backend yet.');
   });
 });
