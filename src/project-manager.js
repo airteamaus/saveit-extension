@@ -1,9 +1,9 @@
-// project-manager.js - Dashboard project navigation and project membership UI
+// project-manager.js - Saved pages project navigation and membership UI
 
 class ProjectManager {
-  constructor(api, components) {
+  constructor(api, htmlUtils) {
     this.api = api;
-    this.components = components;
+    this.htmlUtils = htmlUtils;
   }
 
   async loadProjects(dashboard) {
@@ -97,9 +97,9 @@ class ProjectManager {
 
         return `
           <div class="project-nav-row ${activeClass}">
-            <button class="project-nav-item ${activeClass}" data-project-id="${this.components.escapeHtml(project.id)}">
+            <button class="project-nav-item ${activeClass}" data-project-id="${this.htmlUtils.escapeHtml(project.id)}">
               <span class="project-nav-main">
-                <span class="project-nav-name">${this.components.escapeHtml(project.name)}</span>
+                <span class="project-nav-name">${this.htmlUtils.escapeHtml(project.name)}</span>
                 <span class="project-nav-visibility">${visibilityLabel}</span>
               </span>
               <span class="project-nav-count">${project.page_count || 0}</span>
@@ -107,21 +107,21 @@ class ProjectManager {
             <div class="project-nav-actions">
               <button
                 class="project-nav-action project-action-rename"
-                data-project-id="${this.components.escapeHtml(project.id)}"
+                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
                 title="Rename project"
-                aria-label="Rename ${this.components.escapeHtml(project.name)}"
+                aria-label="Rename ${this.htmlUtils.escapeHtml(project.name)}"
               >Rename</button>
               <button
                 class="project-nav-action project-action-visibility"
-                data-project-id="${this.components.escapeHtml(project.id)}"
+                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
                 title="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
                 aria-label="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
               >${project.visibility === 'company' ? 'Private' : 'Share'}</button>
               <button
                 class="project-nav-action project-action-archive"
-                data-project-id="${this.components.escapeHtml(project.id)}"
+                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
                 title="Archive project"
-                aria-label="Archive ${this.components.escapeHtml(project.name)}"
+                aria-label="Archive ${this.htmlUtils.escapeHtml(project.name)}"
               >Archive</button>
             </div>
           </div>
@@ -190,12 +190,12 @@ class ProjectManager {
             <input
               class="project-editor-checkbox"
               type="checkbox"
-              data-page-id="${this.components.escapeHtml(page.id)}"
-              data-project-id="${this.components.escapeHtml(project.id)}"
+              data-page-id="${this.htmlUtils.escapeHtml(page.id)}"
+              data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
               ${isChecked ? 'checked' : ''}
             >
             <span class="project-editor-option-main">
-              <span class="project-editor-option-name">${this.components.escapeHtml(project.name)}</span>
+              <span class="project-editor-option-name">${this.htmlUtils.escapeHtml(project.name)}</span>
               <span class="project-editor-option-meta">${project.visibility === 'company' ? 'Shared with company' : 'Private project'}</span>
             </span>
           </label>
@@ -208,10 +208,10 @@ class ProjectManager {
         <button
           class="project-editor-create"
           type="button"
-          data-page-id="${this.components.escapeHtml(page.id)}"
-          data-project-name="${this.components.escapeHtml(query.trim())}"
+          data-page-id="${this.htmlUtils.escapeHtml(page.id)}"
+          data-project-name="${this.htmlUtils.escapeHtml(query.trim())}"
         >
-          Create "${this.components.escapeHtml(query.trim())}"
+          Create "${this.htmlUtils.escapeHtml(query.trim())}"
         </button>
       `
       : '';
@@ -220,14 +220,14 @@ class ProjectManager {
       <div class="project-editor-header">
         <div>
           <p class="project-editor-eyebrow">Page projects</p>
-          <h2 id="project-editor-title" class="project-editor-title">${this.components.escapeHtml(page.title || 'Saved page')}</h2>
+          <h2 id="project-editor-title" class="project-editor-title">${this.htmlUtils.escapeHtml(page.title || 'Saved page')}</h2>
         </div>
         <button class="project-editor-close" type="button" aria-label="Close project editor">Close</button>
       </div>
 
       <div class="project-editor-assigned">
         ${assignedProjects.length > 0
-          ? assignedProjects.map(project => `<span class="project-chip">${this.components.escapeHtml(project.name)}</span>`).join('')
+          ? assignedProjects.map(project => `<span class="project-chip">${this.htmlUtils.escapeHtml(project.name)}</span>`).join('')
           : '<span class="project-editor-empty-inline">Not assigned to any projects yet.</span>'}
       </div>
 
@@ -237,7 +237,7 @@ class ProjectManager {
           id="project-editor-search-input"
           class="search-input project-editor-search-input"
           type="text"
-          value="${this.components.escapeHtml(query)}"
+          value="${this.htmlUtils.escapeHtml(query)}"
           placeholder="Find or create a project"
           autocomplete="off"
         >

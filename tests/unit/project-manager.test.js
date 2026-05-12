@@ -1,10 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import componentModule from '../../src/components.js';
 import projectManagerModule from '../../src/project-manager.js';
 
-const Components = componentModule.Components;
 const ProjectManager = projectManagerModule.ProjectManager || window.ProjectManager;
+const htmlUtils = {
+  escapeHtml(value = '') {
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll('\'', '&#39;');
+  }
+};
 
 describe('ProjectManager', () => {
   let api;
@@ -31,7 +39,7 @@ describe('ProjectManager', () => {
       updateProject: vi.fn(async (_projectId, updates) => updates)
     };
 
-    manager = new ProjectManager(api, Components);
+    manager = new ProjectManager(api, htmlUtils);
     dashboard = {
       allPages: [
         { id: '1', title: 'Page one', project_ids: ['project-1'] },
