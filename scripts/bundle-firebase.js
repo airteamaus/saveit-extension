@@ -40,7 +40,7 @@ import {
   onAuthStateChanged,
   getIdToken,
   signOut
-} from '@firebase/auth/web-extension';
+} from 'firebase/auth/web-extension';
 
 export {
   initializeApp,
@@ -77,7 +77,7 @@ import {
   onAuthStateChanged,
   getIdToken,
   signOut
-} from '@firebase/auth/web-extension';
+} from 'firebase/auth/web-extension';
 
 export {
   initializeApp,
