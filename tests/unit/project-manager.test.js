@@ -56,6 +56,7 @@ describe('ProjectManager', () => {
         { id: 'project-1', name: 'SaveIt product', visibility: 'private', page_count: 2 },
         { id: 'project-2', name: 'AI radar', visibility: 'company', page_count: 2 }
       ],
+      projectsLoading: false,
       projectsAvailable: true,
       projectsUnavailableMessage: '',
       allItemsTotal: 3,
@@ -157,6 +158,16 @@ describe('ProjectManager', () => {
     const sidebar = document.getElementById('project-sidebar');
     expect(sidebar.textContent).toContain('not supported by the connected backend');
     expect(sidebar.textContent).not.toContain('New');
+  });
+
+  it('renders a loading state while projects are hydrating', () => {
+    dashboard.projects = [];
+    dashboard.projectsLoading = true;
+
+    manager.renderSidebar(dashboard);
+
+    const sidebar = document.getElementById('project-sidebar');
+    expect(sidebar.textContent).toContain('Loading projects...');
   });
 
   it('alerts immediately when opening projects while unsupported', () => {

@@ -68,6 +68,7 @@ const FAVORITE_PREVIEW_GAP = 14;
 
 let drawerSearchDebounceTimer = null;
 let savedPagesCacheRefreshTimer = null;
+let drawerProjectsPromise = null;
 
 const favoritesState = {
   allPages: [],
@@ -99,6 +100,7 @@ const drawerState = {
   pages: [],
   allPages: [],
   projects: [],
+  projectsLoading: false,
   projectsAvailable: true,
   projectsUnavailableMessage: '',
   selectedProjectId: null,
@@ -797,6 +799,12 @@ const savedPagesView = {
   set projects(value) {
     drawerState.projects = Array.isArray(value) ? value : [];
   },
+  get projectsLoading() {
+    return drawerState.projectsLoading;
+  },
+  set projectsLoading(value) {
+    drawerState.projectsLoading = value === true;
+  },
   get selectedProjectId() {
     return drawerState.selectedProjectId;
   },
@@ -1114,9 +1122,21 @@ function updateDrawerPageCollections(id, updater) {
 }
 
 async function ensureDrawerProjectsLoaded() {
-  if (!drawerState.projects.length) {
-    await projectManager.loadProjects(savedPagesView);
+  if (drawerState.projects.length || drawerState.projectsAvailable === false) {
+    return null;
   }
+
+  if (!drawerProjectsPromise) {
+    drawerState.projectsLoading = true;
+    drawerProjectsPromise = projectManager
+      .loadProjects(savedPagesView)
+      .finally(() => {
+        drawerState.projectsLoading = false;
+        drawerProjectsPromise = null;
+      });
+  }
+
+  return drawerProjectsPromise;
 }
 
 async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true } = {}) {
@@ -1142,7 +1162,7 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
   renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
 
   try {
-    await ensureDrawerProjectsLoaded();
+    const projectsPromise = ensureDrawerProjectsLoaded();
 
     const response = await API.getSavedPages({
       limit: DRAWER_INITIAL_FETCH_LIMIT,
@@ -1164,6 +1184,17 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
     applyDrawerFilters(trimmedQuery);
     drawerState.hasInitialized = true;
     renderDrawerResults();
+
+    if (projectsPromise) {
+      void projectsPromise.then(() => {
+        if (requestId !== drawerState.requestId) {
+          return;
+        }
+
+        projectManager.refreshProjectCounts(savedPagesView);
+        renderDrawerResults();
+      });
+    }
   } catch (error) {
     if (requestId !== drawerState.requestId) {
       return;
@@ -1602,6 +1633,7 @@ async function initAuth() {
               pages: [],
               allPages: [],
               projects: [],
+              projectsLoading: false,
               projectsAvailable: true,
               projectsUnavailableMessage: '',
               selectedProjectId: null,

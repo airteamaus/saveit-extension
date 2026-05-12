@@ -117,6 +117,20 @@ class ProjectManager {
       return;
     }
 
+    if (dashboard.projectsLoading) {
+      container.innerHTML = `
+        <div class="project-sidebar-header">
+          <div>
+            <p class="project-sidebar-eyebrow">Projects</p>
+            <h2 class="project-sidebar-title">Collections</h2>
+          </div>
+          <button class="project-sidebar-create" type="button" disabled>New</button>
+        </div>
+        <p class="project-sidebar-empty">Loading projects...</p>
+      `;
+      return;
+    }
+
     const totalCount = dashboard.allItemsTotal || dashboard.totalPages || dashboard.allPages.length;
     const selectedProject = this.getSelectedProject(dashboard);
     const projectRows = (dashboard.projects || [])
