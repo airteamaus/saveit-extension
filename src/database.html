@@ -85,13 +85,24 @@
   </header>
 
   <main class="main">
-    <div id="tag-bar" class="tag-bar">
-      <!-- Tag navigation will be rendered here by newtab.js -->
-    </div>
-    <div id="content" class="content">
-      <!-- Cards will be rendered here by newtab.js -->
+    <div class="dashboard-layout">
+      <aside id="project-sidebar" class="project-sidebar">
+        <!-- Project navigation rendered by project-manager.js -->
+      </aside>
+
+      <section class="dashboard-main">
+        <div id="tag-bar" class="tag-bar">
+          <!-- Tag navigation will be rendered here by newtab.js -->
+        </div>
+        <div id="content" class="content">
+          <!-- Cards will be rendered here by newtab.js -->
+        </div>
+      </section>
     </div>
   </main>
+
+  <div id="project-editor-backdrop" class="project-editor-backdrop hidden"></div>
+  <section id="project-editor-dialog" class="project-editor-dialog hidden" role="dialog" aria-modal="true" aria-label="Manage page projects"></section>
 
   <footer class="footer">
     <div class="footer-content">
@@ -130,6 +141,7 @@
   <script src="auth-ui.js"></script>
   <script src="discovery-manager.js"></script>
   <script src="theme-manager.js"></script>
+  <script src="project-manager.js"></script>
   <script src="tag-interaction-manager.js"></script>
   <script src="event-manager.js"></script>
   <script src="firebase-auth-manager.js"></script>

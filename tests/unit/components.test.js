@@ -131,6 +131,28 @@ describe('Components', () => {
       expect(html).toContain('My personal notes here');
     });
 
+    it('should render project controls and project pills when project metadata is provided', () => {
+      const page = {
+        id: 'test-projects',
+        title: 'Project page',
+        url: 'https://example.com',
+        project_ids: ['project-1']
+      };
+
+      const html = Components.savedPageCard(page, {
+        projectMap: {
+          'project-1': {
+            id: 'project-1',
+            name: 'SaveIt product'
+          }
+        }
+      });
+
+      expect(html).toContain('btn-projects');
+      expect(html).toContain('SaveIt product');
+      expect(html).toContain('project-pill-remove');
+    });
+
     it('should render metadata items', () => {
       const page = {
         id: 'test-meta',
@@ -169,6 +191,15 @@ describe('Components', () => {
 
       expect(html).toContain('empty-state');
       expect(html).toContain('No saved pages yet');
+    });
+  });
+
+  describe('projectEmptyState', () => {
+    it('should render project empty state message', () => {
+      const html = Components.projectEmptyState('SaveIt product');
+
+      expect(html).toContain('No pages in this project yet');
+      expect(html).toContain('SaveIt product');
     });
   });
 

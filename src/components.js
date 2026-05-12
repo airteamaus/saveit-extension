@@ -139,9 +139,13 @@ const Components = {
    * @param {Page} page - Page data object
    * @returns {string} HTML string
    */
-  savedPageCard(page) {
+  savedPageCard(page, options = {}) {
     // Build consolidated metadata row: domain • tags • reading_time
     const metaParts = [];
+    const projectMap = options.projectMap || {};
+    const pageProjects = (page.project_ids || [])
+      .map(projectId => projectMap[projectId])
+      .filter(Boolean);
 
     // Add domain first
     if (page.domain) {
@@ -158,6 +162,26 @@ const Components = {
     if (page.reading_time_minutes) {
       metaParts.push(`<span class="meta-item">${page.reading_time_minutes} min read</span>`);
     }
+
+    const projectPillsHtml = pageProjects.length > 0
+      ? `
+        <div class="row-projects">
+          ${pageProjects.map(project => `
+            <span class="project-pill" title="${this.escapeHtml(project.name)}">
+              <span class="project-pill-label">${this.escapeHtml(project.name)}</span>
+              <button
+                class="project-pill-remove"
+                type="button"
+                data-page-id="${page.id}"
+                data-project-id="${this.escapeHtml(project.id)}"
+                title="Remove from ${this.escapeHtml(project.name)}"
+                aria-label="Remove from ${this.escapeHtml(project.name)}"
+              >×</button>
+            </span>
+          `).join('')}
+        </div>
+      `
+      : '';
 
     return `
       <div class="saved-page-card" data-id="${page.id}" data-url="${this.escapeHtml(page.url)}">
@@ -181,23 +205,31 @@ const Components = {
               <div class="row-meta-inline">
                 ${metaParts.join(' <span class="meta-separator">⏺</span> ')}
               </div>
-              <button class="btn-delete" data-id="${page.id}" title="Delete page">
-                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>
+              <div class="row-actions">
+                <button class="btn-projects" type="button" data-id="${page.id}" title="Manage projects">Projects</button>
+                <button class="btn-delete" data-id="${page.id}" title="Delete page">
+                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           ` : `
             <div class="row-footer">
-              <button class="btn-delete" data-id="${page.id}" title="Delete page">
-                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <polyline points="3 6 5 6 21 6"></polyline>
-                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-                </svg>
-              </button>
+              <div class="row-actions">
+                <button class="btn-projects" type="button" data-id="${page.id}" title="Manage projects">Projects</button>
+                <button class="btn-delete" data-id="${page.id}" title="Delete page">
+                  <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                  </svg>
+                </button>
+              </div>
             </div>
           `}
+
+          ${projectPillsHtml}
 
           ${page.user_notes ? `
             <div class="row-notes">
@@ -225,6 +257,20 @@ const Components = {
         </svg>
         <h2>No saved pages yet</h2>
         <p>Click the SaveIt extension icon while browsing to save your first page!</p>
+      </div>
+    `;
+  },
+
+  projectEmptyState(projectName) {
+    return `
+      <div class="empty-state">
+        <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 7h5l2 2h11v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <path d="M3 7V5a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2"></path>
+        </svg>
+        <h2>${this.escapeHtml(projectName)}</h2>
+        <p>No pages in this project yet.</p>
+        <p class="secondary-text">Use the Projects button on any saved page to add it here.</p>
       </div>
     `;
   },

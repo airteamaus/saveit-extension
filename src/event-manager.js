@@ -110,6 +110,23 @@ class EventManager {
         return;
       }
 
+      const projectsBtn = e.target.closest('.btn-projects');
+      if (projectsBtn) {
+        e.stopPropagation();
+        const id = projectsBtn.dataset.id;
+        dashboard.openProjectEditor(id);
+        return;
+      }
+
+      const projectPillRemoveBtn = e.target.closest('.project-pill-remove');
+      if (projectPillRemoveBtn) {
+        e.stopPropagation();
+        const pageId = projectPillRemoveBtn.dataset.pageId;
+        const projectId = projectPillRemoveBtn.dataset.projectId;
+        dashboard.togglePageProject(pageId, projectId, false);
+        return;
+      }
+
       // Tag click - handle tags anywhere (tag bar OR search results)
       const tag = e.target.closest('.tag.ai-tag');
       if (tag) {
@@ -142,6 +159,77 @@ class EventManager {
         }
       }
     });
+
+    const projectSidebar = document.getElementById('project-sidebar');
+    if (projectSidebar) {
+      projectSidebar.addEventListener('click', (e) => {
+        const createButton = e.target.closest('.project-sidebar-create');
+        if (createButton) {
+          dashboard.createProject();
+          return;
+        }
+
+        const renameButton = e.target.closest('.project-action-rename');
+        if (renameButton) {
+          e.stopPropagation();
+          dashboard.renameProject(renameButton.dataset.projectId);
+          return;
+        }
+
+        const visibilityButton = e.target.closest('.project-action-visibility');
+        if (visibilityButton) {
+          e.stopPropagation();
+          dashboard.toggleProjectVisibility(visibilityButton.dataset.projectId);
+          return;
+        }
+
+        const archiveButton = e.target.closest('.project-action-archive');
+        if (archiveButton) {
+          e.stopPropagation();
+          dashboard.archiveProject(archiveButton.dataset.projectId);
+          return;
+        }
+
+        const projectButton = e.target.closest('.project-nav-item');
+        if (projectButton) {
+          dashboard.handleProjectSelect(projectButton.dataset.projectId || null);
+        }
+      });
+    }
+
+    const projectEditorBackdrop = document.getElementById('project-editor-backdrop');
+    if (projectEditorBackdrop) {
+      projectEditorBackdrop.addEventListener('click', () => dashboard.closeProjectEditor());
+    }
+
+    const projectEditorDialog = document.getElementById('project-editor-dialog');
+    if (projectEditorDialog) {
+      projectEditorDialog.addEventListener('click', (e) => {
+        const closeButton = e.target.closest('.project-editor-close');
+        if (closeButton) {
+          dashboard.closeProjectEditor();
+          return;
+        }
+
+        const createButton = e.target.closest('.project-editor-create');
+        if (createButton) {
+          dashboard.createProject(createButton.dataset.projectName, createButton.dataset.pageId);
+        }
+      });
+
+      projectEditorDialog.addEventListener('input', (e) => {
+        const searchInputEl = e.target.closest('.project-editor-search-input');
+        if (searchInputEl) {
+          dashboard.updateProjectEditorQuery(searchInputEl.value);
+          return;
+        }
+
+        const checkbox = e.target.closest('.project-editor-checkbox');
+        if (checkbox) {
+          dashboard.togglePageProject(checkbox.dataset.pageId, checkbox.dataset.projectId, checkbox.checked);
+        }
+      });
+    }
 
     // About link
     document.getElementById('about-link').addEventListener('click', (e) => {

@@ -5,7 +5,7 @@
 // All user-provided data is sanitized via Components.escapeHtml() which uses
 // textContent to prevent XSS attacks. See components.js:204 for implementation.
 
-/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager, PageLoaderManager */
+/* global TagManager, SearchManager, ScrollManager, AuthUIManager, DiscoveryManager, ThemeManager, ProjectManager, TagInteractionManager, StatsManager, NotificationManager, EventManager, FirebaseAuthManager, PageLoaderManager */
 
 const SEMANTIC_SEARCH_THRESHOLD = 0.58;
 
@@ -14,6 +14,12 @@ class SaveItDashboard {
     this.pages = [];
     this.allPages = []; // Keep unfiltered copy for client-side filtering
     this.totalPages = 0; // Total count from backend (all user's pages)
+    this.projects = [];
+    this.selectedProjectId = null;
+    this.projectEditorState = {
+      pageId: null,
+      query: ''
+    };
     this.currentFilter = {
       search: '',
       sort: 'newest',
@@ -43,6 +49,7 @@ class SaveItDashboard {
     this.authUIManager = new AuthUIManager();
     this.discoveryManager = new DiscoveryManager(API, Components, this.tagManager);
     this.themeManager = new ThemeManager();
+    this.projectManager = new ProjectManager(API, Components);
     this.tagInteractionManager = new TagInteractionManager(API, this.tagManager, Components);
     this.statsManager = new StatsManager();
     this.notificationManager = new NotificationManager();
@@ -79,6 +86,8 @@ class SaveItDashboard {
 
     // Initialize Firebase auth
     await this.firebaseAuthManager.initAuth(this);
+
+    await this.loadProjects();
 
     // Load pages and render based on auth state
     if (!API.isExtension || this.getCurrentUser()) {
@@ -164,6 +173,11 @@ class SaveItDashboard {
    */
   async loadPages() {
     await this.pageLoaderManager.loadPages(this);
+    this.projectManager.refreshProjectCounts(this);
+  }
+
+  async loadProjects() {
+    await this.projectManager.loadProjects(this);
   }
 
   /**
@@ -232,7 +246,11 @@ class SaveItDashboard {
    * Update stats display
    */
   updateStats() {
-    this.statsManager.updateStats(this.totalPages, this.pages.length);
+    this.statsManager.updateStats(this.projectManager.getStatsTotal(this), this.pages.length);
+  }
+
+  renderProjectSidebar() {
+    this.projectManager.renderSidebar(this);
   }
 
 
@@ -317,18 +335,24 @@ class SaveItDashboard {
    * @param {HTMLElement} sentinel - Scroll sentinel element
    */
   renderEmptyState(container, sentinel) {
+    const selectedProject = this.projectManager.getSelectedProject(this);
+
     // Check if user is authenticated before showing empty state
     if (API.isExtension) {
       const user = this.getCurrentUser();
 
       if (user) {
-        container.innerHTML = Components.emptyState();
+        container.innerHTML = selectedProject
+          ? Components.projectEmptyState(selectedProject.name)
+          : Components.emptyState();
       } else {
         container.innerHTML = Components.signInState();
       }
     } else {
       // In standalone mode, always show empty state (mock data)
-      container.innerHTML = Components.emptyState();
+      container.innerHTML = selectedProject
+        ? Components.projectEmptyState(selectedProject.name)
+        : Components.emptyState();
     }
 
     // Re-append sentinel
@@ -343,7 +367,9 @@ class SaveItDashboard {
    */
   render() {
     // Render tag bar first
+    this.renderProjectSidebar();
     this.renderTagBar();
+    this.projectManager.renderEditor(this);
 
     const container = document.getElementById('content');
     const sentinel = document.getElementById('scroll-sentinel');
@@ -359,7 +385,8 @@ class SaveItDashboard {
     }
 
     // Render page cards
-    const cardsHtml = this.pages.map(page => Components.savedPageCard(page)).join('');
+    const projectMap = this.projectManager.getProjectMap(this);
+    const cardsHtml = this.pages.map(page => Components.savedPageCard(page, { projectMap })).join('');
     container.innerHTML = cardsHtml;
 
     // Re-append sentinel
@@ -395,11 +422,13 @@ class SaveItDashboard {
 
     // Reset all filter state
     this.currentFilter.search = '';
+    this.selectedProjectId = null;
+    this.closeProjectEditor();
     this.tagInteractionManager.clearSelection();
     this.discoveryManager.exit();
 
     // Restore pages to show all items (unfiltered)
-    this.pages = [...this.allPages];
+    this.pages = this.projectManager.getScopedPages(this, this.allPages);
 
     // Re-render the view
     this.render();
@@ -422,18 +451,19 @@ class SaveItDashboard {
       return;
     }
 
-    // Get currently displayed pages (either similarity results or all pages)
-    const basePages = this.pages.length > 0 ? this.pages : [...this.allPages];
+    const projectScopedPages = this.projectManager.getScopedPages(this, this.allPages);
+    const activeLabel = this.tagInteractionManager.getActiveLabel();
+    const basePages = activeLabel
+      ? [...this.pages]
+      : projectScopedPages;
 
     if (this.currentFilter.search) {
       // Apply search filter using SearchManager
       this.pages = this.searchManager.applySearchFilter(basePages, this.currentFilter.search);
     } else {
       // No search - restore base pages
-      const activeLabel = this.tagInteractionManager.getActiveLabel();
       if (!activeLabel) {
-        // No tag selected either - show all
-        this.pages = [...this.allPages];
+        this.pages = projectScopedPages;
       }
       // If tag is selected, pages already contains similarity results
     }
@@ -493,6 +523,7 @@ class SaveItDashboard {
       // Remove from both allPages and pages
       this.allPages = this.allPages.filter(p => p.id !== id);
       this.pages = this.pages.filter(p => p.id !== id);
+      this.projectManager.refreshProjectCounts(this);
 
       this.updateStats();
       this.render();
@@ -578,6 +609,86 @@ Version ${version} • ${mode} Mode${!API.isExtension ? '\n\n⚠️  Currently v
    */
   showToast(message) {
     this.notificationManager.showToast(message);
+  }
+
+  async handleProjectSelect(projectId) {
+    await this.projectManager.selectProject(this, projectId);
+  }
+
+  openProjectEditor(pageId) {
+    this.projectManager.openEditor(this, pageId);
+  }
+
+  closeProjectEditor() {
+    this.projectManager.closeEditor(this);
+  }
+
+  updateProjectEditorQuery(query) {
+    this.projectManager.updateEditorQuery(this, query);
+  }
+
+  async togglePageProject(pageId, projectId, shouldAssign) {
+    try {
+      await this.projectManager.togglePageProject(this, pageId, projectId, shouldAssign);
+      this.showToast(shouldAssign ? 'Page added to project' : 'Page removed from project');
+    } catch (error) {
+      console.error('Failed to update page project membership:', error);
+      this.showToast('Failed to update page project. Please try again.', 'error');
+    }
+  }
+
+  async createProject(name = '', autoAssignPageId = null) {
+    try {
+      let createdProject = null;
+      if (name) {
+        createdProject = await this.projectManager.createProject(this, name, autoAssignPageId);
+      } else {
+        createdProject = await this.projectManager.promptCreateProject(this, '', autoAssignPageId);
+      }
+
+      if (createdProject) {
+        this.showToast('Project created');
+      }
+    } catch (error) {
+      console.error('Failed to create project:', error);
+      this.showToast('Failed to create project. Please try again.', 'error');
+    }
+  }
+
+  async renameProject(projectId) {
+    try {
+      const updatedProject = await this.projectManager.renameProject(this, projectId);
+      if (updatedProject) {
+        this.showToast('Project updated');
+      }
+    } catch (error) {
+      console.error('Failed to rename project:', error);
+      this.showToast('Failed to rename project. Please try again.', 'error');
+    }
+  }
+
+  async toggleProjectVisibility(projectId) {
+    try {
+      const updatedProject = await this.projectManager.toggleProjectVisibility(this, projectId);
+      if (updatedProject) {
+        this.showToast('Project visibility updated');
+      }
+    } catch (error) {
+      console.error('Failed to update project visibility:', error);
+      this.showToast('Failed to update project visibility. Please try again.', 'error');
+    }
+  }
+
+  async archiveProject(projectId) {
+    try {
+      const archivedProject = await this.projectManager.archiveProject(this, projectId);
+      if (archivedProject) {
+        this.showToast('Project archived');
+      }
+    } catch (error) {
+      console.error('Failed to archive project:', error);
+      this.showToast('Failed to archive project. Please try again.', 'error');
+    }
   }
 
   /**

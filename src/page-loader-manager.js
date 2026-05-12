@@ -36,15 +36,16 @@ class PageLoaderManager {
       skipCache: true
     }));
 
-    dashboard.allPages = freshResponse.pages || [];
-    dashboard.totalPages = freshResponse.pagination?.total || 0;
-    dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
-    dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
-    dashboard.paginationStateFromCache = false;
+      dashboard.allPages = freshResponse.pages || [];
+      dashboard.totalPages = freshResponse.pagination?.total || 0;
+      dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
+      dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
+      dashboard.paginationStateFromCache = false;
 
-    dashboard.pages = [...dashboard.allPages];
-    dashboard.updateStats();
-    dashboard.render();
+      dashboard.pages = [...dashboard.allPages];
+      dashboard.projectManager?.refreshProjectCounts(dashboard);
+      dashboard.updateStats();
+      dashboard.render();
   }
 
   /**
@@ -65,6 +66,7 @@ class PageLoaderManager {
 
       // Initially show all pages (no tag selected)
       dashboard.pages = [...dashboard.allPages];
+      dashboard.projectManager?.refreshProjectCounts(dashboard);
     } catch (error) {
       console.error('Failed to load pages:', error);
       dashboard.showError(error);
@@ -92,14 +94,15 @@ class PageLoaderManager {
       const freshPages = freshResponse.pages || [];
 
       // Only update if data changed
-      if (JSON.stringify(freshPages) !== JSON.stringify(dashboard.allPages)) {
-        dashboard.allPages = freshPages;
-        dashboard.totalPages = freshResponse.pagination?.total || 0;
-        dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
-        dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
-        dashboard.paginationStateFromCache = false;
+        if (JSON.stringify(freshPages) !== JSON.stringify(dashboard.allPages)) {
+          dashboard.allPages = freshPages;
+          dashboard.totalPages = freshResponse.pagination?.total || 0;
+          dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
+          dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
+          dashboard.paginationStateFromCache = false;
+          dashboard.projectManager?.refreshProjectCounts(dashboard);
 
-        // If a tag is selected, re-run similarity search to update results
+          // If a tag is selected, re-run similarity search to update results
         const activeLabel = dashboard.tagInteractionManager.getActiveLabel();
         if (activeLabel) {
           // Re-trigger tag click to refresh similarity results with new data
@@ -174,14 +177,15 @@ class PageLoaderManager {
       const newPages = response.pages || [];
       dashboard.totalPages = response.pagination?.total || dashboard.totalPages; // Update total (should be same)
       dashboard.hasMorePages = response.pagination?.hasNextPage || false;
-      dashboard.nextCursor = response.pagination?.nextCursor || null;
-      dashboard.paginationStateFromCache = false;
+        dashboard.nextCursor = response.pagination?.nextCursor || null;
+        dashboard.paginationStateFromCache = false;
 
-      // Append new pages to existing
-      dashboard.allPages = [...dashboard.allPages, ...newPages];
+        // Append new pages to existing
+        dashboard.allPages = [...dashboard.allPages, ...newPages];
+        dashboard.projectManager?.refreshProjectCounts(dashboard);
 
-      // Also append to filtered pages (they'll match same criteria)
-      dashboard.pages = [...dashboard.pages, ...newPages];
+        // Also append to filtered pages (they'll match same criteria)
+        dashboard.pages = [...dashboard.pages, ...newPages];
 
       dashboard.updateStats();
       dashboard.render();
