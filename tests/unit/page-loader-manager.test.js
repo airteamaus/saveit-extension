@@ -68,6 +68,21 @@ describe('PageLoaderManager', () => {
       expect(mockDashboard.nextCursor).toBe('cursor-123');
     });
 
+    it('should pass project scope through to the API', async () => {
+      mockDashboard.currentFilter.projectId = 'project-saveit-product';
+      mockAPI.getSavedPages.mockResolvedValue({
+        pages: [{ id: '1', title: 'Scoped page' }],
+        pagination: { total: 1, hasNextPage: false, nextCursor: null }
+      });
+
+      await manager.loadPages(mockDashboard);
+
+      expect(mockAPI.getSavedPages).toHaveBeenCalledWith({
+        ...mockDashboard.currentFilter,
+        search: ''
+      });
+    });
+
     it('should handle response without pagination', async () => {
       const mockResponse = {
         pages: [{ id: '1', title: 'Page 1' }],

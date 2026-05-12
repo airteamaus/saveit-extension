@@ -14,6 +14,7 @@ class SaveItDashboard {
     this.pages = [];
     this.allPages = []; // Keep unfiltered copy for client-side filtering
     this.totalPages = 0; // Total count from backend (all user's pages)
+    this.allItemsTotal = 0;
     this.projects = [];
     this.selectedProjectId = null;
     this.projectEditorState = {
@@ -24,6 +25,7 @@ class SaveItDashboard {
       search: '',
       sort: 'newest',
       category: '',
+      projectId: null,
       cursor: null,
       limit: 50, // Pages per batch for infinite scroll
       pinnedFirst: false // Main dashboard uses chronological order, not pinned-first
@@ -265,7 +267,8 @@ class SaveItDashboard {
    * Render tag bar with hierarchical selection
    */
   renderTagBar() {
-    this.tagInteractionManager.renderTagBar(this.allPages, this.pages);
+    const scopedAllPages = this.projectManager.getScopedPages(this, this.allPages);
+    this.tagInteractionManager.renderTagBar(scopedAllPages, this.pages);
   }
 
   /**
@@ -288,7 +291,7 @@ class SaveItDashboard {
       if (!result) return;
 
       // Update pages from result
-      this.pages = result.pages;
+      this.pages = this.projectManager.getScopedPages(this, result.pages);
 
       // Apply search filter if active
       if (this.currentFilter.search) {
@@ -409,7 +412,7 @@ class SaveItDashboard {
   /**
    * Reset all filters and return to default view
    */
-  resetToDefaultView() {
+  async resetToDefaultView() {
     // Clear search
     const searchInput = document.getElementById('search');
     const clearSearch = document.getElementById('clear-search');
@@ -423,12 +426,14 @@ class SaveItDashboard {
     // Reset all filter state
     this.currentFilter.search = '';
     this.selectedProjectId = null;
+    this.currentFilter.projectId = null;
+    this.currentFilter.cursor = null;
     this.closeProjectEditor();
     this.tagInteractionManager.clearSelection();
     this.discoveryManager.exit();
 
-    // Restore pages to show all items (unfiltered)
-    this.pages = this.projectManager.getScopedPages(this, this.allPages);
+    this.showLoading();
+    await this.loadPages();
 
     // Re-render the view
     this.render();
@@ -520,10 +525,17 @@ class SaveItDashboard {
     try {
       await API.deletePage(id);
 
+      const deletedPage = this.allPages.find(p => p.id === id);
+
       // Remove from both allPages and pages
       this.allPages = this.allPages.filter(p => p.id !== id);
       this.pages = this.pages.filter(p => p.id !== id);
-      this.projectManager.refreshProjectCounts(this);
+      deletedPage?.project_ids?.forEach(projectId => {
+        this.projectManager.adjustProjectCount(this, projectId, -1);
+      });
+      if (this.allItemsTotal > 0) {
+        this.allItemsTotal -= 1;
+      }
 
       this.updateStats();
       this.render();

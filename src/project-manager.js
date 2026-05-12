@@ -30,10 +30,35 @@ class ProjectManager {
 
   refreshProjectCounts(dashboard) {
     const activeProjects = dashboard.projects || [];
+    const computedCounts = new Map(
+      dashboard.allPages.reduce((counts, page) => {
+        (page.project_ids || []).forEach(projectId => {
+          counts.set(projectId, (counts.get(projectId) || 0) + 1);
+        });
+        return counts;
+      }, new Map())
+    );
+
     dashboard.projects = activeProjects.map(project => ({
       ...project,
-      page_count: dashboard.allPages.filter(page => page.project_ids?.includes(project.id)).length
+      page_count: typeof project.page_count === 'number'
+        ? project.page_count
+        : (computedCounts.get(project.id) || 0)
     }));
+  }
+
+  adjustProjectCount(dashboard, projectId, delta) {
+    dashboard.projects = (dashboard.projects || []).map(project => {
+      if (project.id !== projectId) {
+        return project;
+      }
+
+      const currentCount = typeof project.page_count === 'number' ? project.page_count : 0;
+      return {
+        ...project,
+        page_count: Math.max(0, currentCount + delta)
+      };
+    });
   }
 
   getStatsTotal(dashboard) {
@@ -61,7 +86,7 @@ class ProjectManager {
       return;
     }
 
-    const totalCount = dashboard.totalPages || dashboard.allPages.length;
+    const totalCount = dashboard.allItemsTotal || dashboard.totalPages || dashboard.allPages.length;
     const selectedProject = this.getSelectedProject(dashboard);
     const projectRows = (dashboard.projects || [])
       .filter(project => !project.archived)
@@ -357,9 +382,13 @@ class ProjectManager {
 
   async selectProject(dashboard, projectId) {
     dashboard.selectedProjectId = projectId || null;
+    dashboard.currentFilter.projectId = dashboard.selectedProjectId;
+    dashboard.currentFilter.cursor = null;
     dashboard.tagInteractionManager.clearSelection();
     dashboard.discoveryManager.exit();
     this.closeEditor(dashboard);
+    dashboard.showLoading();
+    await dashboard.loadPages();
     await dashboard.handleFilterChange();
   }
 
@@ -390,7 +419,7 @@ class ProjectManager {
 
     dashboard.allPages = dashboard.allPages.map(applyMembership);
     dashboard.pages = dashboard.pages.map(applyMembership);
-    this.refreshProjectCounts(dashboard);
+    this.adjustProjectCount(dashboard, projectId, shouldAssign ? 1 : -1);
     await dashboard.handleFilterChange();
     this.renderEditor(dashboard);
   }

@@ -38,6 +38,9 @@ class PageLoaderManager {
 
       dashboard.allPages = freshResponse.pages || [];
       dashboard.totalPages = freshResponse.pagination?.total || 0;
+      if (!dashboard.currentFilter.projectId) {
+        dashboard.allItemsTotal = dashboard.totalPages;
+      }
       dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
       dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
       dashboard.paginationStateFromCache = false;
@@ -60,6 +63,9 @@ class PageLoaderManager {
       // API always returns {pages, pagination} format
       dashboard.allPages = response.pages || [];
       dashboard.totalPages = response.pagination?.total || 0;
+      if (!dashboard.currentFilter.projectId) {
+        dashboard.allItemsTotal = dashboard.totalPages;
+      }
       dashboard.hasMorePages = response.pagination?.hasNextPage || false;
       dashboard.nextCursor = response.pagination?.nextCursor || null;
       dashboard.paginationStateFromCache = Boolean(response.meta?.fromCache);
@@ -97,6 +103,9 @@ class PageLoaderManager {
         if (JSON.stringify(freshPages) !== JSON.stringify(dashboard.allPages)) {
           dashboard.allPages = freshPages;
           dashboard.totalPages = freshResponse.pagination?.total || 0;
+          if (!dashboard.currentFilter.projectId) {
+            dashboard.allItemsTotal = dashboard.totalPages;
+          }
           dashboard.hasMorePages = freshResponse.pagination?.hasNextPage || false;
           dashboard.nextCursor = freshResponse.pagination?.nextCursor || null;
           dashboard.paginationStateFromCache = false;
@@ -176,6 +185,9 @@ class PageLoaderManager {
       // API always returns {pages, pagination} format
       const newPages = response.pages || [];
       dashboard.totalPages = response.pagination?.total || dashboard.totalPages; // Update total (should be same)
+      if (!dashboard.currentFilter.projectId) {
+        dashboard.allItemsTotal = dashboard.totalPages;
+      }
       dashboard.hasMorePages = response.pagination?.hasNextPage || false;
         dashboard.nextCursor = response.pagination?.nextCursor || null;
         dashboard.paginationStateFromCache = false;

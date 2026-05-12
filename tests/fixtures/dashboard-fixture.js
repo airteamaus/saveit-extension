@@ -17,6 +17,7 @@ export function createMockDashboard(overrides = {}) {
     isLoadingMore: false,
     currentFilter: {
       limit: 50,
+      projectId: null,
       cursor: null
     },
     isDrawerEmbedded: vi.fn(() => false),
