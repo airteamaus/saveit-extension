@@ -12,17 +12,17 @@
   <div id="background" class="background"></div>
 
   <button
-    id="dashboard-toggle-btn"
-    class="dashboard-toggle-btn"
+    id="saved-pages-toggle-btn"
+    class="saved-pages-toggle-btn"
     type="button"
     aria-label="Open saved pages"
     aria-expanded="false"
     title="Open saved pages"
   >
-    <svg id="dashboard-toggle-icon" class="dashboard-toggle-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+    <svg id="saved-pages-toggle-icon" class="saved-pages-toggle-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
       <path d="M7 2a2 2 0 0 0-2 2v17l7-4.6 7 4.6V4a2 2 0 0 0-2-2z"></path>
     </svg>
-    <span class="dashboard-toggle-label">Saved pages</span>
+    <span class="saved-pages-toggle-label">Saved pages</span>
   </button>
 
   <!-- User menu (top-right corner) -->
@@ -133,11 +133,11 @@
     </span>
   </footer>
 
-  <div id="dashboard-drawer" class="dashboard-drawer hidden" aria-hidden="true">
-    <div id="dashboard-drawer-backdrop" class="dashboard-drawer-backdrop"></div>
-    <aside class="dashboard-drawer-panel" aria-label="Saved pages drawer">
-      <div class="dashboard-drawer-header">
-        <form id="dashboard-drawer-search-form" class="search-form dashboard-drawer-search" role="search">
+  <div id="saved-pages-drawer" class="saved-pages-drawer hidden" aria-hidden="true">
+    <div id="saved-pages-drawer-backdrop" class="saved-pages-drawer-backdrop"></div>
+    <aside class="saved-pages-drawer-panel" aria-label="Saved pages drawer">
+      <div class="saved-pages-drawer-header">
+        <form id="saved-pages-drawer-search-form" class="search-form saved-pages-drawer-search" role="search">
           <span class="search-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
@@ -146,29 +146,29 @@
           </span>
           <input
             type="text"
-            id="dashboard-drawer-search-input"
-            class="search-input dashboard-drawer-search-input"
+            id="saved-pages-drawer-search-input"
+            class="search-input saved-pages-drawer-search-input"
             placeholder="Search your saved pages..."
             autocomplete="off"
           >
-          <button id="dashboard-drawer-clear-btn" class="clear-search hidden" type="button" title="Clear search">
+          <button id="saved-pages-drawer-clear-btn" class="clear-search hidden" type="button" title="Clear search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </form>
-        <button id="dashboard-drawer-close-btn" class="dashboard-drawer-close-btn" type="button" aria-label="Close saved pages">
+        <button id="saved-pages-drawer-close-btn" class="saved-pages-drawer-close-btn" type="button" aria-label="Close saved pages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
           </svg>
         </button>
       </div>
-      <div id="dashboard-drawer-body" class="dashboard-drawer-body">
-        <aside id="project-sidebar" class="project-sidebar dashboard-drawer-project-sidebar" aria-label="Projects"></aside>
-        <div class="dashboard-drawer-content">
-          <div id="dashboard-drawer-results" class="dashboard-drawer-results" aria-live="polite"></div>
+      <div id="saved-pages-drawer-body" class="saved-pages-drawer-body">
+        <aside id="project-sidebar" class="project-sidebar saved-pages-drawer-project-sidebar" aria-label="Projects"></aside>
+        <div class="saved-pages-drawer-content">
+          <div id="saved-pages-drawer-results" class="saved-pages-drawer-results" aria-live="polite"></div>
         </div>
       </div>
     </aside>
@@ -187,7 +187,7 @@
   <script src="polyfill-loader.js"></script>
   <script type="module" src="config-loader.js"></script>
   <script type="module" src="bundles/sentry-init.js"></script>
-  <script type="module" src="firebase-init-dashboard.js"></script>
+  <script type="module" src="firebase-init-pages.js"></script>
   <script src="mock-data.js"></script>
   <script src="cache-manager.js"></script>
   <script src="api-core.js"></script>

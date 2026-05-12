@@ -2,13 +2,13 @@
 
 Firefox extension for saving pages to BigQuery via Cloud Function.
 
-## Dashboard projects
+## Project collections
 
-The dashboard includes project collections so saved pages can be grouped without changing the default chronological feed.
+The saved pages drawer includes project collections so saved pages can be grouped without changing the default chronological feed.
 
-- Create projects from the dashboard sidebar
+- Create projects from the saved pages sidebar
 - Add a saved page to one or more projects from the page card
-- Toggle a project between private and company-shared in the dashboard
+- Toggle a project between private and company-shared in the saved pages drawer
 - Archive projects when they are no longer active
 
 ## Files

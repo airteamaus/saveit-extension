@@ -30,10 +30,8 @@ npm run test:e2e
 tests/
 ├── setup.js                 # Global test configuration
 ├── unit/                    # Unit tests (fast, isolated)
-│   ├── api.test.js
-│   └── components.test.js
-├── integration/             # Integration tests (components working together)
-│   └── dashboard.test.js
+│   ├── newtab.test.js
+│   └── project-manager.test.js
 └── e2e/                     # End-to-end tests (full user flows)
     └── standalone.spec.js
 ```
@@ -62,20 +60,11 @@ describe('API.getSavedPages', () => {
 - Branches: 65%
 - Statements: 70%
 
-## Integration Tests
+## Integration Coverage
 
-Test multiple components working together.
+The current suite covers cross-module behavior through `newtab.test.js`, `project-manager.test.js`, and the standalone Playwright flow in `tests/e2e/standalone.spec.js`.
 
-```javascript
-// tests/integration/dashboard.test.js
-describe('Dashboard rendering', () => {
-  it('should show search results', () => {
-    // Test search → filter → render flow
-  });
-});
-```
-
-**Run:** Same as unit tests (`npm test`)
+**Run:** Same as unit tests (`npm test`) plus `npm run test:e2e -- tests/e2e/standalone.spec.js`
 
 ## E2E Tests
 

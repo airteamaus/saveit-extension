@@ -455,29 +455,29 @@ describe('newtab-minimal', () => {
     function getSearchUrl(query) {
       const trimmed = query.trim();
       if (trimmed) {
-        return `newtab.html?drawer=dashboard&search=${encodeURIComponent(trimmed)}`;
+        return `newtab.html?drawer=saved-pages&search=${encodeURIComponent(trimmed)}`;
       }
-      return 'newtab.html?drawer=dashboard';
+      return 'newtab.html?drawer=saved-pages';
     }
 
     it('should navigate to drawer search with query', () => {
       const result = getSearchUrl('test query');
-      expect(result).toBe('newtab.html?drawer=dashboard&search=test%20query');
+      expect(result).toBe('newtab.html?drawer=saved-pages&search=test%20query');
     });
 
     it('should handle special characters', () => {
       const result = getSearchUrl('test & query');
-      expect(result).toBe('newtab.html?drawer=dashboard&search=test%20%26%20query');
+      expect(result).toBe('newtab.html?drawer=saved-pages&search=test%20%26%20query');
     });
 
     it('should return drawer URL for empty query', () => {
       const result = getSearchUrl('');
-      expect(result).toBe('newtab.html?drawer=dashboard');
+      expect(result).toBe('newtab.html?drawer=saved-pages');
     });
 
     it('should trim whitespace and return drawer URL', () => {
       const result = getSearchUrl('   ');
-      expect(result).toBe('newtab.html?drawer=dashboard');
+      expect(result).toBe('newtab.html?drawer=saved-pages');
     });
   });
 

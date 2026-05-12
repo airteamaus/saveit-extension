@@ -247,5 +247,5 @@ From this exploration, key principles emerged:
 
 - Current new tab: `src/newtab.html`, `src/newtab.js`
 - Saved pages drawer: `src/newtab.html`, `src/newtab.js`, `src/newtab.css`
-- Component library: `src/components.js`
+- Project controls: `src/project-manager.js`
 - API endpoints: `src/api.js`

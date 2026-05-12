@@ -6,15 +6,15 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
 
 async function openDrawer(page) {
-  await page.click('#dashboard-toggle-btn');
-  await expect(page.locator('#dashboard-drawer')).not.toHaveClass(/hidden/);
-  await page.waitForSelector('.dashboard-drawer-card');
+  await page.click('#saved-pages-toggle-btn');
+  await expect(page.locator('#saved-pages-drawer')).not.toHaveClass(/hidden/);
+  await page.waitForSelector('.saved-pages-drawer-card');
 }
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`file://${newtabPath}`);
-    await page.waitForSelector('#dashboard-toggle-btn');
+    await page.waitForSelector('#saved-pages-toggle-btn');
   });
 
   test('should display the standalone new-tab shell', async ({ page }) => {
@@ -28,18 +28,18 @@ test.describe('Standalone Mode', () => {
 
     await expect(page.locator('#project-sidebar')).toContainText('Collections');
     await expect(page.locator('#project-sidebar')).toContainText('SaveIt product');
-    await expect(page.locator('.dashboard-drawer-card').first()).toBeVisible();
+    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible();
   });
 
   test('should filter drawer results with search', async ({ page }) => {
     await openDrawer(page);
 
-    await page.fill('#dashboard-drawer-search-input', 'JavaScript');
+    await page.fill('#saved-pages-drawer-search-input', 'JavaScript');
     await page.waitForTimeout(400);
 
-    const filteredCount = await page.locator('.dashboard-drawer-card').count();
+    const filteredCount = await page.locator('.saved-pages-drawer-card').count();
     expect(filteredCount).toBeGreaterThan(0);
-    const cardText = await page.locator('.dashboard-drawer-card').first().textContent();
+    const cardText = await page.locator('.saved-pages-drawer-card').first().textContent();
     expect(cardText.toLowerCase()).toContain('javascript');
   });
 
@@ -79,7 +79,7 @@ test.describe('Standalone Mode', () => {
     await page.getByRole('button', { name: 'Create "Playwright project"' }).click();
 
     await expect(page.locator('#project-sidebar')).toContainText('Playwright project');
-    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('Playwright project');
+    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('Playwright project');
   });
 
   test('should scope results when selecting a project', async ({ page }) => {
@@ -89,6 +89,6 @@ test.describe('Standalone Mode', () => {
     await projectButton.click();
 
     await expect(projectButton).toHaveClass(/is-active/);
-    await expect(page.locator('.dashboard-drawer-card').first()).toContainText('SaveIt product');
+    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('SaveIt product');
   });
 });

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Bundle Firebase SDK for use in browser extension
-// Creates two bundles: one for background.js (service worker), one for dashboard
+// Creates two bundles: one for background.js (service worker), one for page surfaces
 
 import esbuild from 'esbuild';
 import fs from 'fs';
@@ -67,9 +67,9 @@ export {
   console.log('✅ Built firebase-background.js');
 }
 
-async function buildDashboardBundle() {
+async function buildPagesBundle() {
   const entryContent = `
-// Firebase bundle for dashboard surfaces (newtab.html and related pages)
+// Firebase bundle for page surfaces (newtab.html and search-results.html)
 import { initializeApp } from 'firebase/app';
 import {
   initializeAuth,
@@ -89,17 +89,17 @@ export {
 };
 `;
 
-  const entryFile = path.join(BUNDLE_DIR, '_dashboard-entry.js');
+  const entryFile = path.join(BUNDLE_DIR, '_pages-entry.js');
   fs.writeFileSync(entryFile, entryContent);
 
   await esbuild.build({
     ...sharedConfig,
     entryPoints: [entryFile],
-    outfile: path.join(BUNDLE_DIR, 'firebase-dashboard.js'),
+    outfile: path.join(BUNDLE_DIR, 'firebase-pages.js'),
   });
 
   fs.unlinkSync(entryFile);
-  console.log('✅ Built firebase-dashboard.js');
+  console.log('✅ Built firebase-pages.js');
 }
 
 async function bundleBackgroundScript() {
@@ -128,7 +128,7 @@ async function bundleBackgroundScript() {
 }
 
 async function buildSentryBundle() {
-  // Bundle sentry-init.js for dashboard (needs @sentry/browser bundled)
+  // Bundle sentry-init.js for page surfaces (needs @sentry/browser bundled)
   await esbuild.build({
     ...sharedConfig,
     entryPoints: [path.join(SRC_DIR, 'sentry-init.js')],
@@ -159,10 +159,10 @@ async function build() {
     // Build Firebase bundles first (background.js depends on these)
     await Promise.all([
       buildBackgroundBundle(),
-      buildDashboardBundle(),
+      buildPagesBundle(),
     ]);
     // Then bundle background.js (which imports from firebase-background.js and sentry.js)
-    // and sentry-init.js for dashboard
+    // and sentry-init.js for page surfaces
     await Promise.all([
       bundleBackgroundScript(),
       buildSentryBundle(),

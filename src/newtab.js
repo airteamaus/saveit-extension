@@ -1,4 +1,4 @@
-// newtab-minimal.js - Minimal new tab with search navigation
+// newtab.js - Minimal new tab with search navigation
 // Handles search form submission, Firebase auth, and Unsplash background
 
 /* global ThemeManager, AuthMenu, ProjectManager */
@@ -29,20 +29,20 @@ const userDropdown = document.getElementById('hero-user-dropdown');
 const userEmailEl = document.getElementById('hero-user-email');
 const signOutBtn = document.getElementById('hero-sign-out-btn');
 const refreshBackgroundBtn = document.getElementById('hero-refresh-background-btn');
-const dashboardToggleBtn = document.getElementById('dashboard-toggle-btn');
-const dashboardDrawer = document.getElementById('dashboard-drawer');
-const dashboardDrawerBackdrop = document.getElementById('dashboard-drawer-backdrop');
-const dashboardDrawerCloseBtn = document.getElementById('dashboard-drawer-close-btn');
-const dashboardDrawerSearchForm = document.getElementById('dashboard-drawer-search-form');
-const dashboardDrawerSearchInput = document.getElementById('dashboard-drawer-search-input');
-const dashboardDrawerClearBtn = document.getElementById('dashboard-drawer-clear-btn');
-const dashboardDrawerResults = document.getElementById('dashboard-drawer-results');
+const savedPagesToggleBtn = document.getElementById('saved-pages-toggle-btn');
+const savedPagesDrawer = document.getElementById('saved-pages-drawer');
+const savedPagesDrawerBackdrop = document.getElementById('saved-pages-drawer-backdrop');
+const savedPagesDrawerCloseBtn = document.getElementById('saved-pages-drawer-close-btn');
+const savedPagesDrawerSearchForm = document.getElementById('saved-pages-drawer-search-form');
+const savedPagesDrawerSearchInput = document.getElementById('saved-pages-drawer-search-input');
+const savedPagesDrawerClearBtn = document.getElementById('saved-pages-drawer-clear-btn');
+const savedPagesDrawerResults = document.getElementById('saved-pages-drawer-results');
 const projectSidebar = document.getElementById('project-sidebar');
 const projectEditorBackdrop = document.getElementById('project-editor-backdrop');
 const projectEditorDialog = document.getElementById('project-editor-dialog');
 
-const DASHBOARD_DRAWER_PARAM = 'drawer';
-const DASHBOARD_DRAWER_VALUE = 'dashboard';
+const SAVED_PAGES_DRAWER_PARAM = 'drawer';
+const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
 const FAVORITES_MAX_ITEMS = 300;
 const FAVORITES_DRAG_THRESHOLD = 40;
 const FAVORITES_MAX_COLUMNS = 10;
@@ -138,7 +138,7 @@ async function handleSignOut() {
     await AuthMenu.signOut();
     // Auth state listener will update UI
   } catch (error) {
-    console.error('[newtab-minimal] Sign out failed:', error);
+    console.error('[newtab] Sign out failed:', error);
   }
 }
 
@@ -701,7 +701,7 @@ function initFavoritesPager() {
 function handleSearch(e) {
   e.preventDefault();
   const query = searchInput.value.trim();
-  openDashboardDrawer({ searchQuery: query });
+  openSavedPagesDrawer({ searchQuery: query });
 }
 
 /**
@@ -730,32 +730,32 @@ async function handleSignIn() {
 function updateDrawerUrl(isOpen, searchQuery = '') {
   const url = new URL(window.location.href);
   if (isOpen) {
-    url.searchParams.set(DASHBOARD_DRAWER_PARAM, DASHBOARD_DRAWER_VALUE);
+    url.searchParams.set(SAVED_PAGES_DRAWER_PARAM, SAVED_PAGES_DRAWER_VALUE);
     if (searchQuery.trim()) {
       url.searchParams.set('search', searchQuery.trim());
     } else {
       url.searchParams.delete('search');
     }
   } else {
-    url.searchParams.delete(DASHBOARD_DRAWER_PARAM);
+    url.searchParams.delete(SAVED_PAGES_DRAWER_PARAM);
     url.searchParams.delete('search');
   }
   window.history.replaceState({}, '', url);
 }
 
 function setDrawerToggleState(isOpen) {
-  if (!dashboardToggleBtn) return;
+  if (!savedPagesToggleBtn) return;
 
-  dashboardToggleBtn.setAttribute('aria-expanded', String(isOpen));
-  dashboardToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
-  dashboardToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
-  dashboardToggleBtn.classList.toggle('is-active', isOpen);
+  savedPagesToggleBtn.setAttribute('aria-expanded', String(isOpen));
+  savedPagesToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
+  savedPagesToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
+  savedPagesToggleBtn.classList.toggle('is-active', isOpen);
 }
 
 function setDrawerSearchValue(query = '') {
-  if (!dashboardDrawerSearchInput || !dashboardDrawerClearBtn) return;
-  dashboardDrawerSearchInput.value = query;
-  dashboardDrawerClearBtn.classList.toggle('hidden', !query.trim());
+  if (!savedPagesDrawerSearchInput || !savedPagesDrawerClearBtn) return;
+  savedPagesDrawerSearchInput.value = query;
+  savedPagesDrawerClearBtn.classList.toggle('hidden', !query.trim());
 }
 
 function getDrawerCurrentUser() {
@@ -773,7 +773,7 @@ function truncateText(text = '', maxLength = 180) {
   return `${text.slice(0, maxLength).trim()}...`;
 }
 
-const drawerDashboard = {
+const savedPagesView = {
   get allPages() {
     return drawerState.allPages;
   },
@@ -862,11 +862,11 @@ function renderDrawerTags(page) {
 }
 
 function getDrawerProjectPills(page) {
-  return projectManager.getProjectPills(page, drawerDashboard);
+  return projectManager.getProjectPills(page, savedPagesView);
 }
 
 function getProjectScopeLabel() {
-  const selectedProject = projectManager.getSelectedProject(drawerDashboard);
+  const selectedProject = projectManager.getSelectedProject(savedPagesView);
   return selectedProject ? selectedProject.name : 'All saved items';
 }
 
@@ -896,7 +896,7 @@ function applyDrawerFilters(query = drawerState.query) {
   drawerState.query = trimmedQuery;
   drawerState.currentFilter.search = trimmedQuery;
 
-  const scopedPages = projectManager.getScopedPages(drawerDashboard, drawerState.allPages);
+  const scopedPages = projectManager.getScopedPages(savedPagesView, drawerState.allPages);
   drawerState.total = drawerState.selectedProjectId
     ? scopedPages.length
     : (drawerState.allItemsTotal || scopedPages.length);
@@ -911,11 +911,11 @@ function applyDrawerFilters(query = drawerState.query) {
 }
 
 function renderProjectSidebar() {
-  projectManager.renderSidebar(drawerDashboard);
+  projectManager.renderSidebar(savedPagesView);
 }
 
 function renderProjectEditor() {
-  projectManager.renderEditor(drawerDashboard);
+  projectManager.renderEditor(savedPagesView);
 }
 
 function renderDrawerChrome() {
@@ -949,7 +949,7 @@ function renderDrawerCard(page) {
   const projectPills = getDrawerProjectPills(page);
   const projectPillsHtml = projectPills.length
     ? `
-      <div class="dashboard-drawer-card-projects">
+      <div class="saved-pages-drawer-card-projects">
         ${projectPills.map(project => `
           <span class="project-pill" title="${escapeHtml(project.name)}">
             <span class="project-pill-label">${escapeHtml(project.name)}</span>
@@ -969,15 +969,15 @@ function renderDrawerCard(page) {
     : '';
 
   return `
-    <a class="dashboard-drawer-card" href="${escapeHtml(page.url || '#')}">
-      <div class="dashboard-drawer-card-header">
-        <div class="dashboard-drawer-card-heading">
-          ${domain ? `<img class="dashboard-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
-          <h3 class="dashboard-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+    <a class="saved-pages-drawer-card" href="${escapeHtml(page.url || '#')}">
+      <div class="saved-pages-drawer-card-header">
+        <div class="saved-pages-drawer-card-heading">
+          ${domain ? `<img class="saved-pages-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
+          <h3 class="saved-pages-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
         </div>
-        <div class="dashboard-drawer-card-actions">
+        <div class="saved-pages-drawer-card-actions">
           <button
-            class="dashboard-drawer-action-btn dashboard-drawer-pin-btn ${page.pinned ? 'is-active' : ''}"
+            class="saved-pages-drawer-action-btn saved-pages-drawer-pin-btn ${page.pinned ? 'is-active' : ''}"
             type="button"
             data-action="pin"
             data-id="${escapeHtml(page.id)}"
@@ -998,7 +998,7 @@ function renderDrawerCard(page) {
             aria-label="Manage projects"
           >Projects</button>
           <button
-            class="dashboard-drawer-action-btn dashboard-drawer-delete-btn"
+            class="saved-pages-drawer-action-btn saved-pages-drawer-delete-btn"
             type="button"
             data-action="delete"
             data-id="${escapeHtml(page.id)}"
@@ -1015,26 +1015,26 @@ function renderDrawerCard(page) {
           </button>
         </div>
       </div>
-      ${summary ? `<p class="dashboard-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
+      ${summary ? `<p class="saved-pages-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
       ${projectPillsHtml}
-      <div class="dashboard-drawer-card-footer">
-        ${meta.length ? `<div class="dashboard-drawer-card-meta">${meta.join('<span class="dashboard-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
-        ${tagsHtml ? `<div class="dashboard-drawer-card-tags">${tagsHtml}</div>` : ''}
+      <div class="saved-pages-drawer-card-footer">
+        ${meta.length ? `<div class="saved-pages-drawer-card-meta">${meta.join('<span class="saved-pages-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
+        ${tagsHtml ? `<div class="saved-pages-drawer-card-tags">${tagsHtml}</div>` : ''}
       </div>
     </a>
   `;
 }
 
 function renderDrawerState(html) {
-  if (dashboardDrawerResults) {
-    dashboardDrawerResults.innerHTML = html;
+  if (savedPagesDrawerResults) {
+    savedPagesDrawerResults.innerHTML = html;
   }
   renderDrawerChrome();
 }
 
 function renderDrawerLoadingState(message = 'Loading saved pages...') {
   renderDrawerState(`
-    <div class="loading-state dashboard-drawer-state">
+    <div class="loading-state saved-pages-drawer-state">
       <div class="loading-spinner"></div>
       <p>${escapeHtml(message)}</p>
     </div>
@@ -1043,7 +1043,7 @@ function renderDrawerLoadingState(message = 'Loading saved pages...') {
 
 function renderDrawerErrorState(message) {
   renderDrawerState(`
-    <div class="error-state dashboard-drawer-state">
+    <div class="error-state saved-pages-drawer-state">
       <h2>Something went wrong</h2>
       <p>${escapeHtml(message)}</p>
     </div>
@@ -1060,7 +1060,7 @@ function renderDrawerEmptyState(query = '') {
       : 'Save a page to see it here.';
 
   renderDrawerState(`
-    <div class="empty-state dashboard-drawer-state">
+    <div class="empty-state saved-pages-drawer-state">
       <h2>${title}</h2>
       <p>${description}</p>
     </div>
@@ -1069,7 +1069,7 @@ function renderDrawerEmptyState(query = '') {
 
 function renderDrawerSignInState() {
   renderDrawerState(`
-    <div class="empty-state dashboard-drawer-state">
+    <div class="empty-state saved-pages-drawer-state">
       <h2>Sign in to browse saved pages</h2>
       <p>Your drawer is available once you are signed in.</p>
     </div>
@@ -1096,7 +1096,7 @@ function updateDrawerPageCollections(id, updater) {
 
 async function ensureDrawerProjectsLoaded() {
   if (!drawerState.projects.length) {
-    await projectManager.loadProjects(drawerDashboard);
+    await projectManager.loadProjects(savedPagesView);
   }
 }
 
@@ -1107,7 +1107,7 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
   drawerState.isLoading = true;
   setDrawerSearchValue(trimmedQuery);
 
-  if (syncUrl && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+  if (syncUrl && savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
     updateDrawerUrl(true, trimmedQuery);
   }
 
@@ -1141,7 +1141,7 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
     if (!drawerState.selectedProjectId) {
       drawerState.allItemsTotal = drawerState.total;
     }
-    projectManager.refreshProjectCounts(drawerDashboard);
+    projectManager.refreshProjectCounts(savedPagesView);
     applyDrawerFilters(trimmedQuery);
     drawerState.hasInitialized = true;
     renderDrawerResults();
@@ -1150,7 +1150,7 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
       return;
     }
 
-    console.error('[newtab-minimal] Drawer load failed:', error);
+    console.error('[newtab] Drawer load failed:', error);
     renderDrawerErrorState(error.message || 'Failed to load saved pages.');
   } finally {
     if (requestId === drawerState.requestId) {
@@ -1174,11 +1174,11 @@ async function handleDrawerDelete(id) {
       drawerState.allItemsTotal = Math.max(0, drawerState.allItemsTotal - 1);
     }
     (deletedPage?.project_ids || []).forEach(projectId => {
-      projectManager.adjustProjectCount(drawerDashboard, projectId, -1);
+      projectManager.adjustProjectCount(savedPagesView, projectId, -1);
     });
     renderDrawerResults();
   } catch (error) {
-    console.error('[newtab-minimal] Failed to delete page:', error);
+    console.error('[newtab] Failed to delete page:', error);
     alert('Failed to delete page. Please try again.');
   }
 }
@@ -1198,7 +1198,7 @@ async function handleDrawerPin(id) {
   } catch (error) {
     updateDrawerPageCollections(id, entry => ({ ...entry, pinned: !nextPinnedState }));
     renderDrawerResults();
-    console.error('[newtab-minimal] Failed to update pin:', error);
+    console.error('[newtab] Failed to update pin:', error);
     alert('Failed to update pin status. Please try again.');
   }
 }
@@ -1212,7 +1212,7 @@ async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
   }
 
   setDrawerSearchValue(trimmedQuery);
-  if (syncUrl && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+  if (syncUrl && savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
     updateDrawerUrl(true, trimmedQuery);
   }
 
@@ -1220,13 +1220,13 @@ async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
   renderDrawerResults();
 }
 
-function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
-  if (!dashboardDrawer) return;
+function openSavedPagesDrawer({ syncUrl = true, searchQuery = '' } = {}) {
+  if (!savedPagesDrawer) return;
 
   setDrawerSearchValue(searchQuery);
-  dashboardDrawer.classList.remove('hidden');
-  dashboardDrawer.setAttribute('aria-hidden', 'false');
-  document.body.classList.add('dashboard-drawer-open');
+  savedPagesDrawer.classList.remove('hidden');
+  savedPagesDrawer.setAttribute('aria-hidden', 'false');
+  document.body.classList.add('saved-pages-drawer-open');
   setDrawerToggleState(true);
 
   if (syncUrl) {
@@ -1240,12 +1240,12 @@ function openDashboardDrawer({ syncUrl = true, searchQuery = '' } = {}) {
   }
 }
 
-function closeDashboardDrawer({ syncUrl = true } = {}) {
-  if (!dashboardDrawer) return;
+function closeSavedPagesDrawer({ syncUrl = true } = {}) {
+  if (!savedPagesDrawer) return;
 
-  dashboardDrawer.classList.add('hidden');
-  dashboardDrawer.setAttribute('aria-hidden', 'true');
-  document.body.classList.remove('dashboard-drawer-open');
+  savedPagesDrawer.classList.add('hidden');
+  savedPagesDrawer.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('saved-pages-drawer-open');
   setDrawerToggleState(false);
 
   if (syncUrl) {
@@ -1253,24 +1253,24 @@ function closeDashboardDrawer({ syncUrl = true } = {}) {
   }
 }
 
-function initDashboardDrawer() {
-  dashboardToggleBtn?.addEventListener('click', () => {
-    if (dashboardDrawer?.classList.contains('hidden')) {
-      openDashboardDrawer();
+function initSavedPagesDrawer() {
+  savedPagesToggleBtn?.addEventListener('click', () => {
+    if (savedPagesDrawer?.classList.contains('hidden')) {
+      openSavedPagesDrawer();
     } else {
-      closeDashboardDrawer();
+      closeSavedPagesDrawer();
     }
   });
 
-  dashboardDrawerBackdrop?.addEventListener('click', () => closeDashboardDrawer());
-  dashboardDrawerCloseBtn?.addEventListener('click', () => closeDashboardDrawer());
+  savedPagesDrawerBackdrop?.addEventListener('click', () => closeSavedPagesDrawer());
+  savedPagesDrawerCloseBtn?.addEventListener('click', () => closeSavedPagesDrawer());
 
-  dashboardDrawerSearchForm?.addEventListener('submit', (event) => {
+  savedPagesDrawerSearchForm?.addEventListener('submit', (event) => {
     event.preventDefault();
-    void loadDrawerResults(dashboardDrawerSearchInput?.value || '');
+    void loadDrawerResults(savedPagesDrawerSearchInput?.value || '');
   });
 
-  dashboardDrawerSearchInput?.addEventListener('input', (event) => {
+  savedPagesDrawerSearchInput?.addEventListener('input', (event) => {
     const query = event.target.value;
     setDrawerSearchValue(query);
     window.clearTimeout(drawerSearchDebounceTimer);
@@ -1279,13 +1279,13 @@ function initDashboardDrawer() {
     }, DRAWER_SEARCH_DEBOUNCE_MS);
   });
 
-  dashboardDrawerClearBtn?.addEventListener('click', () => {
+  savedPagesDrawerClearBtn?.addEventListener('click', () => {
     window.clearTimeout(drawerSearchDebounceTimer);
     void loadDrawerResults('');
-    dashboardDrawerSearchInput?.focus();
+    savedPagesDrawerSearchInput?.focus();
   });
 
-  dashboardDrawerResults?.addEventListener('click', (event) => {
+  savedPagesDrawerResults?.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) {
       return;
@@ -1301,12 +1301,12 @@ function initDashboardDrawer() {
     }
 
     if (action === 'projects') {
-      projectManager.openEditor(drawerDashboard, id);
+      projectManager.openEditor(savedPagesView, id);
       return;
     }
 
     if (action === 'remove-project') {
-      void projectManager.togglePageProject(drawerDashboard, id, actionButton.dataset.projectId, false);
+      void projectManager.togglePageProject(savedPagesView, id, actionButton.dataset.projectId, false);
       return;
     }
 
@@ -1318,49 +1318,49 @@ function initDashboardDrawer() {
   projectSidebar?.addEventListener('click', (event) => {
     const createButton = event.target.closest('.project-sidebar-create');
     if (createButton) {
-      void projectManager.promptCreateProject(drawerDashboard);
+      void projectManager.promptCreateProject(savedPagesView);
       return;
     }
 
     const projectButton = event.target.closest('.project-nav-item');
     if (projectButton) {
-      void projectManager.selectProject(drawerDashboard, projectButton.dataset.projectId || null);
+      void projectManager.selectProject(savedPagesView, projectButton.dataset.projectId || null);
       return;
     }
 
     const renameButton = event.target.closest('.project-action-rename');
     if (renameButton) {
-      void projectManager.renameProject(drawerDashboard, renameButton.dataset.projectId);
+      void projectManager.renameProject(savedPagesView, renameButton.dataset.projectId);
       return;
     }
 
     const visibilityButton = event.target.closest('.project-action-visibility');
     if (visibilityButton) {
-      void projectManager.toggleProjectVisibility(drawerDashboard, visibilityButton.dataset.projectId);
+      void projectManager.toggleProjectVisibility(savedPagesView, visibilityButton.dataset.projectId);
       return;
     }
 
     const archiveButton = event.target.closest('.project-action-archive');
     if (archiveButton) {
-      void projectManager.archiveProject(drawerDashboard, archiveButton.dataset.projectId);
+      void projectManager.archiveProject(savedPagesView, archiveButton.dataset.projectId);
     }
   });
 
   projectEditorBackdrop?.addEventListener('click', () => {
-    projectManager.closeEditor(drawerDashboard);
+    projectManager.closeEditor(savedPagesView);
   });
 
   projectEditorDialog?.addEventListener('click', (event) => {
     const closeButton = event.target.closest('.project-editor-close');
     if (closeButton) {
-      projectManager.closeEditor(drawerDashboard);
+      projectManager.closeEditor(savedPagesView);
       return;
     }
 
     const createButton = event.target.closest('.project-editor-create');
     if (createButton) {
       void projectManager.createProject(
-        drawerDashboard,
+        savedPagesView,
         createButton.dataset.projectName || '',
         createButton.dataset.pageId || null
       );
@@ -1374,7 +1374,7 @@ function initDashboardDrawer() {
     }
 
     void projectManager.togglePageProject(
-      drawerDashboard,
+      savedPagesView,
       checkbox.dataset.pageId,
       checkbox.dataset.projectId,
       checkbox.checked
@@ -1387,23 +1387,23 @@ function initDashboardDrawer() {
       return;
     }
 
-    projectManager.updateEditorQuery(drawerDashboard, input.value);
+    projectManager.updateEditorQuery(savedPagesView, input.value);
   });
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape' && !projectEditorDialog?.classList.contains('hidden')) {
-      projectManager.closeEditor(drawerDashboard);
+      projectManager.closeEditor(savedPagesView);
       return;
     }
 
-    if (e.key === 'Escape' && dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
-      closeDashboardDrawer();
+    if (e.key === 'Escape' && savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
+      closeSavedPagesDrawer();
     }
   });
 
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get(DASHBOARD_DRAWER_PARAM) === DASHBOARD_DRAWER_VALUE) {
-    openDashboardDrawer({
+  if (urlParams.get(SAVED_PAGES_DRAWER_PARAM) === SAVED_PAGES_DRAWER_VALUE) {
+    openSavedPagesDrawer({
       syncUrl: false,
       searchQuery: urlParams.get('search') || ''
     });
@@ -1474,12 +1474,12 @@ async function initFavorites() {
             updateStats(freshResponse.pagination);
           }
         })
-        .catch(err => console.debug('[newtab-minimal] Background refresh failed:', err));
+        .catch(err => console.debug('[newtab] Background refresh failed:', err));
     }
 
     return response ? response.pagination : null;
   } catch (error) {
-    console.error('[newtab-minimal] Failed to load favorites:', error);
+    console.error('[newtab] Failed to load favorites:', error);
   }
   return null;
 }
@@ -1529,8 +1529,8 @@ async function initAuth() {
             // User is signed in, load favorites and stats
             const pagination = await initFavorites();
             updateStats(pagination);
-            if (dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
-              void loadDrawerResults(dashboardDrawerSearchInput?.value || '', { syncUrl: false });
+            if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
+              void loadDrawerResults(savedPagesDrawerSearchInput?.value || '', { syncUrl: false });
             }
           } else {
             // User signed out, hide favorites and stats
@@ -1556,7 +1556,7 @@ async function initAuth() {
               total: 0,
               allItemsTotal: 0
             });
-            if (dashboardDrawer && !dashboardDrawer.classList.contains('hidden')) {
+            if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
               renderDrawerSignInState();
             }
           }
@@ -1566,7 +1566,7 @@ async function initAuth() {
         updateAuthUI(null);
       }
     } catch (error) {
-      console.error('[newtab-minimal] Firebase init failed:', error);
+      console.error('[newtab] Firebase init failed:', error);
       updateAuthUI(null);
     }
   } else {
@@ -1595,7 +1595,7 @@ function updateVersionIndicator() {
       versionNumberEl.textContent = 'standalone';
     }
   } catch (error) {
-    console.error('[newtab-minimal] Failed to get version:', error);
+    console.error('[newtab] Failed to get version:', error);
     versionNumberEl.textContent = 'unknown';
   }
 }
@@ -1622,7 +1622,7 @@ initTheme();
 updateVersionIndicator();
 
 // Drawer controls
-initDashboardDrawer();
+initSavedPagesDrawer();
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([

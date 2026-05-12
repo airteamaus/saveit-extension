@@ -107,18 +107,9 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 **Architecture Layers:**
 
 *UI Layer (presentation):*
-- `src/components.js` - Pure UI builders
-- `src/newtab.js` - Main dashboard controller
-
-*Manager Layer (business logic):*
-- `src/tag-manager.js` - Tag hierarchy & classification
-- `src/search-manager.js` - Search & filtering
-- `src/scroll-manager.js` - Infinite scroll & pagination
-- `src/page-loader-manager.js` - Data fetching & loading states
-- `src/event-manager.js` - Event coordination
-- `src/stats-manager.js` - Statistics display
-- `src/notification-manager.js` - Toast notifications
-- `src/auth-ui.js` - Authentication UI
+- `src/newtab.js` - Main new-tab controller and saved pages drawer
+- `src/search-results.js` - Semantic search results page
+- `src/project-manager.js` - Project navigation and membership editing inside the saved pages drawer
 
 *Data Layer (API & storage):*
 - `src/api.js` - API abstraction (mode auto-detection)
@@ -134,11 +125,11 @@ Mode auto-detected by `src/api.js` checking `typeof browser !== 'undefined'`
 3. POST to Cloud Function `/save`
 4. Show success/error notification
 
-*Dashboard Load:*
+*Saved Pages Load:*
 1. `newtab.js` checks auth state
-2. `page-loader-manager.js` fetches via `api.js`
-3. Managers render cards, tags, stats
-4. Infinite scroll loads more on demand
+2. `api.js` fetches via `api-pages.js`
+3. `newtab.js` renders drawer cards, projects, and filters
+4. Project actions update the drawer state in place
 
 **OAuth caching:** Permanent after first auth. Clear: `browser.storage.local.clear()`
 
@@ -167,9 +158,9 @@ See Tool Reference below for complete command listing.
 | Path | Type | Coverage |
 |------|------|----------|
 | `tests/unit/api.test.js` | Fast, isolated functions | 12 tests |
-| `tests/unit/components.test.js` | Component rendering | 15 tests |
-| `tests/integration/dashboard.test.js` | Multi-component flows | 13 tests |
-| `tests/e2e/standalone.spec.js` | Real browser workflows | 10 scenarios |
+| `tests/unit/newtab.test.js` | New-tab pure logic | 37 tests |
+| `tests/unit/project-manager.test.js` | Project drawer behavior | 5 tests |
+| `tests/e2e/standalone.spec.js` | Real browser workflows | 6 scenarios |
 
 ### Schema Validation
 
@@ -258,7 +249,7 @@ Auto-detects from extension version:
 
 **Bundles created** (in `src/bundles/`, gitignored):
 1. `firebase-background.js` - Firebase SDK for service worker (101KB)
-2. `firebase-dashboard.js` - Firebase SDK for dashboard (100KB)
+2. `firebase-pages.js` - Firebase SDK for page surfaces (100KB)
 3. `background-bundle.js` - Background script with polyfill (186KB)
 4. `sentry-init.js` - Sentry error tracking (70KB, prod only)
 5. `browser-polyfill.min.js` - WebExtension API polyfill (10KB, copied from node_modules)
@@ -286,7 +277,7 @@ node scripts/bundle-firebase.js  # Build Firebase bundles only
 ```bash
 # Fastest iteration (standalone mode)
 just preview                    # Or: open src/newtab.html
-# Edit src/newtab.css, src/newtab.js, src/components.js
+# Edit src/newtab.css, src/newtab.js, src/project-manager.js
 # Refresh browser (Cmd+R)
 
 # Extension mode (for OAuth, real data testing)
