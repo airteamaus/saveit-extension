@@ -235,6 +235,27 @@ describe('newtab-minimal', () => {
       return pagedFavorites;
     }
 
+    function mergeFavoritePages(existingPages, incomingPages) {
+      const mergedPages = Array.isArray(existingPages) ? [...existingPages] : [];
+      const seenIds = new Set(mergedPages.map(page => page.id));
+
+      for (const page of Array.isArray(incomingPages) ? incomingPages : []) {
+        if (!page?.id || seenIds.has(page.id)) continue;
+        seenIds.add(page.id);
+        mergedPages.push(page);
+      }
+
+      return mergedPages.slice(0, FAVORITES_MAX_ITEMS);
+    }
+
+    function shouldLoadMoreFavorites(targetPageIndex, loadedPageCount, hasNextPage) {
+      return targetPageIndex >= loadedPageCount && hasNextPage;
+    }
+
+    function shouldReuseWarmHistory(hasWarmCache, hasNextPage) {
+      return hasWarmCache && hasNextPage !== false;
+    }
+
     it('should not render when pages is null', () => {
       expect(shouldRenderFavorites(null)).toBeFalsy();
     });
@@ -311,6 +332,35 @@ describe('newtab-minimal', () => {
       const result = paginateFavorites(pages, layout.pageSize);
 
       expect(result.flat()).toHaveLength(FAVORITES_MAX_ITEMS);
+    });
+
+    it('should request more favorites when navigating beyond loaded pages and more are available', () => {
+      expect(shouldLoadMoreFavorites(1, 1, true)).toBe(true);
+      expect(shouldLoadMoreFavorites(0, 1, true)).toBe(false);
+      expect(shouldLoadMoreFavorites(1, 1, false)).toBe(false);
+    });
+
+    it('should append newly loaded favorites without duplicating existing items', () => {
+      const existingPages = [
+        { id: '1', title: 'Existing 1' },
+        { id: '2', title: 'Existing 2' }
+      ];
+      const incomingPages = [
+        { id: '2', title: 'Existing 2' },
+        { id: '3', title: 'Existing 3' }
+      ];
+
+      expect(mergeFavoritePages(existingPages, incomingPages)).toEqual([
+        { id: '1', title: 'Existing 1' },
+        { id: '2', title: 'Existing 2' },
+        { id: '3', title: 'Existing 3' }
+      ]);
+    });
+
+    it('should discard warm history when the fresh response has no older pages', () => {
+      expect(shouldReuseWarmHistory(true, false)).toBe(false);
+      expect(shouldReuseWarmHistory(true, true)).toBe(true);
+      expect(shouldReuseWarmHistory(false, true)).toBe(false);
     });
   });
 

@@ -145,9 +145,17 @@ function getMockPages(options) {
 
 function getMockFavorites(options = {}) {
   const allPages = globalThis.filterMockData(MOCK_DATA, { ...options, cursor: null });
-  const pagedPages = globalThis.filterMockData(MOCK_DATA, options);
   const limit = options.limit || 300;
-  const pages = pagedPages.slice(0, limit).map(page => ({
+  const cursor = options.cursor || null;
+  const startIndex = cursor
+    ? allPages.findIndex(page => page.id === cursor)
+    : -1;
+  const offset = cursor && startIndex !== -1 ? startIndex + 1 : 0;
+  const pageSlice = allPages.slice(offset, offset + limit);
+  const nextCursor = offset + pageSlice.length < allPages.length
+    ? pageSlice[pageSlice.length - 1]?.id || null
+    : null;
+  const pages = pageSlice.map(page => ({
     ...page,
     pinned: page.pinned ?? false,
     saved_at: page.saved_at || null
@@ -157,8 +165,8 @@ function getMockFavorites(options = {}) {
     pages,
     pagination: {
       total: allPages.length,
-      hasNextPage: allPages.length > limit,
-      nextCursor: null
+      hasNextPage: nextCursor !== null,
+      nextCursor
     },
     meta: {}
   };

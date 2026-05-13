@@ -4,6 +4,7 @@
 /* global ThemeManager, AuthMenu, ProjectManager */
 
 import { unsplashAccessKey, getStorageAPI } from './config.js';
+import { FavoritesStore } from './favorites-store.js';
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 
 const CACHE_KEY = 'newtab_background';
@@ -46,6 +47,7 @@ const SAVED_PAGES_DRAWER_PARAM = 'drawer';
 const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
 const FAVORITES_MAX_ITEMS = 300;
 const FAVORITES_INITIAL_FETCH_LIMIT = 36;
+const FAVORITES_PREFETCH_BATCH_LIMIT = 72;
 const FAVORITES_DRAG_THRESHOLD = 40;
 const FAVORITES_MAX_COLUMNS = 10;
 const FAVORITES_MIN_COLUMNS = 6;
@@ -65,27 +67,26 @@ const DRAWER_INITIAL_FETCH_LIMIT = 50;
 const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
 const FAVORITE_PREVIEW_MARGIN = 8;
 const FAVORITE_PREVIEW_GAP = 14;
+const FAVORITES_WARM_CACHE_SCOPE = {
+  surface: 'favorites-prefetch',
+  sort: 'newest',
+  pinnedFirst: true,
+  limit: FAVORITES_MAX_ITEMS
+};
 
 let drawerSearchDebounceTimer = null;
 let savedPagesCacheRefreshTimer = null;
 let drawerProjectsPromise = null;
 
 const favoritesState = {
-  allPages: [],
-  pagedPages: [],
-  currentPage: 0,
-  pageSize: 12,
-  columns: 6,
-  rows: 2,
-  tileWidth: FAVORITES_DESKTOP_TILE_WIDTH,
+  activePreviewId: null,
   pointerActive: false,
   pointerStartX: 0,
   pointerStartY: 0,
   pointerDeltaX: 0,
   pointerDeltaY: 0,
   dragging: false,
-  suppressClick: false,
-  activePreviewId: null
+  suppressClick: false
 };
 
 const drawerState = {
@@ -114,6 +115,19 @@ const drawerState = {
 };
 
 const projectManager = new ProjectManager(API, { escapeHtml });
+const favoritesStore = new FavoritesStore(API, {
+  maxItems: FAVORITES_MAX_ITEMS,
+  initialFetchLimit: FAVORITES_INITIAL_FETCH_LIMIT,
+  prefetchBatchLimit: FAVORITES_PREFETCH_BATCH_LIMIT,
+  warmCacheScope: FAVORITES_WARM_CACHE_SCOPE,
+  initialLayout: {
+    pageSize: 12,
+    columns: FAVORITES_MIN_COLUMNS,
+    rows: FAVORITES_DEFAULT_ROWS,
+    tileWidth: FAVORITES_DESKTOP_TILE_WIDTH,
+    gridWidth: FAVORITES_MAX_GRID_WIDTH
+  }
+});
 
 /**
  * Initialize theme from saved preference and inject toggle
@@ -200,6 +214,10 @@ function formatSavedDate(savedAt) {
   } catch {
     return '';
   }
+}
+
+function getFavoritesSnapshot() {
+  return favoritesStore.getSnapshot();
 }
 
 function getFavoritePreviewWidth(sectionWidth, tileWidth) {
@@ -367,7 +385,7 @@ function showFavoritePreview(page, item) {
 
   const sectionRect = favoritesSection.getBoundingClientRect();
   const itemRect = item.getBoundingClientRect();
-  const previewWidth = getFavoritePreviewWidth(sectionRect.width, favoritesState.tileWidth);
+  const previewWidth = getFavoritePreviewWidth(sectionRect.width, getFavoritesSnapshot().tileWidth);
 
   favoriteHoverCard.style.width = `${previewWidth}px`;
   favoriteHoverCard.classList.remove('hidden');
@@ -481,36 +499,22 @@ function getFavoritesLayout(viewportWidth = window.innerWidth, viewportHeight = 
   };
 }
 
-/**
- * Paginate favorites into pages
- * @param {Array} pages - Array of page objects
- * @param {number} pageSize - Number of favorites per page
- * @returns {Array<Array>} Chunked favorites
- */
-function paginateFavorites(pages, pageSize) {
-  const favorites = Array.isArray(pages) ? pages.slice(0, FAVORITES_MAX_ITEMS) : [];
-  if (favorites.length === 0 || pageSize <= 0) return [];
-
-  const pagedFavorites = [];
-  for (let i = 0; i < favorites.length; i += pageSize) {
-    pagedFavorites.push(favorites.slice(i, i + pageSize));
-  }
-  return pagedFavorites;
-}
-
-function updateFavoritesNav() {
-  const totalPages = favoritesState.pagedPages.length;
-  const hasMultiplePages = totalPages > 1;
+function updateFavoritesNav(snapshot = getFavoritesSnapshot()) {
+  const totalPages = snapshot.pagedPages.length;
+  const hasMultiplePages = totalPages > 1 || snapshot.hasNextPage;
 
   favoritesPrevBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
   favoritesNextBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
 
   if (favoritesPrevBtn) {
-    favoritesPrevBtn.disabled = !hasMultiplePages || favoritesState.currentPage === 0;
+    favoritesPrevBtn.disabled = !hasMultiplePages || snapshot.currentPage === 0;
   }
 
   if (favoritesNextBtn) {
-    favoritesNextBtn.disabled = !hasMultiplePages || favoritesState.currentPage === totalPages - 1;
+    const isAtLastLoadedPage = snapshot.currentPage >= totalPages - 1;
+    favoritesNextBtn.disabled = !hasMultiplePages || snapshot.isLoadingMore || (
+      isAtLastLoadedPage && !snapshot.hasNextPage
+    );
   }
 
   if (!favoritesDots) return;
@@ -520,36 +524,32 @@ function updateFavoritesNav() {
 
   if (!hasMultiplePages) return;
 
-  favoritesState.pagedPages.forEach((_, index) => {
+  snapshot.pagedPages.forEach((_, index) => {
     const dot = document.createElement('button');
     dot.type = 'button';
     dot.className = 'favorite-dot';
     dot.setAttribute('aria-label', `Show favorites page ${index + 1}`);
-    dot.setAttribute('aria-pressed', String(index === favoritesState.currentPage));
-    if (index === favoritesState.currentPage) {
+    dot.setAttribute('aria-pressed', String(index === snapshot.currentPage));
+    if (index === snapshot.currentPage) {
       dot.classList.add('active');
     }
-    dot.addEventListener('click', () => goToFavoritesPage(index));
+    dot.addEventListener('click', () => void favoritesStore.goToPage(index));
     favoritesDots.appendChild(dot);
   });
 }
 
-function applyFavoritesLayout(layout) {
-  favoritesState.pageSize = layout.pageSize;
-  favoritesState.columns = layout.columns;
-  favoritesState.rows = layout.rows;
-  favoritesState.tileWidth = layout.tileWidth;
-
-  favoritesSection?.style.setProperty('--favorites-grid-width', `${layout.gridWidth}px`);
-  favoritesRow?.style.setProperty('--favorites-columns', String(layout.columns));
-  favoritesRow?.style.setProperty('--favorites-tile-width', `${layout.tileWidth}px`);
+function applyFavoritesLayout(snapshot = getFavoritesSnapshot()) {
+  favoritesSection?.style.setProperty('--favorites-grid-width', `${snapshot.gridWidth}px`);
+  favoritesRow?.style.setProperty('--favorites-columns', String(snapshot.columns));
+  favoritesRow?.style.setProperty('--favorites-tile-width', `${snapshot.tileWidth}px`);
 }
 
-function renderFavoritesPage() {
+function renderFavoritesPage(snapshot = getFavoritesSnapshot()) {
   if (!favoritesRow || !favoritesSection) return;
   hideFavoritePreview();
+  applyFavoritesLayout(snapshot);
 
-  const favorites = favoritesState.pagedPages[favoritesState.currentPage] || [];
+  const favorites = snapshot.pagedPages[snapshot.currentPage] || [];
   favoritesRow.innerHTML = '';
 
   favorites.forEach(page => {
@@ -557,66 +557,25 @@ function renderFavoritesPage() {
   });
 
   favoritesSection.classList.toggle('hidden', favorites.length === 0);
-  updateFavoritesNav();
+  updateStats(snapshot.total === null ? null : { total: snapshot.total });
+  updateFavoritesNav(snapshot);
 }
 
-function goToFavoritesPage(pageIndex) {
-  if (!favoritesState.pagedPages.length) return;
-
-  favoritesState.currentPage = Math.max(
-    0,
-    Math.min(pageIndex, favoritesState.pagedPages.length - 1)
-  );
+favoritesStore.subscribe(() => {
   renderFavoritesPage();
-}
-
-function resetFavorites() {
-  favoritesState.allPages = [];
-  favoritesState.pagedPages = [];
-  favoritesState.currentPage = 0;
-  applyFavoritesLayout(getFavoritesLayout());
-
-  if (favoritesRow) favoritesRow.innerHTML = '';
-  if (favoritesDots) favoritesDots.innerHTML = '';
-  favoritesSection?.classList.add('hidden');
-}
-
-/**
- * Render favorites pager with recent saves
- * @param {Array} pages - Array of page objects
- */
-function renderFavorites(pages) {
-  if (!pages || pages.length === 0) {
-    resetFavorites();
-    return;
-  }
-
-  favoritesState.allPages = pages.slice(0, FAVORITES_MAX_ITEMS);
-  const layout = getFavoritesLayout();
-  applyFavoritesLayout(layout);
-  favoritesState.pagedPages = paginateFavorites(favoritesState.allPages, layout.pageSize);
-  favoritesState.currentPage = Math.min(
-    favoritesState.currentPage,
-    favoritesState.pagedPages.length - 1
-  );
-  renderFavoritesPage();
-}
+});
 
 function handleFavoritesResize() {
-  if (!favoritesState.allPages.length) return;
-  hideFavoritePreview();
-
+  const snapshot = getFavoritesSnapshot();
   const layout = getFavoritesLayout();
   if (
-    layout.pageSize === favoritesState.pageSize &&
-    layout.columns === favoritesState.columns &&
-    layout.tileWidth === favoritesState.tileWidth
+    layout.pageSize === snapshot.pageSize &&
+    layout.columns === snapshot.columns &&
+    layout.tileWidth === snapshot.tileWidth
   ) return;
 
-  const firstVisibleIndex = favoritesState.currentPage * favoritesState.pageSize;
-  applyFavoritesLayout(layout);
-  favoritesState.pagedPages = paginateFavorites(favoritesState.allPages, layout.pageSize);
-  goToFavoritesPage(Math.floor(firstVisibleIndex / layout.pageSize));
+  hideFavoritePreview();
+  favoritesStore.applyLayout(layout);
 }
 
 function clearFavoritesPointerState() {
@@ -628,7 +587,7 @@ function clearFavoritesPointerState() {
 }
 
 function handleFavoritesPointerDown(event) {
-  if (!favoritesState.pagedPages.length) return;
+  if (!getFavoritesSnapshot().pagedPages.length) return;
   if (event.pointerType === 'mouse' && event.button !== 0) return;
   hideFavoritePreview();
 
@@ -664,10 +623,11 @@ function handleFavoritesPointerUp() {
     Math.abs(favoritesState.pointerDeltaX) > Math.abs(favoritesState.pointerDeltaY);
 
   if (shouldPage) {
+    const snapshot = getFavoritesSnapshot();
     const targetPage = favoritesState.pointerDeltaX < 0
-      ? favoritesState.currentPage + 1
-      : favoritesState.currentPage - 1;
-    goToFavoritesPage(targetPage);
+      ? snapshot.currentPage + 1
+      : snapshot.currentPage - 1;
+    void favoritesStore.goToPage(targetPage);
 
     favoritesState.suppressClick = true;
     window.setTimeout(() => {
@@ -679,8 +639,11 @@ function handleFavoritesPointerUp() {
 }
 
 function initFavoritesPager() {
-  favoritesPrevBtn?.addEventListener('click', () => goToFavoritesPage(favoritesState.currentPage - 1));
-  favoritesNextBtn?.addEventListener('click', () => goToFavoritesPage(favoritesState.currentPage + 1));
+  favoritesStore.applyLayout(getFavoritesLayout(), { emit: false });
+  renderFavoritesPage();
+
+  favoritesPrevBtn?.addEventListener('click', () => void favoritesStore.goToPage(getFavoritesSnapshot().currentPage - 1));
+  favoritesNextBtn?.addEventListener('click', () => void favoritesStore.goToPage(getFavoritesSnapshot().currentPage + 1));
 
   favoritesViewport?.addEventListener('pointerdown', handleFavoritesPointerDown);
   favoritesViewport?.addEventListener('pointermove', handleFavoritesPointerMove);
@@ -1532,42 +1495,20 @@ async function refreshBackground() {
 
 /**
  * Fetch and display favorites (recent saves)
- * Returns pagination data for stats display
- * @returns {Promise<Object|null>} Pagination object or null
+ * Uses a local-first store that renders cached data immediately and refreshes in place
+ * @returns {Promise<void>}
  */
 async function initFavorites() {
   try {
-    // Check if API is available (extension mode)
     if (typeof API === 'undefined' || !API.getFavorites) {
-      return null;
+      favoritesStore.reset();
+      return;
     }
 
-    const options = { limit: FAVORITES_INITIAL_FETCH_LIMIT, sort: 'newest', pinnedFirst: true };
-
-    // 1. Try cache (or fresh if no cache)
-    const response = await API.getFavorites(options);
-    if (response && response.pages) {
-      renderFavorites(response.pages);
-      updateStats(response.pagination);
-    }
-
-    // 2. Background refresh only when initial render used cached data
-    if (API.isExtension && response?.meta?.fromCache) {
-      API.getFavorites({ ...options, skipCache: true })
-        .then(freshResponse => {
-          if (freshResponse && freshResponse.pages) {
-            renderFavorites(freshResponse.pages);
-            updateStats(freshResponse.pagination);
-          }
-        })
-        .catch(err => console.debug('[newtab] Background refresh failed:', err));
-    }
-
-    return response ? response.pagination : null;
+    await favoritesStore.hydrate();
   } catch (error) {
     console.error('[newtab] Failed to load favorites:', error);
   }
-  return null;
 }
 
 /**
@@ -1613,14 +1554,13 @@ async function initAuth() {
           updateAuthUI(user);
           if (user) {
             // User is signed in, load favorites and stats
-            const pagination = await initFavorites();
-            updateStats(pagination);
+            await initFavorites();
             if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
               void loadDrawerResults(savedPagesDrawerSearchInput?.value || '', { syncUrl: false });
             }
           } else {
             // User signed out, hide favorites and stats
-            favoritesSection?.classList.add('hidden');
+            favoritesStore.reset();
             updateStats(null);
             Object.assign(drawerState, {
               hasInitialized: false,

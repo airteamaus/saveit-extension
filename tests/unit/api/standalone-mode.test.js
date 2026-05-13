@@ -353,4 +353,52 @@ describe('API - Standalone Mode Methods', () => {
     });
   });
 
+  describe('getFavorites (standalone)', () => {
+    beforeEach(() => {
+      globalThis.filterMockData = vi.fn((data, options = {}) => {
+        const pinnedFirst = options.pinnedFirst !== false;
+        const sorted = data
+          .filter(page => !page.deleted)
+          .slice()
+          .sort((a, b) => {
+            if (pinnedFirst && a.pinned !== b.pinned) {
+              return (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+            }
+
+            return new Date(b.saved_at || 0) - new Date(a.saved_at || 0);
+          });
+
+        return sorted;
+      });
+    });
+
+    it('should return a next cursor when more favorites are available', async () => {
+      globalThis.MOCK_DATA = [
+        { id: '1', title: 'First', url: 'https://one.test', saved_at: '2026-05-03T00:00:00.000Z', pinned: true, deleted: false },
+        { id: '2', title: 'Second', url: 'https://two.test', saved_at: '2026-05-02T00:00:00.000Z', pinned: false, deleted: false },
+        { id: '3', title: 'Third', url: 'https://three.test', saved_at: '2026-05-01T00:00:00.000Z', pinned: false, deleted: false }
+      ];
+
+      const result = await API.getFavorites({ limit: 2, pinnedFirst: true });
+
+      expect(result.pages.map(page => page.id)).toEqual(['1', '2']);
+      expect(result.pagination.hasNextPage).toBe(true);
+      expect(result.pagination.nextCursor).toBe('2');
+    });
+
+    it('should return the next batch when a favorites cursor is provided', async () => {
+      globalThis.MOCK_DATA = [
+        { id: '1', title: 'First', url: 'https://one.test', saved_at: '2026-05-03T00:00:00.000Z', pinned: true, deleted: false },
+        { id: '2', title: 'Second', url: 'https://two.test', saved_at: '2026-05-02T00:00:00.000Z', pinned: false, deleted: false },
+        { id: '3', title: 'Third', url: 'https://three.test', saved_at: '2026-05-01T00:00:00.000Z', pinned: false, deleted: false }
+      ];
+
+      const result = await API.getFavorites({ limit: 2, pinnedFirst: true, cursor: '2' });
+
+      expect(result.pages.map(page => page.id)).toEqual(['3']);
+      expect(result.pagination.hasNextPage).toBe(false);
+      expect(result.pagination.nextCursor).toBeNull();
+    });
+  });
+
 });
