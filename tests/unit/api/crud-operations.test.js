@@ -34,6 +34,7 @@ describe('API - CRUD Operations', () => {
     // Load API module
     const apiModule = await import('../../../src/api.js');
     API = apiModule.API;
+    API._cacheManager = null;
   });
 
   afterEach(() => {
@@ -354,6 +355,10 @@ describe('API - CRUD Operations', () => {
       global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      API._cacheManager = {
+        getCachedPages: vi.fn(async () => null),
+        setCachedPages: vi.fn(async () => {})
+      };
       global.fetch = vi.fn(async () => ({
         ok: true,
         json: async () => ([{ id: 'project-1', name: 'Shared project' }])
@@ -373,12 +378,32 @@ describe('API - CRUD Operations', () => {
       expect(result).toHaveLength(1);
     });
 
+    it('should return cached projects in extension mode when available', async () => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+
+      API._cacheManager = {
+        getCachedPages: vi.fn(async () => [{ id: 'project-1', name: 'Cached project' }]),
+        setCachedPages: vi.fn()
+      };
+
+      const result = await API.getProjects();
+
+      expect(API._cacheManager.getCachedPages).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result.meta.fromCache).toBe(true);
+    });
+
     it('should treat non-project responses as unsupported project backends', async () => {
       global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
       global.getStorageAPI = vi.fn(() => ({ local: {} }));
       global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
+      API._cacheManager = {
+        getCachedPages: vi.fn(async () => null),
+        setCachedPages: vi.fn(async () => {})
+      };
       global.fetch = vi.fn(async () => ({
         ok: true,
         json: async () => ({ pages: [{ id: 'page-1', title: 'A page' }] })

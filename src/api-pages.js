@@ -67,6 +67,24 @@ function normalizeProjectsResponse(data) {
   return data;
 }
 
+function buildProjectsCacheScope(options = {}) {
+  return {
+    surface: 'projects',
+    includeArchived: options.includeArchived === true ? 'true' : null
+  };
+}
+
+function withProjectsCacheMetadata(projects, fromCache) {
+  Object.defineProperty(projects, 'meta', {
+    value: { fromCache },
+    configurable: true,
+    enumerable: false,
+    writable: true
+  });
+
+  return projects;
+}
+
 function buildCreateProjectPayload(project) {
   const payload = {
     name: project.name?.trim()
@@ -353,13 +371,23 @@ function applyApiPages(API) {
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
+            const cacheScope = buildProjectsCacheScope(options);
+            if (!options.skipCache) {
+              const cached = await this.getCachedPages(cacheScope);
+              if (cached) {
+                return withProjectsCacheMetadata(normalizeProjectsResponse(cached), true);
+              }
+            }
+
             const params = {};
             if (options.includeArchived !== undefined) {
               params.includeArchived = String(options.includeArchived);
             }
 
             const response = await this._fetchWithAuth('/projects', params);
-            return normalizeProjectsResponse(response);
+            const normalized = normalizeProjectsResponse(response);
+            await this.setCachedPages(normalized, cacheScope);
+            return withProjectsCacheMetadata(normalized, false);
           },
           'getProjects',
           { options }

@@ -17,10 +17,25 @@ class ProjectManager {
 
   async loadProjects(dashboard) {
     try {
-      dashboard.projects = await this.api.getProjects();
+      const projects = await this.api.getProjects();
+      dashboard.projects = projects;
       dashboard.projectsAvailable = true;
       dashboard.projectsUnavailableMessage = '';
       this.refreshProjectCounts(dashboard);
+
+      if (projects?.meta?.fromCache) {
+        this.api.getProjects({ skipCache: true })
+          .then(freshProjects => {
+            dashboard.projects = freshProjects;
+            dashboard.projectsAvailable = true;
+            dashboard.projectsUnavailableMessage = '';
+            this.refreshProjectCounts(dashboard);
+            dashboard.onProjectsUpdated?.();
+          })
+          .catch(error => {
+            console.error('Failed to refresh projects:', error);
+          });
+      }
     } catch (error) {
       console.error('Failed to load projects:', error);
       dashboard.projects = [];

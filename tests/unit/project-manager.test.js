@@ -81,6 +81,7 @@ describe('ProjectManager', () => {
       loadPages: vi.fn(async () => {}),
       handleFilterChange: vi.fn(async () => {}),
       render: vi.fn(),
+      onProjectsUpdated: vi.fn(),
       getCurrentUser: vi.fn(() => ({
         uid: 'user-123',
         email: 'rich@airteam.com.au'
@@ -168,6 +169,24 @@ describe('ProjectManager', () => {
 
     const sidebar = document.getElementById('project-sidebar');
     expect(sidebar.textContent).toContain('Loading projects...');
+  });
+
+  it('refreshes cached projects in the background and notifies the dashboard', async () => {
+    api.getProjects = vi
+      .fn()
+      .mockResolvedValueOnce(Object.assign([{ id: 'project-1', name: 'Cached project', visibility: 'private', page_count: 1 }], {
+        meta: { fromCache: true }
+      }))
+      .mockResolvedValueOnce([{ id: 'project-1', name: 'Fresh project', visibility: 'private', page_count: 2 }]);
+
+    await manager.loadProjects(dashboard);
+    await Promise.resolve();
+    await Promise.resolve();
+
+    expect(api.getProjects).toHaveBeenNthCalledWith(1);
+    expect(api.getProjects).toHaveBeenNthCalledWith(2, { skipCache: true });
+    expect(dashboard.projects[0].name).toBe('Fresh project');
+    expect(dashboard.onProjectsUpdated).toHaveBeenCalled();
   });
 
   it('alerts immediately when opening projects while unsupported', () => {

@@ -819,6 +819,9 @@ const savedPagesView = {
   render() {
     renderDrawerResults();
   },
+  onProjectsUpdated() {
+    renderDrawerResults();
+  },
   tagInteractionManager: {
     clearSelection() {}
   },
@@ -1123,13 +1126,14 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
 
   try {
     const projectsPromise = ensureDrawerProjectsLoaded();
-
-    const response = await API.getSavedPages({
+    const requestOptions = {
       limit: DRAWER_INITIAL_FETCH_LIMIT,
       sort: 'newest',
       pinnedFirst: false,
       projectId: drawerState.selectedProjectId || undefined
-    });
+    };
+
+    const response = await API.getSavedPages(requestOptions);
 
     if (requestId !== drawerState.requestId) {
       return;
@@ -1146,6 +1150,29 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
     applyDrawerFilters(trimmedQuery);
     drawerState.hasInitialized = true;
     renderDrawerResults();
+
+    if (response?.meta?.fromCache) {
+      void API.getSavedPages({ ...requestOptions, skipCache: true })
+        .then(freshResponse => {
+          if (requestId !== drawerState.requestId) {
+            return;
+          }
+
+          drawerState.allPages = freshResponse.pages || [];
+          drawerState.total = typeof freshResponse.pagination?.total === 'number'
+            ? freshResponse.pagination.total
+            : null;
+          if (!drawerState.selectedProjectId) {
+            drawerState.allItemsTotal = drawerState.total;
+          }
+          projectManager.refreshProjectCounts(savedPagesView);
+          applyDrawerFilters(trimmedQuery);
+          renderDrawerResults();
+        })
+        .catch(error => {
+          console.debug('[newtab] Background saved pages refresh failed:', error);
+        });
+    }
 
     if (projectsPromise) {
       void projectsPromise.then(() => {
