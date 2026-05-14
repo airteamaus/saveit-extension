@@ -248,8 +248,8 @@ describe('newtab-minimal', () => {
       return mergedPages.slice(0, FAVORITES_MAX_ITEMS);
     }
 
-    function shouldLoadMoreFavorites(targetPageIndex, loadedPageCount, hasNextPage) {
-      return targetPageIndex >= loadedPageCount && hasNextPage;
+    function shouldShowFavoritesNavigation(loadedPageCount) {
+      return loadedPageCount > 1;
     }
 
     function shouldReuseWarmHistory(hasWarmCache, hasNextPage) {
@@ -334,10 +334,10 @@ describe('newtab-minimal', () => {
       expect(result.flat()).toHaveLength(FAVORITES_MAX_ITEMS);
     });
 
-    it('should request more favorites when navigating beyond loaded pages and more are available', () => {
-      expect(shouldLoadMoreFavorites(1, 1, true)).toBe(true);
-      expect(shouldLoadMoreFavorites(0, 1, true)).toBe(false);
-      expect(shouldLoadMoreFavorites(1, 1, false)).toBe(false);
+    it('should only show favorites navigation when multiple local pages are loaded', () => {
+      expect(shouldShowFavoritesNavigation(2)).toBe(true);
+      expect(shouldShowFavoritesNavigation(1)).toBe(false);
+      expect(shouldShowFavoritesNavigation(0)).toBe(false);
     });
 
     it('should append newly loaded favorites without duplicating existing items', () => {

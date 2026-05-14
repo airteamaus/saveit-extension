@@ -501,7 +501,7 @@ function getFavoritesLayout(viewportWidth = window.innerWidth, viewportHeight = 
 
 function updateFavoritesNav(snapshot = getFavoritesSnapshot()) {
   const totalPages = snapshot.pagedPages.length;
-  const hasMultiplePages = totalPages > 1 || snapshot.hasNextPage;
+  const hasMultiplePages = totalPages > 1;
 
   favoritesPrevBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
   favoritesNextBtn?.classList.toggle('favorites-nav-hidden', !hasMultiplePages);
@@ -511,10 +511,7 @@ function updateFavoritesNav(snapshot = getFavoritesSnapshot()) {
   }
 
   if (favoritesNextBtn) {
-    const isAtLastLoadedPage = snapshot.currentPage >= totalPages - 1;
-    favoritesNextBtn.disabled = !hasMultiplePages || snapshot.isLoadingMore || (
-      isAtLastLoadedPage && !snapshot.hasNextPage
-    );
+    favoritesNextBtn.disabled = !hasMultiplePages || snapshot.currentPage >= totalPages - 1;
   }
 
   if (!favoritesDots) return;

@@ -130,10 +130,6 @@ export class FavoritesStore {
     if (emit) {
       this.emitChange();
     }
-
-    if (this.shouldPrefetchToCompletePages()) {
-      void this.prefetchToCompletePages(this.state.requestId);
-    }
   }
 
   async hydrate() {
@@ -179,7 +175,7 @@ export class FavoritesStore {
 
       this.replaceData(combinedPages, combinedPagination, { requestId });
       await this.persistWarmCache(requestId);
-      void this.prefetchToCompletePages(requestId);
+      void this.prefetchAllPages(requestId);
     }
 
     if (response?.meta?.fromCache && !warmCache?.pages?.length) {
@@ -190,14 +186,7 @@ export class FavoritesStore {
   }
 
   async goToPage(pageIndex) {
-    const requestId = this.state.requestId;
-
-    while (pageIndex >= this.state.pagedPages.length && this.state.hasNextPage) {
-      const loaded = await this.loadMore(requestId);
-      if (!loaded) break;
-    }
-
-    if (!this.state.pagedPages.length || this.state.requestId !== requestId) {
+    if (!this.state.pagedPages.length) {
       return this.getSnapshot();
     }
 
@@ -223,7 +212,7 @@ export class FavoritesStore {
 
       this.replaceData(response.pages, response.pagination, { requestId });
       await this.persistWarmCache(requestId);
-      void this.prefetchToCompletePages(requestId);
+      void this.prefetchAllPages(requestId);
       return true;
     } catch (error) {
       console.debug('[favorites-store] Initial refresh failed:', error);
@@ -249,6 +238,8 @@ export class FavoritesStore {
 
     this.loadingPromise = (async () => {
       try {
+        const previousCount = this.state.allPages.length;
+        const previousCursor = this.state.nextCursor;
         const response = await this.api.getFavorites({
           limit: this.options.prefetchBatchLimit,
           sort: 'newest',
@@ -272,9 +263,22 @@ export class FavoritesStore {
           hasNextPage: response?.pagination?.hasNextPage,
           nextCursor: response?.pagination?.nextCursor
         }, { requestId });
+
+        const didAppendPages = mergedPages.length > previousCount;
+        const didAdvanceCursor = Boolean(
+          response?.pagination?.nextCursor &&
+          response.pagination.nextCursor !== previousCursor
+        );
+
+        if (!didAppendPages && !didAdvanceCursor && this.state.requestId === requestId) {
+          this.state.hasNextPage = false;
+          this.state.nextCursor = null;
+          this.emitChange();
+        }
+
         await this.persistWarmCache(requestId);
 
-        return (response?.pages || []).length > 0;
+        return didAppendPages || didAdvanceCursor;
       } catch (error) {
         console.error('[favorites-store] Failed to load more favorites:', error);
         return false;
@@ -290,8 +294,12 @@ export class FavoritesStore {
     return this.loadingPromise;
   }
 
-  async prefetchToCompletePages(requestId = this.state.requestId) {
-    while (this.state.requestId === requestId && this.shouldPrefetchToCompletePages()) {
+  async prefetchAllPages(requestId = this.state.requestId) {
+    while (
+      this.state.requestId === requestId &&
+      this.state.hasNextPage &&
+      this.state.allPages.length < this.options.maxItems
+    ) {
       const loaded = await this.loadMore(requestId);
       if (!loaded) break;
     }
@@ -319,24 +327,6 @@ export class FavoritesStore {
     this.state.hasNextPage = !hasReachedFavoritesCap && pagination?.hasNextPage === true;
     this.state.nextCursor = this.state.hasNextPage ? pagination?.nextCursor || null : null;
     this.emitChange();
-  }
-
-  shouldPrefetchToCompletePages() {
-    if (!this.state.hasNextPage || this.state.pageSize <= 0) {
-      return false;
-    }
-
-    const loadedCount = this.state.allPages.length;
-    if (loadedCount === 0 || loadedCount >= this.options.maxItems) {
-      return false;
-    }
-
-    const targetCount = Math.min(
-      this.options.maxItems,
-      Math.ceil(loadedCount / this.state.pageSize) * this.state.pageSize
-    );
-
-    return loadedCount < targetCount;
   }
 
   buildInitialFetchOptions(overrides = {}) {
