@@ -4,6 +4,7 @@ describe('CacheManager', () => {
   let CacheManager;
   let mockStorage;
   let getCurrentUserId;
+  let getBootstrapUserId;
   let getStorage;
   let cacheManager;
 
@@ -35,13 +36,16 @@ describe('CacheManager', () => {
     };
 
     getCurrentUserId = vi.fn(() => 'user-123');
+    getBootstrapUserId = vi.fn(async () => null);
     getStorage = vi.fn(() => mockStorage);
 
     // Import CacheManager
     const cacheModule = await import('../../src/cache-manager.js');
     CacheManager = cacheModule.CacheManager;
 
-    cacheManager = new CacheManager(getCurrentUserId, getStorage);
+    cacheManager = new CacheManager(getCurrentUserId, getStorage, {
+      getBootstrapUserId
+    });
   });
 
   describe('Constructor', () => {
@@ -53,6 +57,7 @@ describe('CacheManager', () => {
     it('should store callback functions', () => {
       expect(cacheManager.getCurrentUserId).toBe(getCurrentUserId);
       expect(cacheManager.getStorage).toBe(getStorage);
+      expect(cacheManager.getBootstrapUserId).toBe(getBootstrapUserId);
     });
   });
 
@@ -76,6 +81,25 @@ describe('CacheManager', () => {
       const result = await cacheManager.getCachedPages();
       expect(result).toBeNull();
       expect(mockStorage.get).not.toHaveBeenCalled();
+    });
+
+    it('should fall back to bootstrap user ID for cache reads', async () => {
+      getCurrentUserId.mockReturnValue(null);
+      getBootstrapUserId.mockResolvedValue('user-123');
+      const mockResponse = {
+        pages: [{ id: '1', title: 'Bootstrap cached page' }],
+        pagination: { total: 1 }
+      };
+
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
+        userId: 'user-123',
+        response: mockResponse,
+        timestamp: Date.now()
+      };
+
+      const result = await cacheManager.getCachedPages();
+      expect(result).toEqual(mockResponse);
+      expect(getBootstrapUserId).toHaveBeenCalled();
     });
 
     it('should return null when storage is not available', async () => {
@@ -161,6 +185,7 @@ describe('CacheManager', () => {
   describe('setCachedPages', () => {
     it('should not cache when no user is logged in', async () => {
       getCurrentUserId.mockReturnValue(null);
+      getBootstrapUserId.mockResolvedValue('user-123');
 
       await cacheManager.setCachedPages({ pages: [] });
       expect(mockStorage.set).not.toHaveBeenCalled();

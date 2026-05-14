@@ -1577,12 +1577,14 @@ async function initAuth() {
         window.firebaseOnAuthStateChanged(window.firebaseAuth, async (user) => {
           updateAuthUI(user);
           if (user) {
+            await API.setLastKnownUser?.(user);
             // User is signed in, load favorites and stats
             await initFavorites();
             if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
               void loadDrawerResults(savedPagesDrawerSearchInput?.value || '', { syncUrl: false });
             }
           } else {
+            await API.clearLastKnownUser?.();
             // User signed out, hide favorites and stats
             favoritesStore.reset();
             updateStats(null);
@@ -1677,6 +1679,7 @@ updateVersionIndicator();
 // Drawer controls
 initSavedPagesDrawer();
 initSavedPagesCacheSync();
+void initFavorites();
 
 // Initialize (background and auth can run in parallel)
 await Promise.all([

@@ -146,14 +146,14 @@ export class FavoritesStore {
 
     if (warmCache?.pages?.length) {
       this.replaceData(warmCache.pages, warmCache.pagination, { requestId });
-    } else {
-      this.emitChange();
+      void this.refreshInitial(requestId);
+      return this.getSnapshot();
     }
 
+    this.emitChange();
+
     const response = await this.api.getFavorites(
-      warmCache?.pages?.length
-        ? this.buildInitialFetchOptions({ skipCache: true })
-        : this.buildInitialFetchOptions()
+      this.buildInitialFetchOptions()
     );
 
     if (this.state.requestId !== requestId) {
@@ -161,25 +161,14 @@ export class FavoritesStore {
     }
 
     if (response?.pages) {
-      const shouldReuseWarmHistory = warmCache?.pages?.length && response.pagination?.hasNextPage !== false;
-      const combinedPages = shouldReuseWarmHistory
-        ? mergeFavoritePages(response.pages, warmCache.pages, this.options.maxItems)
-        : response.pages;
-      const combinedPagination = shouldReuseWarmHistory
-        ? {
-            total: response.pagination?.total ?? warmCache.pagination?.total,
-            hasNextPage: response.pagination?.hasNextPage ?? warmCache.pagination?.hasNextPage ?? false,
-            nextCursor: response.pagination?.nextCursor || warmCache.pagination?.nextCursor || null
-          }
-        : response.pagination;
-
-      this.replaceData(combinedPages, combinedPagination, { requestId });
+      this.replaceData(response.pages, response.pagination, { requestId });
       await this.persistWarmCache(requestId);
-      void this.prefetchAllPages(requestId);
-    }
 
-    if (response?.meta?.fromCache && !warmCache?.pages?.length) {
-      void this.refreshInitial(requestId);
+      if (response?.meta?.fromCache) {
+        void this.refreshInitial(requestId);
+      } else {
+        void this.prefetchAllPages(requestId);
+      }
     }
 
     return this.getSnapshot();

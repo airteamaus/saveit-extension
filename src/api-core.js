@@ -2,6 +2,8 @@
 
 function applyApiCore(API) {
   API._cacheManager = null;
+  API._lastKnownUserId = undefined;
+  API.LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
 
   Object.defineProperty(API, 'cacheManager', {
     configurable: true,
@@ -10,7 +12,10 @@ function applyApiCore(API) {
       if (!this._cacheManager && this.isExtension) {
         this._cacheManager = new globalThis.CacheManager_Export(
           () => this.getCurrentUserId(),
-          () => this.getStorage()
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId()
+          }
         );
       }
       return this._cacheManager;
@@ -36,6 +41,81 @@ function applyApiCore(API) {
 
     getStorage() {
       return globalThis.getStorageAPI();
+    },
+
+    async getLastKnownUserId() {
+      if (!this.isExtension) {
+        return null;
+      }
+
+      if (this._lastKnownUserId !== undefined) {
+        return this._lastKnownUserId;
+      }
+
+      const storage = this.getStorage();
+      if (!storage) {
+        this._lastKnownUserId = null;
+        return null;
+      }
+
+      try {
+        const result = await storage.get(this.LAST_KNOWN_USER_KEY);
+        const userId = result?.[this.LAST_KNOWN_USER_KEY]?.userId || null;
+        this._lastKnownUserId = userId;
+        return userId;
+      } catch (error) {
+        console.error('[getLastKnownUserId] Failed to read cached auth bootstrap:', error);
+        this._lastKnownUserId = null;
+        return null;
+      }
+    },
+
+    async setLastKnownUser(user) {
+      if (!this.isExtension) {
+        return;
+      }
+
+      const storage = this.getStorage();
+      if (!storage) {
+        return;
+      }
+
+      const userId = user?.uid || null;
+      this._lastKnownUserId = userId;
+
+      try {
+        if (!userId) {
+          await storage.remove(this.LAST_KNOWN_USER_KEY);
+          return;
+        }
+
+        await storage.set({
+          [this.LAST_KNOWN_USER_KEY]: {
+            userId,
+            updatedAt: Date.now()
+          }
+        });
+      } catch (error) {
+        console.error('[setLastKnownUser] Failed to persist cached auth bootstrap:', error);
+      }
+    },
+
+    async clearLastKnownUser() {
+      if (!this.isExtension) {
+        return;
+      }
+
+      this._lastKnownUserId = null;
+      const storage = this.getStorage();
+      if (!storage) {
+        return;
+      }
+
+      try {
+        await storage.remove(this.LAST_KNOWN_USER_KEY);
+      } catch (error) {
+        console.error('[clearLastKnownUser] Failed to clear cached auth bootstrap:', error);
+      }
     },
 
     _buildListCacheScope(surface, options = {}) {

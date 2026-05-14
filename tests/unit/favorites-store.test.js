@@ -119,6 +119,52 @@ describe('FavoritesStore', () => {
     expect(api.getFavorites).toHaveBeenCalledTimes(2);
   });
 
+  it('returns from hydrate immediately when warm cache exists and fresh fetch is still pending', async () => {
+    const cachedPages = makePages(40);
+    let resolveFreshFetch;
+    const api = {
+      isExtension: true,
+      getCachedPages: vi.fn(async () => buildFavoritesCachePayload(cachedPages, {
+        total: 40,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      setCachedPages: vi.fn(async () => {}),
+      getFavorites: vi.fn(() => new Promise((resolve) => {
+        resolveFreshFetch = resolve;
+      }))
+    };
+    const store = new FavoritesStore(api, {
+      initialFetchLimit: 36,
+      prefetchBatchLimit: 24,
+      maxItems: 300,
+      warmCacheScope: { surface: 'favorites-prefetch' },
+      initialLayout: { pageSize: 20, columns: 10, rows: 2, tileWidth: 88, gridWidth: 1008 }
+    });
+
+    const onResolved = vi.fn();
+    const hydratePromise = store.hydrate().then(onResolved);
+
+    await vi.waitFor(() => {
+      expect(onResolved).toHaveBeenCalledTimes(1);
+    });
+    expect(store.getSnapshot().allPages).toHaveLength(40);
+
+    resolveFreshFetch({
+      pages: cachedPages.slice(0, 36),
+      pagination: {
+        total: 40,
+        hasNextPage: true,
+        nextCursor: 'page-36'
+      },
+      meta: {
+        fromCache: false
+      }
+    });
+
+    await hydratePromise;
+  });
+
   it('navigates using local pages without triggering on-demand fetches', async () => {
     const firstBatch = makePages(30);
     const secondBatch = makePages(30, 31);

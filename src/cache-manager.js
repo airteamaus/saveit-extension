@@ -8,11 +8,25 @@
  * - Cache validation (user_id mismatch detection)
  */
 class CacheManager {
-  constructor(getCurrentUserId, getStorage) {
+  constructor(getCurrentUserId, getStorage, options = {}) {
     this.getCurrentUserId = getCurrentUserId;
     this.getStorage = getStorage;
+    this.getBootstrapUserId = options.getBootstrapUserId || (async () => null);
     this.CACHE_KEY_PREFIX = 'savedPages_cache';
     this.CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
+  }
+
+  async resolveReadUserId() {
+    const currentUserId = await this.getCurrentUserId();
+    if (currentUserId) {
+      return currentUserId;
+    }
+
+    return await this.getBootstrapUserId();
+  }
+
+  async resolveWriteUserId() {
+    return await this.getCurrentUserId();
   }
 
   /**
@@ -69,7 +83,7 @@ class CacheManager {
    */
   async getCachedPages(scope = {}) {
     try {
-      const userId = this.getCurrentUserId();
+      const userId = await this.resolveReadUserId();
       if (!userId) {
         debug('[getCachedPages] No user logged in, skipping cache');
         return null;
@@ -123,7 +137,7 @@ class CacheManager {
    */
   async setCachedPages(response, scope = {}) {
     try {
-      const userId = this.getCurrentUserId();
+      const userId = await this.resolveWriteUserId();
       if (!userId) {
         debug('[setCachedPages] No user logged in, skipping cache write');
         return;
@@ -155,7 +169,7 @@ class CacheManager {
    */
   async invalidateCache(scope = null) {
     try {
-      const userId = this.getCurrentUserId();
+      const userId = await this.resolveWriteUserId();
       if (!userId) {
         debug('[invalidateCache] No user logged in');
         return;
@@ -201,7 +215,7 @@ class CacheManager {
    */
   async cleanupLegacyCache() {
     try {
-      const userId = this.getCurrentUserId();
+      const userId = await this.resolveWriteUserId();
       const storage = this.getStorage();
       if (!storage) return;
 
