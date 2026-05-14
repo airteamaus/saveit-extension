@@ -6,6 +6,36 @@ class ProjectManager {
     this.htmlUtils = htmlUtils;
   }
 
+  getProjectActionIcon(action) {
+    if (action === 'rename') {
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+        </svg>
+      `;
+    }
+
+    if (action === 'visibility') {
+      return `
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+          <circle cx="8.5" cy="7" r="4"></circle>
+          <path d="M20 8v6"></path>
+          <path d="M23 11h-6"></path>
+        </svg>
+      `;
+    }
+
+    return `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <polyline points="21 8 21 21 3 21 3 8"></polyline>
+        <rect x="1" y="3" width="22" height="5"></rect>
+        <line x1="10" y1="12" x2="14" y2="12"></line>
+      </svg>
+    `;
+  }
+
   isProjectsUnavailable(dashboard) {
     return dashboard.projectsAvailable === false;
   }
@@ -158,33 +188,35 @@ class ProjectManager {
         const visibilityLabel = project.visibility === 'company' ? 'Shared' : 'Private';
 
         return `
-          <div class="project-nav-row ${activeClass}">
+          <div class="project-nav-row has-actions ${activeClass}">
             <button class="project-nav-item ${activeClass}" data-project-id="${this.htmlUtils.escapeHtml(project.id)}">
-              <span class="project-nav-main">
-                <span class="project-nav-name">${this.htmlUtils.escapeHtml(project.name)}</span>
-                <span class="project-nav-visibility">${visibilityLabel}</span>
-              </span>
-              <span class="project-nav-count">${project.page_count || 0}</span>
+              <span class="project-nav-name">${this.htmlUtils.escapeHtml(project.name)}</span>
             </button>
-            <div class="project-nav-actions">
-              <button
-                class="project-nav-action project-action-rename"
-                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
-                title="Rename project"
-                aria-label="Rename ${this.htmlUtils.escapeHtml(project.name)}"
-              >Rename</button>
-              <button
-                class="project-nav-action project-action-visibility"
-                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
-                title="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
-                aria-label="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
-              >${project.visibility === 'company' ? 'Private' : 'Share'}</button>
-              <button
-                class="project-nav-action project-action-archive"
-                data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
-                title="Archive project"
-                aria-label="Archive ${this.htmlUtils.escapeHtml(project.name)}"
-              >Archive</button>
+            <div class="project-nav-meta">
+              <span class="project-nav-visibility">${visibilityLabel}</span>
+              <div class="project-nav-meta-right">
+                <span class="project-nav-count">${project.page_count || 0}</span>
+                <div class="project-nav-actions" aria-label="Project actions for ${this.htmlUtils.escapeHtml(project.name)}">
+                  <button
+                    class="project-nav-action project-action-rename"
+                    data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
+                    title="Rename project"
+                    aria-label="Rename ${this.htmlUtils.escapeHtml(project.name)}"
+                  >${this.getProjectActionIcon('rename')}</button>
+                  <button
+                    class="project-nav-action project-action-visibility"
+                    data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
+                    title="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
+                    aria-label="${project.visibility === 'company' ? 'Make private' : 'Share with company'}"
+                  >${this.getProjectActionIcon('visibility')}</button>
+                  <button
+                    class="project-nav-action project-action-archive"
+                    data-project-id="${this.htmlUtils.escapeHtml(project.id)}"
+                    title="Archive project"
+                    aria-label="Archive ${this.htmlUtils.escapeHtml(project.name)}"
+                  >${this.getProjectActionIcon('archive')}</button>
+                </div>
+              </div>
             </div>
           </div>
         `;
@@ -201,13 +233,17 @@ class ProjectManager {
       </div>
 
       <div class="project-nav">
-        <button class="project-nav-item ${selectedProject ? '' : 'is-active'}" data-project-id="">
-          <span class="project-nav-main">
+        <div class="project-nav-row ${selectedProject ? '' : 'is-active'}">
+          <button class="project-nav-item ${selectedProject ? '' : 'is-active'}" data-project-id="">
             <span class="project-nav-name">All saved items</span>
+          </button>
+          <div class="project-nav-meta">
             <span class="project-nav-visibility">Default feed</span>
-          </span>
-          ${typeof totalCount === 'number' ? `<span class="project-nav-count">${totalCount}</span>` : ''}
-        </button>
+            ${typeof totalCount === 'number'
+              ? `<div class="project-nav-meta-right"><span class="project-nav-count">${totalCount}</span></div>`
+              : ''}
+          </div>
+        </div>
 
         <div class="project-nav-section-label">My projects</div>
         ${projectRows || '<p class="project-sidebar-empty">No projects yet. Create one to group related pages.</p>'}

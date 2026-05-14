@@ -104,8 +104,8 @@ describe('ProjectManager', () => {
     expect(sidebar.textContent).toContain('All saved items');
     expect(sidebar.textContent).toContain('SaveIt product');
     expect(sidebar.textContent).toContain('AI radar');
-    expect(sidebar.textContent).toContain('Share');
-    expect(sidebar.textContent).toContain('Rename');
+    expect(sidebar.querySelector('.project-action-rename[aria-label="Rename SaveIt product"]')).not.toBeNull();
+    expect(sidebar.querySelector('.project-action-visibility[aria-label="Share with company"]')).not.toBeNull();
   });
 
   it('selects a project and reloads the scoped dashboard data', async () => {
