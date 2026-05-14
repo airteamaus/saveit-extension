@@ -3,6 +3,8 @@
 
 /* global ThemeManager, AuthMenu */
 
+import { SearchResultsStore } from './search-results-store.js';
+
 // State
 let currentQuery = '';
 let currentOffset = 0;
@@ -10,6 +12,7 @@ let totalResults = 0;
 let isLoading = false;
 const RESULTS_PER_PAGE = 20;
 const SIMILARITY_THRESHOLD = 0.58;
+const searchResultsStore = new SearchResultsStore(() => globalThis.API);
 
 // DOM elements
 const searchForm = document.getElementById('search-form');
@@ -224,7 +227,7 @@ async function executeSearch(query, loadMore = false) {
       throw new Error('Search not available. Please sign in.');
     }
 
-    const response = await API.searchContent(query, {
+    const response = await searchResultsStore.search(query, {
       limit: RESULTS_PER_PAGE,
       offset: currentOffset,
       threshold: SIMILARITY_THRESHOLD
@@ -308,6 +311,7 @@ function toggleUserDropdown() {
  */
 async function handleSignOut() {
   try {
+    searchResultsStore.clear();
     await AuthMenu.signOut();
     // Auth state listener will update UI
   } catch (error) {
