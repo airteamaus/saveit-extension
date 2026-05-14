@@ -1,6 +1,7 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
+import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 
 const logger = createLogger('background');
@@ -180,15 +181,9 @@ browserApi.action.onClicked.addListener(async (tab) => {
 
     // Invalidate cache so dashboard shows fresh data
     try {
-      const allStorage = await browserApi.storage.local.get(null);
-      const cacheKeys = Object.keys(allStorage).filter(key =>
-        key === 'savedPages_cache' || key.startsWith('savedPages_cache_')
-      );
-      if (cacheKeys.length > 0) {
-        await browserApi.storage.local.remove(cacheKeys);
-      }
+      const cacheKeysRemoved = await invalidateSavedPagesCacheStorage(browserApi.storage.local);
       logger.log('Cache invalidated after save', {
-        cacheKeysRemoved: cacheKeys.length
+        cacheKeysRemoved
       });
     } catch (cacheError) {
       logger.error('Failed to invalidate cache', cacheError);

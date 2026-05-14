@@ -493,23 +493,12 @@ function applyApiPages(API) {
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
-            const idToken = await this.getIdToken();
-            const params = new URLSearchParams({ id });
-
-            const response = await fetch(`${CONFIG.cloudFunctionUrl}?${params}`, {
+            const response = await this._fetchWithAuth('', { id }, {
               method: 'DELETE',
-              headers: {
-                'Authorization': `Bearer ${idToken}`
-              }
             });
 
-            if (!response.ok) {
-              const errorMessage = await this.parseErrorResponse(response);
-              throw new Error(errorMessage);
-            }
-
             await this.invalidateCache();
-            return await response.json();
+            return response;
           },
           'deletePage',
           { id }
@@ -528,22 +517,16 @@ function applyApiPages(API) {
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
-            const idToken = await this.getIdToken();
-            const response = await fetch(`${CONFIG.cloudFunctionUrl}/updatePage`, {
+            const response = await this._fetchWithAuth('/updatePage', null, {
               method: 'PATCH',
               headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${idToken}`
+                'Content-Type': 'application/json'
               },
               body: JSON.stringify({ id, ...updates })
             });
 
-            if (!response.ok) {
-              const errorMessage = await this.parseErrorResponse(response);
-              throw new Error(errorMessage);
-            }
-
-            return await response.json();
+            await this.invalidateCache();
+            return response;
           },
           'updatePage',
           { id, updates }

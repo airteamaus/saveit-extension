@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { isSavedPagesCacheInvalidation } from '../../src/saved-pages-cache.js';
+import {
+  getSavedPagesCacheKeys,
+  invalidateSavedPagesCacheStorage,
+  isSavedPagesCacheInvalidation
+} from '../../src/saved-pages-cache.js';
 
 describe('saved-pages cache sync', () => {
   it('detects saved pages cache removals', () => {
@@ -35,5 +39,40 @@ describe('saved-pages cache sync', () => {
 
     expect(isSavedPagesCacheInvalidation(changes, 'local')).toBe(false);
     expect(isSavedPagesCacheInvalidation(changes, 'sync')).toBe(false);
+  });
+
+  it('finds all saved pages cache keys in storage data', () => {
+    const keys = getSavedPagesCacheKeys({
+      newtab_background: { id: 'photo-1' },
+      savedPages_cache_user123: {},
+      'savedPages_cache_user123_surface%3Ddashboard': {}
+    });
+
+    expect(keys).toEqual([
+      'savedPages_cache_user123',
+      'savedPages_cache_user123_surface%3Ddashboard'
+    ]);
+  });
+
+  it('invalidates saved pages cache keys through shared storage helper', async () => {
+    const removedKeys = [];
+    const storage = {
+      get: async () => ({
+        newtab_background: { id: 'photo-1' },
+        savedPages_cache_user123: {},
+        'savedPages_cache_user123_surface%3Ddashboard': {}
+      }),
+      remove: async (keys) => {
+        removedKeys.push(...keys);
+      }
+    };
+
+    const removedCount = await invalidateSavedPagesCacheStorage(storage);
+
+    expect(removedCount).toBe(2);
+    expect(removedKeys).toEqual([
+      'savedPages_cache_user123',
+      'savedPages_cache_user123_surface%3Ddashboard'
+    ]);
   });
 });

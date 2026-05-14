@@ -216,6 +216,9 @@ describe('API - CRUD Operations', () => {
         json: async () => ({ id: 'page-123', notes: 'New notes' })
       };
       global.fetch = vi.fn(async () => mockResponse);
+      API._cacheManager = {
+        invalidateCache: vi.fn()
+      };
 
       const result = await API.updatePage('page-123', { notes: 'New notes' });
 
@@ -231,6 +234,7 @@ describe('API - CRUD Operations', () => {
         })
       );
       expect(result.notes).toBe('New notes');
+      expect(API._cacheManager.invalidateCache).toHaveBeenCalled();
     });
 
     it('should throw error when page not found in standalone mode', async () => {
