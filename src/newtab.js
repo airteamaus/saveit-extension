@@ -5,6 +5,7 @@
 
 import { unsplashAccessKey, getStorageAPI } from './config.js';
 import { FavoritesStore } from './favorites-store.js';
+import { SavedPagesStore } from './saved-pages-store.js';
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 
 const CACHE_KEY = 'newtab_background';
@@ -73,6 +74,12 @@ const FAVORITES_WARM_CACHE_SCOPE = {
   pinnedFirst: true,
   limit: FAVORITES_MAX_ITEMS
 };
+const DRAWER_WARM_CACHE_SCOPE = {
+  surface: 'saved-pages-drawer',
+  sort: 'newest',
+  pinnedFirst: false,
+  limit: 'all'
+};
 
 let drawerSearchDebounceTimer = null;
 let savedPagesCacheRefreshTimer = null;
@@ -127,6 +134,11 @@ const favoritesStore = new FavoritesStore(API, {
     tileWidth: FAVORITES_DESKTOP_TILE_WIDTH,
     gridWidth: FAVORITES_MAX_GRID_WIDTH
   }
+});
+const savedPagesStore = new SavedPagesStore(API, {
+  initialFetchLimit: DRAWER_INITIAL_FETCH_LIMIT,
+  prefetchBatchLimit: 100,
+  warmCacheScope: DRAWER_WARM_CACHE_SCOPE
 });
 
 /**
@@ -805,9 +817,24 @@ const savedPagesView = {
     drawerState.allItemsTotal = value;
   },
   getCurrentUser: getDrawerCurrentUser,
+  async persistAllPages() {
+    await savedPagesStore.setPages(drawerState.allPages, {
+      total: drawerState.allItemsTotal ?? drawerState.total ?? drawerState.allPages.length,
+      hasNextPage: false,
+      nextCursor: null
+    });
+  },
   showLoading: renderDrawerLoadingState,
   async loadPages() {
-    await loadDrawerBasePages({ query: drawerState.query, syncUrl: false });
+    if (!drawerState.hasInitialized) {
+      await loadDrawerBasePages({ query: drawerState.query, syncUrl: false });
+      return;
+    }
+
+    syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
+      query: drawerState.query,
+      render: false
+    });
   },
   async handleFilterChange() {
     applyDrawerFilters(drawerState.currentFilter.search || '');
@@ -1081,6 +1108,20 @@ function updateDrawerPageCollections(id, updater) {
   drawerState.pages = drawerState.pages.map(page => (page.id === id ? updater(page) : page));
 }
 
+function syncDrawerStateFromStore(snapshot, { query = drawerState.query, render = drawerState.hasInitialized } = {}) {
+  drawerState.allPages = snapshot.allPages || [];
+  drawerState.total = typeof snapshot.total === 'number' ? snapshot.total : drawerState.allPages.length;
+  if (!drawerState.selectedProjectId) {
+    drawerState.allItemsTotal = drawerState.total;
+  }
+  projectManager.refreshProjectCounts(savedPagesView);
+  applyDrawerFilters(query);
+
+  if (render) {
+    renderDrawerResults();
+  }
+}
+
 async function ensureDrawerProjectsLoaded() {
   if (drawerState.projects.length || drawerState.projectsAvailable === false) {
     return null;
@@ -1113,63 +1154,28 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
   if (API.isExtension && !getDrawerCurrentUser()) {
     drawerState.isLoading = false;
     drawerState.hasInitialized = true;
+    savedPagesStore.reset({ emit: false });
     drawerState.allPages = [];
     drawerState.pages = [];
     renderDrawerSignInState();
     return;
   }
 
-  renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
+  if (!savedPagesStore.getSnapshot().allPages.length) {
+    renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
+  }
 
   try {
     const projectsPromise = ensureDrawerProjectsLoaded();
-    const requestOptions = {
-      limit: DRAWER_INITIAL_FETCH_LIMIT,
-      sort: 'newest',
-      pinnedFirst: false,
-      projectId: drawerState.selectedProjectId || undefined
-    };
-
-    const response = await API.getSavedPages(requestOptions);
+    const snapshot = await savedPagesStore.hydrate();
 
     if (requestId !== drawerState.requestId) {
       return;
     }
 
-    drawerState.allPages = response.pages || [];
-    drawerState.total = typeof response.pagination?.total === 'number'
-      ? response.pagination.total
-      : null;
-    if (!drawerState.selectedProjectId) {
-      drawerState.allItemsTotal = drawerState.total;
-    }
-    projectManager.refreshProjectCounts(savedPagesView);
-    applyDrawerFilters(trimmedQuery);
+    syncDrawerStateFromStore(snapshot, { query: trimmedQuery, render: false });
     drawerState.hasInitialized = true;
     renderDrawerResults();
-
-    if (response?.meta?.fromCache) {
-      void API.getSavedPages({ ...requestOptions, skipCache: true })
-        .then(freshResponse => {
-          if (requestId !== drawerState.requestId) {
-            return;
-          }
-
-          drawerState.allPages = freshResponse.pages || [];
-          drawerState.total = typeof freshResponse.pagination?.total === 'number'
-            ? freshResponse.pagination.total
-            : null;
-          if (!drawerState.selectedProjectId) {
-            drawerState.allItemsTotal = drawerState.total;
-          }
-          projectManager.refreshProjectCounts(savedPagesView);
-          applyDrawerFilters(trimmedQuery);
-          renderDrawerResults();
-        })
-        .catch(error => {
-          console.debug('[newtab] Background saved pages refresh failed:', error);
-        });
-    }
 
     if (projectsPromise) {
       void projectsPromise.then(() => {
@@ -1203,14 +1209,11 @@ async function handleDrawerDelete(id) {
   try {
     await API.deletePage(id);
     const deletedPage = findDrawerPage(id);
-    drawerState.allPages = drawerState.allPages.filter(page => page.id !== id);
-    drawerState.pages = drawerState.pages.filter(page => page.id !== id);
-    if (typeof drawerState.total === 'number') {
-      drawerState.total = Math.max(0, drawerState.total - 1);
-    }
-    if (!drawerState.selectedProjectId && typeof drawerState.allItemsTotal === 'number') {
-      drawerState.allItemsTotal = Math.max(0, drawerState.allItemsTotal - 1);
-    }
+    await savedPagesStore.removePage(id);
+    syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
+      query: drawerState.query,
+      render: false
+    });
     (deletedPage?.project_ids || []).forEach(projectId => {
       projectManager.adjustProjectCount(savedPagesView, projectId, -1);
     });
@@ -1229,12 +1232,14 @@ async function handleDrawerPin(id) {
 
   const nextPinnedState = !page.pinned;
   updateDrawerPageCollections(id, entry => ({ ...entry, pinned: nextPinnedState }));
+  void savedPagesView.persistAllPages();
   renderDrawerResults();
 
   try {
     await API.pinPage(id, nextPinnedState);
   } catch (error) {
     updateDrawerPageCollections(id, entry => ({ ...entry, pinned: !nextPinnedState }));
+    void savedPagesView.persistAllPages();
     renderDrawerResults();
     console.error('[newtab] Failed to update pin:', error);
     alert('Failed to update pin status. Please try again.');
@@ -1271,8 +1276,10 @@ function openSavedPagesDrawer({ syncUrl = true, searchQuery = '' } = {}) {
     updateDrawerUrl(true, searchQuery);
   }
 
-  if (!drawerState.hasInitialized || drawerState.query !== searchQuery.trim()) {
+  if (!drawerState.hasInitialized) {
     void loadDrawerBasePages({ query: searchQuery, syncUrl: false });
+  } else if (drawerState.query !== searchQuery.trim()) {
+    void loadDrawerResults(searchQuery, { syncUrl: false });
   } else {
     renderDrawerResults();
   }
@@ -1301,6 +1308,7 @@ function syncSavedPagesAfterCacheInvalidation() {
     }
 
     void initFavorites();
+    void savedPagesStore.hydrate();
 
     if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
       void loadDrawerBasePages({
@@ -1310,6 +1318,17 @@ function syncSavedPagesAfterCacheInvalidation() {
     }
   }, 50);
 }
+
+savedPagesStore.subscribe(() => {
+  if (!drawerState.hasInitialized || (API.isExtension && !getDrawerCurrentUser())) {
+    return;
+  }
+
+  syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
+    query: drawerState.query,
+    render: !savedPagesDrawer?.classList.contains('hidden')
+  });
+});
 
 function initSavedPagesCacheSync() {
   const browserApi = globalThis.browser ?? globalThis.chrome;
@@ -1578,6 +1597,8 @@ async function initAuth() {
           updateAuthUI(user);
           if (user) {
             await API.setLastKnownUser?.(user);
+            drawerState.hasInitialized = false;
+            savedPagesStore.reset({ emit: false });
             // User is signed in, load favorites and stats
             await initFavorites();
             if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
@@ -1587,6 +1608,7 @@ async function initAuth() {
             await API.clearLastKnownUser?.();
             // User signed out, hide favorites and stats
             favoritesStore.reset();
+            savedPagesStore.reset({ emit: false });
             updateStats(null);
             Object.assign(drawerState, {
               hasInitialized: false,

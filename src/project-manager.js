@@ -558,6 +558,7 @@ class ProjectManager {
     dashboard.allPages = dashboard.allPages.map(applyMembership);
     dashboard.pages = dashboard.pages.map(applyMembership);
     this.adjustProjectCount(dashboard, projectId, shouldAssign ? 1 : -1);
+    await dashboard.persistAllPages?.();
     await dashboard.handleFilterChange();
     this.renderEditor(dashboard);
   }
