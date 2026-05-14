@@ -37,6 +37,18 @@ export function buildFavoritesCachePayload(pages, pagination, fromCache = false)
   };
 }
 
+function hasFullFavoriteCoverage(pages, pagination, maxItems) {
+  if (!Array.isArray(pages) || pages.length === 0) {
+    return false;
+  }
+
+  if (typeof pagination?.total === 'number') {
+    return pages.length >= Math.min(pagination.total, maxItems);
+  }
+
+  return pagination?.hasNextPage !== true;
+}
+
 function createInitialState(initialLayout = {}) {
   return {
     allPages: [],
@@ -161,7 +173,7 @@ export class FavoritesStore {
     }
 
     if (response?.pages) {
-      this.replaceData(response.pages, response.pagination, { requestId });
+      this.applyResponse(response, { requestId });
       await this.persistWarmCache(requestId);
 
       if (response?.meta?.fromCache) {
@@ -199,7 +211,7 @@ export class FavoritesStore {
         return false;
       }
 
-      this.replaceData(response.pages, response.pagination, { requestId });
+      this.applyResponse(response, { requestId, preserveExistingCoverage: true });
       await this.persistWarmCache(requestId);
       void this.prefetchAllPages(requestId);
       return true;
@@ -316,6 +328,57 @@ export class FavoritesStore {
     this.state.hasNextPage = !hasReachedFavoritesCap && pagination?.hasNextPage === true;
     this.state.nextCursor = this.state.hasNextPage ? pagination?.nextCursor || null : null;
     this.emitChange();
+  }
+
+  applyResponse(response, { requestId = this.state.requestId, preserveExistingCoverage = false } = {}) {
+    if (this.state.requestId !== requestId || !response?.pages) {
+      return false;
+    }
+
+    const nextPages = this.reconcilePages(response.pages, {
+      preserveExistingCoverage
+    });
+    const nextPagination = this.reconcilePagination(response.pagination, nextPages, {
+      preserveExistingCoverage
+    });
+
+    this.replaceData(nextPages, nextPagination, { requestId });
+    return true;
+  }
+
+  reconcilePages(incomingPages, { preserveExistingCoverage = false } = {}) {
+    const normalizedIncomingPages = Array.isArray(incomingPages)
+      ? incomingPages.slice(0, this.options.maxItems)
+      : [];
+
+    if (!preserveExistingCoverage || this.state.allPages.length <= normalizedIncomingPages.length) {
+      return normalizedIncomingPages;
+    }
+
+    return mergeFavoritePages(normalizedIncomingPages, this.state.allPages, this.options.maxItems);
+  }
+
+  reconcilePagination(pagination, pages, { preserveExistingCoverage = false } = {}) {
+    const total = typeof pagination?.total === 'number'
+      ? Math.max(pagination.total, pages.length)
+      : pages.length;
+
+    if (
+      preserveExistingCoverage &&
+      hasFullFavoriteCoverage(pages, { ...pagination, total }, this.options.maxItems)
+    ) {
+      return {
+        total,
+        hasNextPage: false,
+        nextCursor: null
+      };
+    }
+
+    return {
+      total,
+      hasNextPage: pagination?.hasNextPage === true,
+      nextCursor: pagination?.hasNextPage === true ? pagination?.nextCursor || null : null
+    };
   }
 
   buildInitialFetchOptions(overrides = {}) {

@@ -11,9 +11,8 @@ function makePages(count, start = 1) {
 }
 
 describe('FavoritesStore', () => {
-  it('hydrates from warm cache and keeps older cached pages until fresh paging catches up', async () => {
+  it('keeps the full warm cache when the initial refresh only returns the first slice', async () => {
     const cachedPages = makePages(60);
-    const secondBatch = makePages(24, 37);
     const api = {
       isExtension: true,
       getCachedPages: vi.fn(async () => buildFavoritesCachePayload(cachedPages, {
@@ -24,23 +23,12 @@ describe('FavoritesStore', () => {
       setCachedPages: vi.fn(async () => {}),
       getFavorites: vi
         .fn()
-        .mockResolvedValueOnce({
+        .mockResolvedValue({
           pages: cachedPages.slice(0, 36),
           pagination: {
             total: 60,
             hasNextPage: true,
             nextCursor: 'page-36'
-          },
-          meta: {
-            fromCache: false
-          }
-        })
-        .mockResolvedValueOnce({
-          pages: secondBatch,
-          pagination: {
-            total: 60,
-            hasNextPage: false,
-            nextCursor: null
           },
           meta: {
             fromCache: false
@@ -57,7 +45,7 @@ describe('FavoritesStore', () => {
 
     await store.hydrate();
     await vi.waitFor(() => {
-      expect(api.getFavorites).toHaveBeenCalledTimes(2);
+      expect(api.getFavorites).toHaveBeenCalledTimes(1);
     });
     const snapshot = store.getSnapshot();
 
@@ -65,6 +53,8 @@ describe('FavoritesStore', () => {
     expect(snapshot.pagedPages).toHaveLength(2);
     expect(snapshot.hasNextPage).toBe(false);
     expect(snapshot.nextCursor).toBeNull();
+    expect(api.setCachedPages).toHaveBeenCalled();
+    expect(api.setCachedPages.mock.calls.at(-1)[0].pages).toHaveLength(60);
   });
 
   it('prefetches the full local favorites set after the first slice loads', async () => {
