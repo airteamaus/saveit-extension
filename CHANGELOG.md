@@ -5,43 +5,91 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.10] - 2026-05-15
+
+### ✨ Features
+
+- **cache:** add head-based list freshness sync (7cd548c)
+
+### 🐛 Bug Fixes
+
+- **ui:** make collection cards fully clickable (31a4652)
+
 ## [1.10.9] - 2026-05-15
 
-No notable changes.
+### 📝 Other Improvements
+
+- Refine saved pages drawer workflow (c3f70db)
 
 ## [1.10.8] - 2026-05-14
 
-No notable changes.
+### 📝 Other Improvements
+
+- Harden dependency graph (5613e02)
+- Move Unsplash key to runtime config (e7ce5f5)
+- Unify page mutation invalidation (46bc011)
+- Cache search results per session (84cc346)
+- Move drawer onto cache core (dd68116)
+- Move favorites onto cache core (53e4241)
+- Extract warm cache list core (97a6714)
+- Warm cache the saved pages drawer (a7556ee)
+- Preserve full favorites warm cache (b36cc47)
+- Restore cache-first new tab startup (7310182)
 
 ## [1.10.7] - 2026-05-14
 
-No notable changes.
+### 📝 Other Improvements
+
+- Polish project drawer sidebar (f08c3f8)
+- Prefetch full favorites store (4eb41a1)
 
 ## [1.10.6] - 2026-05-13
 
-No notable changes.
+### 📝 Other Improvements
+
+- Build Firebase bundles before tests (761a55c)
+- Cache projects and drawer refreshes (13fd7d8)
 
 ## [1.10.5] - 2026-05-13
 
-No notable changes.
+### 📝 Other Improvements
+
+- Refactor favorites into local store (7a410f9)
+- Fix Chrome publish workflow install (4750d8e)
 
 ## [1.10.4] - 2026-05-12
 
-No notable changes.
+### 📝 Other Improvements
+
+- Approve required pnpm build scripts (7b7028f)
+- Use public Firebase web-extension exports (8950da8)
+- Match drawer search to list payload (464f973)
+- Treat saved item totals as optional (ec09764)
+- Load drawer projects in parallel (3970c2d)
+- Stabilize saved pages and trim initial loads (11b5be8)
 
 ## [1.10.3] - 2026-05-12
 
-No notable changes.
+### 📝 Other Improvements
+
+- Rename saved pages surfaces (4d4a833)
+- Purge dead dashboard modules (124e7a6)
+- Remove obsolete dashboard checklist (e2873a5)
+- Update standalone docs and tests (eee62cd)
+- Remove legacy database surface (52196fb)
+- Move project collections to newtab drawer (1d57ca0)
+- Document and test project workflows (b864955)
+- Scope dashboard projects correctly (3e243a0)
+- Build project dashboard UI (4f0a6a2)
+- Add project data layer (203ba6f)
 
 ## [1.10.2] - 2026-05-11
 
-No notable changes.
+### 📝 Other Improvements
+
+- Align Chrome package with Store ID (a7cffbc)
 
 ## [1.10.1] - 2026-05-11
-
-No notable changes.
-
-## [1.10.0] - 2026-05-07
 
 ### ✨ Features
 
@@ -227,6 +275,53 @@ No notable changes.
 - **dashboard:** replace grid cards with row-based list layout (43fbfaa)
 - reduce extension complexity and improve code quality (8b9230d)
 - remove obvious comments and promissory comment (3577fac)
+
+### 📝 Other Improvements
+
+- Add safe auth telemetry for Sentry (a297c1f)
+- Fix Chrome Web Store packaging (146e329)
+- Add privacy link to new tab footer (7eda5a6)
+- Fix background auth startup (f474c79)
+- Refine favorites hover preview (9624d63)
+- Fix native drawer regressions (4334567)
+- Refine native saved pages drawer (5182f38)
+- Refactor shared extension UI styles (0388385)
+- Refactor API helpers and upgrade Actions Node (9458cf5)
+- Speed up homepage favorites loading (5b0f3dc)
+- Add responsive homepage favorites pager (c41e121)
+- Bypass hooks in release updates commit (731692d)
+- Fix release workflows and e2e expectations (103260d)
+- Fold dashboard into drawer and remove graph (a8371f4)
+- Unify dashboard entrypoints (f562e9e)
+- (chore): upgraded outdated (c17fe43)
+- simplify card tags to link style with top classification only (0302bea)
+- modernize newtab page with flat black background and simplified tag hierarchy (ee269c5)
+- update link text from "Open full dashboard" to "Open database" (0526f0f)
+- align dashboard with search page design system (a16a932)
+- align dashboard interactions with design system (76c5990)
+- align dark mode surface colors with design system (7579591)
+- Change from opening in new tabs to same tab (42af0ec)
+- remove dead code and unused files (471b5c4)
+- Revert "fix: restore original Chrome extension key for stable local dev ID" (bed4695)
+- add logging to track discovery mode flow in E2E tests (9686067)
+- Remove tagline from footer (a3a9ed5)
+- Improve Chrome release workflow with clearer labeling and instructions (58580dc)
+- Update README.md (775534c)
+- Add comprehensive QA infrastructure and code quality improvements (a547b4a)
+- Add detailed logging for debugging data flow (6adcab5)
+- Revert "fix(cache): add automatic cache-busting for HTML/CSS/JS files" (5645140)
+- 0.7.3 (5969a00)
+- **dashboard:** add base styling for delete button in light mode (782af27)
+- **dashboard:** add dark mode styling for delete button (5f3c390)
+- **dashboard:** increase row-footer spacing from 4px to 4pt (a169dd5)
+- **dashboard:** add 4px spacing above/below row-footer (053ffba)
+- **dashboard:** remove padding around search results (73b5fbd)
+- **dashboard:** use neutral gray dark mode instead of blue-tinted (e11056f)
+- Remove docs/CLAUDE.md (moved to root) (5edac1e)
+- Add dark mode support to dashboard (085d035)
+- Reorganize extension repository structure (5e95326)
+- gitignore (e22ed7c)
+- Fix Mozilla validation issues for v0.5.3 (1cec304)
 
 ### 📚 Documentation
 
