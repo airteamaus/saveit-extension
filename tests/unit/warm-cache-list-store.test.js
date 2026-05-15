@@ -109,6 +109,137 @@ describe('WarmCacheListStore', () => {
     expect(getList).toHaveBeenCalledTimes(2);
   });
 
+  it('drops stale cached entries once a full authoritative refresh completes', async () => {
+    const cachedPages = makePages(5);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: cachedPages.slice(0, 2),
+        pagination: {
+          total: 4,
+          hasNextPage: true,
+          nextCursor: 'page-2'
+        },
+        meta: {
+          fromCache: false
+        }
+      })
+      .mockResolvedValueOnce({
+        pages: [cachedPages[2], cachedPages[4]],
+        pagination: {
+          total: 4,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        meta: {
+          fromCache: false
+        }
+      });
+    const { store } = createStore({
+      getList,
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 5,
+        hasNextPage: false,
+        nextCursor: null
+      }, true))
+    }, {
+      initialFetchLimit: 2,
+      prefetchBatchLimit: 2
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(4);
+    });
+
+    expect(store.getSnapshot().allPages.map(page => page.id)).toEqual([
+      'page-1',
+      'page-2',
+      'page-3',
+      'page-5'
+    ]);
+  });
+
+  it('skips the fresh GET when the HEAD update check reports no newer items', async () => {
+    const cachedPages = makePages(3);
+    const getList = vi.fn();
+    const checkForUpdates = vi.fn(async () => ({
+      hasUpdates: false,
+      latestKnownId: 'page-3'
+    }));
+    const { store } = createStore({
+      getList,
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 3,
+        hasNextPage: false,
+        nextCursor: null
+      }, true))
+    }, {
+      checkForUpdates
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(checkForUpdates).toHaveBeenCalledTimes(1);
+    });
+
+    expect(getList).not.toHaveBeenCalled();
+    expect(store.getSnapshot().allPages).toEqual(cachedPages);
+  });
+
+  it('merges newer items from the incremental refresh path without a full GET', async () => {
+    const cachedPages = makePages(3);
+    const getList = vi.fn();
+    const getIncrementalList = vi.fn(async () => ({
+      pages: makePages(1, 4),
+      pagination: {
+        total: 4,
+        hasNextPage: false,
+        nextCursor: null
+      },
+      meta: {
+        fromCache: false
+      }
+    }));
+    const { store } = createStore({
+      getList,
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 3,
+        hasNextPage: false,
+        nextCursor: null
+      }, true))
+    }, {
+      checkForUpdates: vi.fn(async () => ({
+        hasUpdates: true,
+        anchorFound: true,
+        canIncrementalSync: true,
+        latestKnownId: 'page-3'
+      })),
+      getIncrementalList,
+      buildIncrementalFetchOptions: newerThanId => ({
+        newerThanId,
+        skipCache: true
+      })
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(4);
+    });
+
+    expect(getIncrementalList).toHaveBeenCalledWith({
+      newerThanId: 'page-3',
+      skipCache: true
+    });
+    expect(getList).not.toHaveBeenCalled();
+    expect(store.getSnapshot().allPages.map(page => page.id)).toEqual([
+      'page-4',
+      'page-1',
+      'page-2',
+      'page-3'
+    ]);
+  });
+
   it('persists optimistic local updates', async () => {
     const pages = makePages(3);
     const getList = vi.fn(async () => ({

@@ -1,7 +1,6 @@
 import {
   WarmCacheListStore,
   buildListCachePayload,
-  hasFullCoverage,
   mergeListPages
 } from './warm-cache-list-store.js';
 
@@ -21,10 +20,6 @@ export const mergeFavoritePages = mergeListPages;
 
 export function buildFavoritesCachePayload(pages, pagination, fromCache = false) {
   return buildListCachePayload(pages, pagination, fromCache);
-}
-
-function hasFullFavoriteCoverage(pages, pagination, maxItems) {
-  return hasFullCoverage(pages, pagination, maxItems);
 }
 
 function createInitialState(initialLayout = {}) {
@@ -53,11 +48,25 @@ export class FavoritesStore extends WarmCacheListStore {
       prefetchBatchLimit: options.prefetchBatchLimit || 72,
       warmCacheScope: options.warmCacheScope || null,
       getList: fetchOptions => api?.getFavorites?.(fetchOptions),
+      getIncrementalList: fetchOptions => api?.getFavorites?.(fetchOptions),
+      checkForUpdates: fetchOptions => api?.checkFavoritesUpdates?.(fetchOptions),
       buildInitialFetchOptions: (overrides = {}) => ({
         limit: options.initialFetchLimit || 36,
         sort: 'newest',
         pinnedFirst: true,
         ...overrides
+      }),
+      buildIncrementalFetchOptions: newerThanId => ({
+        limit: options.initialFetchLimit || 36,
+        sort: 'newest',
+        pinnedFirst: true,
+        newerThanId,
+        skipCache: true
+      }),
+      buildUpdateCheckOptions: latestKnownId => ({
+        sort: 'newest',
+        pinnedFirst: true,
+        latestKnownId
       }),
       buildLoadMoreFetchOptions: cursor => ({
         limit: options.prefetchBatchLimit || 72,
@@ -160,48 +169,4 @@ export class FavoritesStore extends WarmCacheListStore {
     this.emitChange();
   }
 
-  reconcilePagination(pagination, pages, { preserveExistingCoverage = false } = {}) {
-    const total = typeof pagination?.total === 'number'
-      ? Math.max(pagination.total, pages.length)
-      : pages.length;
-
-    if (
-      preserveExistingCoverage &&
-      hasFullFavoriteCoverage(pages, { ...pagination, total }, this.options.maxItems)
-    ) {
-      return {
-        total,
-        hasNextPage: false,
-        nextCursor: null
-      };
-    }
-
-    return {
-      total,
-      hasNextPage: pagination?.hasNextPage === true,
-      nextCursor: pagination?.hasNextPage === true ? pagination?.nextCursor || null : null
-    };
-  }
-
-  async persistWarmCache(requestId = this.state.requestId) {
-    if (
-      !this.api?.isExtension ||
-      !this.options.warmCacheScope ||
-      this.state.requestId !== requestId
-    ) {
-      return;
-    }
-
-    await this.api.setCachedPages(
-      buildFavoritesCachePayload(
-        this.state.allPages,
-        {
-          total: this.state.total,
-          hasNextPage: this.state.hasNextPage,
-          nextCursor: this.state.nextCursor
-        }
-      ),
-      this.options.warmCacheScope
-    );
-  }
 }

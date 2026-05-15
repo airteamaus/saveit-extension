@@ -176,4 +176,60 @@ describe('API - Utility Functions', () => {
       );
     });
   });
+
+  describe('checkSavedPagesUpdates', () => {
+    beforeEach(() => {
+      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
+      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
+      global.window.firebaseGetIdToken = vi.fn(async () => 'test-token');
+    });
+
+    it('returns no updates when the HEAD probe responds 204', async () => {
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        status: 204,
+        headers: {
+          get: vi.fn(() => null)
+        }
+      }));
+
+      const result = await API.checkSavedPagesUpdates({ latestKnownId: 'page-1' });
+
+      expect(result).toEqual({
+        hasUpdates: false,
+        anchorFound: true,
+        canIncrementalSync: true
+      });
+      expect(global.fetch).toHaveBeenCalledWith(
+        'https://test.run.app?limit=50&search=&sort=newest&latestKnownId=page-1',
+        expect.objectContaining({
+          method: 'HEAD'
+        })
+      );
+    });
+
+    it('returns update metadata from HEAD response headers', async () => {
+      global.fetch = vi.fn(async () => ({
+        ok: true,
+        status: 200,
+        headers: {
+          get: vi.fn((header) => {
+            if (header === 'x-saveit-anchor-found') return 'false';
+            if (header === 'x-saveit-can-incremental-sync') return 'false';
+            return null;
+          })
+        }
+      }));
+
+      const result = await API.checkSavedPagesUpdates({ latestKnownId: 'page-1' });
+
+      expect(result).toEqual({
+        hasUpdates: true,
+        anchorFound: false,
+        canIncrementalSync: false
+      });
+    });
+  });
 });

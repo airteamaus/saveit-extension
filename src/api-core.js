@@ -219,7 +219,7 @@ function applyApiCore(API) {
       }
     },
 
-    async _fetchWithAuth(endpoint, params = null, options = {}) {
+    async _requestWithAuth(endpoint, params = null, options = {}) {
       const idToken = await this.getIdToken();
 
       let url = endpoint.startsWith('http') ? endpoint : `${CONFIG.cloudFunctionUrl}${endpoint}`;
@@ -249,6 +249,11 @@ function applyApiCore(API) {
         throw error;
       }
 
+      return response;
+    },
+
+    async _fetchWithAuth(endpoint, params = null, options = {}) {
+      const response = await this._requestWithAuth(endpoint, params, options);
       return await response.json();
     }
   });

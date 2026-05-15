@@ -5,6 +5,8 @@
 
 import './config.js';
 import { FavoritesStore } from './favorites-store.js';
+import { reconcileKeyedChildren } from './keyed-dom-list.js';
+import { ProjectsStore } from './projects-store.js';
 import { SavedPagesStore } from './saved-pages-store.js';
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 
@@ -134,6 +136,7 @@ const savedPagesStore = new SavedPagesStore(API, {
   prefetchBatchLimit: 100,
   warmCacheScope: DRAWER_WARM_CACHE_SCOPE
 });
+const projectsStore = new ProjectsStore(API);
 
 /**
  * Initialize theme from saved preference and inject toggle
@@ -553,10 +556,15 @@ function renderFavoritesPage(snapshot = getFavoritesSnapshot()) {
   applyFavoritesLayout(snapshot);
 
   const favorites = snapshot.pagedPages[snapshot.currentPage] || [];
-  favoritesRow.innerHTML = '';
-
-  favorites.forEach(page => {
-    favoritesRow.appendChild(createFavoriteItem(page));
+  reconcileKeyedChildren(favoritesRow, favorites, {
+    getKey: page => page.id || null,
+    getNodeKey: node => node?.dataset?.pageId || null,
+    renderItem: (page, existingNode) => {
+      const nextNode = createFavoriteItem(page);
+      return existingNode && existingNode.outerHTML === nextNode.outerHTML
+        ? existingNode
+        : nextNode;
+    }
   });
 
   favoritesSection.classList.toggle('hidden', favorites.length === 0);
@@ -789,6 +797,7 @@ const savedPagesView = {
   set projectsUnavailableMessage(value) {
     drawerState.projectsUnavailableMessage = value || '';
   },
+  projectsStore,
   get projectEditorState() {
     return drawerState.projectEditorState;
   },
@@ -823,6 +832,9 @@ const savedPagesView = {
     } finally {
       suppressSavedPagesStoreSync = false;
     }
+  },
+  async persistProjects() {
+    await projectsStore.setProjects(drawerState.projects || []);
   },
   showLoading: renderDrawerLoadingState,
   async loadPages() {
@@ -1069,6 +1081,12 @@ function renderDrawerCard(page) {
   `;
 }
 
+function createDrawerCardElement(page) {
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = renderDrawerCard(page).trim();
+  return wrapper.firstElementChild;
+}
+
 function getDrawerCardElement(pageId) {
   if (!savedPagesDrawerResults || !pageId) {
     return null;
@@ -1097,9 +1115,7 @@ function refreshDrawerCard(pageId) {
     return;
   }
 
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = renderDrawerCard(page).trim();
-  const nextCard = wrapper.firstElementChild;
+  const nextCard = createDrawerCardElement(page);
 
   if (!nextCard) {
     return;
@@ -1170,7 +1186,22 @@ function renderDrawerResults() {
     return;
   }
 
-  renderDrawerState(drawerState.pages.map(renderDrawerCard).join(''));
+  if (!savedPagesDrawerResults) {
+    return;
+  }
+
+  reconcileKeyedChildren(savedPagesDrawerResults, drawerState.pages, {
+    getKey: page => page.id || null,
+    getNodeKey: node => node?.dataset?.pageId || null,
+    pruneUnkeyed: true,
+    renderItem: (page, existingNode) => {
+      const nextCard = createDrawerCardElement(page);
+      return existingNode && existingNode.outerHTML === nextCard?.outerHTML
+        ? existingNode
+        : nextCard;
+    }
+  });
+  renderDrawerChrome();
 }
 
 function findDrawerPage(id) {
@@ -1196,6 +1227,17 @@ function syncDrawerStateFromStore(snapshot, { query = drawerState.query, render 
   }
 }
 
+function syncProjectsStateFromStore(snapshot, { render = drawerState.hasInitialized } = {}) {
+  drawerState.projects = snapshot.projects || snapshot.allPages || [];
+  drawerState.projectsAvailable = true;
+  drawerState.projectsUnavailableMessage = '';
+  projectManager.refreshProjectCounts(savedPagesView);
+
+  if (render) {
+    renderDrawerChrome();
+  }
+}
+
 async function ensureDrawerProjectsLoaded() {
   if (drawerState.projects.length || drawerState.projectsAvailable === false) {
     return null;
@@ -1203,8 +1245,24 @@ async function ensureDrawerProjectsLoaded() {
 
   if (!drawerProjectsPromise) {
     drawerState.projectsLoading = true;
-    drawerProjectsPromise = projectManager
-      .loadProjects(savedPagesView)
+    drawerProjectsPromise = projectsStore
+      .hydrate()
+      .then(snapshot => {
+        syncProjectsStateFromStore(snapshot, {
+          render: drawerState.hasInitialized
+        });
+      })
+      .catch(error => {
+        console.error('Failed to load projects:', error);
+        drawerState.projects = [];
+        if (error?.code === 'PROJECTS_UNSUPPORTED') {
+          drawerState.projectsAvailable = false;
+          drawerState.projectsUnavailableMessage = error.message;
+        } else {
+          drawerState.projectsAvailable = true;
+          drawerState.projectsUnavailableMessage = '';
+        }
+      })
       .finally(() => {
         drawerState.projectsLoading = false;
         drawerProjectsPromise = null;
@@ -1382,6 +1440,7 @@ function syncSavedPagesAfterCacheInvalidation() {
     }
 
     void initFavorites();
+    void projectsStore.hydrate();
     void savedPagesStore.hydrate();
 
     if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
@@ -1404,6 +1463,19 @@ savedPagesStore.subscribe(() => {
 
   syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
     query: drawerState.query,
+    render: !savedPagesDrawer?.classList.contains('hidden')
+  });
+});
+
+projectsStore.subscribe(() => {
+  if (
+    !drawerState.hasInitialized ||
+    (API.isExtension && !getDrawerCurrentUser())
+  ) {
+    return;
+  }
+
+  syncProjectsStateFromStore(projectsStore.getSnapshot(), {
     render: !savedPagesDrawer?.classList.contains('hidden')
   });
 });

@@ -19,6 +19,14 @@ function buildSavedPagesParams(options) {
     params.projectId = options.projectId;
   }
 
+  if (options.newerThanId) {
+    params.newerThanId = options.newerThanId;
+  }
+
+  if (options.latestKnownId) {
+    params.latestKnownId = options.latestKnownId;
+  }
+
   return params;
 }
 
@@ -39,6 +47,14 @@ function buildFavoritesParams(options) {
 
   if (options.projectId) {
     params.projectId = options.projectId;
+  }
+
+  if (options.newerThanId) {
+    params.newerThanId = options.newerThanId;
+  }
+
+  if (options.latestKnownId) {
+    params.latestKnownId = options.latestKnownId;
   }
 
   return params;
@@ -319,6 +335,41 @@ async function getCachedOrFreshList(API, {
   return API._withCacheMetadata(mockFetcher(options), false);
 }
 
+async function headListFreshness(API, {
+  options,
+  context,
+  fetcher
+}) {
+  if (!options.latestKnownId) {
+    return {
+      hasUpdates: true,
+      anchorFound: false,
+      canIncrementalSync: false
+    };
+  }
+
+  if (!API.isExtension) {
+    return {
+      hasUpdates: false,
+      anchorFound: true,
+      canIncrementalSync: true
+    };
+  }
+
+  return API._executeWithErrorHandling(
+    async () => {
+      const response = await fetcher(options);
+      return {
+        hasUpdates: response.status !== 204,
+        anchorFound: response.headers.get('x-saveit-anchor-found') !== 'false',
+        canIncrementalSync: response.headers.get('x-saveit-can-incremental-sync') !== 'false'
+      };
+    },
+    context,
+    { options }
+  );
+}
+
 function applyApiPages(API) {
   Object.assign(API, {
     async _fetchFromCloudFunction(options) {
@@ -328,11 +379,25 @@ function applyApiPages(API) {
       return data;
     },
 
+    async _headSavedPagesFromCloudFunction(options) {
+      debug('[headSavedPages] Checking collection freshness...');
+      return await this._requestWithAuth('', buildSavedPagesParams(options), {
+        method: 'HEAD'
+      });
+    },
+
     async _fetchFavoritesFromCloudFunction(options) {
       debug('[getFavorites] Fetching favorites from Cloud Function...');
       const data = await this._fetchWithAuth('', buildFavoritesParams(options));
       debug('[getFavorites] Raw JSON response:', data);
       return data;
+    },
+
+    async _headFavoritesFromCloudFunction(options) {
+      debug('[headFavorites] Checking collection freshness...');
+      return await this._requestWithAuth('', buildFavoritesParams(options), {
+        method: 'HEAD'
+      });
     },
 
     _normalizeResponse(data) {
@@ -364,6 +429,22 @@ function applyApiPages(API) {
         context: 'getFavorites',
         fetcher: fetchOptions => this._fetchFavoritesFromCloudFunction(fetchOptions),
         mockFetcher: getMockFavorites
+      });
+    },
+
+    async checkSavedPagesUpdates(options = {}) {
+      return headListFreshness(this, {
+        options,
+        context: 'headSavedPages',
+        fetcher: fetchOptions => this._headSavedPagesFromCloudFunction(fetchOptions)
+      });
+    },
+
+    async checkFavoritesUpdates(options = {}) {
+      return headListFreshness(this, {
+        options,
+        context: 'headFavorites',
+        fetcher: fetchOptions => this._headFavoritesFromCloudFunction(fetchOptions)
       });
     },
 

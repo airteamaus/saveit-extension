@@ -46,6 +46,27 @@ class ProjectManager {
   }
 
   async loadProjects(dashboard) {
+    if (dashboard.projectsStore?.hydrate) {
+      try {
+        const snapshot = await dashboard.projectsStore.hydrate();
+        dashboard.projects = snapshot.projects || snapshot.allPages || [];
+        dashboard.projectsAvailable = true;
+        dashboard.projectsUnavailableMessage = '';
+        this.refreshProjectCounts(dashboard);
+      } catch (error) {
+        console.error('Failed to load projects:', error);
+        dashboard.projects = [];
+        if (error?.code === 'PROJECTS_UNSUPPORTED') {
+          dashboard.projectsAvailable = false;
+          dashboard.projectsUnavailableMessage = error.message;
+        } else {
+          dashboard.projectsAvailable = true;
+          dashboard.projectsUnavailableMessage = '';
+        }
+      }
+      return;
+    }
+
     try {
       const projects = await this.api.getProjects();
       dashboard.projects = projects;
@@ -432,6 +453,7 @@ class ProjectManager {
       });
 
       dashboard.projects = [...dashboard.projects, { ...newProject, page_count: newProject.page_count || 0 }];
+      await dashboard.persistProjects?.();
       if (autoAssignPageId) {
         await this.togglePageProject(dashboard, autoAssignPageId, newProject.id, true);
         dashboard.projectEditorState.query = '';
@@ -463,6 +485,7 @@ class ProjectManager {
     dashboard.projects = dashboard.projects.map(entry => (
       entry.id === projectId ? { ...entry, ...updatedProject } : entry
     ));
+    await dashboard.persistProjects?.();
     dashboard.render();
     return updatedProject;
   }
@@ -483,6 +506,7 @@ class ProjectManager {
     dashboard.projects = dashboard.projects.map(entry => (
       entry.id === projectId ? { ...entry, ...updatedProject } : entry
     ));
+    await dashboard.persistProjects?.();
     dashboard.render();
     return updatedProject;
   }
@@ -499,6 +523,7 @@ class ProjectManager {
 
     await this.api.updateProject(projectId, { archived: true });
     dashboard.projects = dashboard.projects.filter(entry => entry.id !== projectId);
+    await dashboard.persistProjects?.();
 
     if (dashboard.selectedProjectId === projectId) {
       dashboard.selectedProjectId = null;

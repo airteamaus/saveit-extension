@@ -11,6 +11,30 @@ export function mergeListPages(existingPages, incomingPages, maxItems) {
   return mergedPages.slice(0, maxItems);
 }
 
+export function upsertListPages(existingPages, incomingPages, maxItems) {
+  const mergedPages = Array.isArray(existingPages) ? [...existingPages] : [];
+  const pageIndex = new Map(
+    mergedPages
+      .filter(page => page?.id)
+      .map((page, index) => [page.id, index])
+  );
+
+  for (const page of Array.isArray(incomingPages) ? incomingPages : []) {
+    if (!page?.id) continue;
+
+    const existingIndex = pageIndex.get(page.id);
+    if (typeof existingIndex === 'number') {
+      mergedPages[existingIndex] = page;
+      continue;
+    }
+
+    pageIndex.set(page.id, mergedPages.length);
+    mergedPages.push(page);
+  }
+
+  return mergedPages.slice(0, maxItems);
+}
+
 export function hasFullCoverage(pages, pagination, maxItems) {
   if (!Array.isArray(pages) || pages.length === 0) {
     return false;
@@ -57,9 +81,20 @@ export class WarmCacheListStore {
       prefetchBatchLimit: options.prefetchBatchLimit || 100,
       warmCacheScope: options.warmCacheScope || null,
       getList: options.getList || null,
+      getIncrementalList: options.getIncrementalList || null,
+      checkForUpdates: options.checkForUpdates || null,
       buildInitialFetchOptions: options.buildInitialFetchOptions || (overrides => ({
         limit: this.options.initialFetchLimit,
         ...overrides
+      })),
+      buildIncrementalFetchOptions: options.buildIncrementalFetchOptions || (newerThanId => ({
+        ...this.options.buildInitialFetchOptions({
+          skipCache: true
+        }),
+        newerThanId
+      })),
+      buildUpdateCheckOptions: options.buildUpdateCheckOptions || (latestKnownId => ({
+        latestKnownId
       })),
       buildLoadMoreFetchOptions: options.buildLoadMoreFetchOptions || ((cursor) => ({
         limit: this.options.prefetchBatchLimit,
@@ -70,6 +105,7 @@ export class WarmCacheListStore {
     this.state = createInitialState();
     this.events = new EventTarget();
     this.loadingPromise = null;
+    this.refreshBuffer = null;
   }
 
   subscribe(listener) {
@@ -90,6 +126,7 @@ export class WarmCacheListStore {
 
   reset({ emit = true } = {}) {
     const requestId = this.state.requestId + 1;
+    this.refreshBuffer = null;
     this.state = {
       ...createInitialState(),
       requestId
@@ -148,12 +185,42 @@ export class WarmCacheListStore {
     }
 
     try {
+      const updateStatus = await this.checkForUpdates(requestId);
+      if (this.state.requestId !== requestId) {
+        return false;
+      }
+
+      if (updateStatus?.hasUpdates === false) {
+        return false;
+      }
+
+      if (
+        updateStatus?.hasUpdates === true &&
+        updateStatus?.anchorFound !== false &&
+        updateStatus?.canIncrementalSync !== false &&
+        this.options.getIncrementalList
+      ) {
+        const incrementalResponse = await this.options.getIncrementalList(
+          this.buildIncrementalFetchOptions(updateStatus.latestKnownId)
+        );
+
+        if (this.state.requestId !== requestId) {
+          return false;
+        }
+
+        if (incrementalResponse?.pages?.length && incrementalResponse?.pagination?.hasNextPage !== true) {
+          this.applyIncrementalResponse(incrementalResponse, { requestId });
+          await this.persistWarmCache(requestId);
+          return true;
+        }
+      }
+
       const response = await this.options.getList(this.buildInitialFetchOptions({ skipCache: true }));
       if (this.state.requestId !== requestId || !response?.pages) {
         return false;
       }
 
-      this.applyResponse(response, { requestId, preserveExistingCoverage: true });
+      this.applyFreshResponse(response, { requestId, preserveExistingCoverage: true });
       await this.persistWarmCache(requestId);
       void this.prefetchAllPages(requestId);
       return true;
@@ -170,8 +237,8 @@ export class WarmCacheListStore {
 
     if (
       !this.options.getList ||
-      !this.state.hasNextPage ||
-      !this.state.nextCursor
+      !this.getActiveHasNextPage(requestId) ||
+      !this.getActiveNextCursor(requestId)
     ) {
       return false;
     }
@@ -182,13 +249,19 @@ export class WarmCacheListStore {
     this.loadingPromise = (async () => {
       try {
         const previousCount = this.state.allPages.length;
-        const previousCursor = this.state.nextCursor;
+        const previousCursor = this.getActiveNextCursor(requestId);
         const response = await this.options.getList(
-          this.buildLoadMoreFetchOptions(this.state.nextCursor)
+          this.buildLoadMoreFetchOptions(previousCursor)
         );
 
         if (this.state.requestId !== requestId) {
           return false;
+        }
+
+        if (this.hasActiveRefreshBuffer(requestId)) {
+          const didUpdate = this.extendRefreshBuffer(response, { requestId });
+          await this.persistWarmCache(requestId);
+          return didUpdate;
         }
 
         const mergedPages = mergeListPages(
@@ -236,8 +309,8 @@ export class WarmCacheListStore {
   async prefetchAllPages(requestId = this.state.requestId) {
     while (
       this.state.requestId === requestId &&
-      this.state.hasNextPage &&
-      this.state.allPages.length < this.options.maxItems
+      this.getActiveHasNextPage(requestId) &&
+      this.getAuthoritativeCount(requestId) < this.options.maxItems
     ) {
       const loaded = await this.loadMore(requestId);
       if (!loaded) break;
@@ -270,6 +343,67 @@ export class WarmCacheListStore {
     });
 
     this.replaceData(nextPages, nextPagination, { requestId });
+    return true;
+  }
+
+  applyFreshResponse(response, { requestId = this.state.requestId, preserveExistingCoverage = false } = {}) {
+    const authoritativeTotal = typeof response?.pagination?.total === 'number'
+      ? response.pagination.total
+      : response?.pages?.length || 0;
+    const cappedAuthoritativeTotal = Math.min(authoritativeTotal, this.options.maxItems);
+
+    if (
+      !preserveExistingCoverage ||
+      !Array.isArray(response?.pages) ||
+      this.state.allPages.length === cappedAuthoritativeTotal ||
+      (
+        this.state.allPages.length <= response.pages.length &&
+        this.state.allPages.length <= authoritativeTotal
+      )
+    ) {
+      this.refreshBuffer = null;
+      return this.applyResponse(response, { requestId, preserveExistingCoverage });
+    }
+
+    this.refreshBuffer = {
+      requestId,
+      fallbackPages: [...this.state.allPages],
+      pages: response.pages.slice(0, this.options.maxItems),
+      total: authoritativeTotal,
+      hasNextPage: response?.pagination?.hasNextPage === true,
+      nextCursor: response?.pagination?.hasNextPage === true
+        ? response?.pagination?.nextCursor || null
+        : null
+    };
+
+    this.applyRefreshBuffer(requestId);
+    return true;
+  }
+
+  applyIncrementalResponse(response, { requestId = this.state.requestId } = {}) {
+    if (this.state.requestId !== requestId || !Array.isArray(response?.pages) || response.pages.length === 0) {
+      return false;
+    }
+
+    const nextPages = mergeListPages(
+      response.pages.slice(0, this.options.maxItems),
+      this.state.allPages,
+      this.options.maxItems
+    );
+    const total = typeof response?.pagination?.total === 'number'
+      ? response.pagination.total
+      : (
+        typeof this.state.total === 'number'
+          ? this.state.total + response.pages.length
+          : nextPages.length
+      );
+
+    this.refreshBuffer = null;
+    this.replaceData(nextPages, {
+      total,
+      hasNextPage: this.state.hasNextPage,
+      nextCursor: this.state.nextCursor
+    }, { requestId });
     return true;
   }
 
@@ -309,6 +443,7 @@ export class WarmCacheListStore {
   }
 
   async setPages(pages, pagination = {}, { requestId = this.state.requestId } = {}) {
+    this.refreshBuffer = null;
     this.replaceData(pages, {
       total: typeof pagination?.total === 'number' ? pagination.total : pages.length,
       hasNextPage: pagination?.hasNextPage === true,
@@ -353,8 +488,161 @@ export class WarmCacheListStore {
     return this.options.buildInitialFetchOptions(overrides);
   }
 
+  buildIncrementalFetchOptions(newerThanId) {
+    return this.options.buildIncrementalFetchOptions(newerThanId);
+  }
+
+  buildUpdateCheckOptions(latestKnownId) {
+    return this.options.buildUpdateCheckOptions(latestKnownId);
+  }
+
   buildLoadMoreFetchOptions(cursor) {
     return this.options.buildLoadMoreFetchOptions(cursor);
+  }
+
+  getMostRecentItemId() {
+    const mostRecentPage = this.state.allPages.reduce((latestPage, page) => {
+      if (!page?.id) {
+        return latestPage;
+      }
+
+      if (!latestPage?.id) {
+        return page;
+      }
+
+      const latestTime = Date.parse(latestPage.saved_at || '') || 0;
+      const pageTime = Date.parse(page.saved_at || '') || 0;
+      if (pageTime !== latestTime) {
+        return pageTime > latestTime ? page : latestPage;
+      }
+
+      return page.id > latestPage.id ? page : latestPage;
+    }, null);
+
+    return mostRecentPage?.id || null;
+  }
+
+  async checkForUpdates(requestId = this.state.requestId) {
+    if (!this.options.checkForUpdates) {
+      return {
+        hasUpdates: true,
+        anchorFound: false,
+        canIncrementalSync: false
+      };
+    }
+
+    const latestKnownId = this.getMostRecentItemId();
+    if (!latestKnownId) {
+      return {
+        hasUpdates: true,
+        anchorFound: false,
+        canIncrementalSync: false
+      };
+    }
+
+    return {
+      latestKnownId,
+      ...(await this.options.checkForUpdates(this.buildUpdateCheckOptions(latestKnownId), {
+        requestId
+      }))
+    };
+  }
+
+  hasActiveRefreshBuffer(requestId = this.state.requestId) {
+    return this.refreshBuffer?.requestId === requestId;
+  }
+
+  getAuthoritativeCount(requestId = this.state.requestId) {
+    if (this.hasActiveRefreshBuffer(requestId)) {
+      return this.refreshBuffer.pages.length;
+    }
+
+    return this.state.allPages.length;
+  }
+
+  getActiveHasNextPage(requestId = this.state.requestId) {
+    if (this.hasActiveRefreshBuffer(requestId)) {
+      return this.refreshBuffer.hasNextPage;
+    }
+
+    return this.state.hasNextPage;
+  }
+
+  getActiveNextCursor(requestId = this.state.requestId) {
+    if (this.hasActiveRefreshBuffer(requestId)) {
+      return this.refreshBuffer.nextCursor;
+    }
+
+    return this.state.nextCursor;
+  }
+
+  applyRefreshBuffer(requestId = this.state.requestId) {
+    if (!this.hasActiveRefreshBuffer(requestId)) {
+      return false;
+    }
+
+    const cappedTotal = typeof this.refreshBuffer.total === 'number'
+      ? Math.min(this.refreshBuffer.total, this.options.maxItems)
+      : null;
+    const hasAuthoritativeCoverage = cappedTotal !== null
+      ? this.refreshBuffer.pages.length >= cappedTotal
+      : this.refreshBuffer.hasNextPage !== true;
+
+    const nextPages = hasAuthoritativeCoverage
+      ? this.refreshBuffer.pages.slice(0, this.options.maxItems)
+      : mergeListPages(
+        this.refreshBuffer.pages,
+        this.refreshBuffer.fallbackPages,
+        this.options.maxItems
+      );
+
+    const authoritativeTotal = typeof this.refreshBuffer.total === 'number'
+      ? this.refreshBuffer.total
+      : nextPages.length;
+    const total = hasAuthoritativeCoverage
+      ? authoritativeTotal
+      : Math.max(authoritativeTotal, nextPages.length);
+
+    this.replaceData(nextPages, {
+      total,
+      hasNextPage: this.refreshBuffer.hasNextPage === true,
+      nextCursor: this.refreshBuffer.hasNextPage === true ? this.refreshBuffer.nextCursor : null
+    }, { requestId });
+
+    if (hasAuthoritativeCoverage) {
+      this.refreshBuffer = null;
+    }
+
+    return true;
+  }
+
+  extendRefreshBuffer(response, { requestId = this.state.requestId } = {}) {
+    if (!this.hasActiveRefreshBuffer(requestId) || !response?.pages) {
+      return false;
+    }
+
+    const previousDisplayCount = this.state.allPages.length;
+    const previousCursor = this.refreshBuffer.nextCursor;
+
+    this.refreshBuffer.pages = upsertListPages(
+      this.refreshBuffer.pages,
+      response.pages,
+      this.options.maxItems
+    );
+    this.refreshBuffer.total = typeof response?.pagination?.total === 'number'
+      ? response.pagination.total
+      : this.refreshBuffer.total;
+    this.refreshBuffer.hasNextPage = response?.pagination?.hasNextPage === true;
+    this.refreshBuffer.nextCursor = this.refreshBuffer.hasNextPage
+      ? response?.pagination?.nextCursor || null
+      : null;
+
+    this.applyRefreshBuffer(requestId);
+
+    return (
+      this.state.allPages.length !== previousDisplayCount ||
+      this.getActiveNextCursor(requestId) !== previousCursor
+    );
   }
 
   async getWarmCache() {
