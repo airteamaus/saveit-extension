@@ -106,6 +106,8 @@ describe('ProjectManager', () => {
     expect(sidebar.textContent).toContain('All saved items');
     expect(sidebar.textContent).toContain('SaveIt product');
     expect(sidebar.textContent).toContain('AI radar');
+    expect(sidebar.querySelector('.project-nav-row[data-project-id="project-1"]')).not.toBeNull();
+    expect(sidebar.querySelector('.project-nav-row[data-project-id=""]')).not.toBeNull();
     expect(sidebar.querySelector('.project-action-rename[aria-label="Rename SaveIt product"]')).not.toBeNull();
     expect(sidebar.querySelector('.project-action-visibility[aria-label="Share with company"]')).not.toBeNull();
   });

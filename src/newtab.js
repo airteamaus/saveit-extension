@@ -1598,12 +1598,6 @@ function initSavedPagesDrawer() {
       return;
     }
 
-    const projectButton = event.target.closest('.project-nav-item');
-    if (projectButton) {
-      void projectManager.selectProject(savedPagesView, projectButton.dataset.projectId || null);
-      return;
-    }
-
     const renameButton = event.target.closest('.project-action-rename');
     if (renameButton) {
       void projectManager.renameProject(savedPagesView, renameButton.dataset.projectId);
@@ -1619,6 +1613,13 @@ function initSavedPagesDrawer() {
     const archiveButton = event.target.closest('.project-action-archive');
     if (archiveButton) {
       void projectManager.archiveProject(savedPagesView, archiveButton.dataset.projectId);
+      return;
+    }
+
+    const projectRow = event.target.closest('.project-nav-row[data-project-id]');
+    if (projectRow) {
+      event.preventDefault();
+      void projectManager.selectProject(savedPagesView, projectRow.dataset.projectId || null);
     }
   });
 

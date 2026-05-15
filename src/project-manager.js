@@ -209,7 +209,7 @@ class ProjectManager {
         const visibilityLabel = project.visibility === 'company' ? 'Shared' : 'Private';
 
         return `
-          <div class="project-nav-row has-actions ${activeClass}">
+          <div class="project-nav-row has-actions ${activeClass}" data-project-id="${this.htmlUtils.escapeHtml(project.id)}">
             <button class="project-nav-item ${activeClass}" data-project-id="${this.htmlUtils.escapeHtml(project.id)}">
               <span class="project-nav-name">${this.htmlUtils.escapeHtml(project.name)}</span>
             </button>
@@ -254,7 +254,7 @@ class ProjectManager {
       </div>
 
       <div class="project-nav">
-        <div class="project-nav-row ${selectedProject ? '' : 'is-active'}">
+        <div class="project-nav-row ${selectedProject ? '' : 'is-active'}" data-project-id="">
           <button class="project-nav-item ${selectedProject ? '' : 'is-active'}" data-project-id="">
             <span class="project-nav-name">All saved items</span>
           </button>
