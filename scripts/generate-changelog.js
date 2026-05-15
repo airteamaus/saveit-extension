@@ -10,6 +10,15 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const CHANGELOG_PATH = path.join(__dirname, '..', 'CHANGELOG.md');
+const RELEASE_NOTES_OVERRIDES_PATH = path.join(__dirname, 'release-notes-overrides.json');
+
+function readReleaseNoteOverrides() {
+  try {
+    return JSON.parse(fs.readFileSync(RELEASE_NOTES_OVERRIDES_PATH, 'utf8'));
+  } catch {
+    return {};
+  }
+}
 
 /**
  * Parse a conventional commit message
@@ -35,6 +44,14 @@ function parseCommit(message) {
   };
 }
 
+function shouldIgnoreCommit(message) {
+  return (
+    /^Merge /.test(message) ||
+    /^Bump version to /.test(message) ||
+    /^Update updates\.json /.test(message)
+  );
+}
+
 /**
  * Get commits between two tags (or from tag to HEAD)
  */
@@ -56,9 +73,14 @@ function getCommits(fromTag, toTag = 'HEAD') {
       return {
         hash: hash.substring(0, 7),
         message,
-        ...parsed
+        ...(parsed || {
+          type: 'other',
+          scope: null,
+          breaking: false,
+          subject: message.trim()
+        })
       };
-    }).filter(commit => commit.type); // Only include conventional commits
+    }).filter(commit => !shouldIgnoreCommit(commit.message));
   } catch (error) {
     console.error('Failed to get commits:', error.message);
     return [];
@@ -105,6 +127,7 @@ function categorizeCommits(commits) {
     fix: [],
     perf: [],
     refactor: [],
+    other: [],
     docs: [],
     test: [],
     build: [],
@@ -147,6 +170,7 @@ function generateVersionSection(version, date, commits) {
     fix: { title: '🐛 Bug Fixes', commits: categories.fix },
     perf: { title: '⚡ Performance', commits: categories.perf },
     refactor: { title: '♻️ Refactoring', commits: categories.refactor },
+    other: { title: '📝 Other Improvements', commits: categories.other },
     docs: { title: '📚 Documentation', commits: categories.docs },
     test: { title: '✅ Tests', commits: categories.test },
     build: { title: '🔧 Build System', commits: categories.build },
@@ -230,6 +254,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Generate release notes for a specific version (for GitHub releases)
  */
 function generateReleaseNotes(version) {
+  const overrides = readReleaseNoteOverrides();
+  if (typeof overrides[version] === 'string' && overrides[version].trim()) {
+    return overrides[version].trim() + '\n';
+  }
+
   const tags = getVersionTags();
   const currentTag = `v${version}`;
   const currentIndex = tags.indexOf(currentTag);
@@ -250,7 +279,8 @@ function generateReleaseNotes(version) {
     feat: { emoji: '✨', title: 'Features', commits: categories.feat },
     fix: { emoji: '🐛', title: 'Bug Fixes', commits: categories.fix },
     perf: { emoji: '⚡', title: 'Performance', commits: categories.perf },
-    refactor: { emoji: '♻️', title: 'Refactoring', commits: categories.refactor }
+    refactor: { emoji: '♻️', title: 'Refactoring', commits: categories.refactor },
+    other: { emoji: '📝', title: 'Other Improvements', commits: categories.other }
   };
 
   for (const [, { emoji, title, commits }] of Object.entries(categoryMapping)) {

@@ -1,0 +1,3 @@
+{
+  "1.10.10": "## Improvements based on recent feedback\n\nThis release combines the user-facing improvements from the last two updates so they are documented in one place.\n\n- Saved pages and favorites now load from the local warm cache first and refresh in place, so the drawer feels faster and more stable.\n- The default feed now checks whether anything changed before reloading and only inserts newer items when the server has something new.\n- Collection cards in the sidebar are now clickable across the full card, matching the saved item cards.\n- The saved pages drawer and collection browsing flow were refined to better match how people are actually using the extension.\n"
+}
