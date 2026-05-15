@@ -25,10 +25,6 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 5. Select the extension directory
 6. Extension will remain until manually removed
 
-### Optional build-time configuration
-
-- `SAVEIT_UNSPLASH_ACCESS_KEY` - enables Unsplash background refresh during local builds and packaged releases. If omitted, the extension falls back to cached or default backgrounds without fetching new Unsplash images.
-
 ### Getting Started
 
 1. **Sign in**: Click the SaveIt button in your toolbar and sign in with Google

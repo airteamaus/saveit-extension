@@ -31,8 +31,8 @@ describe('saved-pages cache sync', () => {
 
   it('ignores unrelated storage changes', () => {
     const changes = {
-      newtab_background: {
-        oldValue: { id: 'photo-1' },
+      theme_preference: {
+        oldValue: 'dark',
         newValue: undefined
       }
     };
@@ -43,7 +43,7 @@ describe('saved-pages cache sync', () => {
 
   it('finds all saved pages cache keys in storage data', () => {
     const keys = getSavedPagesCacheKeys({
-      newtab_background: { id: 'photo-1' },
+      theme_preference: 'dark',
       savedPages_cache_user123: {},
       'savedPages_cache_user123_surface%3Ddashboard': {}
     });
@@ -58,7 +58,7 @@ describe('saved-pages cache sync', () => {
     const removedKeys = [];
     const storage = {
       get: async () => ({
-        newtab_background: { id: 'photo-1' },
+        theme_preference: 'dark',
         savedPages_cache_user123: {},
         'savedPages_cache_user123_surface%3Ddashboard': {}
       }),

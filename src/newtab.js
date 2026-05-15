@@ -1,22 +1,16 @@
 // newtab.js - Minimal new tab with search navigation
-// Handles search form submission, Firebase auth, and Unsplash background
+// Handles search form submission, Firebase auth, and saved pages access
 
 /* global ThemeManager, AuthMenu, ProjectManager */
 
-import { unsplashAccessKey, getStorageAPI } from './config.js';
+import './config.js';
 import { FavoritesStore } from './favorites-store.js';
 import { SavedPagesStore } from './saved-pages-store.js';
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 
-const CACHE_KEY = 'newtab_background';
-const CACHE_DURATION_MS = 3 * 60 * 60 * 1000; // 3 hours
-
 const searchForm = document.getElementById('search-form');
 const searchInput = document.getElementById('search-input');
 const signInBtn = document.getElementById('hero-sign-in-btn');
-const backgroundEl = document.getElementById('background');
-const photoCreditEl = document.getElementById('photo-credit');
-const photographerLinkEl = document.getElementById('photographer-link');
 const favoritesSection = document.getElementById('favorites-section');
 const favoritesViewport = document.getElementById('favorites-viewport');
 const favoritesRow = document.getElementById('favorites-row');
@@ -31,7 +25,6 @@ const userAvatar = document.getElementById('hero-user-avatar');
 const userDropdown = document.getElementById('hero-user-dropdown');
 const userEmailEl = document.getElementById('hero-user-email');
 const signOutBtn = document.getElementById('hero-sign-out-btn');
-const refreshBackgroundBtn = document.getElementById('hero-refresh-background-btn');
 const savedPagesToggleBtn = document.getElementById('saved-pages-toggle-btn');
 const savedPagesDrawer = document.getElementById('saved-pages-drawer');
 const savedPagesDrawerBackdrop = document.getElementById('saved-pages-drawer-backdrop');
@@ -84,6 +77,7 @@ const DRAWER_WARM_CACHE_SCOPE = {
 let drawerSearchDebounceTimer = null;
 let savedPagesCacheRefreshTimer = null;
 let drawerProjectsPromise = null;
+let suppressSavedPagesStoreSync = false;
 
 const favoritesState = {
   activePreviewId: null,
@@ -818,11 +812,17 @@ const savedPagesView = {
   },
   getCurrentUser: getDrawerCurrentUser,
   async persistAllPages() {
-    await savedPagesStore.setPages(drawerState.allPages, {
-      total: drawerState.allItemsTotal ?? drawerState.total ?? drawerState.allPages.length,
-      hasNextPage: false,
-      nextCursor: null
-    });
+    suppressSavedPagesStoreSync = true;
+
+    try {
+      await savedPagesStore.setPages(drawerState.allPages, {
+        total: drawerState.allItemsTotal ?? drawerState.total ?? drawerState.allPages.length,
+        hasNextPage: false,
+        nextCursor: null
+      });
+    } finally {
+      suppressSavedPagesStoreSync = false;
+    }
   },
   showLoading: renderDrawerLoadingState,
   async loadPages() {
@@ -842,6 +842,18 @@ const savedPagesView = {
   },
   render() {
     renderDrawerResults();
+  },
+  handleProjectMembershipChange(pageId, projectId) {
+    const shouldRefilter = drawerState.selectedProjectId === projectId;
+
+    if (shouldRefilter) {
+      applyDrawerFilters(drawerState.currentFilter.search || '');
+      renderDrawerResults();
+      return;
+    }
+
+    renderProjectSidebar();
+    refreshDrawerCard(pageId);
   },
   onProjectsUpdated() {
     renderDrawerResults();
@@ -935,6 +947,20 @@ function renderDrawerChrome() {
   renderProjectEditor();
 }
 
+function navigateDrawerCard(card, event = {}) {
+  const url = card?.dataset?.url;
+  if (!url) {
+    return;
+  }
+
+  if (event.metaKey || event.ctrlKey || event.button === 1) {
+    window.open(url, '_blank', 'noopener');
+    return;
+  }
+
+  window.location.assign(url);
+}
+
 function renderDrawerCard(page) {
   let derivedDomain = '';
   if (page.url) {
@@ -960,6 +986,10 @@ function renderDrawerCard(page) {
   const tagsHtml = renderDrawerTags(page);
   const projectPills = getDrawerProjectPills(page);
   const projectsUnavailable = savedPagesView.projectsAvailable === false;
+  const url = page.url || '';
+  const navigationAttrs = url
+    ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
+    : '';
   const projectPillsHtml = projectPills.length
     ? `
       <div class="saved-pages-drawer-card-projects">
@@ -982,7 +1012,7 @@ function renderDrawerCard(page) {
     : '';
 
   return `
-    <a class="saved-pages-drawer-card" href="${escapeHtml(page.url || '#')}">
+    <article class="saved-pages-drawer-card" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
       <div class="saved-pages-drawer-card-header">
         <div class="saved-pages-drawer-card-heading">
           ${domain ? `<img class="saved-pages-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
@@ -1035,8 +1065,52 @@ function renderDrawerCard(page) {
         ${meta.length ? `<div class="saved-pages-drawer-card-meta">${meta.join('<span class="saved-pages-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
         ${tagsHtml ? `<div class="saved-pages-drawer-card-tags">${tagsHtml}</div>` : ''}
       </div>
-    </a>
+    </article>
   `;
+}
+
+function getDrawerCardElement(pageId) {
+  if (!savedPagesDrawerResults || !pageId) {
+    return null;
+  }
+
+  return Array.from(savedPagesDrawerResults.querySelectorAll('.saved-pages-drawer-card'))
+    .find(card => card.dataset.pageId === pageId) || null;
+}
+
+function refreshDrawerCard(pageId) {
+  if (!pageId || !savedPagesDrawerResults) {
+    return;
+  }
+
+  const existingCard = getDrawerCardElement(pageId);
+  const page = drawerState.pages.find(entry => entry.id === pageId) || null;
+
+  if (!page) {
+    if (existingCard) {
+      existingCard.remove();
+    }
+
+    if (!drawerState.pages.length) {
+      renderDrawerEmptyState(drawerState.query);
+    }
+    return;
+  }
+
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = renderDrawerCard(page).trim();
+  const nextCard = wrapper.firstElementChild;
+
+  if (!nextCard) {
+    return;
+  }
+
+  if (!existingCard) {
+    renderDrawerResults();
+    return;
+  }
+
+  existingCard.replaceWith(nextCard);
 }
 
 function renderDrawerState(html) {
@@ -1320,7 +1394,11 @@ function syncSavedPagesAfterCacheInvalidation() {
 }
 
 savedPagesStore.subscribe(() => {
-  if (!drawerState.hasInitialized || (API.isExtension && !getDrawerCurrentUser())) {
+  if (
+    suppressSavedPagesStoreSync ||
+    !drawerState.hasInitialized ||
+    (API.isExtension && !getDrawerCurrentUser())
+  ) {
     return;
   }
 
@@ -1380,6 +1458,12 @@ function initSavedPagesDrawer() {
   savedPagesDrawerResults?.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) {
+      const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+      if (!card) {
+        return;
+      }
+
+      navigateDrawerCard(card, event);
       return;
     }
 
@@ -1405,6 +1489,34 @@ function initSavedPagesDrawer() {
     if (action === 'delete') {
       void handleDrawerDelete(id);
     }
+  });
+
+  savedPagesDrawerResults?.addEventListener('auxclick', (event) => {
+    if (event.button !== 1 || event.target.closest('[data-action]')) {
+      return;
+    }
+
+    const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+    if (!card) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateDrawerCard(card, event);
+  });
+
+  savedPagesDrawerResults?.addEventListener('keydown', (event) => {
+    if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
+      return;
+    }
+
+    const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+    if (!card) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateDrawerCard(card, event);
   });
 
   projectSidebar?.addEventListener('click', (event) => {
@@ -1502,38 +1614,6 @@ function initSavedPagesDrawer() {
   } else {
     setDrawerToggleState(false);
   }
-}
-
-/**
- * Get background config for ThemeManager
- * @returns {Object} Configuration object for background management
- */
-function getBackgroundConfig() {
-  return {
-    cacheKey: CACHE_KEY,
-    cacheDurationMs: CACHE_DURATION_MS,
-    storage: getStorageAPI(),
-    unsplashAccessKey: unsplashAccessKey,
-    backgroundEl: backgroundEl,
-    photographerLinkEl: photographerLinkEl,
-    photoCreditEl: photoCreditEl
-  };
-}
-
-/**
- * Initialize background image from cache or Unsplash
- */
-async function initBackground() {
-  const themeManager = new ThemeManager();
-  await themeManager.initBackground(getBackgroundConfig());
-}
-
-/**
- * Refresh background image (fetch new photo)
- */
-async function refreshBackground() {
-  const themeManager = new ThemeManager();
-  await themeManager.refreshBackground(getBackgroundConfig());
 }
 
 /**
@@ -1682,7 +1762,6 @@ searchForm.addEventListener('submit', handleSearch);
 signInBtn.addEventListener('click', handleSignIn);
 userAvatarBtn.addEventListener('click', toggleUserDropdown);
 signOutBtn.addEventListener('click', handleSignOut);
-refreshBackgroundBtn.addEventListener('click', refreshBackground);
 initFavoritesPager();
 
 // Close dropdown when clicking outside
@@ -1703,8 +1782,4 @@ initSavedPagesDrawer();
 initSavedPagesCacheSync();
 void initFavorites();
 
-// Initialize (background and auth can run in parallel)
-await Promise.all([
-  initBackground(),
-  initAuth()
-]);
+await initAuth();

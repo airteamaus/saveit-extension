@@ -531,29 +531,4 @@ describe('newtab-minimal', () => {
     });
   });
 
-  describe('Unsplash response parsing', () => {
-    function parseUnsplashPhoto(photo) {
-      return {
-        imageUrl: photo.urls.full,
-        photographerName: photo.user.name,
-        photographerUrl: `${photo.user.links.html}?utm_source=saveit&utm_medium=referral`
-      };
-    }
-
-    it('should parse Unsplash API response correctly', () => {
-      const mockResponse = {
-        urls: { full: 'https://images.unsplash.com/photo-123' },
-        user: {
-          name: 'John Doe',
-          links: { html: 'https://unsplash.com/@johndoe' }
-        }
-      };
-
-      const result = parseUnsplashPhoto(mockResponse);
-
-      expect(result.imageUrl).toBe('https://images.unsplash.com/photo-123');
-      expect(result.photographerName).toBe('John Doe');
-      expect(result.photographerUrl).toBe('https://unsplash.com/@johndoe?utm_source=saveit&utm_medium=referral');
-    });
-  });
 });

@@ -80,6 +80,8 @@ describe('ProjectManager', () => {
       showLoading: vi.fn(),
       loadPages: vi.fn(async () => {}),
       handleFilterChange: vi.fn(async () => {}),
+      handleProjectMembershipChange: vi.fn(),
+      persistAllPages: vi.fn(async () => {}),
       render: vi.fn(),
       onProjectsUpdated: vi.fn(),
       getCurrentUser: vi.fn(() => ({
@@ -124,7 +126,8 @@ describe('ProjectManager', () => {
     expect(api.addPageToProject).toHaveBeenCalledWith('project-1', '2');
     expect(dashboard.allPages.find(page => page.id === '2').project_ids).toEqual(['project-2', 'project-1']);
     expect(dashboard.projects.find(project => project.id === 'project-1').page_count).toBe(3);
-    expect(dashboard.handleFilterChange).toHaveBeenCalled();
+    expect(dashboard.persistAllPages).toHaveBeenCalled();
+    expect(dashboard.handleProjectMembershipChange).toHaveBeenCalledWith('2', 'project-1');
   });
 
   it('renders the project editor with assigned projects and matching options', () => {

@@ -1,6 +1,3 @@
-import { unsplashAccessKey } from './runtime-config.generated.js';
-export { unsplashAccessKey };
-
 // Environment-aware configuration
 // Automatically detects environment based on context
 
