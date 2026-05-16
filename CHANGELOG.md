@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.11] - 2026-05-16
+
+### 🐛 Bug Fixes
+
+- **cache:** keep warm cache active after idle (daf801c)
+
 ## [1.10.10] - 2026-05-15
 
 ### ✨ Features
@@ -84,12 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add project data layer (203ba6f)
 
 ## [1.10.2] - 2026-05-11
-
-### 📝 Other Improvements
-
-- Align Chrome package with Store ID (a7cffbc)
-
-## [1.10.1] - 2026-05-11
 
 ### ✨ Features
 
@@ -278,6 +278,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Align Chrome package with Store ID (a7cffbc)
 - Add safe auth telemetry for Sentry (a297c1f)
 - Fix Chrome Web Store packaging (146e329)
 - Add privacy link to new tab footer (7eda5a6)
