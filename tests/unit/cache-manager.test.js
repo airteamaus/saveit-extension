@@ -143,6 +143,22 @@ describe('CacheManager', () => {
       expect(result).toBeNull();
     });
 
+    it('should return expired cache when allowExpired is true', async () => {
+      const mockResponse = {
+        pages: [{ id: '1', title: 'Stale but usable' }],
+        pagination: { total: 1 }
+      };
+      const expiredTimestamp = Date.now() - (6 * 60 * 1000); // 6 minutes ago
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
+        userId: 'user-123',
+        response: mockResponse,
+        timestamp: expiredTimestamp
+      };
+
+      const result = await cacheManager.getCachedPages({}, { allowExpired: true });
+      expect(result).toEqual(mockResponse);
+    });
+
     it('should invalidate cache when user ID mismatch', async () => {
       const cacheKey = cacheManager.getCacheKey('user-123');
       mockStorage._testData[cacheKey] = {

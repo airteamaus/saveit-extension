@@ -56,7 +56,9 @@ export class ProjectsStore extends WarmCacheListStore {
       return null;
     }
 
-    const cachedProjects = await this.api.getCachedPages(this.options.warmCacheScope);
+    const cachedProjects = await this.api.getCachedPages(this.options.warmCacheScope, {
+      allowExpired: true
+    });
     if (!Array.isArray(cachedProjects)) {
       return null;
     }

@@ -163,17 +163,18 @@ describe('WarmCacheListStore', () => {
   it('skips the fresh GET when the HEAD update check reports no newer items', async () => {
     const cachedPages = makePages(3);
     const getList = vi.fn();
+    const getCachedPages = vi.fn(async () => buildListCachePayload(cachedPages, {
+      total: 3,
+      hasNextPage: false,
+      nextCursor: null
+    }, true));
     const checkForUpdates = vi.fn(async () => ({
       hasUpdates: false,
       latestKnownId: 'page-3'
     }));
     const { store } = createStore({
       getList,
-      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
-        total: 3,
-        hasNextPage: false,
-        nextCursor: null
-      }, true))
+      getCachedPages
     }, {
       checkForUpdates
     });
@@ -184,6 +185,7 @@ describe('WarmCacheListStore', () => {
     });
 
     expect(getList).not.toHaveBeenCalled();
+    expect(getCachedPages).toHaveBeenCalledWith({ surface: 'test' }, { allowExpired: true });
     expect(store.getSnapshot().allPages).toEqual(cachedPages);
   });
 

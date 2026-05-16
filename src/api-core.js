@@ -184,9 +184,9 @@ function applyApiCore(API) {
       return null;
     },
 
-    async getCachedPages(scope = {}) {
+    async getCachedPages(scope = {}, options = {}) {
       if (!this.isExtension) return null;
-      return await this.cacheManager.getCachedPages(scope);
+      return await this.cacheManager.getCachedPages(scope, options);
     },
 
     async setCachedPages(response, scope = {}) {

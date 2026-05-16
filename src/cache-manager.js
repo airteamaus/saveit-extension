@@ -81,7 +81,7 @@ class CacheManager {
    * Cache is isolated per user to prevent cross-user data leakage
    * Returns full response object with pagination metadata
    */
-  async getCachedPages(scope = {}) {
+  async getCachedPages(scope = {}, options = {}) {
     try {
       const userId = await this.resolveReadUserId();
       if (!userId) {
@@ -112,12 +112,13 @@ class CacheManager {
       }
 
       const age = Date.now() - cached.timestamp;
-      if (age > this.CACHE_MAX_AGE_MS) {
+      if (age > this.CACHE_MAX_AGE_MS && options.allowExpired !== true) {
         debug('[getCachedPages] Cache expired, fetching fresh data');
         return null;
       }
 
-      debug(`[getCachedPages] Using cached data (${Math.round(age / 1000)}s old)`, {
+      const cacheState = age > this.CACHE_MAX_AGE_MS ? 'stale' : 'fresh';
+      debug(`[getCachedPages] Using ${cacheState} cached data (${Math.round(age / 1000)}s old)`, {
         user_id: userId,
         pages_count: cached.response?.pages ? cached.response.pages.length : 0,
         total: cached.response?.pagination?.total,

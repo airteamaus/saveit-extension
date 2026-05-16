@@ -650,7 +650,7 @@ export class WarmCacheListStore {
       return null;
     }
 
-    return this.api.getCachedPages(this.options.warmCacheScope);
+    return this.api.getCachedPages(this.options.warmCacheScope, { allowExpired: true });
   }
 
   async persistWarmCache(requestId = this.state.requestId) {
