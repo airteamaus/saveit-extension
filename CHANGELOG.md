@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.12] - 2026-05-17
+
+### 🐛 Bug Fixes
+
+- **sync:** align freshness anchor with list ordering (dc6e681)
+
 ## [1.10.11] - 2026-05-16
 
 ### 🐛 Bug Fixes
@@ -75,21 +81,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Stabilize saved pages and trim initial loads (11b5be8)
 
 ## [1.10.3] - 2026-05-12
-
-### 📝 Other Improvements
-
-- Rename saved pages surfaces (4d4a833)
-- Purge dead dashboard modules (124e7a6)
-- Remove obsolete dashboard checklist (e2873a5)
-- Update standalone docs and tests (eee62cd)
-- Remove legacy database surface (52196fb)
-- Move project collections to newtab drawer (1d57ca0)
-- Document and test project workflows (b864955)
-- Scope dashboard projects correctly (3e243a0)
-- Build project dashboard UI (4f0a6a2)
-- Add project data layer (203ba6f)
-
-## [1.10.2] - 2026-05-11
 
 ### ✨ Features
 
@@ -278,6 +269,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Rename saved pages surfaces (4d4a833)
+- Purge dead dashboard modules (124e7a6)
+- Remove obsolete dashboard checklist (e2873a5)
+- Update standalone docs and tests (eee62cd)
+- Remove legacy database surface (52196fb)
+- Move project collections to newtab drawer (1d57ca0)
+- Document and test project workflows (b864955)
+- Scope dashboard projects correctly (3e243a0)
+- Build project dashboard UI (4f0a6a2)
+- Add project data layer (203ba6f)
 - Align Chrome package with Store ID (a7cffbc)
 - Add safe auth telemetry for Sentry (a297c1f)
 - Fix Chrome Web Store packaging (146e329)
