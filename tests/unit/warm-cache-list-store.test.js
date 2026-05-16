@@ -242,6 +242,56 @@ describe('WarmCacheListStore', () => {
     ]);
   });
 
+  it('uses the top server-ordered item as the update anchor when pinned items sort first', async () => {
+    const cachedPages = [
+      {
+        id: 'unpinned-newer',
+        title: 'Unpinned newer',
+        url: 'https://example.com/unpinned-newer',
+        pinned: false,
+        saved_at: '2026-05-17T00:02:00.000Z'
+      },
+      {
+        id: 'pinned-anchor',
+        title: 'Pinned anchor',
+        url: 'https://example.com/pinned-anchor',
+        pinned: true,
+        saved_at: '2026-05-17T00:01:00.000Z'
+      }
+    ];
+    const checkForUpdates = vi.fn(async () => ({
+      hasUpdates: false
+    }));
+    const { store } = createStore({
+      getList: vi.fn(),
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 2,
+        hasNextPage: false,
+        nextCursor: null
+      }, true))
+    }, {
+      checkForUpdates,
+      buildUpdateCheckOptions: latestKnownId => ({
+        pinnedFirst: true,
+        sort: 'newest',
+        latestKnownId
+      })
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(checkForUpdates).toHaveBeenCalledTimes(1);
+    });
+
+    expect(checkForUpdates).toHaveBeenCalledWith({
+      pinnedFirst: true,
+      sort: 'newest',
+      latestKnownId: 'pinned-anchor'
+    }, {
+      requestId: expect.any(Number)
+    });
+  });
+
   it('persists optimistic local updates', async () => {
     const pages = makePages(3);
     const getList = vi.fn(async () => ({

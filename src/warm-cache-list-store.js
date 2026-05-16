@@ -500,26 +500,49 @@ export class WarmCacheListStore {
     return this.options.buildLoadMoreFetchOptions(cursor);
   }
 
-  getMostRecentItemId() {
-    const mostRecentPage = this.state.allPages.reduce((latestPage, page) => {
+  getUpdateAnchorItemId() {
+    const updateOptions = this.buildUpdateCheckOptions(null);
+    const sortDirection = updateOptions?.sort === 'oldest' ? 'asc' : 'desc';
+    const pinnedFirst = updateOptions?.pinnedFirst === true;
+
+    const anchorPage = this.state.allPages.reduce((currentAnchor, page) => {
       if (!page?.id) {
-        return latestPage;
+        return currentAnchor;
       }
 
-      if (!latestPage?.id) {
+      if (!currentAnchor?.id) {
         return page;
       }
 
-      const latestTime = Date.parse(latestPage.saved_at || '') || 0;
-      const pageTime = Date.parse(page.saved_at || '') || 0;
-      if (pageTime !== latestTime) {
-        return pageTime > latestTime ? page : latestPage;
+      if (pinnedFirst) {
+        const currentPinned = currentAnchor.pinned === true ? 1 : 0;
+        const nextPinned = page.pinned === true ? 1 : 0;
+        if (currentPinned !== nextPinned) {
+          return nextPinned > currentPinned ? page : currentAnchor;
+        }
       }
 
-      return page.id > latestPage.id ? page : latestPage;
+      const currentTime = Date.parse(currentAnchor.saved_at || '') || 0;
+      const nextTime = Date.parse(page.saved_at || '') || 0;
+      if (currentTime !== nextTime) {
+        if (sortDirection === 'asc') {
+          return nextTime < currentTime ? page : currentAnchor;
+        }
+        return nextTime > currentTime ? page : currentAnchor;
+      }
+
+      if (page.id === currentAnchor.id) {
+        return currentAnchor;
+      }
+
+      if (sortDirection === 'asc') {
+        return page.id < currentAnchor.id ? page : currentAnchor;
+      }
+
+      return page.id > currentAnchor.id ? page : currentAnchor;
     }, null);
 
-    return mostRecentPage?.id || null;
+    return anchorPage?.id || null;
   }
 
   async checkForUpdates(requestId = this.state.requestId) {
@@ -531,7 +554,7 @@ export class WarmCacheListStore {
       };
     }
 
-    const latestKnownId = this.getMostRecentItemId();
+    const latestKnownId = this.getUpdateAnchorItemId();
     if (!latestKnownId) {
       return {
         hasUpdates: true,
