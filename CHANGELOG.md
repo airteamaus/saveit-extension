@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.13] - 2026-05-19
+
+### 📝 Other Improvements
+
+- Simplify toolbar project saving (59e5dbd)
+
 ## [1.10.12] - 2026-05-17
 
 ### 🐛 Bug Fixes
@@ -70,17 +76,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix Chrome publish workflow install (4750d8e)
 
 ## [1.10.4] - 2026-05-12
-
-### 📝 Other Improvements
-
-- Approve required pnpm build scripts (7b7028f)
-- Use public Firebase web-extension exports (8950da8)
-- Match drawer search to list payload (464f973)
-- Treat saved item totals as optional (ec09764)
-- Load drawer projects in parallel (3970c2d)
-- Stabilize saved pages and trim initial loads (11b5be8)
-
-## [1.10.3] - 2026-05-12
 
 ### ✨ Features
 
@@ -269,6 +264,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Approve required pnpm build scripts (7b7028f)
+- Use public Firebase web-extension exports (8950da8)
+- Match drawer search to list payload (464f973)
+- Treat saved item totals as optional (ec09764)
+- Load drawer projects in parallel (3970c2d)
+- Stabilize saved pages and trim initial loads (11b5be8)
 - Rename saved pages surfaces (4d4a833)
 - Purge dead dashboard modules (124e7a6)
 - Remove obsolete dashboard checklist (e2873a5)
