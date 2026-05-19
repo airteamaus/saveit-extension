@@ -112,6 +112,155 @@ async function showBadgeFeedback(type, duration = 2000) {
   }, duration);
 }
 
+async function getAuthenticatedSession() {
+  const session = await backgroundAuth.signIn();
+  await setSentryUser(session.user);
+  logger.log('Got Firebase user', {
+    hasUser: Boolean(session.user?.uid)
+  });
+  return session;
+}
+
+async function parseApiError(response) {
+  const errorData = await response.json().catch(() => null);
+  return errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
+}
+
+async function fetchBackgroundApi(path = '', { method = 'GET', body } = {}) {
+  const { idToken } = await getAuthenticatedSession();
+  const headers = {
+    'Authorization': `Bearer ${idToken}`
+  };
+
+  if (body !== undefined) {
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const response = await fetch(`${CONFIG.cloudFunctionUrl}${path}`, {
+    method,
+    headers,
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return await response.json().catch(() => null);
+}
+
+function getUserSaveErrorMessage(error) {
+  let userMessage = error.message;
+
+  if (userMessage.includes('Invalid URL')) {
+    userMessage = "Sorry, can't save this page. " +
+      (userMessage.includes('example.com') ? 'Example domains are not supported.' :
+       userMessage.includes('localhost') ? 'Local URLs cannot be saved.' :
+       userMessage.includes('protocol') ? 'Only http/https URLs can be saved.' :
+       userMessage);
+  } else if (userMessage.includes('Sign-in failed') || userMessage.includes('Unauthorized')) {
+    userMessage = 'Authentication failed. Please try again or check your Google account.';
+  }
+
+  return userMessage;
+}
+
+async function handleSaveError(error, tab) {
+  logger.error('Error saving page', error, getSafePageContext(tab?.url, tab?.title));
+
+  await captureBackgroundError(error, {
+    context: 'save-page',
+    surface: 'toolbar',
+    ...getSafePageContext(tab?.url, tab?.title)
+  });
+
+  await showBadgeFeedback('error', 3000);
+
+  const userMessage = getUserSaveErrorMessage(error);
+  browserApi.notifications.create({
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: 'SaveIt - Error',
+    message: userMessage
+  });
+
+  return userMessage;
+}
+
+async function getActiveTab() {
+  if (!browserApi.tabs?.query) {
+    throw new Error('Tabs API not available');
+  }
+
+  const tabs = await browserApi.tabs.query({
+    active: true,
+    currentWindow: true
+  });
+  const [tab] = tabs || [];
+
+  if (!tab?.url) {
+    throw new Error('No active tab available to save');
+  }
+
+  return tab;
+}
+
+async function getToolbarProjects() {
+  const projects = await fetchBackgroundApi('/projects');
+  return Array.isArray(projects)
+    ? projects.filter(project => project?.archived !== true)
+    : [];
+}
+
+async function savePageFromTab(tab, { projectId = null } = {}) {
+  const pageData = {
+    url: tab.url,
+    title: tab.title,
+    saved_at: new Date().toISOString(),
+    ...(projectId ? { projectId } : {})
+  };
+
+  logger.log('Sending page save request', {
+    ...getSafePageContext(tab.url, tab.title),
+    hasProjectId: Boolean(projectId)
+  });
+
+  const data = await fetchBackgroundApi('', {
+    method: 'POST',
+    body: pageData
+  });
+
+  logger.log('Page saved successfully');
+
+  if (data?.request_id) {
+    await setSentryRequestId(data.request_id);
+  }
+
+  try {
+    const cacheKeysRemoved = await invalidateSavedPagesCacheStorage(browserApi.storage.local);
+    logger.log('Cache invalidated after save', {
+      cacheKeysRemoved
+    });
+  } catch (cacheError) {
+    logger.error('Failed to invalidate cache', cacheError);
+  }
+
+  await showBadgeFeedback('success', 2000);
+
+  browserApi.notifications.create({
+    type: 'basic',
+    iconUrl: 'icon.png',
+    title: 'SaveIt',
+    message: 'Page saved!'
+  });
+
+  return data;
+}
+
 // Handle messages from dashboard (e.g., sign-in button)
 browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'signIn') {
@@ -130,6 +279,42 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
     return true; // Keep channel open for async response
   }
+
+  if (message.action === 'getToolbarProjects') {
+    getToolbarProjects()
+      .then((projects) => {
+        sendResponse({ success: true, projects });
+      })
+      .catch(async (error) => {
+        logger.error('Failed to load toolbar projects', error);
+        await captureBackgroundError(error, {
+          context: 'get-projects',
+          surface: 'toolbar-popup'
+        });
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (message.action === 'saveCurrentPage') {
+    (async () => {
+      await browserApi.action.setBadgeText({ text: '...' });
+      await browserApi.action.setBadgeBackgroundColor({ color: '#64748b' });
+
+      const tab = await getActiveTab();
+      await savePageFromTab(tab, {
+        projectId: typeof message.projectId === 'string' ? message.projectId : null
+      });
+    })()
+      .then(() => {
+        sendResponse({ success: true });
+      })
+      .catch(async (error) => {
+        const userMessage = await handleSaveError(error, null);
+        sendResponse({ success: false, error: userMessage });
+      });
+    return true;
+  }
 });
 
 // Handle extension icon clicks
@@ -141,96 +326,8 @@ browserApi.action.onClicked.addListener(async (tab) => {
   await browserApi.action.setBadgeBackgroundColor({ color: '#64748b' });
 
   try {
-    // Sign in with Firebase (prompts OAuth if not signed in)
-    const { user, idToken } = await backgroundAuth.signIn();
-    await setSentryUser(user);
-    logger.log('Got Firebase user', {
-      hasUser: Boolean(user?.uid)
-    });
-
-    const pageData = {
-      url: tab.url,
-      title: tab.title,
-      saved_at: new Date().toISOString()
-    };
-
-    logger.log('Sending page save request', getSafePageContext(tab.url, tab.title));
-
-    const response = await fetch(CONFIG.cloudFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`
-      },
-      body: JSON.stringify(pageData)
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => null);
-      const errorMessage = errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
-      throw new Error(errorMessage);
-    }
-
-    const data = await response.json();
-    logger.log('Page saved successfully');
-
-    // Set request_id for error correlation
-    if (data.request_id) {
-      await setSentryRequestId(data.request_id);
-    }
-
-    // Invalidate cache so dashboard shows fresh data
-    try {
-      const cacheKeysRemoved = await invalidateSavedPagesCacheStorage(browserApi.storage.local);
-      logger.log('Cache invalidated after save', {
-        cacheKeysRemoved
-      });
-    } catch (cacheError) {
-      logger.error('Failed to invalidate cache', cacheError);
-    }
-
-    // Show success feedback on icon (always visible)
-    await showBadgeFeedback('success', 2000);
-
-    browserApi.notifications.create({
-      type: 'basic',
-      iconUrl: 'icon.png',
-      title: 'SaveIt',
-      message: 'Page saved!'
-    });
-
+    await savePageFromTab(tab);
   } catch (error) {
-    logger.error('Error saving page', error, getSafePageContext(tab?.url, tab?.title));
-
-    // Capture error in Sentry with context
-    await captureBackgroundError(error, {
-      context: 'save-page',
-      surface: 'toolbar',
-      ...getSafePageContext(tab?.url, tab?.title)
-    });
-
-    // Show error feedback on icon (always visible)
-    await showBadgeFeedback('error', 3000);
-
-    // Show user-friendly error message
-    let userMessage = error.message;
-
-    // Make common errors more user-friendly
-    if (userMessage.includes('Invalid URL')) {
-      userMessage = "Sorry, can't save this page. " +
-        (userMessage.includes('example.com') ? 'Example domains are not supported.' :
-         userMessage.includes('localhost') ? 'Local URLs cannot be saved.' :
-         userMessage.includes('protocol') ? 'Only http/https URLs can be saved.' :
-         userMessage);
-    } else if (userMessage.includes('Sign-in failed') || userMessage.includes('Unauthorized')) {
-      userMessage = 'Authentication failed. Please try again or check your Google account.';
-    }
-
-    browserApi.notifications.create({
-      type: 'basic',
-      iconUrl: 'icon.png',
-      title: 'SaveIt - Error',
-      message: userMessage
-    });
+    await handleSaveError(error, tab);
   }
 });

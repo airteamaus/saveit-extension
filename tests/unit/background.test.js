@@ -3,10 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 describe('background startup', () => {
   let originalBrowser;
   let originalChrome;
+  let originalFetch;
 
   beforeEach(() => {
     originalBrowser = globalThis.browser;
     originalChrome = globalThis.chrome;
+    originalFetch = globalThis.fetch;
   });
 
   afterEach(() => {
@@ -20,6 +22,12 @@ describe('background startup', () => {
       delete globalThis.chrome;
     } else {
       globalThis.chrome = originalChrome;
+    }
+
+    if (originalFetch === undefined) {
+      delete globalThis.fetch;
+    } else {
+      globalThis.fetch = originalFetch;
     }
   });
 
@@ -235,6 +243,197 @@ describe('background startup', () => {
         'warning'
       );
       expect(flush).toHaveBeenCalledWith(2000);
+    });
+  });
+
+  it('loads toolbar projects through the background API', async () => {
+    const onMessageAddListener = vi.fn();
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => [{ id: 'project-1', name: 'SaveIt product', archived: false }])
+    });
+
+    vi.resetModules();
+    vi.doMock('../../src/background-auth.js', () => ({
+      createBackgroundAuth: () => ({
+        signIn: vi.fn(async () => ({
+          user: { uid: 'user-123' },
+          idToken: 'token-123'
+        })),
+        signOut: vi.fn()
+      })
+    }));
+    vi.doMock('../../src/sentry.js', () => ({
+      initSentry: vi.fn(),
+      setUser: vi.fn(),
+      setRequestId: vi.fn(),
+      captureError: vi.fn(),
+      captureMessage: vi.fn(),
+      flush: vi.fn(async () => true),
+      clearUser: vi.fn()
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    globalThis.browser = {
+      runtime: {
+        id: 'test-extension',
+        getManifest: vi.fn(() => ({
+          version: '1.10.12',
+          name: 'SaveIt'
+        })),
+        onMessage: {
+          addListener: onMessageAddListener
+        }
+      },
+      action: {
+        onClicked: {
+          addListener: vi.fn()
+        },
+        setBadgeText: vi.fn(),
+        setBadgeBackgroundColor: vi.fn()
+      },
+      identity: {
+        getRedirectURL: vi.fn(() => 'https://extension-id.extensions.allizom.org/'),
+        launchWebAuthFlow: vi.fn()
+      },
+      notifications: {
+        create: vi.fn()
+      },
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          remove: vi.fn()
+        }
+      },
+      tabs: {
+        query: vi.fn()
+      }
+    };
+
+    await import('../../src/background.js?toolbar-projects');
+
+    const listener = onMessageAddListener.mock.calls[0][0];
+    const sendResponse = vi.fn();
+    expect(listener({ action: 'getToolbarProjects' }, {}, sendResponse)).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://saveit-5pu7ljvnuq-uc.a.run.app/projects',
+        expect.objectContaining({
+          method: 'GET',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token-123'
+          })
+        })
+      );
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        projects: [{ id: 'project-1', name: 'SaveIt product', archived: false }]
+      });
+    });
+  });
+
+  it('saves the current tab with a selected project from the popup', async () => {
+    const onMessageAddListener = vi.fn();
+    const onClickedAddListener = vi.fn();
+    const notificationsCreate = vi.fn();
+    const tabsQuery = vi.fn(async () => [{
+      url: 'https://example.edu/article',
+      title: 'Example article'
+    }]);
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => ({ success: true, request_id: 'request-123' }))
+    });
+
+    vi.resetModules();
+    vi.doMock('../../src/background-auth.js', () => ({
+      createBackgroundAuth: () => ({
+        signIn: vi.fn(async () => ({
+          user: { uid: 'user-123' },
+          idToken: 'token-123'
+        })),
+        signOut: vi.fn()
+      })
+    }));
+    vi.doMock('../../src/sentry.js', () => ({
+      initSentry: vi.fn(),
+      setUser: vi.fn(),
+      setRequestId: vi.fn(),
+      captureError: vi.fn(),
+      captureMessage: vi.fn(),
+      flush: vi.fn(async () => true),
+      clearUser: vi.fn()
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    globalThis.browser = {
+      runtime: {
+        id: 'test-extension',
+        getManifest: vi.fn(() => ({
+          version: '1.10.12',
+          name: 'SaveIt'
+        })),
+        onMessage: {
+          addListener: onMessageAddListener
+        }
+      },
+      action: {
+        onClicked: {
+          addListener: onClickedAddListener
+        },
+        setBadgeText: vi.fn(),
+        setBadgeBackgroundColor: vi.fn()
+      },
+      identity: {
+        getRedirectURL: vi.fn(() => 'https://extension-id.extensions.allizom.org/'),
+        launchWebAuthFlow: vi.fn()
+      },
+      notifications: {
+        create: notificationsCreate
+      },
+      storage: {
+        local: {
+          get: vi.fn(async () => ({})),
+          remove: vi.fn()
+        }
+      },
+      tabs: {
+        query: tabsQuery
+      }
+    };
+
+    await import('../../src/background.js?save-current-page');
+
+    const listener = onMessageAddListener.mock.calls[0][0];
+    const sendResponse = vi.fn();
+    expect(listener({ action: 'saveCurrentPage', projectId: 'project-1' }, {}, sendResponse)).toBe(true);
+
+    await vi.waitFor(() => {
+      expect(tabsQuery).toHaveBeenCalledWith({
+        active: true,
+        currentWindow: true
+      });
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://saveit-5pu7ljvnuq-uc.a.run.app',
+        expect.objectContaining({
+          method: 'POST',
+          headers: expect.objectContaining({
+            Authorization: 'Bearer token-123',
+            'Content-Type': 'application/json'
+          }),
+          body: expect.stringContaining('"projectId":"project-1"')
+        })
+      );
+      expect(notificationsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'SaveIt',
+          message: 'Page saved!'
+        })
+      );
+      expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
   });
 });

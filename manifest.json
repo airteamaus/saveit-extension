@@ -35,7 +35,8 @@
   "action": {
     "default_icon": {
       "48": "src/icon.png"
-    }
+    },
+    "default_popup": "src/toolbar-popup.html"
   },
   "chrome_url_overrides": {
     "newtab": "src/newtab.html"

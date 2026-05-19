@@ -8,6 +8,10 @@ import { sanitizeTelemetryContext } from './telemetry.js';
 const SENTRY_DSN = 'https://e8cd12c46bbc58b4792f8d00cb861506@o1546.ingest.us.sentry.io/4510395640053760';
 let isInitialized = false;
 
+function isSentryEnabled() {
+  return CONFIG.enableErrorReporting && isInitialized;
+}
+
 /**
  * Initialize Sentry SDK
  * Call at module load time in both background.js and newtab.js
@@ -33,6 +37,10 @@ export function initSentry() {
  * @param {Object} user - Firebase user object with uid and email
  */
 export function setUser(user) {
+  if (!isSentryEnabled()) {
+    return;
+  }
+
   Sentry.setUser({
     id: user.uid,
     email: user.email
@@ -45,6 +53,10 @@ export function setUser(user) {
  * @param {string} requestId - UUID from backend response
  */
 export function setRequestId(requestId) {
+  if (!isSentryEnabled()) {
+    return;
+  }
+
   Sentry.setTag('request_id', requestId);
 }
 
@@ -54,6 +66,10 @@ export function setRequestId(requestId) {
  * @param {Object} context - Additional context (url, operation, etc.)
  */
 export function captureError(error, context = {}) {
+  if (!isSentryEnabled()) {
+    return;
+  }
+
   Sentry.captureException(error, { extra: sanitizeTelemetryContext(context) });
 }
 
@@ -64,6 +80,10 @@ export function captureError(error, context = {}) {
  * @param {'fatal' | 'error' | 'warning' | 'log' | 'info' | 'debug'} level - Sentry level
  */
 export function captureMessage(message, context = {}, level = 'info') {
+  if (!isSentryEnabled()) {
+    return;
+  }
+
   Sentry.captureMessage(message, {
     level,
     extra: sanitizeTelemetryContext(context)
@@ -76,6 +96,10 @@ export function captureMessage(message, context = {}, level = 'info') {
  * @returns {Promise<boolean>}
  */
 export function flush(timeout = 2000) {
+  if (!isSentryEnabled()) {
+    return Promise.resolve(true);
+  }
+
   return Sentry.flush(timeout);
 }
 
@@ -83,5 +107,9 @@ export function flush(timeout = 2000) {
  * Clear user context (on sign out)
  */
 export function clearUser() {
+  if (!isSentryEnabled()) {
+    return;
+  }
+
   Sentry.setUser(null);
 }

@@ -60,6 +60,7 @@ const FAVORITES_WIDTH_PADDING = 220;
 const FAVORITES_MAX_GRID_WIDTH = 1008;
 const DRAWER_SEARCH_DEBOUNCE_MS = 250;
 const DRAWER_INITIAL_FETCH_LIMIT = 50;
+const DRAWER_PROJECT_FETCH_LIMIT = 100;
 const FAVORITE_PREVIEW_WIDTH_MULTIPLIER = 4;
 const FAVORITE_PREVIEW_MARGIN = 8;
 const FAVORITE_PREVIEW_GAP = 14;
@@ -838,6 +839,14 @@ const savedPagesView = {
   },
   showLoading: renderDrawerLoadingState,
   async loadPages() {
+    if (drawerState.selectedProjectId) {
+      await loadDrawerProjectPages(drawerState.selectedProjectId, {
+        query: drawerState.query,
+        syncUrl: false
+      });
+      return;
+    }
+
     if (!drawerState.hasInitialized) {
       await loadDrawerBasePages({ query: drawerState.query, syncUrl: false });
       return;
@@ -1333,6 +1342,79 @@ async function loadDrawerBasePages({ query = drawerState.query, syncUrl = true }
   }
 }
 
+async function loadDrawerProjectPages(projectId, { query = drawerState.query, syncUrl = true } = {}) {
+  const requestId = ++drawerState.requestId;
+  const trimmedQuery = query.trim();
+
+  drawerState.isLoading = true;
+  setDrawerSearchValue(trimmedQuery);
+
+  if (syncUrl && savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
+    updateDrawerUrl(true, trimmedQuery);
+  }
+
+  renderDrawerLoadingState(trimmedQuery ? 'Searching project pages...' : 'Loading project pages...');
+
+  try {
+    const projectsPromise = ensureDrawerProjectsLoaded();
+    const pages = [];
+    let cursor = null;
+    let total = null;
+
+    do {
+      const response = await API.getSavedPages({
+        limit: DRAWER_PROJECT_FETCH_LIMIT,
+        sort: 'newest',
+        pinnedFirst: false,
+        projectId,
+        cursor,
+        skipCache: true
+      });
+
+      if (requestId !== drawerState.requestId) {
+        return;
+      }
+
+      pages.push(...(response?.pages || []));
+      total = typeof response?.pagination?.total === 'number' ? response.pagination.total : total;
+      cursor = response?.pagination?.hasNextPage ? response?.pagination?.nextCursor || null : null;
+    } while (cursor);
+
+    if (requestId !== drawerState.requestId) {
+      return;
+    }
+
+    drawerState.allPages = pages;
+    drawerState.allItemsTotal = total ?? pages.length;
+    drawerState.total = pages.length;
+    applyDrawerFilters(trimmedQuery);
+    drawerState.hasInitialized = true;
+    renderDrawerResults();
+
+    if (projectsPromise) {
+      void projectsPromise.then(() => {
+        if (requestId !== drawerState.requestId) {
+          return;
+        }
+
+        projectManager.refreshProjectCounts(savedPagesView);
+        renderDrawerResults();
+      });
+    }
+  } catch (error) {
+    if (requestId !== drawerState.requestId) {
+      return;
+    }
+
+    console.error('[newtab] Project drawer load failed:', error);
+    renderDrawerErrorState(error.message || 'Failed to load project pages.');
+  } finally {
+    if (requestId === drawerState.requestId) {
+      drawerState.isLoading = false;
+    }
+  }
+}
+
 async function handleDrawerDelete(id) {
   if (!id || !confirm('Delete this saved page? This cannot be undone.')) {
     return;
@@ -1441,6 +1523,14 @@ function syncSavedPagesAfterCacheInvalidation() {
 
     void initFavorites();
     void projectsStore.hydrate();
+    if (drawerState.selectedProjectId) {
+      void loadDrawerProjectPages(drawerState.selectedProjectId, {
+        query: savedPagesDrawerSearchInput?.value || drawerState.query,
+        syncUrl: false
+      });
+      return;
+    }
+
     void savedPagesStore.hydrate();
 
     if (savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden')) {
