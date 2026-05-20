@@ -4,6 +4,7 @@ import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
+import { createDrawerDataController } from '../../src/newtab-drawer-data.js';
 import { getInitialDrawerUrlState } from '../../src/newtab-drawer-events.js';
 import { shouldSyncDrawerStoreUpdate } from '../../src/newtab-drawer-sync.js';
 import {
@@ -162,6 +163,194 @@ describe('newtab modules', () => {
       expect(markup).toContain('data-action="pin"');
       expect(markup).toContain('data-action="delete"');
     });
+  });
+
+  describe('drawer data helpers', () => {
+   function createDrawerDataHarness(overrides = {}) {
+     const state = {
+       hasInitialized: false,
+       isLoading: false,
+       query: '',
+       currentFilter: {
+         search: '',
+         projectId: null,
+         cursor: null
+       },
+       pages: [],
+       allPages: [],
+       projects: [],
+       projectsLoading: false,
+       projectsAvailable: true,
+       projectsUnavailableMessage: '',
+       selectedProjectId: null,
+       projectEditorState: {
+         pageId: null,
+         query: ''
+       },
+       total: null,
+       allItemsTotal: null,
+       requestId: 0,
+       ...(overrides.state || {})
+     };
+     const savedPagesView = {
+       persistAllPages: vi.fn(),
+       ...(overrides.savedPagesView || {})
+     };
+     const api = {
+       isExtension: false,
+       getSavedPages: vi.fn(),
+       deletePage: vi.fn(),
+       pinPage: vi.fn(),
+       ...(overrides.api || {})
+     };
+     const savedPagesStore = {
+       getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+       hydrate: vi.fn(),
+       removePage: vi.fn(),
+       reset: vi.fn(),
+       ...(overrides.savedPagesStore || {})
+     };
+     const projectsStore = {
+       hydrate: vi.fn().mockResolvedValue({ projects: [] }),
+       ...(overrides.projectsStore || {})
+     };
+     const projectManager = {
+       refreshProjectCounts: vi.fn(),
+       adjustProjectCount: vi.fn(),
+       ...(overrides.projectManager || {})
+     };
+     const applyDrawerFilters = vi.fn((query = '') => {
+       state.query = query.trim();
+       state.pages = [...state.allPages];
+     });
+     const dependencies = {
+       api,
+       state,
+       savedPagesStore,
+       projectsStore,
+       projectManager,
+       savedPagesView,
+       getCurrentUser: vi.fn(() => null),
+       isDrawerOpen: vi.fn(() => false),
+       setDrawerSearchValue: vi.fn(),
+       updateDrawerUrl: vi.fn(),
+       renderDrawerLoadingState: vi.fn(),
+       renderDrawerErrorState: vi.fn(),
+       renderDrawerSignInState: vi.fn(),
+       renderDrawerResults: vi.fn(),
+       syncDrawerStateFromStore: vi.fn(),
+       syncProjectsStateFromStore: vi.fn(snapshot => {
+         state.projects = snapshot.projects || [];
+       }),
+       applyDrawerFilters,
+       windowObj: {
+         confirm: vi.fn(() => true),
+         alert: vi.fn(),
+         location: {
+           href: 'https://example.com/newtab.html'
+         },
+         history: {
+           replaceState: vi.fn()
+         }
+       },
+       ...(overrides.dependencies || {})
+     };
+
+     return {
+       controller: createDrawerDataController(dependencies),
+       state,
+       api,
+       savedPagesStore,
+       projectsStore,
+       projectManager,
+       savedPagesView,
+       applyDrawerFilters,
+       dependencies
+     };
+   }
+
+   it('loads project pages across pagination and applies the trimmed query', async () => {
+     const { controller, state, api, projectsStore, applyDrawerFilters, dependencies } =
+       createDrawerDataHarness({
+         state: {
+           selectedProjectId: 'project-1'
+         },
+         api: {
+           getSavedPages: vi.fn()
+             .mockResolvedValueOnce({
+               pages: [{ id: 'page-1' }, { id: 'page-2' }],
+               pagination: {
+                 total: 3,
+                 hasNextPage: true,
+                 nextCursor: 'cursor-2'
+               }
+             })
+             .mockResolvedValueOnce({
+               pages: [{ id: 'page-3' }],
+               pagination: {
+                 total: 3,
+                 hasNextPage: false,
+                 nextCursor: null
+               }
+             })
+         }
+       });
+
+     await controller.loadDrawerProjectPages('project-1', { query: '  alpha  ' });
+     await Promise.resolve();
+
+     expect(projectsStore.hydrate).toHaveBeenCalledTimes(1);
+     expect(api.getSavedPages).toHaveBeenNthCalledWith(1, {
+       limit: 100,
+       sort: 'newest',
+       pinnedFirst: false,
+       projectId: 'project-1',
+       cursor: null,
+       skipCache: true
+     });
+     expect(api.getSavedPages).toHaveBeenNthCalledWith(2, {
+       limit: 100,
+       sort: 'newest',
+       pinnedFirst: false,
+       projectId: 'project-1',
+       cursor: 'cursor-2',
+       skipCache: true
+     });
+     expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching project pages...');
+     expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
+     expect(state.allPages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
+     expect(state.pages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
+     expect(state.total).toBe(3);
+     expect(state.allItemsTotal).toBe(3);
+     expect(state.hasInitialized).toBe(true);
+     expect(dependencies.syncProjectsStateFromStore).toHaveBeenCalled();
+   });
+
+   it('rolls back optimistic pin updates when the API request fails', async () => {
+     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+     const { controller, state, api, savedPagesView, dependencies } = createDrawerDataHarness({
+       state: {
+         pages: [{ id: 'page-1', pinned: false }],
+         allPages: [{ id: 'page-1', pinned: false }]
+       },
+       api: {
+         pinPage: vi.fn().mockRejectedValue(new Error('pin failed'))
+       }
+     });
+
+     await controller.handleDrawerPin('page-1');
+
+     expect(api.pinPage).toHaveBeenCalledWith('page-1', true);
+     expect(savedPagesView.persistAllPages).toHaveBeenCalledTimes(2);
+     expect(dependencies.renderDrawerResults).toHaveBeenCalledTimes(2);
+     expect(state.allPages[0].pinned).toBe(false);
+     expect(state.pages[0].pinned).toBe(false);
+     expect(dependencies.windowObj.alert).toHaveBeenCalledWith(
+       'Failed to update pin status. Please try again.'
+     );
+
+     consoleErrorSpy.mockRestore();
+   });
   });
 
   describe('applyAuthUI', () => {
