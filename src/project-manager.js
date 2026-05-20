@@ -10,8 +10,5 @@ class ProjectManager {
 
 window.ProjectManager = ProjectManager;
 
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { ProjectManager, createProjectManagerController };
-}
-/* eslint-enable no-undef */
+export { ProjectManager, createProjectManagerController };
+export default { ProjectManager, createProjectManagerController };
