@@ -4,6 +4,7 @@ import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
+import { getInitialDrawerUrlState } from '../../src/newtab-drawer-events.js';
 import {
   applyAuthUI,
   getUserFacingSignInErrorMessage
@@ -96,6 +97,22 @@ describe('newtab modules', () => {
       })).toEqual({
         title: 'No pages in Project Alpha',
         description: 'Add pages to this project to see them here.'
+      });
+    });
+
+    describe('drawer event helpers', () => {
+      it('parses open drawer state from the URL search params', () => {
+        expect(getInitialDrawerUrlState('?drawer=saved-pages&search=alpha')).toEqual({
+          isOpen: true,
+          searchQuery: 'alpha'
+        });
+      });
+
+      it('ignores search when the drawer param is not active', () => {
+        expect(getInitialDrawerUrlState('?search=alpha')).toEqual({
+          isOpen: false,
+          searchQuery: ''
+        });
       });
     });
 
