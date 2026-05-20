@@ -3,6 +3,10 @@
 
 /* global ThemeManager, AuthMenu */
 
+import {
+  createElementFromHtml,
+  replaceElementHtml
+} from './dom-render.js';
 import { SearchResultsStore } from './search-results-store.js';
 
 // State
@@ -46,18 +50,11 @@ function getFaviconUrl(domain) {
  */
 function createResultCard(result) {
   const page = result.thing_data;
-  const card = document.createElement('a');
-  card.className = 'result-card';
-  card.href = page.url;
-  card.target = '_blank';
-  card.rel = 'noopener';
-
-  // Get summary (prefer AI summary over description)
   const summary = page.ai_summary_brief || page.description || '';
-
-  card.innerHTML = `
+  const card = createElementFromHtml(`
+    <a class="result-card" target="_blank" rel="noopener">
     <div class="result-header">
-      ${page.domain ? `<img class="result-favicon" src="${getFaviconUrl(page.domain)}" alt="" onerror="this.style.display='none'">` : ''}
+      ${page.domain ? `<img class="result-favicon" src="${getFaviconUrl(page.domain)}" alt="">` : ''}
       <h3 class="result-title">${escapeHtml(page.title || 'Untitled')}</h3>
       ${page.reading_time_minutes ? `<span class="result-reading-time">${page.reading_time_minutes} min</span>` : ''}
     </div>
@@ -65,7 +62,15 @@ function createResultCard(result) {
     <div class="result-meta">
       ${page.domain ? `<span class="result-meta-item">${escapeHtml(page.domain)}</span>` : ''}
     </div>
-  `;
+    </a>
+  `);
+  card.href = page.url;
+  const favicon = card.querySelector('.result-favicon');
+  if (favicon) {
+    favicon.addEventListener('error', () => {
+      favicon.style.display = 'none';
+    });
+  }
 
   return card;
 }
@@ -103,7 +108,7 @@ function escapeHtml(text) {
  */
 function showLoading() {
   isLoading = true;
-  resultsContainer.innerHTML = createSkeletonCards(5);
+  replaceElementHtml(resultsContainer, createSkeletonCards(5));
   resultsHeader.classList.add('hidden');
   loadMoreContainer.classList.add('hidden');
 }
@@ -113,7 +118,7 @@ function showLoading() {
  * @param {string} query - Search query
  */
 function showEmpty(query) {
-  resultsContainer.innerHTML = `
+  replaceElementHtml(resultsContainer, `
     <div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="11" cy="11" r="8"></circle>
@@ -122,7 +127,7 @@ function showEmpty(query) {
       <h2>No results for "${escapeHtml(query)}"</h2>
       <p>Try different keywords or check your spelling</p>
     </div>
-  `;
+  `);
   resultsHeader.classList.add('hidden');
   loadMoreContainer.classList.add('hidden');
 }
@@ -132,7 +137,7 @@ function showEmpty(query) {
  * @param {string} message - Error message
  */
 function showError(message) {
-  resultsContainer.innerHTML = `
+  replaceElementHtml(resultsContainer, `
     <div class="error-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="12" cy="12" r="10"></circle>
@@ -142,7 +147,7 @@ function showError(message) {
       <h2>Something went wrong</h2>
       <p>${escapeHtml(message)}</p>
     </div>
-  `;
+  `);
   resultsHeader.classList.add('hidden');
   loadMoreContainer.classList.add('hidden');
 }
@@ -151,7 +156,7 @@ function showError(message) {
  * Show initial/welcome state
  */
 function showInitialState() {
-  resultsContainer.innerHTML = `
+  replaceElementHtml(resultsContainer, `
     <div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
         <circle cx="11" cy="11" r="8"></circle>
@@ -160,7 +165,7 @@ function showInitialState() {
       <h2>Search your saved pages</h2>
       <p>Enter a query to find pages by content and meaning</p>
     </div>
-  `;
+  `);
   resultsHeader.classList.add('hidden');
   loadMoreContainer.classList.add('hidden');
 }
@@ -174,7 +179,7 @@ function renderResults(results, append = false) {
   isLoading = false;
 
   if (!append) {
-    resultsContainer.innerHTML = '';
+    resultsContainer.replaceChildren();
   }
 
   results.forEach(result => {
