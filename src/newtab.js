@@ -12,59 +12,24 @@ import {
   createSavedPagesStore
 } from './newtab-drawer.js';
 import {
+  bindNewtabEventHandlers,
+  getNewtabElements,
+  startNewtabPage
+} from './newtab-page.js';
+import {
   escapeHtml,
   updateStatsDisplay,
   updateVersionIndicator
 } from './newtab-shared.js';
 
-const searchForm = document.getElementById('search-form');
-const searchInput = document.getElementById('search-input');
-const signInBtn = document.getElementById('hero-sign-in-btn');
-const favoritesSection = document.getElementById('favorites-section');
-const favoritesViewport = document.getElementById('favorites-viewport');
-const favoritesRow = document.getElementById('favorites-row');
-const favoritesPrevBtn = document.getElementById('favorites-prev-btn');
-const favoritesNextBtn = document.getElementById('favorites-next-btn');
-const favoritesDots = document.getElementById('favorites-dots');
-const favoriteHoverConnector = document.getElementById('favorite-hover-connector');
-const favoriteHoverCard = document.getElementById('favorite-hover-card');
-const userMenu = document.getElementById('hero-user-menu');
-const userAvatarBtn = document.getElementById('hero-user-avatar-btn');
-const userAvatar = document.getElementById('hero-user-avatar');
-const userDropdown = document.getElementById('hero-user-dropdown');
-const userEmailEl = document.getElementById('hero-user-email');
-const signOutBtn = document.getElementById('hero-sign-out-btn');
-const savedPagesToggleBtn = document.getElementById('saved-pages-toggle-btn');
-const savedPagesDrawer = document.getElementById('saved-pages-drawer');
-const savedPagesDrawerBackdrop = document.getElementById('saved-pages-drawer-backdrop');
-const savedPagesDrawerCloseBtn = document.getElementById('saved-pages-drawer-close-btn');
-const savedPagesDrawerSearchForm = document.getElementById('saved-pages-drawer-search-form');
-const savedPagesDrawerSearchInput = document.getElementById('saved-pages-drawer-search-input');
-const savedPagesDrawerClearBtn = document.getElementById('saved-pages-drawer-clear-btn');
-const savedPagesDrawerResults = document.getElementById('saved-pages-drawer-results');
-const projectSidebar = document.getElementById('project-sidebar');
-const projectEditorBackdrop = document.getElementById('project-editor-backdrop');
-const projectEditorDialog = document.getElementById('project-editor-dialog');
-const versionIndicator = document.getElementById('hero-version-indicator');
-const versionNumberEl = document.getElementById('hero-version-number');
 const api = globalThis.API;
-
-function initTheme() {
-  ThemeManager.init('hero-theme-toggle-container');
-}
+const elements = getNewtabElements(document);
 
 function updateSavedPagesFooter(total) {
   updateStatsDisplay(
-    versionIndicator,
+    elements.versionIndicator,
     typeof total === 'number' ? { total } : null
   );
-}
-
-function handleSearch(event) {
-  event.preventDefault();
-  drawerController.open({
-    searchQuery: searchInput?.value?.trim() || ''
-  });
 }
 
 const projectManager = new ProjectManager(api, { escapeHtml });
@@ -75,14 +40,14 @@ const projectsStore = createProjectsStore(api);
 const favoritesController = createFavoritesController({
   store: favoritesStore,
   elements: {
-    favoritesSection,
-    favoritesViewport,
-    favoritesRow,
-    favoritesPrevBtn,
-    favoritesNextBtn,
-    favoritesDots,
-    favoriteHoverConnector,
-    favoriteHoverCard
+    favoriteHoverCard: elements.favoriteHoverCard,
+    favoriteHoverConnector: elements.favoriteHoverConnector,
+    favoritesDots: elements.favoritesDots,
+    favoritesNextBtn: elements.favoritesNextBtn,
+    favoritesPrevBtn: elements.favoritesPrevBtn,
+    favoritesRow: elements.favoritesRow,
+    favoritesSection: elements.favoritesSection,
+    favoritesViewport: elements.favoritesViewport
   }
 });
 
@@ -92,17 +57,17 @@ const drawerController = createSavedPagesDrawerController({
   projectsStore,
   projectManager,
   elements: {
-    savedPagesToggleBtn,
-    savedPagesDrawer,
-    savedPagesDrawerBackdrop,
-    savedPagesDrawerCloseBtn,
-    savedPagesDrawerSearchForm,
-    savedPagesDrawerSearchInput,
-    savedPagesDrawerClearBtn,
-    savedPagesDrawerResults,
-    projectSidebar,
-    projectEditorBackdrop,
-    projectEditorDialog
+    projectEditorBackdrop: elements.projectEditorBackdrop,
+    projectEditorDialog: elements.projectEditorDialog,
+    projectSidebar: elements.projectSidebar,
+    savedPagesDrawer: elements.savedPagesDrawer,
+    savedPagesDrawerBackdrop: elements.savedPagesDrawerBackdrop,
+    savedPagesDrawerClearBtn: elements.savedPagesDrawerClearBtn,
+    savedPagesDrawerCloseBtn: elements.savedPagesDrawerCloseBtn,
+    savedPagesDrawerResults: elements.savedPagesDrawerResults,
+    savedPagesDrawerSearchForm: elements.savedPagesDrawerSearchForm,
+    savedPagesDrawerSearchInput: elements.savedPagesDrawerSearchInput,
+    savedPagesToggleBtn: elements.savedPagesToggleBtn
   },
   onSavedPagesTotalChange: updateSavedPagesFooter,
   refreshFavorites: () => {
@@ -114,11 +79,11 @@ const authController = createNewtabAuthController({
   API: api,
   AuthMenu,
   elements: {
-    signInBtn,
-    userMenu,
-    userAvatar,
-    userDropdown,
-    userEmailEl
+    signInBtn: elements.signInBtn,
+    userAvatar: elements.userAvatar,
+    userDropdown: elements.userDropdown,
+    userEmailEl: elements.userEmailEl,
+    userMenu: elements.userMenu
   },
   onSignedIn: async () => {
     await Promise.all([
@@ -132,20 +97,18 @@ const authController = createNewtabAuthController({
   }
 });
 
-searchForm?.addEventListener('submit', handleSearch);
-signInBtn?.addEventListener('click', () => void authController.handleSignIn());
-userAvatarBtn?.addEventListener('click', () => authController.toggleUserDropdown());
-signOutBtn?.addEventListener('click', () => void authController.handleSignOut());
-
-document.addEventListener('click', (event) => {
-  authController.hideDropdownForOutsideClick(event.target);
+bindNewtabEventHandlers({
+  elements,
+  authController,
+  drawerController,
+  documentObj: document
 });
 
-initTheme();
-updateVersionIndicator(versionNumberEl);
-favoritesController.init();
-drawerController.init();
-void favoritesController.load();
-void drawerController.loadSummary();
-
-await authController.init();
+await startNewtabPage({
+  ThemeManager,
+  versionNumberEl: elements.versionNumberEl,
+  updateVersionIndicator,
+  favoritesController,
+  drawerController,
+  authController
+});

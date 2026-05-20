@@ -15,6 +15,12 @@ import {
   getDrawerProjectScopeLabel
 } from '../../src/newtab-drawer-ui.js';
 import {
+  bindNewtabEventHandlers,
+  getNewtabElements,
+  getSubmittedSearchQuery,
+  startNewtabPage
+} from '../../src/newtab-page.js';
+import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
@@ -78,6 +84,101 @@ describe('newtab modules', () => {
         rows: 2,
         pageSize: 8,
         tileWidth: 80
+      });
+    });
+
+    describe('newtab page helpers', () => {
+      it('returns trimmed submitted search queries', () => {
+        expect(getSubmittedSearchQuery({ value: '  alpha  ' })).toBe('alpha');
+        expect(getSubmittedSearchQuery(null)).toBe('');
+      });
+
+      it('collects newtab DOM elements by their expected ids', () => {
+        document.body.innerHTML = `
+          <form id="search-form"></form>
+          <input id="search-input">
+          <button id="hero-sign-in-btn"></button>
+          <div id="favorites-section"></div>
+          <div id="hero-version-indicator"></div>
+        `;
+
+        const elements = getNewtabElements(document);
+
+        expect(elements.searchForm?.id).toBe('search-form');
+        expect(elements.searchInput?.id).toBe('search-input');
+        expect(elements.signInBtn?.id).toBe('hero-sign-in-btn');
+        expect(elements.favoritesSection?.id).toBe('favorites-section');
+        expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
+      });
+
+      it('binds search and auth event handlers', () => {
+        document.body.innerHTML = `
+          <form id="search-form"></form>
+          <input id="search-input" value="  alpha  ">
+          <button id="hero-sign-in-btn"></button>
+          <button id="hero-user-avatar-btn"></button>
+          <button id="hero-sign-out-btn"></button>
+        `;
+        const elements = getNewtabElements(document);
+        const drawerController = { open: vi.fn() };
+        const authController = {
+          handleSignIn: vi.fn(),
+          handleSignOut: vi.fn(),
+          hideDropdownForOutsideClick: vi.fn(),
+          toggleUserDropdown: vi.fn()
+        };
+
+        bindNewtabEventHandlers({
+          elements,
+          authController,
+          drawerController,
+          documentObj: document
+        });
+
+        elements.searchForm.dispatchEvent(new Event('submit'));
+        elements.signInBtn.click();
+        elements.userAvatarBtn.click();
+        elements.signOutBtn.click();
+        document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+        expect(drawerController.open).toHaveBeenCalledWith({ searchQuery: 'alpha' });
+        expect(authController.handleSignIn).toHaveBeenCalled();
+        expect(authController.toggleUserDropdown).toHaveBeenCalled();
+        expect(authController.handleSignOut).toHaveBeenCalled();
+        expect(authController.hideDropdownForOutsideClick).toHaveBeenCalledWith(document.body);
+      });
+
+      it('starts the page by initializing controllers and chrome', async () => {
+        const ThemeManager = { init: vi.fn() };
+        const updateVersionIndicator = vi.fn();
+        const favoritesController = {
+          init: vi.fn(),
+          load: vi.fn()
+        };
+        const drawerController = {
+          init: vi.fn(),
+          loadSummary: vi.fn()
+        };
+        const authController = {
+          init: vi.fn().mockResolvedValue(undefined)
+        };
+
+        await startNewtabPage({
+          ThemeManager,
+          versionNumberEl: { id: 'version' },
+          updateVersionIndicator,
+          favoritesController,
+          drawerController,
+          authController
+        });
+
+        expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
+        expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
+        expect(favoritesController.init).toHaveBeenCalled();
+        expect(drawerController.init).toHaveBeenCalled();
+        expect(favoritesController.load).toHaveBeenCalled();
+        expect(drawerController.loadSummary).toHaveBeenCalled();
+        expect(authController.init).toHaveBeenCalled();
       });
     });
 
