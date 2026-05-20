@@ -5,6 +5,37 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.14] - 2026-05-20
+
+### 📝 Other Improvements
+
+- fix standalone newtab bootstrap (701c348)
+- harden dom render helper (60da2aa)
+- harden favorites rendering (d30e900)
+- harden search results rendering (e36fb03)
+- harden renderer html updates (893bf14)
+- refactor drawer runtime (ff51774)
+- refactor drawer sync observers (336753f)
+- refactor drawer sync lifecycle (cdcbdd6)
+- refactor drawer coordination (489c40c)
+- refactor newtab app coordination (338f538)
+- refactor newtab app factory (047eef4)
+- refactor project manager controller (ec747e2)
+- refactor project manager ui (0ff1f01)
+- refactor newtab page wiring (f1978ba)
+- refactor project manager actions (7e4bbb4)
+- refactor project manager renderer (7a03dd0)
+- refactor project manager state (4cbe51e)
+- refactor newtab drawer barrel (9c50d71)
+- refactor newtab drawer ui (b21c0f6)
+- refactor newtab drawer shell (caaff3a)
+- refactor newtab drawer state (2f96f12)
+- refactor newtab drawer view (e052b03)
+- refactor newtab drawer data (eafb2dd)
+- refactor newtab drawer sync (91fad11)
+- refactor newtab drawer events (75d732c)
+- refactor newtab drawer rendering (3179915)
+
 ## [1.10.13] - 2026-05-19
 
 ### 📝 Other Improvements
@@ -69,13 +100,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cache projects and drawer refreshes (13fd7d8)
 
 ## [1.10.5] - 2026-05-13
-
-### 📝 Other Improvements
-
-- Refactor favorites into local store (7a410f9)
-- Fix Chrome publish workflow install (4750d8e)
-
-## [1.10.4] - 2026-05-12
 
 ### ✨ Features
 
@@ -264,6 +288,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Refactor favorites into local store (7a410f9)
+- Fix Chrome publish workflow install (4750d8e)
 - Approve required pnpm build scripts (7b7028f)
 - Use public Firebase web-extension exports (8950da8)
 - Match drawer search to list payload (464f973)
