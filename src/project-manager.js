@@ -1,5 +1,18 @@
 // project-manager.js - Saved pages project navigation and membership UI
 
+import {
+  adjustProjectCount,
+  getCompanyDomain,
+  getProjectMap,
+  getProjectPills,
+  getProjectsUnavailableMessage,
+  getScopedPages,
+  getSelectedProject,
+  getStatsTotal,
+  isProjectsUnavailable,
+  refreshProjectCounts
+} from './project-manager-state.js';
+
 class ProjectManager {
   constructor(api, htmlUtils) {
     this.api = api;
@@ -37,12 +50,11 @@ class ProjectManager {
   }
 
   isProjectsUnavailable(dashboard) {
-    return dashboard.projectsAvailable === false;
+    return isProjectsUnavailable(dashboard);
   }
 
   getProjectsUnavailableMessage(dashboard) {
-    return dashboard.projectsUnavailableMessage ||
-      'Project collections are not supported by the connected backend yet.';
+    return getProjectsUnavailableMessage(dashboard);
   }
 
   async loadProjects(dashboard) {
@@ -101,67 +113,31 @@ class ProjectManager {
   }
 
   getSelectedProject(dashboard) {
-    return dashboard.projects.find(project => project.id === dashboard.selectedProjectId) || null;
+    return getSelectedProject(dashboard);
   }
 
   getScopedPages(dashboard, pages) {
-    if (!dashboard.selectedProjectId) {
-      return [...pages];
-    }
-
-    return pages.filter(page => page.project_ids?.includes(dashboard.selectedProjectId));
+    return getScopedPages(dashboard, pages);
   }
 
   refreshProjectCounts(dashboard) {
-    const activeProjects = dashboard.projects || [];
-    const computedCounts = new Map(
-      dashboard.allPages.reduce((counts, page) => {
-        (page.project_ids || []).forEach(projectId => {
-          counts.set(projectId, (counts.get(projectId) || 0) + 1);
-        });
-        return counts;
-      }, new Map())
-    );
-
-    dashboard.projects = activeProjects.map(project => ({
-      ...project,
-      page_count: typeof project.page_count === 'number'
-        ? project.page_count
-        : (computedCounts.get(project.id) || 0)
-    }));
+    refreshProjectCounts(dashboard);
   }
 
   adjustProjectCount(dashboard, projectId, delta) {
-    dashboard.projects = (dashboard.projects || []).map(project => {
-      if (project.id !== projectId) {
-        return project;
-      }
-
-      const currentCount = typeof project.page_count === 'number' ? project.page_count : 0;
-      return {
-        ...project,
-        page_count: Math.max(0, currentCount + delta)
-      };
-    });
+    adjustProjectCount(dashboard, projectId, delta);
   }
 
   getStatsTotal(dashboard) {
-    if (dashboard.selectedProjectId) {
-      return this.getScopedPages(dashboard, dashboard.allPages).length;
-    }
-
-    return typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null;
+    return getStatsTotal(dashboard);
   }
 
   getProjectMap(dashboard) {
-    return Object.fromEntries((dashboard.projects || []).map(project => [project.id, project]));
+    return getProjectMap(dashboard);
   }
 
   getProjectPills(page, dashboard) {
-    const projectMap = this.getProjectMap(dashboard);
-    return (page.project_ids || [])
-      .map(projectId => projectMap[projectId])
-      .filter(Boolean);
+    return getProjectPills(page, dashboard);
   }
 
   renderSidebar(dashboard) {
@@ -589,12 +565,7 @@ class ProjectManager {
   }
 
   getCompanyDomain(dashboard) {
-    const currentUser = dashboard.getCurrentUser();
-    if (currentUser?.email?.includes('@')) {
-      return currentUser.email.split('@')[1];
-    }
-
-    return 'airteam.com.au';
+    return getCompanyDomain(dashboard);
   }
 }
 
