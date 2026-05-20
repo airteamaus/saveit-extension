@@ -14,8 +14,12 @@ import {
   startNewtabPage
 } from './newtab-page.js';
 import {
+  createFavoritesRefreshHandler,
+  createNewtabAuthLifecycle,
+  createSavedPagesFooterUpdater
+} from './newtab-app-coordination.js';
+import {
   escapeHtml,
-  updateStatsDisplay,
   updateVersionIndicator
 } from './newtab-shared.js';
 
@@ -74,10 +78,12 @@ export function createNewtabApp({
     createProjectsStoreFn = createProjectsStore,
     createSavedPagesDrawerControllerFn = createSavedPagesDrawerController,
     createSavedPagesStoreFn = createSavedPagesStore,
+    createFavoritesRefreshHandlerFn = createFavoritesRefreshHandler,
+    createNewtabAuthLifecycleFn = createNewtabAuthLifecycle,
+    createSavedPagesFooterUpdaterFn = createSavedPagesFooterUpdater,
     escapeHtmlFn = escapeHtml,
     getNewtabElementsFn = getNewtabElements,
     startNewtabPageFn = startNewtabPage,
-    updateStatsDisplayFn = updateStatsDisplay,
     updateVersionIndicatorFn = updateVersionIndicator
   } = dependencies;
 
@@ -87,17 +93,14 @@ export function createNewtabApp({
   const savedPagesStore = createSavedPagesStoreFn(API);
   const projectsStore = createProjectsStoreFn(API);
 
-  function updateSavedPagesFooter(total) {
-    updateStatsDisplayFn(
-      elements.versionIndicator,
-      typeof total === 'number' ? { total } : null
-    );
-  }
-
   const favoritesController = createFavoritesControllerFn({
     store: favoritesStore,
     elements: getFavoritesControllerElements(elements)
   });
+  const updateSavedPagesFooter = createSavedPagesFooterUpdaterFn({
+    versionIndicator: elements.versionIndicator
+  });
+  const refreshFavorites = createFavoritesRefreshHandlerFn(favoritesController);
   const drawerController = createSavedPagesDrawerControllerFn({
     api: API,
     savedPagesStore,
@@ -105,24 +108,18 @@ export function createNewtabApp({
     projectManager,
     elements: getDrawerControllerElements(elements),
     onSavedPagesTotalChange: updateSavedPagesFooter,
-    refreshFavorites: () => {
-      void favoritesController.load();
-    }
+    refreshFavorites
+  });
+  const authLifecycle = createNewtabAuthLifecycleFn({
+    favoritesController,
+    drawerController
   });
   const authController = createNewtabAuthControllerFn({
     API,
     AuthMenu,
     elements: getAuthControllerElements(elements),
-    onSignedIn: async () => {
-      await Promise.all([
-        favoritesController.load(),
-        drawerController.handleSignedIn()
-      ]);
-    },
-    onSignedOut: async () => {
-      favoritesController.reset();
-      drawerController.handleSignedOut();
-    }
+    onSignedIn: authLifecycle.onSignedIn,
+    onSignedOut: authLifecycle.onSignedOut
   });
 
   return {

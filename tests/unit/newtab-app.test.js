@@ -86,6 +86,20 @@ describe('newtab app factory', () => {
     };
     const authController = { id: 'auth-controller' };
     const bindNewtabEventHandlersFn = vi.fn();
+    const createFavoritesRefreshHandlerFn = vi.fn(favoritesControllerArg => () => favoritesControllerArg.load());
+    const createNewtabAuthLifecycleFn = vi.fn(({ favoritesController: fc, drawerController: dc }) => ({
+      onSignedIn: () => Promise.all([fc.load(), dc.handleSignedIn()]),
+      onSignedOut: () => {
+        fc.reset();
+        dc.handleSignedOut();
+      }
+    }));
+    const createSavedPagesFooterUpdaterFn = vi.fn(({ versionIndicator }) => total => {
+      updateStatsDisplayFn(
+        versionIndicator,
+        typeof total === 'number' ? { total } : null
+      );
+    });
     const startNewtabPageFn = vi.fn().mockResolvedValue(undefined);
     const updateStatsDisplayFn = vi.fn();
     const updateVersionIndicatorFn = vi.fn();
@@ -109,14 +123,16 @@ describe('newtab app factory', () => {
         bindNewtabEventHandlersFn,
         createFavoritesControllerFn,
         createFavoritesStoreFn: vi.fn(() => favoritesStore),
+        createFavoritesRefreshHandlerFn,
         createNewtabAuthControllerFn,
+        createNewtabAuthLifecycleFn,
         createProjectsStoreFn: vi.fn(() => projectsStore),
+        createSavedPagesFooterUpdaterFn,
         createSavedPagesDrawerControllerFn,
         createSavedPagesStoreFn: vi.fn(() => savedPagesStore),
         escapeHtmlFn: vi.fn(value => value),
         getNewtabElementsFn: vi.fn(() => elements),
         startNewtabPageFn,
-        updateStatsDisplayFn,
         updateVersionIndicatorFn
       }
     });
@@ -125,7 +141,15 @@ describe('newtab app factory', () => {
       store: favoritesStore,
       elements: {}
     });
+    expect(createSavedPagesFooterUpdaterFn).toHaveBeenCalledWith({
+      versionIndicator: elements.versionIndicator
+    });
+    expect(createFavoritesRefreshHandlerFn).toHaveBeenCalledWith(favoritesController);
     expect(createSavedPagesDrawerControllerFn).toHaveBeenCalledTimes(1);
+    expect(createNewtabAuthLifecycleFn).toHaveBeenCalledWith({
+      favoritesController,
+      drawerController
+    });
     expect(createNewtabAuthControllerFn).toHaveBeenCalledTimes(1);
 
     const drawerOptions = createSavedPagesDrawerControllerFn.mock.calls[0][0];
