@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 import {
+  applyDrawerFilters as applySavedPagesDrawerFilters,
+  getDrawerSearchableText,
+  syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore
+} from '../../src/newtab-drawer-state.js';
+import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
@@ -12,7 +17,6 @@ import {
   applyAuthUI,
   getUserFacingSignInErrorMessage
 } from '../../src/newtab-auth.js';
-import { getDrawerSearchableText } from '../../src/newtab-drawer.js';
 import { getFavoritesLayout } from '../../src/newtab-favorites.js';
 import {
   getFaviconUrl,
@@ -89,6 +93,96 @@ describe('newtab modules', () => {
       expect(searchable).toContain('useful summary');
       expect(searchable).toContain('bookmarks');
       expect(searchable).toContain('research');
+    });
+  });
+
+  describe('drawer state helpers', () => {
+    it('filters pages within the selected project scope', () => {
+      const state = {
+        query: '',
+        currentFilter: {
+          search: '',
+          projectId: 'project-1',
+          cursor: null
+        },
+        selectedProjectId: 'project-1',
+        allItemsTotal: 3,
+        allPages: [
+          { id: 'page-1', title: 'Alpha note', project_ids: ['project-1'] },
+          { id: 'page-2', title: 'Alpha elsewhere', project_ids: ['project-2'] },
+          { id: 'page-3', title: 'Beta note', project_ids: ['project-1'] }
+        ],
+        pages: [],
+        total: null
+      };
+      const projectManager = {
+        getScopedPages: vi.fn((dashboard, pages) => pages.filter(page => (
+          page.project_ids?.includes(dashboard.selectedProjectId)
+        )))
+      };
+      const savedPagesView = {
+        get selectedProjectId() {
+          return state.selectedProjectId;
+        }
+      };
+
+      applySavedPagesDrawerFilters({
+        state,
+        projectManager,
+        savedPagesView,
+        query: 'alpha'
+      });
+
+      expect(projectManager.getScopedPages).toHaveBeenCalled();
+      expect(state.currentFilter.search).toBe('alpha');
+      expect(state.total).toBe(2);
+      expect(state.pages.map(page => page.id)).toEqual(['page-1']);
+    });
+
+    it('syncs store snapshots into drawer state and triggers a render', () => {
+      const state = {
+        query: '',
+        currentFilter: {
+          search: '',
+          projectId: null,
+          cursor: null
+        },
+        selectedProjectId: null,
+        allPages: [],
+        pages: [],
+        total: null,
+        allItemsTotal: null,
+        hasInitialized: true
+      };
+      const applyDrawerFilters = vi.fn(query => {
+        state.query = query;
+        state.pages = [...state.allPages];
+      });
+      const renderDrawerResults = vi.fn();
+      const projectManager = {
+        refreshProjectCounts: vi.fn()
+      };
+
+      syncSavedPagesDrawerStateFromStore({
+        snapshot: {
+          allPages: [{ id: 'page-1' }, { id: 'page-2' }],
+          total: 12
+        },
+        state,
+        savedPagesView: {},
+        projectManager,
+        applyDrawerFilters,
+        renderDrawerResults,
+        query: 'alpha',
+        render: true
+      });
+
+      expect(state.allPages.map(page => page.id)).toEqual(['page-1', 'page-2']);
+      expect(state.total).toBe(12);
+      expect(state.allItemsTotal).toBe(12);
+      expect(projectManager.refreshProjectCounts).toHaveBeenCalled();
+      expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
+      expect(renderDrawerResults).toHaveBeenCalled();
     });
   });
 

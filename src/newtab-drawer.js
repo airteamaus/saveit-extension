@@ -4,6 +4,12 @@ import { createDrawerDataController } from './newtab-drawer-data.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
+import {
+  applyDrawerFilters as applySavedPagesDrawerFilters,
+  createInitialDrawerState,
+  syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore,
+  syncProjectsStateFromStore as syncSavedPagesDrawerProjectsStateFromStore
+} from './newtab-drawer-state.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
 
 const SAVED_PAGES_DRAWER_PARAM = 'drawer';
@@ -16,33 +22,6 @@ const DRAWER_WARM_CACHE_SCOPE = {
   limit: 'all'
 };
 
-function createInitialDrawerState() {
-  return {
-    hasInitialized: false,
-    isLoading: false,
-    query: '',
-    currentFilter: {
-      search: '',
-      projectId: null,
-      cursor: null
-    },
-    pages: [],
-    allPages: [],
-    projects: [],
-    projectsLoading: false,
-    projectsAvailable: true,
-    projectsUnavailableMessage: '',
-    selectedProjectId: null,
-    projectEditorState: {
-      pageId: null,
-      query: ''
-    },
-    total: null,
-    allItemsTotal: null,
-    requestId: 0
-  };
-}
-
 export function createSavedPagesStore(api) {
   return new SavedPagesStore(api, {
     initialFetchLimit: DRAWER_INITIAL_FETCH_LIMIT,
@@ -53,24 +32,6 @@ export function createSavedPagesStore(api) {
 
 export function createProjectsStore(api) {
   return new ProjectsStore(api);
-}
-
-export function getDrawerSearchableText(page = {}) {
-  const fields = [
-    page.title,
-    page.url,
-    page.domain,
-    page.description,
-    page.ai_summary_brief,
-    page.primary_classification_label,
-    ...(page.manual_tags || []),
-    ...(page.classifications || []).map(classification => classification.label)
-  ];
-
-  return fields
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
 }
 
 export function createSavedPagesDrawerController({
@@ -163,22 +124,12 @@ export function createSavedPagesDrawerController({
   }
 
   function applyDrawerFilters(query = state.query) {
-    const trimmedQuery = query.trim();
-    state.query = trimmedQuery;
-    state.currentFilter.search = trimmedQuery;
-
-    const scopedPages = projectManager.getScopedPages(savedPagesView, state.allPages);
-    state.total = state.selectedProjectId
-      ? scopedPages.length
-      : (typeof state.allItemsTotal === 'number' ? state.allItemsTotal : null);
-
-    if (!trimmedQuery) {
-      state.pages = [...scopedPages];
-      return;
-    }
-
-    const loweredQuery = trimmedQuery.toLowerCase();
-    state.pages = scopedPages.filter(page => getDrawerSearchableText(page).includes(loweredQuery));
+    applySavedPagesDrawerFilters({
+      state,
+      projectManager,
+      savedPagesView,
+      query
+    });
   }
 
   function renderProjectSidebar() {
@@ -276,28 +227,27 @@ export function createSavedPagesDrawerController({
   }
 
   function syncDrawerStateFromStore(snapshot, { query = state.query, render = state.hasInitialized } = {}) {
-    state.allPages = snapshot.allPages || [];
-    state.total = typeof snapshot.total === 'number' ? snapshot.total : state.allPages.length;
-    if (!state.selectedProjectId) {
-      state.allItemsTotal = state.total;
-    }
-    projectManager.refreshProjectCounts(savedPagesView);
-    applyDrawerFilters(query);
-
-    if (render) {
-      renderDrawerResults();
-    }
+    syncSavedPagesDrawerStateFromStore({
+      snapshot,
+      state,
+      savedPagesView,
+      projectManager,
+      applyDrawerFilters,
+      renderDrawerResults,
+      query,
+      render
+    });
   }
 
   function syncProjectsStateFromStore(snapshot, { render = state.hasInitialized } = {}) {
-    state.projects = snapshot.projects || snapshot.allPages || [];
-    state.projectsAvailable = true;
-    state.projectsUnavailableMessage = '';
-    projectManager.refreshProjectCounts(savedPagesView);
-
-    if (render) {
-      renderDrawerChrome();
-    }
+    syncSavedPagesDrawerProjectsStateFromStore({
+      snapshot,
+      state,
+      savedPagesView,
+      projectManager,
+      renderDrawerChrome,
+      render
+    });
   }
 
   dataController = createDrawerDataController({
