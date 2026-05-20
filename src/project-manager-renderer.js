@@ -1,3 +1,5 @@
+import { replaceElementHtml } from './dom-render.js';
+
 export function getProjectActionIcon(action) {
   if (action === 'rename') {
     return `
@@ -40,7 +42,7 @@ export function renderProjectSidebar(container, {
   }
 
   if (isProjectsUnavailable(dashboard)) {
-    container.innerHTML = `
+    replaceElementHtml(container, `
       <div class="project-sidebar-header">
         <div>
           <p class="project-sidebar-eyebrow">Projects</p>
@@ -48,12 +50,12 @@ export function renderProjectSidebar(container, {
         </div>
       </div>
       <p class="project-sidebar-empty">${htmlUtils.escapeHtml(getProjectsUnavailableMessage(dashboard))}</p>
-    `;
+    `);
     return;
   }
 
   if (dashboard.projectsLoading) {
-    container.innerHTML = `
+    replaceElementHtml(container, `
       <div class="project-sidebar-header">
         <div>
           <p class="project-sidebar-eyebrow">Projects</p>
@@ -62,7 +64,7 @@ export function renderProjectSidebar(container, {
         <button class="project-sidebar-create" type="button" disabled>New</button>
       </div>
       <p class="project-sidebar-empty">Loading projects...</p>
-    `;
+    `);
     return;
   }
 
@@ -113,7 +115,7 @@ export function renderProjectSidebar(container, {
     })
     .join('');
 
-  container.innerHTML = `
+  replaceElementHtml(container, `
     <div class="project-sidebar-header">
       <div>
         <p class="project-sidebar-eyebrow">Projects</p>
@@ -138,7 +140,7 @@ export function renderProjectSidebar(container, {
       <div class="project-nav-section-label">My projects</div>
       ${projectRows || '<p class="project-sidebar-empty">No projects yet. Create one to group related pages.</p>'}
     </div>
-  `;
+  `);
 }
 
 export function renderProjectEditor(backdrop, dialog, {
@@ -156,7 +158,7 @@ export function renderProjectEditor(backdrop, dialog, {
   if (isProjectsUnavailable(dashboard)) {
     backdrop.classList.remove('hidden');
     dialog.classList.remove('hidden');
-    dialog.innerHTML = `
+    replaceElementHtml(dialog, `
       <div class="project-editor-header">
         <div>
           <p class="project-editor-eyebrow">Page projects</p>
@@ -165,7 +167,7 @@ export function renderProjectEditor(backdrop, dialog, {
         <button class="project-editor-close" type="button" aria-label="Close project editor">Close</button>
       </div>
       <p class="project-editor-empty">${htmlUtils.escapeHtml(getProjectsUnavailableMessage(dashboard))}</p>
-    `;
+    `);
     return;
   }
 
@@ -173,7 +175,7 @@ export function renderProjectEditor(backdrop, dialog, {
   if (!pageId) {
     backdrop.classList.add('hidden');
     dialog.classList.add('hidden');
-    dialog.innerHTML = '';
+    dialog.replaceChildren();
     return;
   }
 
@@ -225,7 +227,7 @@ export function renderProjectEditor(backdrop, dialog, {
     `
     : '';
 
-  dialog.innerHTML = `
+  replaceElementHtml(dialog, `
     <div class="project-editor-header">
       <div>
         <p class="project-editor-eyebrow">Page projects</p>
@@ -257,7 +259,7 @@ export function renderProjectEditor(backdrop, dialog, {
     <div class="project-editor-list">
       ${projectOptions}
     </div>
-  `;
+  `);
 
   backdrop.classList.remove('hidden');
   dialog.classList.remove('hidden');

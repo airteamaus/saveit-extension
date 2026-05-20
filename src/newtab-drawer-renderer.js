@@ -1,3 +1,7 @@
+import {
+  createElementFromHtml,
+  replaceElementHtml
+} from './dom-render.js';
 import { reconcileKeyedChildren } from './keyed-dom-list.js';
 import {
   escapeHtml,
@@ -127,12 +131,10 @@ export function createDrawerRenderer({
   getProjectScopeLabel
 }) {
   function createDrawerCardElement(page) {
-    const wrapper = documentObj.createElement('div');
-    wrapper.innerHTML = renderDrawerCardMarkup(page, {
+    return createElementFromHtml(renderDrawerCardMarkup(page, {
       getProjectPills,
       projectsUnavailable: isProjectsUnavailable()
-    }).trim();
-    return wrapper.firstElementChild;
+    }), documentObj);
   }
 
   function getDrawerCardElement(pageId) {
@@ -145,9 +147,7 @@ export function createDrawerRenderer({
   }
 
   function renderDrawerState(html) {
-    if (resultsContainer) {
-      resultsContainer.innerHTML = html;
-    }
+    replaceElementHtml(resultsContainer, html);
     renderChrome();
   }
 
