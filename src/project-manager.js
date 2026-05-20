@@ -14,21 +14,27 @@ import {
 } from './project-manager-state.js';
 import {
   getProjectActionIcon,
-  renderProjectEditor,
-  renderProjectSidebar
 } from './project-manager-renderer.js';
 import { createProjectManagerActions } from './project-manager-actions.js';
+import { createProjectManagerUi } from './project-manager-ui.js';
 
 class ProjectManager {
   constructor(api, htmlUtils) {
     this.api = api;
     this.htmlUtils = htmlUtils;
+    this.ui = createProjectManagerUi({
+      htmlUtils,
+      isProjectsUnavailable: dashboard => this.isProjectsUnavailable(dashboard),
+      getProjectsUnavailableMessage: dashboard => this.getProjectsUnavailableMessage(dashboard),
+      getSelectedProject: dashboard => this.getSelectedProject(dashboard),
+      getProjectPills: (page, dashboard) => this.getProjectPills(page, dashboard)
+    });
     this.actions = createProjectManagerActions({
       api,
       refreshProjectCounts: dashboard => this.refreshProjectCounts(dashboard),
       adjustProjectCount: (dashboard, projectId, delta) => this.adjustProjectCount(dashboard, projectId, delta),
-      renderEditor: dashboard => this.renderEditor(dashboard),
-      closeEditor: dashboard => this.closeEditor(dashboard),
+      renderEditor: dashboard => this.ui.renderEditor(dashboard),
+      closeEditor: dashboard => this.ui.closeEditor(dashboard),
       getCompanyDomain: dashboard => this.getCompanyDomain(dashboard),
       isProjectsUnavailable: dashboard => this.isProjectsUnavailable(dashboard),
       getProjectsUnavailableMessage: dashboard => this.getProjectsUnavailableMessage(dashboard)
@@ -80,63 +86,23 @@ class ProjectManager {
   }
 
   renderSidebar(dashboard) {
-    const container = document.getElementById('project-sidebar');
-    renderProjectSidebar(container, {
-      dashboard,
-      htmlUtils: this.htmlUtils,
-      isProjectsUnavailable: currentDashboard => this.isProjectsUnavailable(currentDashboard),
-      getProjectsUnavailableMessage: currentDashboard => this.getProjectsUnavailableMessage(currentDashboard),
-      getSelectedProject: currentDashboard => this.getSelectedProject(currentDashboard)
-    });
+    this.ui.renderSidebar(dashboard);
   }
 
   renderEditor(dashboard) {
-    const backdrop = document.getElementById('project-editor-backdrop');
-    const dialog = document.getElementById('project-editor-dialog');
-    renderProjectEditor(backdrop, dialog, {
-      dashboard,
-      htmlUtils: this.htmlUtils,
-      isProjectsUnavailable: currentDashboard => this.isProjectsUnavailable(currentDashboard),
-      getProjectsUnavailableMessage: currentDashboard => this.getProjectsUnavailableMessage(currentDashboard),
-      getProjectPills: (page, currentDashboard) => this.getProjectPills(page, currentDashboard),
-      onMissingPage: () => this.closeEditor(dashboard)
-    });
+    this.ui.renderEditor(dashboard);
   }
 
   openEditor(dashboard, pageId) {
-    if (this.isProjectsUnavailable(dashboard)) {
-      alert(this.getProjectsUnavailableMessage(dashboard));
-      return;
-    }
-
-    dashboard.projectEditorState = {
-      pageId,
-      query: ''
-    };
-    this.renderEditor(dashboard);
-    const input = document.getElementById('project-editor-search-input');
-    input?.focus();
+    this.ui.openEditor(dashboard, pageId);
   }
 
   closeEditor(dashboard) {
-    dashboard.projectEditorState = {
-      pageId: null,
-      query: ''
-    };
-    this.renderEditor(dashboard);
+    this.ui.closeEditor(dashboard);
   }
 
   updateEditorQuery(dashboard, query) {
-    dashboard.projectEditorState = {
-      ...(dashboard.projectEditorState || {}),
-      query
-    };
-    this.renderEditor(dashboard);
-    const input = document.getElementById('project-editor-search-input');
-    if (input) {
-      input.focus();
-      input.setSelectionRange(query.length, query.length);
-    }
+    this.ui.updateEditorQuery(dashboard, query);
   }
 
   async promptCreateProject(dashboard, initialName = '', autoAssignPageId = null) {
