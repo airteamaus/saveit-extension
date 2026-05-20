@@ -3,6 +3,7 @@ import { SavedPagesStore } from './saved-pages-store.js';
 import { createDrawerDataController } from './newtab-drawer-data.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
+import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
 import {
   applyDrawerFilters as applySavedPagesDrawerFilters,
@@ -61,6 +62,7 @@ export function createSavedPagesDrawerController({
 
   const state = createInitialDrawerState();
   let suppressSavedPagesStoreSync = false;
+  let dataController;
 
   function notifySavedPagesTotalChange() {
     const snapshot = savedPagesStore.getSnapshot();
@@ -71,48 +73,7 @@ export function createSavedPagesDrawerController({
     return windowObj.firebaseAuth?.currentUser || null;
   }
 
-  function isDrawerOpen() {
-    return Boolean(savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden'));
-  }
-
-  function getSearchQuery() {
-    return savedPagesDrawerSearchInput?.value || state.query;
-  }
-
-  function updateDrawerUrl(isOpen, searchQuery = '') {
-    const url = new URL(windowObj.location.href);
-    if (isOpen) {
-      url.searchParams.set(SAVED_PAGES_DRAWER_PARAM, SAVED_PAGES_DRAWER_VALUE);
-      if (searchQuery.trim()) {
-        url.searchParams.set('search', searchQuery.trim());
-      } else {
-        url.searchParams.delete('search');
-      }
-    } else {
-      url.searchParams.delete(SAVED_PAGES_DRAWER_PARAM);
-      url.searchParams.delete('search');
-    }
-
-    windowObj.history.replaceState({}, '', url);
-  }
-
-  function setDrawerToggleState(isOpen) {
-    if (!savedPagesToggleBtn) return;
-
-    savedPagesToggleBtn.setAttribute('aria-expanded', String(isOpen));
-    savedPagesToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
-    savedPagesToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
-    savedPagesToggleBtn.classList.toggle('is-active', isOpen);
-  }
-
-  function setDrawerSearchValue(query = '') {
-    if (!savedPagesDrawerSearchInput || !savedPagesDrawerClearBtn) return;
-
-    savedPagesDrawerSearchInput.value = query;
-    savedPagesDrawerClearBtn.classList.toggle('hidden', !query.trim());
-  }
-
-  let dataController;
+  let shellController;
 
   function getDrawerProjectPills(page) {
     return projectManager.getProjectPills(page, savedPagesView);
@@ -154,20 +115,6 @@ export function createSavedPagesDrawerController({
     getProjectScopeLabel
   });
 
-  function navigateDrawerCard(card, event = {}) {
-    const url = card?.dataset?.url;
-    if (!url) {
-      return;
-    }
-
-    if (event.metaKey || event.ctrlKey || event.button === 1) {
-      windowObj.open(url, '_blank', 'noopener');
-      return;
-    }
-
-    windowObj.location.assign(url);
-  }
-
   function refreshDrawerCard(pageId) {
     drawerRenderer.refreshCard(pageId, state.pages, state.query, {
       onMissingPage: () => {
@@ -177,6 +124,20 @@ export function createSavedPagesDrawerController({
       }
     });
   }
+
+  shellController = createDrawerShellController({
+    state,
+    savedPagesToggleBtn,
+    savedPagesDrawer,
+    savedPagesDrawerSearchInput,
+    savedPagesDrawerClearBtn,
+    getDataController: () => dataController,
+    renderDrawerResults,
+    drawerParam: SAVED_PAGES_DRAWER_PARAM,
+    drawerValue: SAVED_PAGES_DRAWER_VALUE,
+    windowObj,
+    documentObj
+  });
 
   const savedPagesView = createSavedPagesView({
     state,
@@ -258,9 +219,9 @@ export function createSavedPagesDrawerController({
     projectManager,
     savedPagesView,
     getCurrentUser,
-    isDrawerOpen,
-    setDrawerSearchValue,
-    updateDrawerUrl,
+    isDrawerOpen: shellController.isDrawerOpen,
+    setDrawerSearchValue: shellController.setDrawerSearchValue,
+    updateDrawerUrl: shellController.updateDrawerUrl,
     renderDrawerLoadingState,
     renderDrawerErrorState,
     renderDrawerSignInState,
@@ -271,41 +232,6 @@ export function createSavedPagesDrawerController({
     windowObj,
     projectFetchLimit: 100
   });
-
-  function openSavedPagesDrawer({ syncUrl = true, searchQuery = '' } = {}) {
-    if (!savedPagesDrawer) return;
-
-    setDrawerSearchValue(searchQuery);
-    savedPagesDrawer.classList.remove('hidden');
-    savedPagesDrawer.setAttribute('aria-hidden', 'false');
-    documentObj.body.classList.add('saved-pages-drawer-open');
-    setDrawerToggleState(true);
-
-    if (syncUrl) {
-      updateDrawerUrl(true, searchQuery);
-    }
-
-    if (!state.hasInitialized) {
-      void dataController.loadDrawerBasePages({ query: searchQuery, syncUrl: false });
-    } else if (state.query !== searchQuery.trim()) {
-      void dataController.loadDrawerResults(searchQuery, { syncUrl: false });
-    } else {
-      renderDrawerResults();
-    }
-  }
-
-  function closeSavedPagesDrawer({ syncUrl = true } = {}) {
-    if (!savedPagesDrawer) return;
-
-    savedPagesDrawer.classList.add('hidden');
-    savedPagesDrawer.setAttribute('aria-hidden', 'true');
-    documentObj.body.classList.remove('saved-pages-drawer-open');
-    setDrawerToggleState(false);
-
-    if (syncUrl) {
-      updateDrawerUrl(false);
-    }
-  }
 
   function initDrawerEventHandlers() {
     initSavedPagesDrawerEvents({
@@ -322,15 +248,15 @@ export function createSavedPagesDrawerController({
       projectEditorDialog,
       projectManager,
       savedPagesView,
-      openSavedPagesDrawer,
-      closeSavedPagesDrawer,
+      openSavedPagesDrawer: shellController.openSavedPagesDrawer,
+      closeSavedPagesDrawer: shellController.closeSavedPagesDrawer,
       loadDrawerResults: dataController.loadDrawerResults,
-      navigateDrawerCard,
+      navigateDrawerCard: shellController.navigateDrawerCard,
       handleDrawerPin: dataController.handleDrawerPin,
       handleDrawerDelete: dataController.handleDrawerDelete,
-      setDrawerSearchValue,
-      setDrawerToggleState,
-      isDrawerOpen,
+      setDrawerSearchValue: shellController.setDrawerSearchValue,
+      setDrawerToggleState: shellController.setDrawerToggleState,
+      isDrawerOpen: shellController.isDrawerOpen,
       drawerParam: SAVED_PAGES_DRAWER_PARAM,
       drawerValue: SAVED_PAGES_DRAWER_VALUE,
       windowObj,
@@ -344,8 +270,8 @@ export function createSavedPagesDrawerController({
     savedPagesStore,
     projectsStore,
     getCurrentUser,
-    isDrawerOpen,
-    getSearchQuery,
+    isDrawerOpen: shellController.isDrawerOpen,
+    getSearchQuery: shellController.getSearchQuery,
     notifySavedPagesTotalChange,
     refreshFavorites,
     syncDrawerStateFromStore,
@@ -370,11 +296,11 @@ export function createSavedPagesDrawerController({
   }
 
   return {
-    close: closeSavedPagesDrawer,
+    close: shellController.closeSavedPagesDrawer,
     handleSignedIn: syncCoordinator.handleSignedIn,
     handleSignedOut: syncCoordinator.handleSignedOut,
     init,
     loadSummary: syncCoordinator.loadSummary,
-    open: openSavedPagesDrawer
+    open: shellController.openSavedPagesDrawer
   };
 }

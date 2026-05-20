@@ -6,6 +6,11 @@ import {
   syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore
 } from '../../src/newtab-drawer-state.js';
 import {
+  createDrawerShellController,
+  getSavedPagesDrawerUrl,
+  shouldOpenDrawerCardInNewTab
+} from '../../src/newtab-drawer-shell.js';
+import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
@@ -183,6 +188,81 @@ describe('newtab modules', () => {
       expect(projectManager.refreshProjectCounts).toHaveBeenCalled();
       expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
       expect(renderDrawerResults).toHaveBeenCalled();
+    });
+  });
+
+  describe('drawer shell helpers', () => {
+    it('builds a drawer URL with search when the drawer is open', () => {
+      expect(
+        getSavedPagesDrawerUrl('https://example.com/newtab.html?foo=bar', {
+          isOpen: true,
+          searchQuery: '  alpha  '
+        }).toString()
+      ).toBe('https://example.com/newtab.html?foo=bar&drawer=saved-pages&search=alpha');
+    });
+
+    it('detects new-tab navigation gestures for drawer cards', () => {
+      expect(shouldOpenDrawerCardInNewTab({ metaKey: true })).toBe(true);
+      expect(shouldOpenDrawerCardInNewTab({ ctrlKey: true })).toBe(true);
+      expect(shouldOpenDrawerCardInNewTab({ button: 1 })).toBe(true);
+      expect(shouldOpenDrawerCardInNewTab({})).toBe(false);
+    });
+
+    it('opens the drawer and triggers the initial base-page load', async () => {
+      document.body.innerHTML = `
+        <button id="toggle"></button>
+        <div id="drawer" class="hidden"></div>
+        <input id="search">
+        <button id="clear" class="hidden"></button>
+      `;
+      const savedPagesToggleBtn = document.getElementById('toggle');
+      const savedPagesDrawer = document.getElementById('drawer');
+      const savedPagesDrawerSearchInput = document.getElementById('search');
+      const savedPagesDrawerClearBtn = document.getElementById('clear');
+      const state = {
+        hasInitialized: false,
+        query: ''
+      };
+      const dataController = {
+        loadDrawerBasePages: vi.fn().mockResolvedValue(undefined),
+        loadDrawerResults: vi.fn().mockResolvedValue(undefined)
+      };
+      const windowObj = {
+        location: {
+          href: 'https://example.com/newtab.html'
+        },
+        history: {
+          replaceState: vi.fn()
+        },
+        open: vi.fn()
+      };
+
+      const shellController = createDrawerShellController({
+        state,
+        savedPagesToggleBtn,
+        savedPagesDrawer,
+        savedPagesDrawerSearchInput,
+        savedPagesDrawerClearBtn,
+        getDataController: () => dataController,
+        renderDrawerResults: vi.fn(),
+        windowObj,
+        documentObj: document
+      });
+
+      shellController.openSavedPagesDrawer({ searchQuery: 'alpha' });
+      await Promise.resolve();
+
+      expect(savedPagesDrawer.classList.contains('hidden')).toBe(false);
+      expect(savedPagesDrawer.getAttribute('aria-hidden')).toBe('false');
+      expect(document.body.classList.contains('saved-pages-drawer-open')).toBe(true);
+      expect(savedPagesToggleBtn.getAttribute('aria-expanded')).toBe('true');
+      expect(savedPagesDrawerSearchInput.value).toBe('alpha');
+      expect(savedPagesDrawerClearBtn.classList.contains('hidden')).toBe(false);
+      expect(dataController.loadDrawerBasePages).toHaveBeenCalledWith({
+        query: 'alpha',
+        syncUrl: false
+      });
+      expect(windowObj.history.replaceState).toHaveBeenCalled();
     });
   });
 
