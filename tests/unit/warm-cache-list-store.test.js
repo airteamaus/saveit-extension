@@ -189,6 +189,53 @@ describe('WarmCacheListStore', () => {
     expect(store.getSnapshot().allPages).toEqual(cachedPages);
   });
 
+  it('prefetches the remaining pages when the initial API cache slice is partial but not stale', async () => {
+    const firstBatch = makePages(36);
+    const secondBatch = makePages(54, 37);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: firstBatch,
+        pagination: {
+          total: 90,
+          hasNextPage: true,
+          nextCursor: 'page-36'
+        },
+        meta: {
+          fromCache: true
+        }
+      })
+      .mockResolvedValueOnce({
+        pages: secondBatch,
+        pagination: {
+          total: 90,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        meta: {
+          fromCache: false
+        }
+      });
+    const { store } = createStore({
+      getList
+    }, {
+      initialFetchLimit: 36,
+      prefetchBatchLimit: 100,
+      checkForUpdates: vi.fn(async () => ({
+        hasUpdates: false,
+        latestKnownId: 'page-36'
+      }))
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(90);
+    });
+
+    expect(getList).toHaveBeenCalledTimes(2);
+    expect(store.getSnapshot().hasNextPage).toBe(false);
+  });
+
   it('merges newer items from the incremental refresh path without a full GET', async () => {
     const cachedPages = makePages(3);
     const getList = vi.fn();

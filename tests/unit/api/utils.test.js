@@ -50,7 +50,11 @@ describe('API - Utility Functions', () => {
       const result = API._normalizeResponse(data);
 
       expect(result.pages).toEqual(data.pages);
-      expect(result.pagination).toEqual(data.pagination);
+      expect(result.pagination).toEqual({
+        total: 2,
+        hasNextPage: false,
+        nextCursor: null
+      });
     });
 
     it('should normalize response without pagination', () => {
@@ -65,6 +69,44 @@ describe('API - Utility Functions', () => {
         total: 2,
         hasNextPage: false,
         nextCursor: null
+      });
+    });
+
+    it('should normalize legacy top-level pagination fields', () => {
+      const data = {
+        pages: [{ id: '1' }, { id: '2' }],
+        total: 410,
+        hasMore: true,
+        nextCursor: 'page-2'
+      };
+
+      const result = API._normalizeResponse(data);
+
+      expect(result.pages).toEqual(data.pages);
+      expect(result.pagination).toEqual({
+        total: 410,
+        hasNextPage: true,
+        nextCursor: 'page-2'
+      });
+    });
+
+    it('should normalize snake_case pagination fields', () => {
+      const data = {
+        pages: [{ id: '1' }, { id: '2' }],
+        pagination: {
+          total: 410,
+          has_more: true,
+          next_cursor: 'page-2'
+        }
+      };
+
+      const result = API._normalizeResponse(data);
+
+      expect(result.pages).toEqual(data.pages);
+      expect(result.pagination).toEqual({
+        total: 410,
+        hasNextPage: true,
+        nextCursor: 'page-2'
       });
     });
 

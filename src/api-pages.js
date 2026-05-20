@@ -139,13 +139,41 @@ function buildUpdateProjectPayload(updates) {
   return payload;
 }
 
+function normalizePagination(data) {
+  const rawPagination = data?.pagination && typeof data.pagination === 'object'
+    ? data.pagination
+    : null;
+  const normalizedTotal = typeof rawPagination?.total === 'number'
+    ? rawPagination.total
+    : (typeof data?.total === 'number' ? data.total : null);
+  const normalizedHasNextPage = rawPagination?.hasNextPage === true
+    || rawPagination?.has_more === true
+    || data?.hasMore === true
+    || data?.has_more === true;
+  const normalizedNextCursor = rawPagination?.nextCursor
+    ?? rawPagination?.next_cursor
+    ?? data?.nextCursor
+    ?? data?.next_cursor
+    ?? null;
+
+  return {
+    total: normalizedTotal,
+    hasNextPage: normalizedHasNextPage,
+    nextCursor: normalizedHasNextPage ? normalizedNextCursor : null
+  };
+}
+
 function normalizePagesResponse(data, context) {
+  const pages = Array.isArray(data?.pages)
+    ? data.pages
+    : (Array.isArray(data) ? data : []);
+  const pagination = normalizePagination(data);
   const normalizedResponse = {
-    pages: data.pages || data,
-    pagination: data.pagination || {
-      total: (data.pages || data).length,
-      hasNextPage: false,
-      nextCursor: null
+    pages,
+    pagination: {
+      total: typeof pagination.total === 'number' ? pagination.total : pages.length,
+      hasNextPage: pagination.hasNextPage,
+      nextCursor: pagination.hasNextPage ? pagination.nextCursor : null
     },
     meta: data.meta || {}
   };

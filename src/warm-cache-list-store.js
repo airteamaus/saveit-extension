@@ -191,6 +191,15 @@ export class WarmCacheListStore {
       }
 
       if (updateStatus?.hasUpdates === false) {
+        if (
+          this.getActiveHasNextPage(requestId) &&
+          this.getActiveNextCursor(requestId) &&
+          this.getAuthoritativeCount(requestId) < this.options.maxItems
+        ) {
+          void this.prefetchAllPages(requestId);
+          return true;
+        }
+
         return false;
       }
 
