@@ -1,12 +1,15 @@
 import { createDrawerDataController } from './newtab-drawer-data.js';
+import {
+  createDrawerFiltersApplier,
+  createDrawerStateSyncHelpers,
+  createSavedPagesTotalNotifier,
+  getDrawerCurrentUser
+} from './newtab-drawer-coordination.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
 import {
-  applyDrawerFilters as applySavedPagesDrawerFilters,
   createInitialDrawerState,
-  syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore,
-  syncProjectsStateFromStore as syncSavedPagesDrawerProjectsStateFromStore
 } from './newtab-drawer-state.js';
 import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
@@ -44,24 +47,16 @@ export function createSavedPagesDrawerController({
   let dataController;
   let savedPagesView;
   let uiController;
-
-  function notifySavedPagesTotalChange() {
-    const snapshot = savedPagesStore.getSnapshot();
-    onSavedPagesTotalChange?.(typeof snapshot.total === 'number' ? snapshot.total : null);
-  }
-
-  function getCurrentUser() {
-    return windowObj.firebaseAuth?.currentUser || null;
-  }
-
-  function applyDrawerFilters(query = state.query) {
-    applySavedPagesDrawerFilters({
-      state,
-      projectManager,
-      savedPagesView,
-      query
-    });
-  }
+  const notifySavedPagesTotalChange = createSavedPagesTotalNotifier({
+    savedPagesStore,
+    onSavedPagesTotalChange
+  });
+  const getCurrentUser = () => getDrawerCurrentUser(windowObj);
+  const applyDrawerFilters = createDrawerFiltersApplier({
+    state,
+    projectManager,
+    getSavedPagesView: () => savedPagesView
+  });
 
   const shellController = createDrawerShellController({
     state,
@@ -89,6 +84,17 @@ export function createSavedPagesDrawerController({
   const renderDrawerErrorState = (...args) => uiController.renderErrorState(...args);
   const renderDrawerSignInState = (...args) => uiController.renderSignInState(...args);
   const renderDrawerResults = (...args) => uiController.renderResults(...args);
+  const {
+    syncDrawerStateFromStore,
+    syncProjectsStateFromStore
+  } = createDrawerStateSyncHelpers({
+    state,
+    projectManager,
+    getSavedPagesView: () => savedPagesView,
+    applyDrawerFilters,
+    renderDrawerResults,
+    renderDrawerChrome: (...args) => uiController.renderDrawerChrome(...args)
+  });
 
   savedPagesView = createSavedPagesView({
     state,
@@ -106,30 +112,6 @@ export function createSavedPagesDrawerController({
     renderProjectSidebar: uiController.renderProjectSidebar,
     refreshDrawerCard: uiController.refreshDrawerCard
   });
-
-  function syncDrawerStateFromStore(snapshot, { query = state.query, render = state.hasInitialized } = {}) {
-    syncSavedPagesDrawerStateFromStore({
-      snapshot,
-      state,
-      savedPagesView,
-      projectManager,
-      applyDrawerFilters,
-      renderDrawerResults,
-      query,
-      render
-    });
-  }
-
-  function syncProjectsStateFromStore(snapshot, { render = state.hasInitialized } = {}) {
-    syncSavedPagesDrawerProjectsStateFromStore({
-      snapshot,
-      state,
-      savedPagesView,
-      projectManager,
-      renderDrawerChrome: uiController.renderDrawerChrome,
-      render
-    });
-  }
 
   dataController = createDrawerDataController({
     api,
