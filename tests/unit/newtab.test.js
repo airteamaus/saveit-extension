@@ -5,6 +5,7 @@ import {
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
 import { createDrawerDataController } from '../../src/newtab-drawer-data.js';
+import { createSavedPagesView } from '../../src/newtab-drawer-view.js';
 import { getInitialDrawerUrlState } from '../../src/newtab-drawer-events.js';
 import { shouldSyncDrawerStoreUpdate } from '../../src/newtab-drawer-sync.js';
 import {
@@ -350,6 +351,128 @@ describe('newtab modules', () => {
      );
 
      consoleErrorSpy.mockRestore();
+   });
+  });
+
+  describe('drawer view helpers', () => {
+   function createDrawerViewHarness(overrides = {}) {
+     const state = {
+       hasInitialized: false,
+       query: '',
+       currentFilter: {
+         search: '',
+         projectId: null,
+         cursor: null
+       },
+       pages: [],
+       allPages: [],
+       projects: [],
+       projectsLoading: false,
+       projectsAvailable: true,
+       projectsUnavailableMessage: '',
+       selectedProjectId: null,
+       projectEditorState: {
+         pageId: null,
+         query: ''
+       },
+       total: null,
+       allItemsTotal: null,
+       ...(overrides.state || {})
+     };
+     const savedPagesStore = {
+       setPages: vi.fn().mockResolvedValue(undefined),
+       getSnapshot: vi.fn(() => ({ allPages: [{ id: 'page-1' }], total: 1 })),
+       ...(overrides.savedPagesStore || {})
+     };
+     const projectsStore = {
+       setProjects: vi.fn().mockResolvedValue(undefined),
+       ...(overrides.projectsStore || {})
+     };
+     const dataController = {
+       loadDrawerBasePages: vi.fn().mockResolvedValue(undefined),
+       loadDrawerProjectPages: vi.fn().mockResolvedValue(undefined),
+       ...(overrides.dataController || {})
+     };
+     const setSuppressSavedPagesStoreSync = vi.fn();
+     const renderDrawerLoadingState = vi.fn();
+     const syncDrawerStateFromStore = vi.fn();
+     const applyDrawerFilters = vi.fn();
+     const renderDrawerResults = vi.fn();
+     const renderProjectSidebar = vi.fn();
+     const refreshDrawerCard = vi.fn();
+
+     return {
+       state,
+       savedPagesStore,
+       projectsStore,
+       dataController,
+       setSuppressSavedPagesStoreSync,
+       renderDrawerLoadingState,
+       syncDrawerStateFromStore,
+       applyDrawerFilters,
+       renderDrawerResults,
+       renderProjectSidebar,
+       refreshDrawerCard,
+       savedPagesView: createSavedPagesView({
+         state,
+         savedPagesStore,
+         projectsStore,
+         getCurrentUser: vi.fn(() => null),
+         getDataController: () => dataController,
+         setSuppressSavedPagesStoreSync,
+         renderDrawerLoadingState,
+         syncDrawerStateFromStore,
+         applyDrawerFilters,
+         renderDrawerResults,
+         renderProjectSidebar,
+         refreshDrawerCard
+       })
+     };
+   }
+
+   it('persists all pages with normalized pagination metadata', async () => {
+     const {
+       state,
+       savedPagesStore,
+       setSuppressSavedPagesStoreSync,
+       savedPagesView
+     } = createDrawerViewHarness({
+       state: {
+         allPages: [{ id: 'page-1' }, { id: 'page-2' }],
+         total: null,
+         allItemsTotal: null
+       }
+     });
+
+     await savedPagesView.persistAllPages();
+
+     expect(setSuppressSavedPagesStoreSync).toHaveBeenNthCalledWith(1, true);
+     expect(savedPagesStore.setPages).toHaveBeenCalledWith(state.allPages, {
+       total: 2,
+       hasNextPage: false,
+       nextCursor: null
+     });
+     expect(setSuppressSavedPagesStoreSync).toHaveBeenNthCalledWith(2, false);
+   });
+
+   it('routes project loads through the current data controller', async () => {
+     const {
+       savedPagesView,
+       dataController
+     } = createDrawerViewHarness({
+       state: {
+         hasInitialized: true,
+         query: 'alpha',
+         selectedProjectId: 'project-1'
+       }
+     });
+
+     await savedPagesView.loadPages();
+
+     expect(dataController.loadDrawerProjectPages).toHaveBeenCalledWith('project-1', {
+       query: 'alpha',
+       syncUrl: false
+     });
    });
   });
 

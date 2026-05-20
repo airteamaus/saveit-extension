@@ -4,6 +4,7 @@ import { createDrawerDataController } from './newtab-drawer-data.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
+import { createSavedPagesView } from './newtab-drawer-view.js';
 
 const SAVED_PAGES_DRAWER_PARAM = 'drawer';
 const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
@@ -152,138 +153,6 @@ export function createSavedPagesDrawerController({
 
   let dataController;
 
-  const savedPagesView = {
-    get allPages() {
-      return state.allPages;
-    },
-    set allPages(value) {
-      state.allPages = Array.isArray(value) ? value : [];
-    },
-    get pages() {
-      return state.pages;
-    },
-    set pages(value) {
-      state.pages = Array.isArray(value) ? value : [];
-    },
-    get projects() {
-      return state.projects;
-    },
-    set projects(value) {
-      state.projects = Array.isArray(value) ? value : [];
-    },
-    get projectsLoading() {
-      return state.projectsLoading;
-    },
-    set projectsLoading(value) {
-      state.projectsLoading = value === true;
-    },
-    get selectedProjectId() {
-      return state.selectedProjectId;
-    },
-    set selectedProjectId(value) {
-      state.selectedProjectId = value || null;
-    },
-    get projectsAvailable() {
-      return state.projectsAvailable;
-    },
-    set projectsAvailable(value) {
-      state.projectsAvailable = value !== false;
-    },
-    get projectsUnavailableMessage() {
-      return state.projectsUnavailableMessage;
-    },
-    set projectsUnavailableMessage(value) {
-      state.projectsUnavailableMessage = value || '';
-    },
-    projectsStore,
-    get projectEditorState() {
-      return state.projectEditorState;
-    },
-    set projectEditorState(value) {
-      state.projectEditorState = value || { pageId: null, query: '' };
-    },
-    get currentFilter() {
-      return state.currentFilter;
-    },
-    get totalPages() {
-      return state.total;
-    },
-    set totalPages(value) {
-      state.total = value;
-    },
-    get allItemsTotal() {
-      return state.allItemsTotal;
-    },
-    set allItemsTotal(value) {
-      state.allItemsTotal = value;
-    },
-    getCurrentUser,
-    async persistAllPages() {
-      suppressSavedPagesStoreSync = true;
-
-      try {
-        await savedPagesStore.setPages(state.allPages, {
-          total: state.allItemsTotal ?? state.total ?? state.allPages.length,
-          hasNextPage: false,
-          nextCursor: null
-        });
-      } finally {
-        suppressSavedPagesStoreSync = false;
-      }
-    },
-    async persistProjects() {
-      await projectsStore.setProjects(state.projects || []);
-    },
-    showLoading: renderDrawerLoadingState,
-    async loadPages() {
-      if (state.selectedProjectId) {
-        await dataController.loadDrawerProjectPages(state.selectedProjectId, {
-          query: state.query,
-          syncUrl: false
-        });
-        return;
-      }
-
-      if (!state.hasInitialized) {
-        await dataController.loadDrawerBasePages({ query: state.query, syncUrl: false });
-        return;
-      }
-
-      syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
-        query: state.query,
-        render: false
-      });
-    },
-    async handleFilterChange() {
-      applyDrawerFilters(state.currentFilter.search || '');
-      renderDrawerResults();
-    },
-    render() {
-      renderDrawerResults();
-    },
-    handleProjectMembershipChange(pageId, projectId) {
-      const shouldRefilter = state.selectedProjectId === projectId;
-
-      if (shouldRefilter) {
-        applyDrawerFilters(state.currentFilter.search || '');
-        renderDrawerResults();
-        return;
-      }
-
-      renderProjectSidebar();
-      refreshDrawerCard(pageId);
-    },
-    onProjectsUpdated() {
-      renderDrawerResults();
-    },
-    tagInteractionManager: {
-      clearSelection() {}
-    },
-    discoveryManager: {
-      exit() {}
-    }
-  };
-
   function getDrawerProjectPills(page) {
     return projectManager.getProjectPills(page, savedPagesView);
   }
@@ -357,6 +226,23 @@ export function createSavedPagesDrawerController({
       }
     });
   }
+
+  const savedPagesView = createSavedPagesView({
+    state,
+    savedPagesStore,
+    projectsStore,
+    getCurrentUser,
+    getDataController: () => dataController,
+    setSuppressSavedPagesStoreSync: value => {
+      suppressSavedPagesStoreSync = value === true;
+    },
+    renderDrawerLoadingState,
+    syncDrawerStateFromStore,
+    applyDrawerFilters,
+    renderDrawerResults,
+    renderProjectSidebar,
+    refreshDrawerCard
+  });
 
   function renderDrawerLoadingState(message = 'Loading saved pages...') {
     drawerRenderer.renderLoadingState(message);
