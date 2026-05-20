@@ -5,6 +5,7 @@ import {
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
 import { getInitialDrawerUrlState } from '../../src/newtab-drawer-events.js';
+import { shouldSyncDrawerStoreUpdate } from '../../src/newtab-drawer-sync.js';
 import {
   applyAuthUI,
   getUserFacingSignInErrorMessage
@@ -105,6 +106,33 @@ describe('newtab modules', () => {
         expect(getInitialDrawerUrlState('?drawer=saved-pages&search=alpha')).toEqual({
           isOpen: true,
           searchQuery: 'alpha'
+        });
+      });
+
+      describe('drawer sync helpers', () => {
+        it('blocks store sync while suppressed', () => {
+          expect(shouldSyncDrawerStoreUpdate({
+            suppressSavedPagesStoreSync: true,
+            hasInitialized: true,
+            isExtension: false
+          })).toBe(false);
+        });
+
+        it('blocks store sync before the drawer is initialized', () => {
+          expect(shouldSyncDrawerStoreUpdate({
+            suppressSavedPagesStoreSync: false,
+            hasInitialized: false,
+            isExtension: false
+          })).toBe(false);
+        });
+
+        it('allows sync when the drawer is initialized and the auth preconditions are met', () => {
+          expect(shouldSyncDrawerStoreUpdate({
+            suppressSavedPagesStoreSync: false,
+            hasInitialized: true,
+            isExtension: true,
+            hasCurrentUser: true
+          })).toBe(true);
         });
       });
 

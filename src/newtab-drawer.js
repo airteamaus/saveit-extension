@@ -1,8 +1,8 @@
 import { ProjectsStore } from './projects-store.js';
 import { SavedPagesStore } from './saved-pages-store.js';
-import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
+import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
 
 const SAVED_PAGES_DRAWER_PARAM = 'drawer';
 const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
@@ -98,9 +98,7 @@ export function createSavedPagesDrawerController({
   } = elements;
 
   const state = createInitialDrawerState();
-  let savedPagesCacheRefreshTimer = null;
   let drawerProjectsPromise = null;
-  let savedPagesSummaryPromise = null;
   let suppressSavedPagesStoreSync = false;
 
   function notifySavedPagesTotalChange() {
@@ -114,6 +112,10 @@ export function createSavedPagesDrawerController({
 
   function isDrawerOpen() {
     return Boolean(savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden'));
+  }
+
+  function getSearchQuery() {
+    return savedPagesDrawerSearchInput?.value || state.query;
   }
 
   function updateDrawerUrl(isOpen, searchQuery = '') {
@@ -685,51 +687,6 @@ export function createSavedPagesDrawerController({
     }
   }
 
-  function syncSavedPagesAfterCacheInvalidation() {
-    windowObj.clearTimeout(savedPagesCacheRefreshTimer);
-    savedPagesCacheRefreshTimer = windowObj.setTimeout(() => {
-      state.hasInitialized = false;
-
-      if (!getCurrentUser()) {
-        return;
-      }
-
-      refreshFavorites?.();
-      void projectsStore.hydrate();
-      if (state.selectedProjectId) {
-        void loadDrawerProjectPages(state.selectedProjectId, {
-          query: savedPagesDrawerSearchInput?.value || state.query,
-          syncUrl: false
-        });
-        return;
-      }
-
-      void savedPagesStore.hydrate();
-
-      if (isDrawerOpen()) {
-        void loadDrawerBasePages({
-          query: savedPagesDrawerSearchInput?.value || state.query,
-          syncUrl: false
-        });
-      }
-    }, 50);
-  }
-
-  function initSavedPagesCacheSync() {
-    const browserApi = globalThis.browser ?? globalThis.chrome;
-    if (!browserApi?.storage?.onChanged?.addListener) {
-      return;
-    }
-
-    browserApi.storage.onChanged.addListener((changes, areaName) => {
-      if (!isSavedPagesCacheInvalidation(changes, areaName)) {
-        return;
-      }
-
-      syncSavedPagesAfterCacheInvalidation();
-    });
-  }
-
   function initDrawerEventHandlers() {
     initSavedPagesDrawerEvents({
       savedPagesToggleBtn,
@@ -761,103 +718,43 @@ export function createSavedPagesDrawerController({
     });
   }
 
-  function initStoreSubscriptions() {
-    savedPagesStore.subscribe(() => {
-      notifySavedPagesTotalChange();
-
-      if (
-        suppressSavedPagesStoreSync ||
-        !state.hasInitialized ||
-        (api.isExtension && !getCurrentUser())
-      ) {
-        return;
-      }
-
-      syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
-        query: state.query,
-        render: isDrawerOpen()
-      });
-    });
-
-    projectsStore.subscribe(() => {
-      if (
-        !state.hasInitialized ||
-        (api.isExtension && !getCurrentUser())
-      ) {
-        return;
-      }
-
-      syncProjectsStateFromStore(projectsStore.getSnapshot(), {
-        render: isDrawerOpen()
-      });
-    });
-  }
+  const syncCoordinator = createDrawerSyncCoordinator({
+    api,
+    state,
+    savedPagesStore,
+    projectsStore,
+    getCurrentUser,
+    isDrawerOpen,
+    getSearchQuery,
+    notifySavedPagesTotalChange,
+    refreshFavorites,
+    syncDrawerStateFromStore,
+    syncProjectsStateFromStore,
+    loadDrawerBasePages,
+    loadDrawerProjectPages,
+    loadDrawerResults,
+    renderDrawerSignInState,
+    resetDrawerState: () => {
+      Object.assign(state, createInitialDrawerState());
+    },
+    setSuppressSavedPagesStoreSync: value => {
+      suppressSavedPagesStoreSync = value === true;
+    },
+    getSuppressSavedPagesStoreSync: () => suppressSavedPagesStoreSync,
+    windowObj
+  });
 
   function init() {
-    initStoreSubscriptions();
-    initSavedPagesCacheSync();
+    syncCoordinator.init();
     initDrawerEventHandlers();
-  }
-
-  async function loadSummary() {
-    if (savedPagesSummaryPromise) {
-      return savedPagesSummaryPromise;
-    }
-
-    savedPagesSummaryPromise = (async () => {
-      try {
-        if (!api?.getSavedPages) {
-          savedPagesStore.reset({ emit: false });
-          notifySavedPagesTotalChange();
-          return;
-        }
-
-        if (api.isExtension && !getCurrentUser()) {
-          savedPagesStore.reset({ emit: false });
-          notifySavedPagesTotalChange();
-          return;
-        }
-
-        await savedPagesStore.hydrate();
-        notifySavedPagesTotalChange();
-      } catch (error) {
-        console.error('[newtab] Failed to load saved pages summary:', error);
-      } finally {
-        savedPagesSummaryPromise = null;
-      }
-    })();
-
-    return savedPagesSummaryPromise;
-  }
-
-  async function handleSignedIn() {
-    state.hasInitialized = false;
-    savedPagesStore.reset({ emit: false });
-    await loadSummary();
-
-    if (isDrawerOpen()) {
-      await loadDrawerResults(savedPagesDrawerSearchInput?.value || '', { syncUrl: false });
-    }
-  }
-
-  function handleSignedOut() {
-    projectsStore.reset({ emit: false });
-    savedPagesStore.reset({ emit: false });
-    notifySavedPagesTotalChange();
-
-    Object.assign(state, createInitialDrawerState());
-
-    if (isDrawerOpen()) {
-      renderDrawerSignInState();
-    }
   }
 
   return {
     close: closeSavedPagesDrawer,
-    handleSignedIn,
-    handleSignedOut,
+    handleSignedIn: syncCoordinator.handleSignedIn,
+    handleSignedOut: syncCoordinator.handleSignedOut,
     init,
-    loadSummary,
+    loadSummary: syncCoordinator.loadSummary,
     open: openSavedPagesDrawer
   };
 }
