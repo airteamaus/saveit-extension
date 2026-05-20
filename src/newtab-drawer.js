@@ -2,7 +2,6 @@ import { ProjectsStore } from './projects-store.js';
 import { SavedPagesStore } from './saved-pages-store.js';
 import { createDrawerDataController } from './newtab-drawer-data.js';
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
-import { createDrawerRenderer } from './newtab-drawer-renderer.js';
 import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
 import {
@@ -11,6 +10,7 @@ import {
   syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore,
   syncProjectsStateFromStore as syncSavedPagesDrawerProjectsStateFromStore
 } from './newtab-drawer-state.js';
+import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
 
 const SAVED_PAGES_DRAWER_PARAM = 'drawer';
@@ -63,6 +63,8 @@ export function createSavedPagesDrawerController({
   const state = createInitialDrawerState();
   let suppressSavedPagesStoreSync = false;
   let dataController;
+  let savedPagesView;
+  let uiController;
 
   function notifySavedPagesTotalChange() {
     const snapshot = savedPagesStore.getSnapshot();
@@ -75,53 +77,12 @@ export function createSavedPagesDrawerController({
 
   let shellController;
 
-  function getDrawerProjectPills(page) {
-    return projectManager.getProjectPills(page, savedPagesView);
-  }
-
-  function getProjectScopeLabel() {
-    const selectedProject = projectManager.getSelectedProject(savedPagesView);
-    return selectedProject ? selectedProject.name : 'All saved items';
-  }
-
   function applyDrawerFilters(query = state.query) {
     applySavedPagesDrawerFilters({
       state,
       projectManager,
       savedPagesView,
       query
-    });
-  }
-
-  function renderProjectSidebar() {
-    projectManager.renderSidebar(savedPagesView);
-  }
-
-  function renderProjectEditor() {
-    projectManager.renderEditor(savedPagesView);
-  }
-
-  function renderDrawerChrome() {
-    renderProjectSidebar();
-    renderProjectEditor();
-  }
-
-  const drawerRenderer = createDrawerRenderer({
-    documentObj,
-    resultsContainer: savedPagesDrawerResults,
-    renderChrome: renderDrawerChrome,
-    getProjectPills: page => getDrawerProjectPills(page),
-    isProjectsUnavailable: () => savedPagesView.projectsAvailable === false,
-    getProjectScopeLabel
-  });
-
-  function refreshDrawerCard(pageId) {
-    drawerRenderer.refreshCard(pageId, state.pages, state.query, {
-      onMissingPage: () => {
-        if (!state.pages.length) {
-          renderDrawerEmptyState(state.query);
-        }
-      }
     });
   }
 
@@ -132,14 +93,27 @@ export function createSavedPagesDrawerController({
     savedPagesDrawerSearchInput,
     savedPagesDrawerClearBtn,
     getDataController: () => dataController,
-    renderDrawerResults,
+    renderDrawerResults: () => uiController.renderResults(),
     drawerParam: SAVED_PAGES_DRAWER_PARAM,
     drawerValue: SAVED_PAGES_DRAWER_VALUE,
     windowObj,
     documentObj
   });
 
-  const savedPagesView = createSavedPagesView({
+  uiController = createDrawerUiController({
+    state,
+    projectManager,
+    resultsContainer: savedPagesDrawerResults,
+    getSavedPagesView: () => savedPagesView,
+    documentObj
+  });
+
+  const renderDrawerLoadingState = (...args) => uiController.renderLoadingState(...args);
+  const renderDrawerErrorState = (...args) => uiController.renderErrorState(...args);
+  const renderDrawerSignInState = (...args) => uiController.renderSignInState(...args);
+  const renderDrawerResults = (...args) => uiController.renderResults(...args);
+
+  savedPagesView = createSavedPagesView({
     state,
     savedPagesStore,
     projectsStore,
@@ -151,41 +125,10 @@ export function createSavedPagesDrawerController({
     renderDrawerLoadingState,
     syncDrawerStateFromStore,
     applyDrawerFilters,
-    renderDrawerResults,
-    renderProjectSidebar,
-    refreshDrawerCard
+    renderDrawerResults: uiController.renderResults,
+    renderProjectSidebar: uiController.renderProjectSidebar,
+    refreshDrawerCard: uiController.refreshDrawerCard
   });
-
-  function renderDrawerLoadingState(message = 'Loading saved pages...') {
-    drawerRenderer.renderLoadingState(message);
-  }
-
-  function renderDrawerErrorState(message) {
-    drawerRenderer.renderErrorState(message);
-  }
-
-  function renderDrawerEmptyState(query = '') {
-    drawerRenderer.renderEmptyState(query, {
-      hasSelectedProject: Boolean(state.selectedProjectId)
-    });
-  }
-
-  function renderDrawerSignInState() {
-    drawerRenderer.renderSignInState();
-  }
-
-  function renderDrawerResults() {
-    if (!state.pages.length) {
-      renderDrawerEmptyState(state.query);
-      return;
-    }
-
-    if (!savedPagesDrawerResults) {
-      return;
-    }
-
-    drawerRenderer.renderResults(state.pages);
-  }
 
   function syncDrawerStateFromStore(snapshot, { query = state.query, render = state.hasInitialized } = {}) {
     syncSavedPagesDrawerStateFromStore({
@@ -206,7 +149,7 @@ export function createSavedPagesDrawerController({
       state,
       savedPagesView,
       projectManager,
-      renderDrawerChrome,
+      renderDrawerChrome: uiController.renderDrawerChrome,
       render
     });
   }

@@ -11,6 +11,10 @@ import {
   shouldOpenDrawerCardInNewTab
 } from '../../src/newtab-drawer-shell.js';
 import {
+  createDrawerUiController,
+  getDrawerProjectScopeLabel
+} from '../../src/newtab-drawer-ui.js';
+import {
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
@@ -263,6 +267,48 @@ describe('newtab modules', () => {
         syncUrl: false
       });
       expect(windowObj.history.replaceState).toHaveBeenCalled();
+    });
+  });
+
+  describe('drawer UI helpers', () => {
+    it('uses the selected project name as the drawer scope label', () => {
+      const projectManager = {
+        getSelectedProject: vi.fn(() => ({ id: 'project-1', name: 'Reading List' }))
+      };
+
+      expect(getDrawerProjectScopeLabel(projectManager, { selectedProjectId: 'project-1' })).toBe('Reading List');
+    });
+
+    it('renders the empty state when there are no pages', () => {
+      document.body.innerHTML = '<div id="results"></div>';
+      const resultsContainer = document.getElementById('results');
+      const state = {
+        query: '',
+        pages: [],
+        selectedProjectId: null
+      };
+      const savedPagesView = {
+        projectsAvailable: true
+      };
+      const projectManager = {
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn()
+      };
+      const uiController = createDrawerUiController({
+        state,
+        projectManager,
+        resultsContainer,
+        getSavedPagesView: () => savedPagesView,
+        documentObj: document
+      });
+
+      uiController.renderResults();
+
+      expect(resultsContainer.textContent).toContain('No pages in All saved items');
+      expect(projectManager.renderSidebar).toHaveBeenCalled();
+      expect(projectManager.renderEditor).toHaveBeenCalled();
     });
   });
 
