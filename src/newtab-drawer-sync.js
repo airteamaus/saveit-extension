@@ -1,4 +1,5 @@
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
+import { createDrawerSyncLifecycle } from './newtab-drawer-sync-lifecycle.js';
 
 export function shouldSyncDrawerStoreUpdate({
   suppressSavedPagesStoreSync = false,
@@ -43,7 +44,20 @@ export function createDrawerSyncCoordinator({
   windowObj = window
 }) {
   let savedPagesCacheRefreshTimer = null;
-  let savedPagesSummaryPromise = null;
+  const lifecycle = createDrawerSyncLifecycle({
+    api,
+    state,
+    savedPagesStore,
+    projectsStore,
+    getCurrentUser,
+    isDrawerOpen,
+    getSearchQuery,
+    notifySavedPagesTotalChange,
+    loadDrawerResults,
+    renderDrawerSignInState,
+    resetDrawerState,
+    setSuppressSavedPagesStoreSync
+  });
 
   function syncSavedPagesAfterCacheInvalidation() {
     windowObj.clearTimeout(savedPagesCacheRefreshTimer);
@@ -124,68 +138,15 @@ export function createDrawerSyncCoordinator({
     });
   }
 
-  async function loadSummary() {
-    if (savedPagesSummaryPromise) {
-      return savedPagesSummaryPromise;
-    }
-
-    savedPagesSummaryPromise = (async () => {
-      try {
-        if (!api?.getSavedPages) {
-          savedPagesStore.reset({ emit: false });
-          notifySavedPagesTotalChange();
-          return;
-        }
-
-        if (api.isExtension && !getCurrentUser()) {
-          savedPagesStore.reset({ emit: false });
-          notifySavedPagesTotalChange();
-          return;
-        }
-
-        await savedPagesStore.hydrate();
-        notifySavedPagesTotalChange();
-      } catch (error) {
-        console.error('[newtab] Failed to load saved pages summary:', error);
-      } finally {
-        savedPagesSummaryPromise = null;
-      }
-    })();
-
-    return savedPagesSummaryPromise;
-  }
-
-  async function handleSignedIn() {
-    state.hasInitialized = false;
-    savedPagesStore.reset({ emit: false });
-    await loadSummary();
-
-    if (isDrawerOpen()) {
-      await loadDrawerResults(getSearchQuery(), { syncUrl: false });
-    }
-  }
-
-  function handleSignedOut() {
-    projectsStore.reset({ emit: false });
-    savedPagesStore.reset({ emit: false });
-    notifySavedPagesTotalChange();
-    resetDrawerState();
-    setSuppressSavedPagesStoreSync(false);
-
-    if (isDrawerOpen()) {
-      renderDrawerSignInState();
-    }
-  }
-
   function init() {
     initStoreSubscriptions();
     initSavedPagesCacheSync();
   }
 
   return {
-    handleSignedIn,
-    handleSignedOut,
+    handleSignedIn: lifecycle.handleSignedIn,
+    handleSignedOut: lifecycle.handleSignedOut,
     init,
-    loadSummary
+    loadSummary: lifecycle.loadSummary
   };
 }
