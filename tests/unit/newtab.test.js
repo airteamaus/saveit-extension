@@ -31,6 +31,10 @@ import {
   getFaviconUrl,
   updateStatsDisplay
 } from '../../src/newtab-shared.js';
+import {
+  createProjectsStore,
+  createSavedPagesStore
+} from '../../src/newtab-drawer.js';
 
 describe('newtab modules', () => {
   describe('getFaviconUrl', () => {
@@ -83,6 +87,34 @@ describe('newtab modules', () => {
         rows: 3,
         pageSize: 30,
         tileWidth: 88
+      });
+    });
+  });
+
+  describe('drawer store factories', () => {
+    it('creates a saved pages store with drawer cache scope defaults', () => {
+      const store = createSavedPagesStore({});
+
+      expect(store.options.initialFetchLimit).toBe(50);
+      expect(store.options.prefetchBatchLimit).toBe(100);
+      expect(store.options.warmCacheScope).toEqual({
+        surface: 'saved-pages-drawer',
+        sort: 'newest',
+        pinnedFirst: false,
+        limit: 'all'
+      });
+      expect(store.buildInitialFetchOptions()).toEqual({
+        limit: 50,
+        sort: 'newest',
+        pinnedFirst: false
+      });
+    });
+
+    it('creates a projects store with the projects warm cache scope', () => {
+      const store = createProjectsStore({});
+
+      expect(store.options.warmCacheScope).toEqual({
+        surface: 'projects'
       });
     });
   });
