@@ -32,8 +32,12 @@ import {
   applyAuthUI,
   getUserFacingSignInErrorMessage
 } from '../../src/newtab-auth.js';
-import { getFavoritesLayout } from '../../src/newtab-favorites.js';
 import {
+  createFavoritesController,
+  getFavoritesLayout
+} from '../../src/newtab-favorites.js';
+import {
+  createBookmarkIconElement,
   getFaviconUrl,
   updateStatsDisplay
 } from '../../src/newtab-shared.js';
@@ -52,6 +56,16 @@ describe('newtab modules', () => {
 
     it('returns null for invalid URLs', () => {
       expect(getFaviconUrl('not-a-url')).toBeNull();
+    });
+  });
+
+  describe('createBookmarkIconElement', () => {
+    it('creates the bookmark fallback svg without HTML injection', () => {
+      const icon = createBookmarkIconElement(document);
+
+      expect(icon.tagName.toLowerCase()).toBe('svg');
+      expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
+      expect(icon.querySelector('path')?.getAttribute('d')).toBe('M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
     });
   });
 
@@ -189,6 +203,85 @@ describe('newtab modules', () => {
         pageSize: 30,
         tileWidth: 88
       });
+    });
+  });
+
+  describe('favorites controller', () => {
+    it('renders the bookmark fallback icon and hover preview content', () => {
+      document.body.innerHTML = `
+        <section id="favorites-section">
+          <div id="favorites-viewport"></div>
+          <div id="favorites-row"></div>
+          <button id="favorites-prev-btn"></button>
+          <button id="favorites-next-btn"></button>
+          <div id="favorites-dots"></div>
+          <div id="favorite-hover-connector" class="hidden"></div>
+          <div id="favorite-hover-card" class="hidden"></div>
+        </section>
+      `;
+
+      const snapshot = {
+        pagedPages: [[{
+          id: 'page-1',
+          url: 'not-a-url',
+          title: 'Example page',
+          domain: 'example.com',
+          ai_summary_brief: 'AI summary',
+          manual_tags: ['alpha'],
+          saved_at: '2026-05-20T00:00:00.000Z',
+          pinned: true
+        }]],
+        currentPage: 0,
+        pageSize: 12,
+        columns: 6,
+        rows: 2,
+        tileWidth: 88,
+        gridWidth: 600
+      };
+      const store = {
+        getSnapshot: vi.fn(() => snapshot),
+        subscribe: vi.fn(),
+        applyLayout: vi.fn(),
+        goToPage: vi.fn()
+      };
+      const controller = createFavoritesController({
+        store,
+        elements: {
+          favoritesSection: document.getElementById('favorites-section'),
+          favoritesViewport: document.getElementById('favorites-viewport'),
+          favoritesRow: document.getElementById('favorites-row'),
+          favoritesPrevBtn: document.getElementById('favorites-prev-btn'),
+          favoritesNextBtn: document.getElementById('favorites-next-btn'),
+          favoritesDots: document.getElementById('favorites-dots'),
+          favoriteHoverConnector: document.getElementById('favorite-hover-connector'),
+          favoriteHoverCard: document.getElementById('favorite-hover-card')
+        },
+        windowObj: window,
+        documentObj: document
+      });
+
+      const favoritesSection = document.getElementById('favorites-section');
+      const favoriteHoverCard = document.getElementById('favorite-hover-card');
+
+      favoritesSection.getBoundingClientRect = () => ({
+        left: 0, top: 0, right: 800, bottom: 400, width: 800, height: 400
+      });
+      favoriteHoverCard.getBoundingClientRect = () => ({
+        left: 160, top: 40, right: 520, bottom: 200, width: 360, height: 160
+      });
+
+      controller.init();
+
+      const favoriteItem = document.querySelector('.favorite-item');
+      favoriteItem.getBoundingClientRect = () => ({
+        left: 20, top: 20, right: 108, bottom: 108, width: 88, height: 88
+      });
+      favoriteItem.dispatchEvent(new Event('mouseenter'));
+
+      expect(document.querySelector('.favorite-icon svg')).not.toBeNull();
+      expect(favoriteHoverCard.querySelector('.favorite-hover-card-title')?.textContent).toBe('Example page');
+      expect(favoriteHoverCard.querySelector('.favorite-hover-card-summary')?.textContent).toContain('AI summary');
+      expect(favoriteHoverCard.querySelector('.favorite-hover-card-meta')?.textContent).toContain('Pinned');
     });
   });
 

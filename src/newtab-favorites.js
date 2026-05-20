@@ -1,7 +1,8 @@
 import { FavoritesStore } from './favorites-store.js';
+import { replaceElementHtml } from './dom-render.js';
 import { reconcileKeyedChildren } from './keyed-dom-list.js';
 import {
-  createBookmarkIconMarkup,
+  createBookmarkIconElement,
   escapeHtml,
   formatSavedDate,
   getFaviconUrl,
@@ -270,7 +271,7 @@ export function createFavoritesController({
     if (page.reading_time_minutes) meta.push(`<span>${page.reading_time_minutes} min read</span>`);
     if (page.pinned) meta.push('<span>Pinned</span>');
 
-    favoriteHoverCard.innerHTML = `
+    replaceElementHtml(favoriteHoverCard, `
       <div class="favorite-hover-card-header">
         <div class="favorite-hover-card-icon">
           ${domain ? `<img src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="22" height="22">` : ''}
@@ -280,7 +281,7 @@ export function createFavoritesController({
       ${summary ? `<p class="favorite-hover-card-summary">${escapeHtml(truncateText(summary, 220))}</p>` : ''}
       ${tagsHtml ? `<div class="favorite-hover-card-tags">${tagsHtml}</div>` : ''}
       ${meta.length ? `<div class="favorite-hover-card-meta">${meta.join('<span class="favorite-hover-card-separator">•</span>')}</div>` : ''}
-    `;
+    `);
 
     const sectionRect = favoritesSection.getBoundingClientRect();
     const itemRect = item.getBoundingClientRect();
@@ -319,11 +320,11 @@ export function createFavoritesController({
       img.src = faviconUrl;
       img.alt = '';
       img.onerror = () => {
-        iconContainer.innerHTML = createBookmarkIconMarkup();
+        iconContainer.replaceChildren(createBookmarkIconElement(documentObj));
       };
       iconContainer.appendChild(img);
     } else {
-      iconContainer.innerHTML = createBookmarkIconMarkup();
+      iconContainer.replaceChildren(createBookmarkIconElement(documentObj));
     }
 
     const title = documentObj.createElement('span');
@@ -359,7 +360,7 @@ export function createFavoritesController({
 
     if (!favoritesDots) return;
 
-    favoritesDots.innerHTML = '';
+    favoritesDots.replaceChildren();
     favoritesDots.classList.toggle('hidden', !hasMultiplePages);
 
     if (!hasMultiplePages) return;

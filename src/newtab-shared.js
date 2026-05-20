@@ -114,3 +114,18 @@ export function createBookmarkIconMarkup() {
     </svg>
   `;
 }
+
+export function createBookmarkIconElement(documentObj = document) {
+  const svgNs = 'http://www.w3.org/2000/svg';
+  const svg = documentObj.createElementNS(svgNs, 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '2');
+
+  const path = documentObj.createElementNS(svgNs, 'path');
+  path.setAttribute('d', 'M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
+  svg.appendChild(path);
+
+  return svg;
+}
