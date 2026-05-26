@@ -1,5 +1,6 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
+import { upsertListPages } from './warm-cache-list-store.js';
 
 export function createDrawerDataController({
   api,
@@ -30,6 +31,9 @@ export function createDrawerDataController({
 
   function updateDrawerPageCollections(id, updater) {
     state.allPages = state.allPages.map(page => (page.id === id ? updater(page) : page));
+    if (Array.isArray(state.loadedProjectPages)) {
+      state.loadedProjectPages = state.loadedProjectPages.map(page => (page.id === id ? updater(page) : page));
+    }
     state.pages = state.pages.map(page => (page.id === id ? updater(page) : page));
   }
 
@@ -150,7 +154,6 @@ export function createDrawerDataController({
       const projectsPromise = ensureDrawerProjectsLoaded();
       const pages = [];
       let cursor = null;
-      let total = null;
 
       do {
         const response = await api.getSavedPages({
@@ -165,9 +168,8 @@ export function createDrawerDataController({
         if (requestId !== state.requestId) {
           return;
         }
-
         pages.push(...(response?.pages || []));
-        total = typeof response?.pagination?.total === 'number' ? response.pagination.total : total;
+        pages.push(...(response?.pages || []));
         cursor = response?.pagination?.hasNextPage ? response?.pagination?.nextCursor || null : null;
       } while (cursor);
 
@@ -175,10 +177,11 @@ export function createDrawerDataController({
         return;
       }
 
-      state.allPages = pages;
-      state.allItemsTotal = total ?? pages.length;
-      state.total = pages.length;
+      const normalizedProjectPages = upsertListPages([], pages, Number.POSITIVE_INFINITY);
+      state.allPages = upsertListPages(state.allPages, normalizedProjectPages, Number.POSITIVE_INFINITY);
+      state.loadedProjectPages = normalizedProjectPages;
       applyDrawerFilters(trimmedQuery);
+      projectManager.refreshProjectCounts(savedPagesView);
       state.hasInitialized = true;
       renderDrawerResults();
 
@@ -215,6 +218,9 @@ export function createDrawerDataController({
       await api.deletePage(id);
       const deletedPage = findDrawerPage(id);
       await savedPagesStore.removePage(id);
+      if (Array.isArray(state.loadedProjectPages)) {
+        state.loadedProjectPages = state.loadedProjectPages.filter(page => page.id !== id);
+      }
       syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
         query: state.query,
         render: false

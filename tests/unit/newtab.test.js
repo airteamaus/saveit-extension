@@ -659,6 +659,7 @@ describe('newtab modules', () => {
        },
        pages: [],
        allPages: [],
+       loadedProjectPages: null,
        projects: [],
        projectsLoading: false,
        projectsAvailable: true,
@@ -698,11 +699,22 @@ describe('newtab modules', () => {
        ...(overrides.projectsStore || {})
      };
      const projectManager = {
+       getScopedPages: vi.fn((dashboard, pages) => {
+         if (!dashboard.selectedProjectId) {
+           return [...pages];
+         }
+
+         if (dashboard.selectedProjectId === '__pinned__') {
+           return pages.filter(page => page.pinned);
+         }
+
+         return pages.filter(page => page.project_ids?.includes(dashboard.selectedProjectId));
+       }),
        refreshProjectCounts: vi.fn(),
        adjustProjectCount: vi.fn(),
        ...(overrides.projectManager || {})
      };
-     const applyDrawerFilters = vi.fn((query = '') => {
+     const applyDrawerFilters = overrides.applyDrawerFilters || vi.fn((query = '') => {
        state.query = query.trim();
        state.pages = [...state.allPages];
      });
@@ -756,12 +768,19 @@ describe('newtab modules', () => {
      const { controller, state, api, projectsStore, applyDrawerFilters, dependencies } =
        createDrawerDataHarness({
          state: {
-           selectedProjectId: 'project-1'
+           selectedProjectId: 'project-1',
+           allPages: [
+             { id: 'page-0', title: 'Pinned elsewhere', pinned: true, project_ids: [] }
+           ],
+           allItemsTotal: 4
          },
          api: {
            getSavedPages: vi.fn()
              .mockResolvedValueOnce({
-               pages: [{ id: 'page-1' }, { id: 'page-2' }],
+               pages: [
+                 { id: 'page-1', title: 'Alpha one', pinned: true, project_ids: ['project-1'] },
+                 { id: 'page-2', title: 'Alpha two', pinned: false, project_ids: ['project-1'] }
+               ],
                pagination: {
                  total: 3,
                  hasNextPage: true,
@@ -769,14 +788,28 @@ describe('newtab modules', () => {
                }
              })
              .mockResolvedValueOnce({
-               pages: [{ id: 'page-3' }],
+               pages: [{ id: 'page-3', title: 'Alpha three', pinned: false, project_ids: ['project-1'] }],
                pagination: {
                  total: 3,
                  hasNextPage: false,
                  nextCursor: null
                }
              })
-         }
+         },
+         applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
+           state,
+           projectManager: {
+             getScopedPages: (dashboard, pages) => pages.filter(page => (
+               page.project_ids?.includes(dashboard.selectedProjectId)
+             ))
+           },
+           savedPagesView: {
+             get selectedProjectId() {
+               return state.selectedProjectId;
+             }
+           },
+           query
+         }))
        });
 
      await controller.loadDrawerProjectPages('project-1', { query: '  alpha  ' });
@@ -801,12 +834,67 @@ describe('newtab modules', () => {
      });
      expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching project pages...');
      expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
-     expect(state.allPages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
+     expect(state.allPages.map(page => page.id)).toEqual(['page-0', 'page-1', 'page-2', 'page-3']);
+     expect(state.loadedProjectPages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
      expect(state.pages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
      expect(state.total).toBe(3);
-     expect(state.allItemsTotal).toBe(3);
+     expect(state.allItemsTotal).toBe(4);
      expect(state.hasInitialized).toBe(true);
      expect(dependencies.syncProjectsStateFromStore).toHaveBeenCalled();
+   });
+
+   it('keeps pinned and all-pages sidebar counts tied to the canonical page collection when a project is selected', async () => {
+     const { controller, state } = createDrawerDataHarness({
+       state: {
+         selectedProjectId: 'project-1',
+         allPages: [
+           { id: 'page-0', title: 'Pinned elsewhere', pinned: true, project_ids: [] }
+         ],
+         allItemsTotal: 4
+       },
+       api: {
+         getSavedPages: vi.fn().mockResolvedValue({
+           pages: [
+             { id: 'page-1', title: 'Alpha one', pinned: true, project_ids: ['project-1'] },
+             { id: 'page-2', title: 'Alpha two', pinned: false, project_ids: ['project-1'] },
+             { id: 'page-3', title: 'Alpha three', pinned: false, project_ids: ['project-1'] }
+           ],
+           pagination: {
+             total: 3,
+             hasNextPage: false,
+             nextCursor: null
+           }
+         })
+       },
+       applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
+         state,
+         projectManager: {
+           getScopedPages: (dashboard, pages) => {
+             if (dashboard.selectedProjectId === '__pinned__') {
+               return pages.filter(page => page.pinned);
+             }
+
+             if (!dashboard.selectedProjectId) {
+               return [...pages];
+             }
+
+             return pages.filter(page => page.project_ids?.includes(dashboard.selectedProjectId));
+           }
+         },
+         savedPagesView: {
+           get selectedProjectId() {
+             return state.selectedProjectId;
+           }
+         },
+         query
+       }))
+     });
+
+     await controller.loadDrawerProjectPages('project-1');
+
+     expect(state.allPages.filter(page => page.pinned)).toHaveLength(2);
+     expect(state.allItemsTotal).toBe(4);
+     expect(state.total).toBe(3);
    });
 
    it('rolls back optimistic pin updates when the API request fails', async () => {

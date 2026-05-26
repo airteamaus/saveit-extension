@@ -12,6 +12,7 @@ export function createInitialDrawerState() {
     },
     pages: [],
     allPages: [],
+    loadedProjectPages: null,
     projects: [],
     projectsLoading: false,
     projectsAvailable: true,
@@ -57,7 +58,10 @@ export function applyDrawerFilters({
   state.query = trimmedQuery;
   state.currentFilter.search = trimmedQuery;
 
-  const scopedPages = projectManager.getScopedPages(savedPagesView, state.allPages);
+  const scopeSourcePages = Array.isArray(state.loadedProjectPages) && state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID
+    ? state.loadedProjectPages
+    : state.allPages;
+  const scopedPages = projectManager.getScopedPages(savedPagesView, scopeSourcePages);
   state.total = state.selectedProjectId
     ? scopedPages.length
     : (typeof state.allItemsTotal === 'number' ? state.allItemsTotal : null);
@@ -82,6 +86,7 @@ export function syncDrawerStateFromStore({
   render = state.hasInitialized
 }) {
   state.allPages = snapshot.allPages || [];
+  state.loadedProjectPages = null;
   state.allItemsTotal = Math.max(
     typeof snapshot.total === 'number' ? snapshot.total : 0,
     state.allPages.length
