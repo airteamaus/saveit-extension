@@ -1,8 +1,13 @@
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
 export function getDrawerProjectScopeLabel(projectManager, savedPagesView) {
+  if (savedPagesView.selectedProjectId === PINNED_PAGES_SCOPE_ID) {
+    return 'Pinned';
+  }
+
   const selectedProject = projectManager.getSelectedProject(savedPagesView);
-  return selectedProject ? selectedProject.name : 'All saved items';
+  return selectedProject ? selectedProject.name : 'All pages';
 }
 
 export function createDrawerUiController({
@@ -36,6 +41,8 @@ export function createDrawerUiController({
   const drawerRenderer = createDrawerRenderer({
     documentObj,
     resultsContainer,
+    getEditingPageId: () => state.editingPageId,
+    getSavingEditPageId: () => state.savingEditPageId,
     renderChrome: renderDrawerChrome,
     getProjectPills: page => getDrawerProjectPills(page),
     isProjectsUnavailable: () => getSavedPagesViewOrThrow().projectsAvailable === false,

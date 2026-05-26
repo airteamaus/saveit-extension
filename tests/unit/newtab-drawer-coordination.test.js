@@ -128,4 +128,45 @@ describe('newtab drawer coordination', () => {
     expect(state.projects).toEqual([{ id: 'project-1', name: 'Alpha' }]);
     expect(renderDrawerChrome).toHaveBeenCalled();
   });
+
+  it('normalizes stale cached totals so all-pages counts never drop below loaded pages', () => {
+    const state = {
+      query: '',
+      currentFilter: {
+        search: '',
+        projectId: '__pinned__',
+        cursor: null
+      },
+      selectedProjectId: '__pinned__',
+      allPages: [],
+      pages: [],
+      total: null,
+      allItemsTotal: null,
+      hasInitialized: true,
+      projects: []
+    };
+    const applyDrawerFilters = vi.fn(query => {
+      state.query = query;
+    });
+    const syncHelpers = createDrawerStateSyncHelpers({
+      state,
+      projectManager: {
+        refreshProjectCounts: vi.fn()
+      },
+      getSavedPagesView: () => ({}),
+      applyDrawerFilters,
+      renderDrawerResults: vi.fn(),
+      renderDrawerChrome: vi.fn()
+    });
+
+    syncHelpers.syncDrawerStateFromStore({
+      allPages: [{ id: 'page-1' }, { id: 'page-2' }, { id: 'page-3' }],
+      total: 1
+    }, {
+      render: false
+    });
+
+    expect(state.allItemsTotal).toBe(3);
+    expect(state.total).toBe(3);
+  });
 });

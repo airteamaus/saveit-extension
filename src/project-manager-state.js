@@ -1,3 +1,5 @@
+export const PINNED_PAGES_SCOPE_ID = '__pinned__';
+
 const PROJECTS_UNAVAILABLE_MESSAGE =
   'Project collections are not supported by the connected backend yet.';
 
@@ -10,10 +12,18 @@ export function getProjectsUnavailableMessage(dashboard) {
 }
 
 export function getSelectedProject(dashboard) {
+  if (dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID) {
+    return null;
+  }
+
   return dashboard.projects.find(project => project.id === dashboard.selectedProjectId) || null;
 }
 
 export function getScopedPages(dashboard, pages) {
+  if (dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID) {
+    return pages.filter(page => page.pinned);
+  }
+
   if (!dashboard.selectedProjectId) {
     return [...pages];
   }
@@ -55,6 +65,10 @@ export function adjustProjectCount(dashboard, projectId, delta) {
 }
 
 export function getStatsTotal(dashboard) {
+  if (dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID) {
+    return getScopedPages(dashboard, dashboard.allPages).length;
+  }
+
   if (dashboard.selectedProjectId) {
     return getScopedPages(dashboard, dashboard.allPages).length;
   }

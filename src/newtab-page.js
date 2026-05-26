@@ -15,13 +15,13 @@ export function getNewtabElements(documentObj = document) {
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
     projectSidebar: documentObj.getElementById('project-sidebar'),
-    savedPagesDrawer: documentObj.getElementById('saved-pages-drawer'),
+    savedPagesDrawer: documentObj.getElementById('saved-pages-page'),
     savedPagesDrawerBackdrop: documentObj.getElementById('saved-pages-drawer-backdrop'),
-    savedPagesDrawerClearBtn: documentObj.getElementById('saved-pages-drawer-clear-btn'),
+    savedPagesDrawerClearBtn: documentObj.getElementById('saved-pages-search-clear-btn'),
     savedPagesDrawerCloseBtn: documentObj.getElementById('saved-pages-drawer-close-btn'),
-    savedPagesDrawerResults: documentObj.getElementById('saved-pages-drawer-results'),
-    savedPagesDrawerSearchForm: documentObj.getElementById('saved-pages-drawer-search-form'),
-    savedPagesDrawerSearchInput: documentObj.getElementById('saved-pages-drawer-search-input'),
+    savedPagesDrawerResults: documentObj.getElementById('saved-pages-results'),
+    savedPagesDrawerSearchForm: documentObj.getElementById('saved-pages-search-form'),
+    savedPagesDrawerSearchInput: documentObj.getElementById('saved-pages-search-input'),
     savedPagesToggleBtn: documentObj.getElementById('saved-pages-toggle-btn'),
     searchForm: documentObj.getElementById('search-form'),
     searchInput: documentObj.getElementById('search-input'),
@@ -40,15 +40,8 @@ export function getNewtabElements(documentObj = document) {
 export function bindNewtabEventHandlers({
   elements,
   authController,
-  drawerController,
   documentObj = document
 }) {
-  elements.searchForm?.addEventListener('submit', event => {
-    event.preventDefault();
-    drawerController.open({
-      searchQuery: getSubmittedSearchQuery(elements.searchInput)
-    });
-  });
   elements.signInBtn?.addEventListener('click', () => void authController.handleSignIn());
   elements.userAvatarBtn?.addEventListener('click', () => authController.toggleUserDropdown());
   elements.signOutBtn?.addEventListener('click', () => void authController.handleSignOut());
@@ -62,15 +55,13 @@ export async function startNewtabPage({
   ThemeManager,
   versionNumberEl,
   updateVersionIndicator,
-  favoritesController,
   drawerController,
   authController
 }) {
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
-  favoritesController.init();
   drawerController.init();
-  void favoritesController.load();
   void drawerController.loadSummary();
+  void drawerController.load?.();
   await authController.init();
 }

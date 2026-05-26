@@ -1,4 +1,5 @@
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
 export function shouldSyncDrawerStoreUpdate({
   suppressSavedPagesStoreSync = false,
@@ -46,7 +47,7 @@ export function createDrawerCacheInvalidationObserver({
 
       refreshFavorites?.();
       void projectsStore.hydrate();
-      if (state.selectedProjectId) {
+      if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
         void loadDrawerProjectPages(state.selectedProjectId, {
           query: getSearchQuery(),
           syncUrl: false

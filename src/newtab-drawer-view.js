@@ -1,5 +1,11 @@
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+
 function getDefaultProjectEditorState() {
   return { pageId: null, query: '' };
+}
+
+function hasSelectedProjectScope(state) {
+  return Boolean(state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID);
 }
 
 export function createSavedPagesView({
@@ -86,8 +92,13 @@ export function createSavedPagesView({
       setSuppressSavedPagesStoreSync(true);
 
       try {
+        const safeTotal = Math.max(
+          typeof state.allItemsTotal === 'number' ? state.allItemsTotal : 0,
+          typeof state.total === 'number' ? state.total : 0,
+          state.allPages.length
+        );
         await savedPagesStore.setPages(state.allPages, {
-          total: state.allItemsTotal ?? state.total ?? state.allPages.length,
+          total: safeTotal,
           hasNextPage: false,
           nextCursor: null
         });
@@ -101,7 +112,7 @@ export function createSavedPagesView({
     showLoading: renderDrawerLoadingState,
     async loadPages() {
       const dataController = getDataController();
-      if (state.selectedProjectId) {
+      if (hasSelectedProjectScope(state)) {
         await dataController.loadDrawerProjectPages(state.selectedProjectId, {
           query: state.query,
           syncUrl: false
@@ -127,7 +138,7 @@ export function createSavedPagesView({
       renderDrawerResults();
     },
     handleProjectMembershipChange(pageId, projectId) {
-      const shouldRefilter = state.selectedProjectId === projectId;
+      const shouldRefilter = state.selectedProjectId === projectId || state.selectedProjectId === PINNED_PAGES_SCOPE_ID;
 
       if (shouldRefilter) {
         applyDrawerFilters(state.currentFilter.search || '');

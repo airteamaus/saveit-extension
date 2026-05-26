@@ -103,7 +103,8 @@ describe('ProjectManager', () => {
     manager.renderSidebar(dashboard);
 
     const sidebar = document.getElementById('project-sidebar');
-    expect(sidebar.textContent).toContain('All saved items');
+    expect(sidebar.textContent).toContain('Pinned');
+    expect(sidebar.textContent).toContain('All pages');
     expect(sidebar.textContent).toContain('SaveIt product');
     expect(sidebar.textContent).toContain('AI radar');
     expect(sidebar.querySelector('.project-nav-row[data-project-id="project-1"]')).not.toBeNull();

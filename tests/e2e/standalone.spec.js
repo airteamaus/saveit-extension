@@ -5,42 +5,42 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
 
-async function openDrawer(page) {
-  await page.click('#saved-pages-toggle-btn');
-  await expect(page.locator('#saved-pages-drawer')).not.toHaveClass(/hidden/);
+async function openStandaloneNewtab(page) {
+  await page.goto(`file://${newtabPath}`);
+  await page.waitForSelector('#project-sidebar');
+  await page.waitForSelector('#saved-pages-results');
+}
+
+async function showAllPages(page) {
+  await page.locator('.project-nav-item[data-project-id=""]').click();
+  await expect(page.locator('.project-nav-item[data-project-id=""]')).toHaveClass(/is-active/);
   await page.waitForSelector('.saved-pages-drawer-card');
 }
 
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`file://${newtabPath}`);
-    await page.waitForSelector('#saved-pages-toggle-btn');
+    await openStandaloneNewtab(page);
   });
 
-  test('should display the standalone new-tab shell', async ({ page }) => {
-    await expect(page.locator('.logo-hero')).toContainText('SaveIt');
-    await expect(page.locator('#search-input')).toBeVisible();
-    await expect(page.locator('#hero-sign-in-btn')).toBeVisible();
-  });
-
-  test('should open the drawer with projects and saved pages', async ({ page }) => {
-    await openDrawer(page);
-
+  test('should render the full-page saved pages shell with pinned selected by default', async ({ page }) => {
+    await expect(page.locator('#saved-pages-page')).toBeVisible();
+    await expect(page.locator('#saved-pages-search-input')).toBeVisible();
     await expect(page.locator('#project-sidebar')).toContainText('Collections');
-    await expect(page.locator('#project-sidebar')).toContainText('SaveIt product');
-    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible();
+    await expect(page.locator('#project-sidebar')).toContainText('Pinned');
+    await expect(page.locator('#project-sidebar')).toContainText('All pages');
+    await expect(page.locator('.project-nav-item[data-project-id="__pinned__"]')).toHaveClass(/is-active/);
+    await expect(page.locator('#saved-pages-results')).toContainText('No pages in Pinned');
   });
 
-  test('should filter drawer results with search', async ({ page }) => {
-    await openDrawer(page);
+  test('should filter all pages results with search', async ({ page }) => {
+    await showAllPages(page);
 
-    await page.fill('#saved-pages-drawer-search-input', 'JavaScript');
+    await page.fill('#saved-pages-search-input', 'JavaScript');
     await page.waitForTimeout(400);
 
-    const filteredCount = await page.locator('.saved-pages-drawer-card').count();
-    expect(filteredCount).toBeGreaterThan(0);
-    const cardText = await page.locator('.saved-pages-drawer-card').first().textContent();
-    expect(cardText.toLowerCase()).toContain('javascript');
+    const cards = page.locator('.saved-pages-drawer-card');
+    expect(await cards.count()).toBeGreaterThan(0);
+    await expect(cards.first()).toContainText('JavaScript');
   });
 
   test('should switch themes', async ({ page }) => {
@@ -69,26 +69,48 @@ test.describe('Standalone Mode', () => {
     await expect(autoButton).toHaveClass(/active/);
   });
 
-  test('should create and assign a project from the drawer editor', async ({ page }) => {
-    await openDrawer(page);
+  test('should create and assign a project from the page editor', async ({ page }) => {
+    await showAllPages(page);
 
-    await page.locator('.btn-projects').first().click();
+    const firstCard = page.locator('.saved-pages-drawer-card').first();
+    await firstCard.locator('.btn-projects').click();
     await expect(page.locator('#project-editor-dialog')).not.toHaveClass(/hidden/);
 
     await page.fill('#project-editor-search-input', 'Playwright project');
     await page.getByRole('button', { name: 'Create "Playwright project"' }).click();
 
     await expect(page.locator('#project-sidebar')).toContainText('Playwright project');
-    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('Playwright project');
+    await expect(firstCard.locator('.saved-pages-drawer-card-projects')).toContainText('Playwright project');
   });
 
   test('should scope results when selecting a project', async ({ page }) => {
-    await openDrawer(page);
+    await showAllPages(page);
 
     const projectButton = page.locator('.project-nav-item[data-project-id="project-saveit-product"]');
     await projectButton.click();
 
     await expect(projectButton).toHaveClass(/is-active/);
     await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('SaveIt product');
+  });
+
+  test('should edit a page title and description inline', async ({ page }) => {
+    await showAllPages(page);
+
+    await page.fill('#saved-pages-search-input', 'Epic Motorcycle Journey');
+    await page.waitForTimeout(400);
+
+    const card = page.locator('.saved-pages-drawer-card').first();
+    await card.locator('.saved-pages-drawer-edit-btn').click();
+
+    await card.locator('input[name="title"]').fill('Edited Himalayan Journey');
+    await card.locator('textarea[name="description"]').fill('Updated description from Playwright.');
+    await card.locator('.saved-pages-drawer-edit-save').click();
+
+    await page.fill('#saved-pages-search-input', 'Edited Himalayan Journey');
+    await page.waitForTimeout(400);
+
+    const editedCard = page.locator('.saved-pages-drawer-card').first();
+    await expect(editedCard.locator('.saved-pages-drawer-card-title')).toContainText('Edited Himalayan Journey');
+    await expect(editedCard.locator('.saved-pages-drawer-card-summary')).toContainText('Updated description from Playwright.');
   });
 });

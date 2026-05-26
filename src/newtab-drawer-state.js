@@ -1,3 +1,5 @@
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+
 export function createInitialDrawerState() {
   return {
     hasInitialized: false,
@@ -5,7 +7,7 @@ export function createInitialDrawerState() {
     query: '',
     currentFilter: {
       search: '',
-      projectId: null,
+      projectId: PINNED_PAGES_SCOPE_ID,
       cursor: null
     },
     pages: [],
@@ -14,11 +16,13 @@ export function createInitialDrawerState() {
     projectsLoading: false,
     projectsAvailable: true,
     projectsUnavailableMessage: '',
-    selectedProjectId: null,
+    selectedProjectId: PINNED_PAGES_SCOPE_ID,
     projectEditorState: {
       pageId: null,
       query: ''
     },
+    editingPageId: null,
+    savingEditPageId: null,
     total: null,
     allItemsTotal: null,
     requestId: 0
@@ -78,10 +82,11 @@ export function syncDrawerStateFromStore({
   render = state.hasInitialized
 }) {
   state.allPages = snapshot.allPages || [];
-  state.total = typeof snapshot.total === 'number' ? snapshot.total : state.allPages.length;
-  if (!state.selectedProjectId) {
-    state.allItemsTotal = state.total;
-  }
+  state.allItemsTotal = Math.max(
+    typeof snapshot.total === 'number' ? snapshot.total : 0,
+    state.allPages.length
+  );
+  state.total = state.allItemsTotal;
   projectManager.refreshProjectCounts(savedPagesView);
   applyDrawerFilters(query);
 

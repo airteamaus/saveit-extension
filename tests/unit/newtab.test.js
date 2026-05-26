@@ -125,7 +125,7 @@ describe('newtab modules', () => {
         expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
       });
 
-      it('binds search and auth event handlers', () => {
+      it('binds auth event handlers', () => {
         document.body.innerHTML = `
           <form id="search-form"></form>
           <input id="search-input" value="  alpha  ">
@@ -134,7 +134,6 @@ describe('newtab modules', () => {
           <button id="hero-sign-out-btn"></button>
         `;
         const elements = getNewtabElements(document);
-        const drawerController = { open: vi.fn() };
         const authController = {
           handleSignIn: vi.fn(),
           handleSignOut: vi.fn(),
@@ -145,17 +144,14 @@ describe('newtab modules', () => {
         bindNewtabEventHandlers({
           elements,
           authController,
-          drawerController,
           documentObj: document
         });
 
-        elements.searchForm.dispatchEvent(new Event('submit'));
         elements.signInBtn.click();
         elements.userAvatarBtn.click();
         elements.signOutBtn.click();
         document.body.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
-        expect(drawerController.open).toHaveBeenCalledWith({ searchQuery: 'alpha' });
         expect(authController.handleSignIn).toHaveBeenCalled();
         expect(authController.toggleUserDropdown).toHaveBeenCalled();
         expect(authController.handleSignOut).toHaveBeenCalled();
@@ -165,12 +161,9 @@ describe('newtab modules', () => {
       it('starts the page by initializing controllers and chrome', async () => {
         const ThemeManager = { init: vi.fn() };
         const updateVersionIndicator = vi.fn();
-        const favoritesController = {
-          init: vi.fn(),
-          load: vi.fn()
-        };
         const drawerController = {
           init: vi.fn(),
+          load: vi.fn(),
           loadSummary: vi.fn()
         };
         const authController = {
@@ -181,16 +174,14 @@ describe('newtab modules', () => {
           ThemeManager,
           versionNumberEl: { id: 'version' },
           updateVersionIndicator,
-          favoritesController,
           drawerController,
           authController
         });
 
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
-        expect(favoritesController.init).toHaveBeenCalled();
         expect(drawerController.init).toHaveBeenCalled();
-        expect(favoritesController.load).toHaveBeenCalled();
+        expect(drawerController.load).toHaveBeenCalled();
         expect(drawerController.loadSummary).toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
       });
@@ -428,7 +419,7 @@ describe('newtab modules', () => {
           isOpen: true,
           searchQuery: '  alpha  '
         }).toString()
-      ).toBe('https://example.com/newtab.html?foo=bar&drawer=saved-pages&search=alpha');
+      ).toBe('https://example.com/newtab.html?foo=bar&search=alpha');
     });
 
     it('detects new-tab navigation gestures for drawer cards', () => {
@@ -440,12 +431,10 @@ describe('newtab modules', () => {
 
     it('opens the drawer and triggers the initial base-page load', async () => {
       document.body.innerHTML = `
-        <button id="toggle"></button>
-        <div id="drawer" class="hidden"></div>
+        <div id="drawer"></div>
         <input id="search">
         <button id="clear" class="hidden"></button>
       `;
-      const savedPagesToggleBtn = document.getElementById('toggle');
       const savedPagesDrawer = document.getElementById('drawer');
       const savedPagesDrawerSearchInput = document.getElementById('search');
       const savedPagesDrawerClearBtn = document.getElementById('clear');
@@ -469,7 +458,6 @@ describe('newtab modules', () => {
 
       const shellController = createDrawerShellController({
         state,
-        savedPagesToggleBtn,
         savedPagesDrawer,
         savedPagesDrawerSearchInput,
         savedPagesDrawerClearBtn,
@@ -482,10 +470,7 @@ describe('newtab modules', () => {
       shellController.openSavedPagesDrawer({ searchQuery: 'alpha' });
       await Promise.resolve();
 
-      expect(savedPagesDrawer.classList.contains('hidden')).toBe(false);
       expect(savedPagesDrawer.getAttribute('aria-hidden')).toBe('false');
-      expect(document.body.classList.contains('saved-pages-drawer-open')).toBe(true);
-      expect(savedPagesToggleBtn.getAttribute('aria-expanded')).toBe('true');
       expect(savedPagesDrawerSearchInput.value).toBe('alpha');
       expect(savedPagesDrawerClearBtn.classList.contains('hidden')).toBe(false);
       expect(dataController.loadDrawerBasePages).toHaveBeenCalledWith({
@@ -532,7 +517,7 @@ describe('newtab modules', () => {
 
       uiController.renderResults();
 
-      expect(resultsContainer.textContent).toContain('No pages in All saved items');
+      expect(resultsContainer.textContent).toContain('No pages in All pages');
       expect(projectManager.renderSidebar).toHaveBeenCalled();
       expect(projectManager.renderEditor).toHaveBeenCalled();
     });
@@ -586,8 +571,8 @@ describe('newtab modules', () => {
 
       it('ignores search when the drawer param is not active', () => {
         expect(getInitialDrawerUrlState('?search=alpha')).toEqual({
-          isOpen: false,
-          searchQuery: ''
+          isOpen: true,
+          searchQuery: 'alpha'
         });
       });
     });
@@ -609,6 +594,25 @@ describe('newtab modules', () => {
       expect(markup).toContain('Important');
       expect(markup).toContain('data-action="pin"');
       expect(markup).toContain('data-action="delete"');
+      expect(markup).toContain('data-action="edit"');
+    });
+
+    it('renders an inline edit form for the active editing card', () => {
+      const markup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: 'Editable',
+        url: 'https://example.com/article'
+      }, {
+        editingPageId: 'page-1',
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+
+      expect(markup).toContain('saved-pages-drawer-edit-form');
+      expect(markup).toContain('name="title"');
+      expect(markup).toContain('name="description"');
+      expect(markup).toContain('data-action="cancel-edit"');
     });
   });
 
@@ -648,6 +652,7 @@ describe('newtab modules', () => {
        getSavedPages: vi.fn(),
        deletePage: vi.fn(),
        pinPage: vi.fn(),
+       updatePage: vi.fn(),
        ...(overrides.api || {})
      };
      const savedPagesStore = {
@@ -797,6 +802,39 @@ describe('newtab modules', () => {
      );
 
      consoleErrorSpy.mockRestore();
+   });
+
+   it('updates page title and description inline and re-applies filters', async () => {
+     const { controller, state, api, savedPagesView, applyDrawerFilters, dependencies } = createDrawerDataHarness({
+       state: {
+         query: 'alpha',
+         editingPageId: 'page-1',
+         pages: [{ id: 'page-1', title: 'Alpha', description: 'Before', pinned: false }],
+         allPages: [{ id: 'page-1', title: 'Alpha', description: 'Before', pinned: false }]
+       },
+       api: {
+         updatePage: vi.fn().mockResolvedValue({ updated_at: '2026-05-26T00:00:00.000Z' })
+       }
+     });
+
+     await controller.handleDrawerUpdate('page-1', {
+       title: 'Alpha edited',
+       description: 'After'
+     });
+
+     expect(api.updatePage).toHaveBeenCalledWith('page-1', {
+       title: 'Alpha edited',
+       description: 'After'
+     });
+     expect(savedPagesView.persistAllPages).toHaveBeenCalled();
+     expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
+     expect(dependencies.renderDrawerResults).toHaveBeenCalledTimes(2);
+     expect(state.editingPageId).toBeNull();
+     expect(state.savingEditPageId).toBeNull();
+     expect(state.allPages[0]).toMatchObject({
+       title: 'Alpha edited',
+       description: 'After'
+     });
    });
   });
 

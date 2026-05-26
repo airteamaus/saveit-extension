@@ -9,122 +9,17 @@
   <link rel="stylesheet" href="newtab.css">
 </head>
   <body>
-  <button
-    id="saved-pages-toggle-btn"
-    class="saved-pages-toggle-btn"
-    type="button"
-    aria-label="Open saved pages"
-    aria-expanded="false"
-    title="Open saved pages"
-  >
-    <svg id="saved-pages-toggle-icon" class="saved-pages-toggle-icon" aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M7 2a2 2 0 0 0-2 2v17l7-4.6 7 4.6V4a2 2 0 0 0-2-2z"></path>
-    </svg>
-    <span class="saved-pages-toggle-label">Saved pages</span>
-  </button>
-
-  <!-- User menu (top-right corner) -->
-  <div id="hero-user-menu" class="user-menu user-menu-fixed hidden">
-    <button id="hero-user-avatar-btn" class="user-avatar-btn" title="Account">
-      <span id="hero-user-avatar" class="user-avatar"></span>
-    </button>
-    <div id="hero-user-dropdown" class="user-dropdown hidden" data-dropdown-mode="class">
-      <div id="hero-theme-toggle-container"></div>
-      <div class="user-info">
-        <span id="hero-user-email" class="user-email"></span>
-      </div>
-        <button id="hero-sign-out-btn" class="dropdown-item dropdown-item-danger">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-          <polyline points="16 17 21 12 16 7"></polyline>
-          <line x1="21" y1="12" x2="9" y2="12"></line>
-        </svg>
-          Sign out
-        </button>
-    </div>
-  </div>
-
-  <div class="minimal-container">
-    <a href="newtab.html" class="logo logo-hero">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
-      </svg>
-      SaveIt
-    </a>
-
-    <div class="search-container">
-      <form id="search-form" class="search-form search-form-hero">
-        <span class="search-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="11" cy="11" r="8"></circle>
-            <path d="m21 21-4.35-4.35"></path>
+  <main id="saved-pages-page" class="saved-pages-page" aria-label="Saved pages">
+    <section class="saved-pages-page-shell" aria-label="Saved pages">
+      <div class="saved-pages-page-header">
+        <a href="newtab.html" class="logo logo-hero saved-pages-page-logo">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
           </svg>
-        </span>
-        <input
-          type="text"
-          id="search-input"
-          class="search-input search-input-hero"
-          placeholder="Search your saved pages..."
-          autocomplete="off"
-          autofocus
-        >
-      </form>
-    </div>
+          SaveIt
+        </a>
 
-    <div class="minimal-links">
-      <button id="hero-sign-in-btn" class="sign-in-btn hidden">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-          <polyline points="10 17 15 12 10 7"></polyline>
-          <line x1="15" y1="12" x2="3" y2="12"></line>
-        </svg>
-        Sign in
-      </button>
-    </div>
-
-    <div id="favorites-section" class="favorites-section hidden">
-      <div class="favorites-pager">
-        <button
-          id="favorites-prev-btn"
-          class="favorites-nav favorites-nav-prev"
-          type="button"
-          aria-label="Show previous favorites"
-        >
-          <span aria-hidden="true">‹</span>
-        </button>
-
-        <div id="favorites-viewport" class="favorites-viewport">
-          <div id="favorites-row" class="favorites-row">
-            <!-- Populated by JS with a page of recent saves -->
-          </div>
-        </div>
-
-        <button
-          id="favorites-next-btn"
-          class="favorites-nav favorites-nav-next"
-          type="button"
-          aria-label="Show next favorites"
-        >
-          <span aria-hidden="true">›</span>
-        </button>
-      </div>
-
-      <div id="favorites-dots" class="favorites-dots" aria-label="Favorites pages"></div>
-      <div id="favorite-hover-connector" class="favorite-hover-connector hidden" aria-hidden="true"></div>
-      <div id="favorite-hover-card" class="favorite-hover-card hidden" aria-hidden="true"></div>
-    </div>
-  </div>
-
-  <footer class="minimal-footer">
-    <a href="https://getsave.it/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
-    <span id="hero-version-indicator">v<span id="hero-version-number">...</span></span>
-  </footer>
-
-  <div id="saved-pages-drawer" class="saved-pages-drawer hidden" aria-hidden="true">
-    <div id="saved-pages-drawer-backdrop" class="saved-pages-drawer-backdrop"></div>
-    <aside class="saved-pages-drawer-panel" aria-label="Saved pages drawer">
-      <div class="saved-pages-drawer-header">
-        <form id="saved-pages-drawer-search-form" class="search-form saved-pages-drawer-search" role="search">
+        <form id="saved-pages-search-form" class="search-form saved-pages-page-search" role="search">
           <span class="search-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="11" cy="11" r="8"></circle>
@@ -133,33 +28,64 @@
           </span>
           <input
             type="text"
-            id="saved-pages-drawer-search-input"
-            class="search-input saved-pages-drawer-search-input"
+            id="saved-pages-search-input"
+            class="search-input saved-pages-page-search-input"
             placeholder="Search your saved pages..."
             autocomplete="off"
+            autofocus
           >
-          <button id="saved-pages-drawer-clear-btn" class="clear-search hidden" type="button" title="Clear search">
+          <button id="saved-pages-search-clear-btn" class="clear-search hidden" type="button" title="Clear search">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
               <line x1="18" y1="6" x2="6" y2="18"></line>
               <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
           </button>
         </form>
-        <button id="saved-pages-drawer-close-btn" class="saved-pages-drawer-close-btn" type="button" aria-label="Close saved pages">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div id="saved-pages-drawer-body" class="saved-pages-drawer-body">
-        <aside id="project-sidebar" class="project-sidebar saved-pages-drawer-project-sidebar" aria-label="Projects"></aside>
-        <div class="saved-pages-drawer-content">
-          <div id="saved-pages-drawer-results" class="saved-pages-drawer-results" aria-live="polite"></div>
+
+        <div class="saved-pages-page-actions">
+          <button id="hero-sign-in-btn" class="sign-in-btn hidden">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+              <polyline points="10 17 15 12 10 7"></polyline>
+              <line x1="15" y1="12" x2="3" y2="12"></line>
+            </svg>
+            Sign in
+          </button>
+
+          <div id="hero-user-menu" class="user-menu hidden">
+            <button id="hero-user-avatar-btn" class="user-avatar-btn" title="Account">
+              <span id="hero-user-avatar" class="user-avatar"></span>
+            </button>
+            <div id="hero-user-dropdown" class="user-dropdown hidden" data-dropdown-mode="class">
+              <div id="hero-theme-toggle-container"></div>
+              <div class="user-info">
+                <span id="hero-user-email" class="user-email"></span>
+              </div>
+                <button id="hero-sign-out-btn" class="dropdown-item dropdown-item-danger">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                  Sign out
+                </button>
+            </div>
+          </div>
         </div>
       </div>
-    </aside>
-  </div>
+      <div id="saved-pages-page-body" class="saved-pages-page-body">
+        <aside id="project-sidebar" class="project-sidebar saved-pages-page-sidebar" aria-label="Projects"></aside>
+        <div class="saved-pages-page-content">
+          <div id="saved-pages-results" class="saved-pages-page-results" aria-live="polite"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="minimal-footer">
+    <a href="https://getsave.it/privacy/" target="_blank" rel="noopener noreferrer">Privacy Policy</a>
+    <span id="hero-version-indicator">v<span id="hero-version-number">...</span></span>
+  </footer>
 
   <div id="project-editor-backdrop" class="project-editor-backdrop hidden" aria-hidden="true"></div>
   <div

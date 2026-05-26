@@ -17,18 +17,13 @@ export function createFavoritesRefreshHandler(favoritesController) {
 }
 
 export function createNewtabAuthLifecycle({
-  favoritesController,
   drawerController
 }) {
   return {
     async onSignedIn() {
-      await Promise.all([
-        favoritesController.load(),
-        drawerController.handleSignedIn()
-      ]);
+      await drawerController.handleSignedIn();
     },
     async onSignedOut() {
-      favoritesController.reset();
       drawerController.handleSignedOut();
     }
   };

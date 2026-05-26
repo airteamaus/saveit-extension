@@ -4,18 +4,15 @@ export function getInitialDrawerUrlState(locationSearch = '', {
 } = {}) {
   const urlParams = new URLSearchParams(locationSearch);
   const isOpen = urlParams.get(drawerParam) === drawerValue;
+  void isOpen;
 
   return {
-    isOpen,
-    searchQuery: isOpen ? (urlParams.get('search') || '') : ''
+    isOpen: true,
+    searchQuery: urlParams.get('search') || ''
   };
 }
 
 export function initSavedPagesDrawerEvents({
-  savedPagesToggleBtn,
-  savedPagesDrawer,
-  savedPagesDrawerBackdrop,
-  savedPagesDrawerCloseBtn,
   savedPagesDrawerSearchForm,
   savedPagesDrawerSearchInput,
   savedPagesDrawerClearBtn,
@@ -29,28 +26,20 @@ export function initSavedPagesDrawerEvents({
   closeSavedPagesDrawer,
   loadDrawerResults,
   navigateDrawerCard,
+  handleDrawerEditCancel,
+  handleDrawerEditStart,
   handleDrawerPin,
+  handleDrawerUpdate,
   handleDrawerDelete,
   setDrawerSearchValue,
   setDrawerToggleState,
   isDrawerOpen,
-  drawerParam = 'drawer',
-  drawerValue = 'saved-pages',
   windowObj = window,
   documentObj = document
 }) {
   let drawerSearchDebounceTimer = null;
-
-  savedPagesToggleBtn?.addEventListener('click', () => {
-    if (savedPagesDrawer?.classList.contains('hidden')) {
-      openSavedPagesDrawer();
-    } else {
-      closeSavedPagesDrawer();
-    }
-  });
-
-  savedPagesDrawerBackdrop?.addEventListener('click', () => closeSavedPagesDrawer());
-  savedPagesDrawerCloseBtn?.addEventListener('click', () => closeSavedPagesDrawer());
+  void closeSavedPagesDrawer;
+  void isDrawerOpen;
 
   savedPagesDrawerSearchForm?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -75,6 +64,9 @@ export function initSavedPagesDrawerEvents({
   savedPagesDrawerResults?.addEventListener('click', (event) => {
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) {
+      if (event.target.closest('.saved-pages-drawer-edit-form')) {
+        return;
+      }
       const card = event.target.closest('.saved-pages-drawer-card[data-url]');
       if (!card) {
         return;
@@ -90,6 +82,16 @@ export function initSavedPagesDrawerEvents({
     const { action, id } = actionButton.dataset;
     if (action === 'pin') {
       void handleDrawerPin(id);
+      return;
+    }
+
+    if (action === 'edit') {
+      handleDrawerEditStart(id);
+      return;
+    }
+
+    if (action === 'cancel-edit') {
+      handleDrawerEditCancel();
       return;
     }
 
@@ -109,7 +111,11 @@ export function initSavedPagesDrawerEvents({
   });
 
   savedPagesDrawerResults?.addEventListener('auxclick', (event) => {
-    if (event.button !== 1 || event.target.closest('[data-action]')) {
+    if (
+      event.button !== 1 ||
+      event.target.closest('[data-action]') ||
+      event.target.closest('.saved-pages-drawer-edit-form')
+    ) {
       return;
     }
 
@@ -123,6 +129,16 @@ export function initSavedPagesDrawerEvents({
   });
 
   savedPagesDrawerResults?.addEventListener('keydown', (event) => {
+    if (
+      event.target.closest('.saved-pages-drawer-edit-form')
+    ) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        handleDrawerEditCancel();
+      }
+      return;
+    }
+
     if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
       return;
     }
@@ -134,6 +150,20 @@ export function initSavedPagesDrawerEvents({
 
     event.preventDefault();
     navigateDrawerCard(card, event);
+  });
+
+  savedPagesDrawerResults?.addEventListener('submit', (event) => {
+    const form = event.target.closest('.saved-pages-drawer-edit-form');
+    if (!form) {
+      return;
+    }
+
+    event.preventDefault();
+    const formData = new FormData(form);
+    void handleDrawerUpdate(form.dataset.pageId, {
+      title: formData.get('title') || '',
+      description: formData.get('description') || ''
+    });
   });
 
   projectSidebar?.addEventListener('click', (event) => {
@@ -215,24 +245,9 @@ export function initSavedPagesDrawerEvents({
   documentObj.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !projectEditorDialog?.classList.contains('hidden')) {
       projectManager.closeEditor(savedPagesView);
-      return;
-    }
-
-    if (event.key === 'Escape' && isDrawerOpen()) {
-      closeSavedPagesDrawer();
     }
   });
-
-  const initialUrlState = getInitialDrawerUrlState(windowObj.location.search, {
-    drawerParam,
-    drawerValue
-  });
-  if (initialUrlState.isOpen) {
-    openSavedPagesDrawer({
-      syncUrl: false,
-      searchQuery: initialUrlState.searchQuery
-    });
-  } else {
-    setDrawerToggleState(false);
-  }
+  void openSavedPagesDrawer;
+  setDrawerToggleState(true);
+  setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);
 }

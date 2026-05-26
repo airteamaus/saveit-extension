@@ -1,3 +1,5 @@
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+
 import { replaceElementHtml } from './dom-render.js';
 
 export function getProjectActionIcon(action) {
@@ -45,7 +47,6 @@ export function renderProjectSidebar(container, {
     replaceElementHtml(container, `
       <div class="project-sidebar-header">
         <div>
-          <p class="project-sidebar-eyebrow">Projects</p>
           <h2 class="project-sidebar-title">Collections</h2>
         </div>
       </div>
@@ -58,7 +59,6 @@ export function renderProjectSidebar(container, {
     replaceElementHtml(container, `
       <div class="project-sidebar-header">
         <div>
-          <p class="project-sidebar-eyebrow">Projects</p>
           <h2 class="project-sidebar-title">Collections</h2>
         </div>
         <button class="project-sidebar-create" type="button" disabled>New</button>
@@ -71,7 +71,9 @@ export function renderProjectSidebar(container, {
   const totalCount = typeof dashboard.allItemsTotal === 'number'
     ? dashboard.allItemsTotal
     : (typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null);
+  const pinnedCount = (dashboard.allPages || []).filter(page => page.pinned).length;
   const selectedProject = getSelectedProject(dashboard);
+  const isPinnedSelected = dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID;
   const projectRows = (dashboard.projects || [])
     .filter(project => !project.archived)
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -118,16 +120,25 @@ export function renderProjectSidebar(container, {
   replaceElementHtml(container, `
     <div class="project-sidebar-header">
       <div>
-        <p class="project-sidebar-eyebrow">Projects</p>
         <h2 class="project-sidebar-title">Collections</h2>
       </div>
       <button class="project-sidebar-create" type="button">New</button>
     </div>
 
     <div class="project-nav">
-      <div class="project-nav-row ${selectedProject ? '' : 'is-active'}" data-project-id="">
-        <button class="project-nav-item ${selectedProject ? '' : 'is-active'}" data-project-id="">
-          <span class="project-nav-name">All saved items</span>
+      <div class="project-nav-row ${isPinnedSelected ? 'is-active' : ''}" data-project-id="${PINNED_PAGES_SCOPE_ID}">
+        <button class="project-nav-item ${isPinnedSelected ? 'is-active' : ''}" data-project-id="${PINNED_PAGES_SCOPE_ID}">
+          <span class="project-nav-name">Pinned</span>
+        </button>
+        <div class="project-nav-meta">
+          <span class="project-nav-visibility">Pinned pages</span>
+          <div class="project-nav-meta-right"><span class="project-nav-count">${pinnedCount}</span></div>
+        </div>
+      </div>
+
+      <div class="project-nav-row ${selectedProject || isPinnedSelected ? '' : 'is-active'}" data-project-id="">
+        <button class="project-nav-item ${selectedProject || isPinnedSelected ? '' : 'is-active'}" data-project-id="">
+          <span class="project-nav-name">All pages</span>
         </button>
         <div class="project-nav-meta">
           <span class="project-nav-visibility">Default feed</span>

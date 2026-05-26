@@ -12,9 +12,6 @@ import { createInitialDrawerState } from './newtab-drawer-state.js';
 import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
 
-const SAVED_PAGES_DRAWER_PARAM = 'drawer';
-const SAVED_PAGES_DRAWER_VALUE = 'saved-pages';
-
 export function createSavedPagesDrawerController({
   api,
   savedPagesStore,
@@ -41,10 +38,7 @@ export function createSavedPagesDrawerController({
     initSavedPagesDrawerEventsFn = initSavedPagesDrawerEvents
   } = dependencies;
   const {
-    savedPagesToggleBtn,
     savedPagesDrawer,
-    savedPagesDrawerBackdrop,
-    savedPagesDrawerCloseBtn,
     savedPagesDrawerSearchForm,
     savedPagesDrawerSearchInput,
     savedPagesDrawerClearBtn,
@@ -72,14 +66,11 @@ export function createSavedPagesDrawerController({
 
   const shellController = createDrawerShellControllerFn({
     state,
-    savedPagesToggleBtn,
     savedPagesDrawer,
     savedPagesDrawerSearchInput,
     savedPagesDrawerClearBtn,
     getDataController: () => dataController,
     renderDrawerResults: () => uiController.renderResults(),
-    drawerParam: SAVED_PAGES_DRAWER_PARAM,
-    drawerValue: SAVED_PAGES_DRAWER_VALUE,
     windowObj,
     documentObj
   });
@@ -149,10 +140,6 @@ export function createSavedPagesDrawerController({
 
   function initDrawerEventHandlers() {
     initSavedPagesDrawerEventsFn({
-      savedPagesToggleBtn,
-      savedPagesDrawer,
-      savedPagesDrawerBackdrop,
-      savedPagesDrawerCloseBtn,
       savedPagesDrawerSearchForm,
       savedPagesDrawerSearchInput,
       savedPagesDrawerClearBtn,
@@ -166,13 +153,14 @@ export function createSavedPagesDrawerController({
       closeSavedPagesDrawer: shellController.closeSavedPagesDrawer,
       loadDrawerResults: dataController.loadDrawerResults,
       navigateDrawerCard: shellController.navigateDrawerCard,
+      handleDrawerEditCancel: dataController.handleDrawerEditCancel,
+      handleDrawerEditStart: dataController.handleDrawerEditStart,
       handleDrawerPin: dataController.handleDrawerPin,
+      handleDrawerUpdate: dataController.handleDrawerUpdate,
       handleDrawerDelete: dataController.handleDrawerDelete,
       setDrawerSearchValue: shellController.setDrawerSearchValue,
       setDrawerToggleState: shellController.setDrawerToggleState,
       isDrawerOpen: shellController.isDrawerOpen,
-      drawerParam: SAVED_PAGES_DRAWER_PARAM,
-      drawerValue: SAVED_PAGES_DRAWER_VALUE,
       windowObj,
       documentObj
     });
@@ -214,6 +202,7 @@ export function createSavedPagesDrawerController({
     handleSignedIn: syncCoordinator.handleSignedIn,
     handleSignedOut: syncCoordinator.handleSignedOut,
     init,
+    load: shellController.openSavedPagesDrawer,
     loadSummary: syncCoordinator.loadSummary,
     open: shellController.openSavedPagesDrawer
   };

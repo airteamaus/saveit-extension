@@ -32,25 +32,18 @@ describe('newtab app coordination', () => {
   });
 
   it('coordinates signed-in and signed-out auth lifecycle behavior', async () => {
-    const favoritesController = {
-      load: vi.fn().mockResolvedValue(undefined),
-      reset: vi.fn()
-    };
     const drawerController = {
       handleSignedIn: vi.fn().mockResolvedValue(undefined),
       handleSignedOut: vi.fn()
     };
     const lifecycle = createNewtabAuthLifecycle({
-      favoritesController,
       drawerController
     });
 
     await lifecycle.onSignedIn();
     await lifecycle.onSignedOut();
 
-    expect(favoritesController.load).toHaveBeenCalled();
     expect(drawerController.handleSignedIn).toHaveBeenCalled();
-    expect(favoritesController.reset).toHaveBeenCalled();
     expect(drawerController.handleSignedOut).toHaveBeenCalled();
   });
 });

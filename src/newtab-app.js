@@ -1,9 +1,5 @@
 import { createNewtabAuthController } from './newtab-auth.js';
 import {
-  createFavoritesController,
-  createFavoritesStore
-} from './newtab-favorites.js';
-import {
   createProjectsStore,
   createSavedPagesDrawerController,
   createSavedPagesStore
@@ -14,27 +10,14 @@ import {
   startNewtabPage
 } from './newtab-page.js';
 import {
-  createFavoritesRefreshHandler,
   createNewtabAuthLifecycle,
   createSavedPagesFooterUpdater
 } from './newtab-app-coordination.js';
 import {
   escapeHtml,
+  updateStatsDisplay,
   updateVersionIndicator
 } from './newtab-shared.js';
-
-export function getFavoritesControllerElements(elements) {
-  return {
-    favoriteHoverCard: elements.favoriteHoverCard,
-    favoriteHoverConnector: elements.favoriteHoverConnector,
-    favoritesDots: elements.favoritesDots,
-    favoritesNextBtn: elements.favoritesNextBtn,
-    favoritesPrevBtn: elements.favoritesPrevBtn,
-    favoritesRow: elements.favoritesRow,
-    favoritesSection: elements.favoritesSection,
-    favoritesViewport: elements.favoritesViewport
-  };
-}
 
 export function getDrawerControllerElements(elements) {
   return {
@@ -42,11 +25,9 @@ export function getDrawerControllerElements(elements) {
     projectEditorDialog: elements.projectEditorDialog,
     projectSidebar: elements.projectSidebar,
     savedPagesDrawer: elements.savedPagesDrawer,
-    savedPagesDrawerBackdrop: elements.savedPagesDrawerBackdrop,
     savedPagesDrawerClearBtn: elements.savedPagesDrawerClearBtn,
-    savedPagesDrawerCloseBtn: elements.savedPagesDrawerCloseBtn,
     savedPagesDrawerResults: elements.savedPagesDrawerResults,
-    savedPagesDrawerSearchForm: elements.savedPagesDrawerSearchForm,
+    savedPagesDrawerSearchForm: elements.savedPagesDrawerSearchForm || elements.searchForm,
     savedPagesDrawerSearchInput: elements.savedPagesDrawerSearchInput,
     savedPagesToggleBtn: elements.savedPagesToggleBtn
   };
@@ -72,35 +53,28 @@ export function createNewtabApp({
 }) {
   const {
     bindNewtabEventHandlersFn = bindNewtabEventHandlers,
-    createFavoritesControllerFn = createFavoritesController,
-    createFavoritesStoreFn = createFavoritesStore,
     createNewtabAuthControllerFn = createNewtabAuthController,
     createProjectsStoreFn = createProjectsStore,
     createSavedPagesDrawerControllerFn = createSavedPagesDrawerController,
     createSavedPagesStoreFn = createSavedPagesStore,
-    createFavoritesRefreshHandlerFn = createFavoritesRefreshHandler,
     createNewtabAuthLifecycleFn = createNewtabAuthLifecycle,
     createSavedPagesFooterUpdaterFn = createSavedPagesFooterUpdater,
     escapeHtmlFn = escapeHtml,
     getNewtabElementsFn = getNewtabElements,
     startNewtabPageFn = startNewtabPage,
+    updateStatsDisplayFn = updateStatsDisplay,
     updateVersionIndicatorFn = updateVersionIndicator
   } = dependencies;
 
   const elements = getNewtabElementsFn(documentObj);
   const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn });
-  const favoritesStore = createFavoritesStoreFn(API);
   const savedPagesStore = createSavedPagesStoreFn(API);
   const projectsStore = createProjectsStoreFn(API);
 
-  const favoritesController = createFavoritesControllerFn({
-    store: favoritesStore,
-    elements: getFavoritesControllerElements(elements)
-  });
   const updateSavedPagesFooter = createSavedPagesFooterUpdaterFn({
-    versionIndicator: elements.versionIndicator
+    versionIndicator: elements.versionIndicator,
+    updateStatsDisplay: updateStatsDisplayFn
   });
-  const refreshFavorites = createFavoritesRefreshHandlerFn(favoritesController);
   const drawerController = createSavedPagesDrawerControllerFn({
     api: API,
     savedPagesStore,
@@ -108,10 +82,9 @@ export function createNewtabApp({
     projectManager,
     elements: getDrawerControllerElements(elements),
     onSavedPagesTotalChange: updateSavedPagesFooter,
-    refreshFavorites
+    refreshFavorites: undefined
   });
   const authLifecycle = createNewtabAuthLifecycleFn({
-    favoritesController,
     drawerController
   });
   const authController = createNewtabAuthControllerFn({
@@ -126,8 +99,6 @@ export function createNewtabApp({
     authController,
     drawerController,
     elements,
-    favoritesController,
-    favoritesStore,
     projectManager,
     projectsStore,
     savedPagesStore,
@@ -135,7 +106,6 @@ export function createNewtabApp({
       bindNewtabEventHandlersFn({
         elements,
         authController,
-        drawerController,
         documentObj
       });
     },
@@ -144,7 +114,6 @@ export function createNewtabApp({
         ThemeManager,
         versionNumberEl: elements.versionNumberEl,
         updateVersionIndicator: updateVersionIndicatorFn,
-        favoritesController,
         drawerController,
         authController
       });

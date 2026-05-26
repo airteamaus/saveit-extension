@@ -1,3 +1,5 @@
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+
 export function createDrawerDataController({
   api,
   state,
@@ -126,6 +128,11 @@ export function createDrawerDataController({
   }
 
   async function loadDrawerProjectPages(projectId, { query = state.query, syncUrl = true } = {}) {
+    if (!projectId || projectId === PINNED_PAGES_SCOPE_ID) {
+      await loadDrawerBasePages({ query, syncUrl });
+      return;
+    }
+
     const requestId = ++state.requestId;
     const trimmedQuery = query.trim();
 
@@ -243,6 +250,65 @@ export function createDrawerDataController({
     }
   }
 
+  function handleDrawerEditStart(id) {
+    if (!findDrawerPage(id)) {
+      return;
+    }
+
+    state.editingPageId = id;
+    state.savingEditPageId = null;
+    renderDrawerResults();
+  }
+
+  function handleDrawerEditCancel() {
+    if (state.savingEditPageId) {
+      return;
+    }
+
+    state.editingPageId = null;
+    renderDrawerResults();
+  }
+
+  async function handleDrawerUpdate(id, updates = {}) {
+    const page = findDrawerPage(id);
+    if (!page) {
+      return;
+    }
+
+    const nextTitle = (updates.title || '').trim();
+    const nextDescription = (updates.description || '').trim();
+    if (!nextTitle) {
+      windowObj.alert('Title is required.');
+      return;
+    }
+
+    state.savingEditPageId = id;
+    renderDrawerResults();
+
+    try {
+      const response = await api.updatePage(id, {
+        title: nextTitle,
+        description: nextDescription
+      });
+      updateDrawerPageCollections(id, entry => ({
+        ...entry,
+        ...(response && typeof response === 'object' ? response : {}),
+        title: nextTitle,
+        description: nextDescription
+      }));
+      state.editingPageId = null;
+      state.savingEditPageId = null;
+      await savedPagesView.persistAllPages();
+      applyDrawerFilters(state.query);
+      renderDrawerResults();
+    } catch (error) {
+      state.savingEditPageId = null;
+      renderDrawerResults();
+      console.error('[newtab] Failed to update page:', error);
+      windowObj.alert('Failed to update page. Please try again.');
+    }
+  }
+
   async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
     const trimmedQuery = query.trim();
 
@@ -263,7 +329,10 @@ export function createDrawerDataController({
   return {
     ensureDrawerProjectsLoaded,
     handleDrawerDelete,
+    handleDrawerEditCancel,
+    handleDrawerEditStart,
     handleDrawerPin,
+    handleDrawerUpdate,
     loadDrawerBasePages,
     loadDrawerProjectPages,
     loadDrawerResults

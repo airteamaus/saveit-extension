@@ -5,16 +5,13 @@ export function getSavedPagesDrawerUrl(locationHref, {
   drawerValue = 'saved-pages'
 }) {
   const url = new URL(locationHref);
+  void isOpen;
+  void drawerValue;
 
-  if (isOpen) {
-    url.searchParams.set(drawerParam, drawerValue);
-    if (searchQuery.trim()) {
-      url.searchParams.set('search', searchQuery.trim());
-    } else {
-      url.searchParams.delete('search');
-    }
+  url.searchParams.delete(drawerParam);
+  if (searchQuery.trim()) {
+    url.searchParams.set('search', searchQuery.trim());
   } else {
-    url.searchParams.delete(drawerParam);
     url.searchParams.delete('search');
   }
 
@@ -27,7 +24,6 @@ export function shouldOpenDrawerCardInNewTab(event = {}) {
 
 export function createDrawerShellController({
   state,
-  savedPagesToggleBtn,
   savedPagesDrawer,
   savedPagesDrawerSearchInput,
   savedPagesDrawerClearBtn,
@@ -38,8 +34,10 @@ export function createDrawerShellController({
   windowObj = window,
   documentObj = document
 }) {
+  void documentObj;
+
   function isDrawerOpen() {
-    return Boolean(savedPagesDrawer && !savedPagesDrawer.classList.contains('hidden'));
+    return Boolean(savedPagesDrawer);
   }
 
   function getSearchQuery() {
@@ -57,14 +55,7 @@ export function createDrawerShellController({
     windowObj.history.replaceState({}, '', url);
   }
 
-  function setDrawerToggleState(isOpen) {
-    if (!savedPagesToggleBtn) return;
-
-    savedPagesToggleBtn.setAttribute('aria-expanded', String(isOpen));
-    savedPagesToggleBtn.setAttribute('aria-label', isOpen ? 'Close saved pages' : 'Open saved pages');
-    savedPagesToggleBtn.title = isOpen ? 'Close saved pages' : 'Open saved pages';
-    savedPagesToggleBtn.classList.toggle('is-active', isOpen);
-  }
+  function setDrawerToggleState() {}
 
   function setDrawerSearchValue(query = '') {
     if (!savedPagesDrawerSearchInput || !savedPagesDrawerClearBtn) return;
@@ -91,10 +82,7 @@ export function createDrawerShellController({
     if (!savedPagesDrawer) return;
 
     setDrawerSearchValue(searchQuery);
-    savedPagesDrawer.classList.remove('hidden');
     savedPagesDrawer.setAttribute('aria-hidden', 'false');
-    documentObj.body.classList.add('saved-pages-drawer-open');
-    setDrawerToggleState(true);
 
     if (syncUrl) {
       updateDrawerUrl(true, searchQuery);
@@ -111,13 +99,6 @@ export function createDrawerShellController({
   }
 
   function closeSavedPagesDrawer({ syncUrl = true } = {}) {
-    if (!savedPagesDrawer) return;
-
-    savedPagesDrawer.classList.add('hidden');
-    savedPagesDrawer.setAttribute('aria-hidden', 'true');
-    documentObj.body.classList.remove('saved-pages-drawer-open');
-    setDrawerToggleState(false);
-
     if (syncUrl) {
       updateDrawerUrl(false);
     }
