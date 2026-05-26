@@ -148,6 +148,8 @@ jobs:
 
           # Fetch and checkout main to avoid detached HEAD issues
           git fetch origin main
+          git reset --hard
+          git clean -fd
           git checkout main
           git pull origin main
 
