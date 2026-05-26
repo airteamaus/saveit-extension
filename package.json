@@ -1,6 +1,6 @@
 {
   "name": "saveit-extension",
-  "version": "1.10.18",
+  "version": "1.10.19",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
   "type": "module",
   "scripts": {

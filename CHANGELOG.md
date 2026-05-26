@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.19] - 2026-05-26
+
+### 📝 Other Improvements
+
+- Fix release publishing workflow (86b7880)
+
 ## [1.10.18] - 2026-05-26
 
 ### 📝 Other Improvements
@@ -84,15 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **cache:** add head-based list freshness sync (7cd548c)
-
-### 🐛 Bug Fixes
-
-- **ui:** make collection cards fully clickable (31a4652)
-
-## [1.10.9] - 2026-05-15
-
-### ✨ Features
-
 - add pinnedFirst parameter to control pinned item sorting (1683350)
 - add background refresh option to profile menu (4321d7b)
 - add theme toggle to search-results page (65ad6e8)
@@ -158,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **ui:** make collection cards fully clickable (31a4652)
 - address web-ext linting warnings (5204993)
 - sync theme changes across tabs and respond to OS preference (621a743)
 - add data-theme CSS rules for manual theme override (aaa8021)
