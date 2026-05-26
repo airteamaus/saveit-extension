@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.16] - 2026-05-26
+
+### 📝 Other Improvements
+
+- Refactor newtab saved pages layout (dfd724a)
+
 ## [1.10.15] - 2026-05-20
 
 ### 📝 Other Improvements
@@ -92,13 +98,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Restore cache-first new tab startup (7310182)
 
 ## [1.10.7] - 2026-05-14
-
-### 📝 Other Improvements
-
-- Polish project drawer sidebar (f08c3f8)
-- Prefetch full favorites store (4eb41a1)
-
-## [1.10.6] - 2026-05-13
 
 ### ✨ Features
 
@@ -287,6 +286,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Polish project drawer sidebar (f08c3f8)
+- Prefetch full favorites store (4eb41a1)
 - Build Firebase bundles before tests (761a55c)
 - Cache projects and drawer refreshes (13fd7d8)
 - Refactor favorites into local store (7a410f9)
