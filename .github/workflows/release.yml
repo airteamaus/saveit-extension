@@ -97,49 +97,61 @@ jobs:
           } >> $GITHUB_OUTPUT
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ${{ steps.find_xpi.outputs.XPI_NAME }}
-            ${{ steps.find_zip.outputs.ZIP_NAME }}
-          draft: false
-          prerelease: false
-          body: |
-            ${{ steps.release_notes.outputs.NOTES }}
-
-            ---
-
-            ## 📦 Downloads
-
-            ### 🦊 Firefox (Recommended - Auto-updates enabled)
-            **Download:** `saveit-${{ steps.get_version.outputs.VERSION }}.xpi` ✅ Signed by Mozilla
-
-            **Installation:**
-            1. Click the `.xpi` file to download
-            2. Firefox will prompt to install
-            3. Click "Add" to confirm
-            4. Extension will auto-update when new versions are released
-
-            ---
-
-            ### 🌐 Chrome / Brave / Edge (Developer Mode - Manual updates)
-            **Download:** `saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip` ⚠️ Unsigned (for testing/sideloading)
-
-            **Installation:**
-            1. Download and **extract** the `.zip` file
-            2. Open your browser's extensions page:
-               - Chrome: `chrome://extensions`
-               - Brave: `brave://extensions`
-               - Edge: `edge://extensions`
-            3. Enable **"Developer mode"** (toggle in top right)
-            4. Click **"Load unpacked"**
-            5. Select the **extracted folder** (the folder containing `manifest.json`)
-
-            **Note:** Chrome builds are unsigned and require developer mode. You'll need to manually download and install new versions when they're released.
-
-            ---
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          TAG="v$VERSION"
+
+          cat > release-notes.md <<'EOF'
+          ${{ steps.release_notes.outputs.NOTES }}
+
+          ---
+
+          ## 📦 Downloads
+
+          ### 🦊 Firefox (Recommended - Auto-updates enabled)
+          **Download:** `saveit-${{ steps.get_version.outputs.VERSION }}.xpi` ✅ Signed by Mozilla
+
+          **Installation:**
+          1. Click the `.xpi` file to download
+          2. Firefox will prompt to install
+          3. Click "Add" to confirm
+          4. Extension will auto-update when new versions are released
+
+          ---
+
+          ### 🌐 Chrome / Brave / Edge (Developer Mode - Manual updates)
+          **Download:** `saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip` ⚠️ Unsigned (for testing/sideloading)
+
+          **Installation:**
+          1. Download and **extract** the `.zip` file
+          2. Open your browser's extensions page:
+             - Chrome: `chrome://extensions`
+             - Brave: `brave://extensions`
+             - Edge: `edge://extensions`
+          3. Enable **"Developer mode"** (toggle in top right)
+          4. Click **"Load unpacked"**
+          5. Select the **extracted folder** (the folder containing `manifest.json`)
+
+          **Note:** Chrome builds are unsigned and require developer mode. You'll need to manually download and install new versions when they're released.
+
+          ---
+          EOF
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" \
+              "${{ steps.find_xpi.outputs.XPI_NAME }}" \
+              "${{ steps.find_zip.outputs.ZIP_NAME }}" \
+              --clobber
+            gh release edit "$TAG" --notes-file release-notes.md
+          else
+            gh release create "$TAG" \
+              "${{ steps.find_xpi.outputs.XPI_NAME }}" \
+              "${{ steps.find_zip.outputs.ZIP_NAME }}" \
+              --title "$TAG" \
+              --notes-file release-notes.md
+          fi
 
       - name: Update updates.json
         run: |
