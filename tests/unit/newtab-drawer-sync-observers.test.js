@@ -138,7 +138,7 @@ describe('drawer sync observers', () => {
 
     expect(refreshFavorites).toHaveBeenCalled();
     expect(projectsStore.hydrate).toHaveBeenCalled();
-    expect(savedPagesStore.hydrate).toHaveBeenCalled();
+    expect(savedPagesStore.hydrate).not.toHaveBeenCalled();
     expect(loadDrawerBasePages).toHaveBeenCalledWith({
       query: 'alpha',
       syncUrl: false

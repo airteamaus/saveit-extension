@@ -1,4 +1,5 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
 
 export function createDrawerDataController({
   api,
@@ -77,7 +78,7 @@ export function createDrawerDataController({
       updateDrawerUrl(true, trimmedQuery);
     }
 
-    if (api.isExtension && !getCurrentUser()) {
+    if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
       state.isLoading = false;
       state.hasInitialized = true;
       savedPagesStore.reset({ emit: false });

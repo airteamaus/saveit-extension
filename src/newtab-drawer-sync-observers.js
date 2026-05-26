@@ -47,6 +47,22 @@ export function createDrawerCacheInvalidationObserver({
 
       refreshFavorites?.();
       void projectsStore.hydrate();
+      if (isDrawerOpen()) {
+        if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
+          void loadDrawerProjectPages(state.selectedProjectId, {
+            query: getSearchQuery(),
+            syncUrl: false
+          });
+          return;
+        }
+
+        void loadDrawerBasePages({
+          query: getSearchQuery(),
+          syncUrl: false
+        });
+        return;
+      }
+
       if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
         void loadDrawerProjectPages(state.selectedProjectId, {
           query: getSearchQuery(),
@@ -56,13 +72,6 @@ export function createDrawerCacheInvalidationObserver({
       }
 
       void savedPagesStore.hydrate();
-
-      if (isDrawerOpen()) {
-        void loadDrawerBasePages({
-          query: getSearchQuery(),
-          syncUrl: false
-        });
-      }
     }, 50);
   }
 

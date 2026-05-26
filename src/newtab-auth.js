@@ -79,33 +79,65 @@ export function createNewtabAuthController({
     }
   }
 
+  async function handleResolvedAuthState(user) {
+    updateAuthUi(user);
+
+    try {
+      if (user) {
+        await API.setLastKnownUser?.(user);
+        await onSignedIn?.(user);
+      } else {
+        await API.clearLastKnownUser?.();
+        await onSignedOut?.();
+      }
+    } catch (error) {
+      console.error('[newtab] Failed to handle auth state change:', error);
+    }
+  }
+
   async function init() {
     if (!windowObj.firebaseReady) {
       updateAuthUi(null);
-      return;
+      return { handledInitialState: false, user: null };
     }
 
     try {
       await windowObj.firebaseReady;
 
       if (windowObj.firebaseAuth && windowObj.firebaseOnAuthStateChanged) {
-        windowObj.firebaseOnAuthStateChanged(windowObj.firebaseAuth, async (user) => {
-          updateAuthUi(user);
+        let hasResolvedInitialState = false;
 
-          if (user) {
-            await API.setLastKnownUser?.(user);
-            await onSignedIn?.(user);
-          } else {
-            await API.clearLastKnownUser?.();
-            await onSignedOut?.();
-          }
-        });
+        const initialAuthState = await Promise.race([
+          new Promise(resolve => {
+            windowObj.firebaseOnAuthStateChanged(windowObj.firebaseAuth, (user) => {
+              if (!hasResolvedInitialState) {
+                hasResolvedInitialState = true;
+                void handleResolvedAuthState(user).finally(() => {
+                  resolve(user || null);
+                });
+                return;
+              }
+
+              void handleResolvedAuthState(user);
+            });
+          }),
+          new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Firebase auth timeout')), 10000);
+          })
+        ]);
+
+        return {
+          handledInitialState: true,
+          user: initialAuthState
+        };
       } else {
         updateAuthUi(null);
+        return { handledInitialState: false, user: null };
       }
     } catch (error) {
       console.error('[newtab] Firebase init failed:', error);
       updateAuthUi(null);
+      return { handledInitialState: false, user: null };
     }
   }
 

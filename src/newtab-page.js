@@ -61,7 +61,12 @@ export async function startNewtabPage({
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
   drawerController.init();
-  void drawerController.loadSummary();
+  drawerController.showLoadingState?.('Loading saved pages...');
+  const authState = await authController.init();
+
+  if (authState?.handledInitialState) {
+    return;
+  }
+
   void drawerController.load?.();
-  await authController.init();
 }

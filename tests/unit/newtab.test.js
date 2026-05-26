@@ -30,6 +30,7 @@ import { getInitialDrawerUrlState } from '../../src/newtab-drawer-events.js';
 import { shouldSyncDrawerStoreUpdate } from '../../src/newtab-drawer-sync.js';
 import {
   applyAuthUI,
+  createNewtabAuthController,
   getUserFacingSignInErrorMessage
 } from '../../src/newtab-auth.js';
 import {
@@ -158,16 +159,17 @@ describe('newtab modules', () => {
         expect(authController.hideDropdownForOutsideClick).toHaveBeenCalledWith(document.body);
       });
 
-      it('starts the page by initializing controllers and chrome', async () => {
+      it('starts the page by initializing controllers and chrome when auth does not handle first load', async () => {
         const ThemeManager = { init: vi.fn() };
         const updateVersionIndicator = vi.fn();
         const drawerController = {
           init: vi.fn(),
           load: vi.fn(),
-          loadSummary: vi.fn()
+          loadSummary: vi.fn(),
+          showLoadingState: vi.fn()
         };
         const authController = {
-          init: vi.fn().mockResolvedValue(undefined)
+          init: vi.fn().mockResolvedValue({ handledInitialState: false, user: null })
         };
 
         await startNewtabPage({
@@ -181,9 +183,37 @@ describe('newtab modules', () => {
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
+        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
         expect(drawerController.load).toHaveBeenCalled();
-        expect(drawerController.loadSummary).toHaveBeenCalled();
+        expect(drawerController.loadSummary).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
+      });
+
+      it('skips the eager drawer load when auth handles the initial state', async () => {
+        const ThemeManager = { init: vi.fn() };
+        const updateVersionIndicator = vi.fn();
+        const drawerController = {
+          init: vi.fn(),
+          load: vi.fn(),
+          loadSummary: vi.fn(),
+          showLoadingState: vi.fn()
+        };
+        const authController = {
+          init: vi.fn().mockResolvedValue({ handledInitialState: true, user: { uid: 'user-1' } })
+        };
+
+        await startNewtabPage({
+          ThemeManager,
+          versionNumberEl: { id: 'version' },
+          updateVersionIndicator,
+          drawerController,
+          authController
+        });
+
+        expect(drawerController.init).toHaveBeenCalled();
+        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
+        expect(drawerController.load).not.toHaveBeenCalled();
+        expect(drawerController.loadSummary).not.toHaveBeenCalled();
       });
     });
 
@@ -652,6 +682,7 @@ describe('newtab modules', () => {
        getSavedPages: vi.fn(),
        deletePage: vi.fn(),
        pinPage: vi.fn(),
+       getLastKnownUserId: vi.fn().mockResolvedValue(null),
        updatePage: vi.fn(),
        ...(overrides.api || {})
      };
@@ -802,6 +833,32 @@ describe('newtab modules', () => {
      );
 
      consoleErrorSpy.mockRestore();
+   });
+
+   it('hydrates saved pages from warm cache bootstrap before auth restoration completes', async () => {
+     const snapshot = {
+       allPages: [{ id: 'page-1', title: 'Cached page' }],
+       total: 1
+     };
+     const { controller, savedPagesStore, dependencies } = createDrawerDataHarness({
+       api: {
+         isExtension: true,
+         getLastKnownUserId: vi.fn().mockResolvedValue('user-1')
+       },
+       savedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue(snapshot)
+       }
+     });
+
+     await controller.loadDrawerBasePages();
+
+     expect(savedPagesStore.hydrate).toHaveBeenCalled();
+     expect(dependencies.renderDrawerSignInState).not.toHaveBeenCalled();
+     expect(dependencies.syncDrawerStateFromStore).toHaveBeenCalledWith(snapshot, {
+       query: '',
+       render: false
+     });
    });
 
    it('updates page title and description inline and re-applies filters', async () => {
@@ -1016,6 +1073,65 @@ describe('newtab modules', () => {
       expect(getUserFacingSignInErrorMessage(new Error('Popup closed'))).toBe(
         'Failed to sign in. Please try again.'
       );
+    });
+  });
+
+  describe('createNewtabAuthController', () => {
+    it('waits for the initial auth state before resolving init', async () => {
+      let authStateListener = null;
+      const onSignedIn = vi.fn().mockResolvedValue(undefined);
+      const onSignedOut = vi.fn().mockResolvedValue(undefined);
+      const signInBtn = {
+        classList: {
+          add: vi.fn(),
+          remove: vi.fn()
+        }
+      };
+      const controller = createNewtabAuthController({
+        API: {
+          setLastKnownUser: vi.fn().mockResolvedValue(undefined),
+          clearLastKnownUser: vi.fn().mockResolvedValue(undefined)
+        },
+        AuthMenu: {
+          updateCompactMenu: vi.fn(),
+          toggleDropdown: vi.fn(),
+          hideDropdown: vi.fn(),
+          signOut: vi.fn(),
+          signIn: vi.fn()
+        },
+        elements: {
+          signInBtn,
+          userMenu: {},
+          userAvatar: {},
+          userDropdown: {},
+          userEmailEl: {}
+        },
+        onSignedIn,
+        onSignedOut,
+        windowObj: {
+          firebaseReady: Promise.resolve(true),
+          firebaseAuth: { currentUser: null },
+          firebaseOnAuthStateChanged: vi.fn((auth, callback) => {
+            authStateListener = callback;
+          })
+        }
+      });
+
+      const initPromise = controller.init();
+      await Promise.resolve();
+      expect(onSignedIn).not.toHaveBeenCalled();
+      expect(onSignedOut).not.toHaveBeenCalled();
+
+      const user = { uid: 'user-1', email: 'test@example.com' };
+      authStateListener(user);
+
+      await expect(initPromise).resolves.toEqual({
+        handledInitialState: true,
+        user
+      });
+      expect(onSignedIn).toHaveBeenCalledWith(user);
+      expect(onSignedOut).not.toHaveBeenCalled();
+      expect(signInBtn.classList.add).toHaveBeenCalledWith('hidden');
     });
   });
 });

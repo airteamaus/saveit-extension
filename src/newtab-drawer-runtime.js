@@ -204,6 +204,7 @@ export function createSavedPagesDrawerController({
     init,
     load: shellController.openSavedPagesDrawer,
     loadSummary: syncCoordinator.loadSummary,
-    open: shellController.openSavedPagesDrawer
+    open: shellController.openSavedPagesDrawer,
+    showLoadingState: renderDrawerLoadingState
   };
 }

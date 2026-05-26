@@ -8,6 +8,23 @@ export function getDrawerCurrentUser(windowObj = window) {
   return windowObj.firebaseAuth?.currentUser || null;
 }
 
+export async function canHydrateDrawerWithWarmCache(api, getCurrentUser) {
+  if (!api?.isExtension) {
+    return true;
+  }
+
+  if (getCurrentUser?.()) {
+    return true;
+  }
+
+  try {
+    return Boolean(await api.getLastKnownUserId?.());
+  } catch (error) {
+    console.debug('[newtab] Failed to read warm-cache bootstrap user:', error);
+    return false;
+  }
+}
+
 export function createSavedPagesTotalNotifier({
   savedPagesStore,
   onSavedPagesTotalChange

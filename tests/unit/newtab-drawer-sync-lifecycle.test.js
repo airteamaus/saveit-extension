@@ -58,6 +58,38 @@ describe('drawer sync lifecycle', () => {
     expect(notifySavedPagesTotalChange).toHaveBeenCalled();
   });
 
+  it('hydrates summary from warm cache bootstrap when a last-known user is available', async () => {
+    const savedPagesStore = {
+      hydrate: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn()
+    };
+    const notifySavedPagesTotalChange = vi.fn();
+    const lifecycle = createDrawerSyncLifecycle({
+      api: {
+        getSavedPages: vi.fn(),
+        getLastKnownUserId: vi.fn().mockResolvedValue('user-1'),
+        isExtension: true
+      },
+      state: {},
+      savedPagesStore,
+      projectsStore: { reset: vi.fn() },
+      getCurrentUser: vi.fn(() => null),
+      isDrawerOpen: vi.fn(() => false),
+      getSearchQuery: vi.fn(() => ''),
+      notifySavedPagesTotalChange,
+      loadDrawerResults: vi.fn(),
+      renderDrawerSignInState: vi.fn(),
+      resetDrawerState: vi.fn(),
+      setSuppressSavedPagesStoreSync: vi.fn()
+    });
+
+    await lifecycle.loadSummary();
+
+    expect(savedPagesStore.hydrate).toHaveBeenCalled();
+    expect(savedPagesStore.reset).not.toHaveBeenCalled();
+    expect(notifySavedPagesTotalChange).toHaveBeenCalled();
+  });
+
   it('reloads open drawer results after sign-in', async () => {
     const loadDrawerResults = vi.fn().mockResolvedValue(undefined);
     const savedPagesStore = {
@@ -82,6 +114,7 @@ describe('drawer sync lifecycle', () => {
     await lifecycle.handleSignedIn();
 
     expect(savedPagesStore.reset).toHaveBeenCalledWith({ emit: false });
+    expect(savedPagesStore.hydrate).not.toHaveBeenCalled();
     expect(loadDrawerResults).toHaveBeenCalledWith('alpha', { syncUrl: false });
   });
 

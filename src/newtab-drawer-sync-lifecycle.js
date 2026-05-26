@@ -1,3 +1,5 @@
+import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
+
 export function createDrawerSyncLifecycle({
   api,
   state,
@@ -27,7 +29,7 @@ export function createDrawerSyncLifecycle({
           return;
         }
 
-        if (api.isExtension && !getCurrentUser()) {
+        if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
           savedPagesStore.reset({ emit: false });
           notifySavedPagesTotalChange();
           return;
@@ -48,11 +50,13 @@ export function createDrawerSyncLifecycle({
   async function handleSignedIn() {
     state.hasInitialized = false;
     savedPagesStore.reset({ emit: false });
-    await loadSummary();
 
     if (isDrawerOpen()) {
       await loadDrawerResults(getSearchQuery(), { syncUrl: false });
+      return;
     }
+
+    await loadSummary();
   }
 
   function handleSignedOut() {
