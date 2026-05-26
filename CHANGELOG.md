@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.17] - 2026-05-26
+
+### 📝 Other Improvements
+
+- Improve newtab loading lifecycle (fae366d)
+- Fix release updates workflow (b0aab23)
+
 ## [1.10.16] - 2026-05-26
 
 ### 📝 Other Improvements
@@ -83,21 +90,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refine saved pages drawer workflow (c3f70db)
 
 ## [1.10.8] - 2026-05-14
-
-### 📝 Other Improvements
-
-- Harden dependency graph (5613e02)
-- Move Unsplash key to runtime config (e7ce5f5)
-- Unify page mutation invalidation (46bc011)
-- Cache search results per session (84cc346)
-- Move drawer onto cache core (dd68116)
-- Move favorites onto cache core (53e4241)
-- Extract warm cache list core (97a6714)
-- Warm cache the saved pages drawer (a7556ee)
-- Preserve full favorites warm cache (b36cc47)
-- Restore cache-first new tab startup (7310182)
-
-## [1.10.7] - 2026-05-14
 
 ### ✨ Features
 
@@ -286,6 +278,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Harden dependency graph (5613e02)
+- Move Unsplash key to runtime config (e7ce5f5)
+- Unify page mutation invalidation (46bc011)
+- Cache search results per session (84cc346)
+- Move drawer onto cache core (dd68116)
+- Move favorites onto cache core (53e4241)
+- Extract warm cache list core (97a6714)
+- Warm cache the saved pages drawer (a7556ee)
+- Preserve full favorites warm cache (b36cc47)
+- Restore cache-first new tab startup (7310182)
 - Polish project drawer sidebar (f08c3f8)
 - Prefetch full favorites store (4eb41a1)
 - Build Firebase bundles before tests (761a55c)
