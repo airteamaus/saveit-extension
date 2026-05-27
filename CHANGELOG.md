@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.21] - 2026-05-27
+
+### 📝 Other Improvements
+
+- Fix cache manager script loading (35b3001)
+
 ## [1.10.20] - 2026-05-27
 
 ### 📝 Other Improvements
@@ -81,12 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.10.12] - 2026-05-17
 
-### 🐛 Bug Fixes
-
-- **sync:** align freshness anchor with list ordering (dc6e681)
-
-## [1.10.11] - 2026-05-16
-
 ### ✨ Features
 
 - **cache:** add head-based list freshness sync (7cd548c)
@@ -155,6 +155,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **sync:** align freshness anchor with list ordering (dc6e681)
 - **cache:** keep warm cache active after idle (daf801c)
 - **ui:** make collection cards fully clickable (31a4652)
 - address web-ext linting warnings (5204993)
