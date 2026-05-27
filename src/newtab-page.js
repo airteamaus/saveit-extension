@@ -62,11 +62,7 @@ export async function startNewtabPage({
   updateVersionIndicator(versionNumberEl);
   drawerController.init();
   drawerController.showLoadingState?.('Loading saved pages...');
-  const authState = await authController.init();
-
-  if (authState?.handledInitialState) {
-    return;
-  }
-
+  void drawerController.preloadProjects?.();
   void drawerController.load?.();
+  await authController.init();
 }

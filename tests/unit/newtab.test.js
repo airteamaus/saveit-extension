@@ -159,20 +159,24 @@ describe('newtab modules', () => {
         expect(authController.hideDropdownForOutsideClick).toHaveBeenCalledWith(document.body);
       });
 
-      it('starts the page by initializing controllers and chrome when auth does not handle first load', async () => {
+      it('starts loading saved pages before auth init resolves', async () => {
         const ThemeManager = { init: vi.fn() };
         const updateVersionIndicator = vi.fn();
+        let resolveAuthInit;
         const drawerController = {
           init: vi.fn(),
           load: vi.fn(),
           loadSummary: vi.fn(),
+          preloadProjects: vi.fn(),
           showLoadingState: vi.fn()
         };
         const authController = {
-          init: vi.fn().mockResolvedValue({ handledInitialState: false, user: null })
+          init: vi.fn(() => new Promise(resolve => {
+            resolveAuthInit = resolve;
+          }))
         };
 
-        await startNewtabPage({
+        const startPromise = startNewtabPage({
           ThemeManager,
           versionNumberEl: { id: 'version' },
           updateVersionIndicator,
@@ -180,22 +184,28 @@ describe('newtab modules', () => {
           authController
         });
 
+        await Promise.resolve();
+
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
         expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
+        expect(drawerController.preloadProjects).toHaveBeenCalled();
         expect(drawerController.load).toHaveBeenCalled();
-        expect(drawerController.loadSummary).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
+
+        resolveAuthInit({ handledInitialState: true, user: { uid: 'user-1' } });
+        await startPromise;
       });
 
-      it('skips the eager drawer load when auth handles the initial state', async () => {
+      it('still waits for auth init to settle before resolving startup', async () => {
         const ThemeManager = { init: vi.fn() };
         const updateVersionIndicator = vi.fn();
         const drawerController = {
           init: vi.fn(),
           load: vi.fn(),
           loadSummary: vi.fn(),
+          preloadProjects: vi.fn(),
           showLoadingState: vi.fn()
         };
         const authController = {
@@ -212,8 +222,8 @@ describe('newtab modules', () => {
 
         expect(drawerController.init).toHaveBeenCalled();
         expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
-        expect(drawerController.load).not.toHaveBeenCalled();
-        expect(drawerController.loadSummary).not.toHaveBeenCalled();
+        expect(drawerController.preloadProjects).toHaveBeenCalled();
+        expect(drawerController.load).toHaveBeenCalled();
       });
     });
 

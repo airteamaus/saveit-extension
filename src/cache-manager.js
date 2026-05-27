@@ -1,3 +1,5 @@
+import { debug } from './config.js';
+
 // cache-manager.js - Browser storage cache management
 // Handles user-isolated caching with expiration and validation
 

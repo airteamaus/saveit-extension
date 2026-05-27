@@ -246,24 +246,38 @@ describe('background startup', () => {
     });
   });
 
-  it('loads toolbar projects through the background API', async () => {
+  it('loads toolbar projects from local cache first and refreshes in the background', async () => {
     const onMessageAddListener = vi.fn();
+    const cachedProjects = [
+      { id: 'project-1', name: 'Cached project', archived: false },
+      { id: 'project-2', name: 'Archived project', archived: true }
+    ];
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
-      json: vi.fn(async () => [{ id: 'project-1', name: 'SaveIt product', archived: false }])
+      json: vi.fn(async () => [{ id: 'project-1', name: 'Fresh project', archived: false }])
     });
 
     vi.resetModules();
-    vi.doMock('../../src/background-auth.js', () => ({
-      createBackgroundAuth: () => ({
-        signIn: vi.fn(async () => ({
-          user: { uid: 'user-123' },
-          idToken: 'token-123'
-        })),
-        signOut: vi.fn()
-      })
-    }));
+    vi.doMock('../../src/background-auth.js', () => {
+      const auth = {
+        currentUser: { uid: 'user-123' }
+      };
+
+      return {
+        createBackgroundAuth: () => ({
+          signIn: vi.fn(async () => ({
+            user: { uid: 'user-123' },
+            idToken: 'token-123'
+          })),
+          getAuthContext: vi.fn(async () => ({
+            auth,
+            authReadyPromise: Promise.resolve()
+          })),
+          signOut: vi.fn()
+        })
+      };
+    });
     vi.doMock('../../src/sentry.js', () => ({
       initSentry: vi.fn(),
       setUser: vi.fn(),
@@ -302,7 +316,20 @@ describe('background startup', () => {
       },
       storage: {
         local: {
-          get: vi.fn(async () => ({})),
+          get: vi.fn(async (key) => {
+            if (key === 'savedPages_cache_user-123_surface=projects') {
+              return {
+                [key]: {
+                  userId: 'user-123',
+                  response: cachedProjects,
+                  timestamp: Date.now()
+                }
+              };
+            }
+
+            return {};
+          }),
+          set: vi.fn(async () => {}),
           remove: vi.fn()
         }
       },
@@ -318,6 +345,10 @@ describe('background startup', () => {
     expect(listener({ action: 'getToolbarProjects' }, {}, sendResponse)).toBe(true);
 
     await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        success: true,
+        projects: [{ id: 'project-1', name: 'Cached project', archived: false }]
+      });
       expect(fetchMock).toHaveBeenCalledWith(
         'https://saveit-5pu7ljvnuq-uc.a.run.app/projects',
         expect.objectContaining({
@@ -327,10 +358,6 @@ describe('background startup', () => {
           })
         })
       );
-      expect(sendResponse).toHaveBeenCalledWith({
-        success: true,
-        projects: [{ id: 'project-1', name: 'SaveIt product', archived: false }]
-      });
     });
   });
 

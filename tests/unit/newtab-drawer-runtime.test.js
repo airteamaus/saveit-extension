@@ -26,6 +26,7 @@ describe('newtab drawer runtime', () => {
     };
     const savedPagesView = { id: 'saved-pages-view' };
     const dataController = {
+      ensureDrawerProjectsLoaded: vi.fn(),
       handleDrawerDelete: vi.fn(),
       handleDrawerPin: vi.fn(),
       loadDrawerBasePages: vi.fn(),
@@ -97,6 +98,7 @@ describe('newtab drawer runtime', () => {
     expect(controller.loadSummary).toBe(syncCoordinator.loadSummary);
     expect(controller.handleSignedIn).toBe(syncCoordinator.handleSignedIn);
     expect(controller.handleSignedOut).toBe(syncCoordinator.handleSignedOut);
+    expect(controller.preloadProjects).toBe(dataController.ensureDrawerProjectsLoaded);
     controller.showLoadingState('Loading saved pages...');
     expect(uiController.renderLoadingState).toHaveBeenCalledWith('Loading saved pages...');
   });

@@ -1,6 +1,8 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
+import './cache-manager.js';
+import { ProjectsStore } from './projects-store.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 
@@ -13,6 +15,7 @@ logger.log('Extension loaded', {
 });
 
 const browserApi = globalThis.browser ?? globalThis.chrome;
+const LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
 
 if (!browserApi?.runtime) {
   throw new Error('Browser runtime API not available in background context');
@@ -121,6 +124,53 @@ async function getAuthenticatedSession() {
   return session;
 }
 
+function getBackgroundStorage() {
+  return browserApi.storage?.local || null;
+}
+
+async function getBackgroundCurrentUserId() {
+  const { auth, authReadyPromise } = await backgroundAuth.getAuthContext();
+  await authReadyPromise;
+  return auth.currentUser?.uid || null;
+}
+
+async function getBackgroundLastKnownUserId() {
+  const storage = getBackgroundStorage();
+  if (!storage) {
+    return null;
+  }
+
+  try {
+    const result = await storage.get(LAST_KNOWN_USER_KEY);
+    return result?.[LAST_KNOWN_USER_KEY]?.userId || null;
+  } catch (error) {
+    logger.error('Failed to read cached auth bootstrap', error);
+    return null;
+  }
+}
+
+const toolbarProjectsCacheManager = new globalThis.CacheManager_Export(
+  getBackgroundCurrentUserId,
+  getBackgroundStorage,
+  {
+    getBootstrapUserId: getBackgroundLastKnownUserId
+  }
+);
+
+const toolbarProjectsStore = new ProjectsStore({
+  isExtension: true,
+  async getProjects() {
+    const projects = await fetchBackgroundApi('/projects');
+    return Array.isArray(projects) ? projects : [];
+  },
+  getCachedPages(scope, options) {
+    return toolbarProjectsCacheManager.getCachedPages(scope, options);
+  },
+  setCachedPages(projects, scope) {
+    return toolbarProjectsCacheManager.setCachedPages(projects, scope);
+  }
+});
+
 async function parseApiError(response) {
   const errorData = await response.json().catch(() => null);
   return errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
@@ -210,7 +260,8 @@ async function getActiveTab() {
 }
 
 async function getToolbarProjects() {
-  const projects = await fetchBackgroundApi('/projects');
+  const snapshot = await toolbarProjectsStore.hydrate();
+  const projects = snapshot.projects || snapshot.allPages || [];
   return Array.isArray(projects)
     ? projects.filter(project => project?.archived !== true)
     : [];

@@ -48,14 +48,20 @@ export function createDrawerSyncLifecycle({
   }
 
   async function handleSignedIn() {
-    state.hasInitialized = false;
-    savedPagesStore.reset({ emit: false });
-
     if (isDrawerOpen()) {
+      if (state.hasInitialized) {
+        await loadDrawerResults(getSearchQuery(), { syncUrl: false });
+        return;
+      }
+
+      state.hasInitialized = false;
+      savedPagesStore.reset({ emit: false });
       await loadDrawerResults(getSearchQuery(), { syncUrl: false });
       return;
     }
 
+    state.hasInitialized = false;
+    savedPagesStore.reset({ emit: false });
     await loadSummary();
   }
 

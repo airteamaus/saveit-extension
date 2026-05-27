@@ -169,7 +169,6 @@ export function createDrawerDataController({
           return;
         }
         pages.push(...(response?.pages || []));
-        pages.push(...(response?.pages || []));
         cursor = response?.pagination?.hasNextPage ? response?.pagination?.nextCursor || null : null;
       } while (cursor);
 
