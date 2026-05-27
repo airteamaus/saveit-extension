@@ -14,6 +14,8 @@ export function getNewtabElements(documentObj = document) {
     favoritesViewport: documentObj.getElementById('favorites-viewport'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
+    savedPagesPageHeader: documentObj.getElementById('saved-pages-page-header'),
+    savedPagesPageShell: documentObj.getElementById('saved-pages-page-shell'),
     projectSidebar: documentObj.getElementById('project-sidebar'),
     savedPagesDrawer: documentObj.getElementById('saved-pages-page'),
     savedPagesDrawerBackdrop: documentObj.getElementById('saved-pages-drawer-backdrop'),

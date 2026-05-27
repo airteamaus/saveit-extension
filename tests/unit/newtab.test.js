@@ -110,6 +110,8 @@ describe('newtab modules', () => {
 
       it('collects newtab DOM elements by their expected ids', () => {
         document.body.innerHTML = `
+          <section id="saved-pages-page-shell"></section>
+          <div id="saved-pages-page-header"></div>
           <form id="search-form"></form>
           <input id="search-input">
           <button id="hero-sign-in-btn"></button>
@@ -122,6 +124,8 @@ describe('newtab modules', () => {
         expect(elements.searchForm?.id).toBe('search-form');
         expect(elements.searchInput?.id).toBe('search-input');
         expect(elements.signInBtn?.id).toBe('hero-sign-in-btn');
+        expect(elements.savedPagesPageShell?.id).toBe('saved-pages-page-shell');
+        expect(elements.savedPagesPageHeader?.id).toBe('saved-pages-page-header');
         expect(elements.favoritesSection?.id).toBe('favorites-section');
         expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
       });
