@@ -1,7 +1,11 @@
-import { debug } from './config.js';
-
 // cache-manager.js - Browser storage cache management
 // Handles user-isolated caching with expiration and validation
+
+function debugLog(...args) {
+  if (typeof globalThis.debug === 'function') {
+    globalThis.debug(...args);
+  }
+}
 
 /**
  * CacheManager handles browser storage caching for saved pages
@@ -87,7 +91,7 @@ class CacheManager {
     try {
       const userId = await this.resolveReadUserId();
       if (!userId) {
-        debug('[getCachedPages] No user logged in, skipping cache');
+        debugLog('[getCachedPages] No user logged in, skipping cache');
         return null;
       }
 
@@ -99,7 +103,7 @@ class CacheManager {
       const cached = result[cacheKey];
 
       if (!cached) {
-        debug('[getCachedPages] No cache found for user:', userId);
+        debugLog('[getCachedPages] No cache found for user:', userId);
         return null;
       }
 
@@ -115,12 +119,12 @@ class CacheManager {
 
       const age = Date.now() - cached.timestamp;
       if (age > this.CACHE_MAX_AGE_MS && options.allowExpired !== true) {
-        debug('[getCachedPages] Cache expired, fetching fresh data');
+        debugLog('[getCachedPages] Cache expired, fetching fresh data');
         return null;
       }
 
       const cacheState = age > this.CACHE_MAX_AGE_MS ? 'stale' : 'fresh';
-      debug(`[getCachedPages] Using ${cacheState} cached data (${Math.round(age / 1000)}s old)`, {
+      debugLog(`[getCachedPages] Using ${cacheState} cached data (${Math.round(age / 1000)}s old)`, {
         user_id: userId,
         pages_count: cached.response?.pages ? cached.response.pages.length : 0,
         total: cached.response?.pagination?.total,
@@ -142,7 +146,7 @@ class CacheManager {
     try {
       const userId = await this.resolveWriteUserId();
       if (!userId) {
-        debug('[setCachedPages] No user logged in, skipping cache write');
+        debugLog('[setCachedPages] No user logged in, skipping cache write');
         return;
       }
 
@@ -157,7 +161,7 @@ class CacheManager {
           timestamp: Date.now()
         }
       });
-      debug('[setCachedPages] Cache updated for user:', userId, {
+      debugLog('[setCachedPages] Cache updated for user:', userId, {
         pages_count: response?.pages?.length,
         total: response?.pagination?.total
       });
@@ -174,7 +178,7 @@ class CacheManager {
     try {
       const userId = await this.resolveWriteUserId();
       if (!userId) {
-        debug('[invalidateCache] No user logged in');
+        debugLog('[invalidateCache] No user logged in');
         return;
       }
 
@@ -190,7 +194,7 @@ class CacheManager {
           await storage.remove(keys);
         }
       }
-      debug('[invalidateCache] Cache invalidated for user:', userId, { scope });
+      debugLog('[invalidateCache] Cache invalidated for user:', userId, { scope });
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
     }
@@ -205,7 +209,7 @@ class CacheManager {
       if (!storage) return;
 
       await storage.clear();
-      debug('[clearAllCache] All cache cleared');
+      debugLog('[clearAllCache] All cache cleared');
     } catch (error) {
       console.error('[clearAllCache] Failed to clear cache:', error);
     }
@@ -230,7 +234,7 @@ class CacheManager {
       }
 
       await storage.remove(keysToRemove);
-      debug('[cleanupLegacyCache] Removed legacy global cache');
+      debugLog('[cleanupLegacyCache] Removed legacy global cache');
     } catch (error) {
       console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
     }
@@ -239,7 +243,6 @@ class CacheManager {
 
 // Export for use in api.js
 const CacheManager_Export = CacheManager;
-globalThis.CacheManager_Export = CacheManager_Export;
 globalThis.CacheManager_Export = CacheManager_Export;
 
 // Export for testing
