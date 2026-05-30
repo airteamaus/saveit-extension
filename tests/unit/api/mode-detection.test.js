@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 describe('API - Mode Detection', () => {
   let API;
+  let harness;
   let originalWindow;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Save original window state
     originalWindow = { ...global.window };
 
@@ -16,18 +18,9 @@ describe('API - Mode Detection', () => {
       SentryHelpers: null
     };
 
-    // Mock CONFIG
-    global.CONFIG = {
-      cloudFunctionUrl: 'https://test-function.run.app'
-    };
-
-    // Mock global functions from config-loader
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
-
-    // Load API module
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
+    harness.setStandaloneMode();
+    API = harness.API;
   });
 
   afterEach(() => {
@@ -37,15 +30,13 @@ describe('API - Mode Detection', () => {
   });
 
   it('should detect standalone mode when browser runtime is null', () => {
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
+    harness.setStandaloneMode();
 
     expect(API.isExtension).toBe(false);
   });
 
   it('should detect extension mode when browser runtime exists', () => {
-    global.getBrowserRuntime = vi.fn(() => ({ id: 'test-extension' }));
-    global.getStorageAPI = vi.fn(() => ({ local: {} }));
+    harness.setExtensionMode({ local: {} }, { id: 'test-extension' });
 
     expect(API.isExtension).toBe(true);
   });

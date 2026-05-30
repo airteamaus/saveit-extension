@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 describe('API - Utility Functions', () => {
   let API;
+  let harness;
   let originalWindow;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Save original window state
     originalWindow = { ...global.window };
 
@@ -16,18 +18,9 @@ describe('API - Utility Functions', () => {
       SentryHelpers: null
     };
 
-    // Mock CONFIG
-    global.CONFIG = {
-      cloudFunctionUrl: 'https://test-function.run.app'
-    };
-
-    // Mock global functions from config-loader
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
-
-    // Load API module
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
+    harness.setStandaloneMode();
+    API = harness.API;
   });
 
   afterEach(() => {
@@ -122,9 +115,8 @@ describe('API - Utility Functions', () => {
 
   describe('_fetchWithAuth', () => {
     beforeEach(() => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'test-token');
     });
@@ -221,9 +213,8 @@ describe('API - Utility Functions', () => {
 
   describe('checkSavedPagesUpdates', () => {
     beforeEach(() => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'test-token');
     });

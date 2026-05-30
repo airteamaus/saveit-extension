@@ -398,7 +398,7 @@ async function headListFreshness(API, {
   );
 }
 
-function applyApiPages(API) {
+export function applyApiPages(API) {
   Object.assign(API, {
     async _fetchFromCloudFunction(options) {
       debug('[getSavedPages] Fetching from Cloud Function...');
@@ -683,12 +683,3 @@ function applyApiPages(API) {
 
   return API;
 }
-
-const ApiPages_Export = { applyApiPages };
-globalThis.ApiPages_Export = ApiPages_Export;
-
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { applyApiPages };
-}
-/* eslint-enable no-undef */

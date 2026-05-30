@@ -161,7 +161,7 @@ function mockSearchContent(query, limit, offset, threshold) {
   };
 }
 
-function applyApiSearch(API) {
+export function applyApiSearch(API) {
   Object.assign(API, {
     _getPageTags(page, lowercase = false) {
       return getPageTags(page, lowercase);
@@ -251,12 +251,3 @@ function applyApiSearch(API) {
 
   return API;
 }
-
-const ApiSearch_Export = { applyApiSearch };
-globalThis.ApiSearch_Export = ApiSearch_Export;
-
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { applyApiSearch };
-}
-/* eslint-enable no-undef */

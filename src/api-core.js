@@ -1,6 +1,20 @@
 // api-core.js - Core API runtime, auth, transport, and cache helpers
 
-function applyApiCore(API) {
+import { CacheManager } from './cache-manager.js';
+import {
+  CONFIG as defaultConfig,
+  getBrowserRuntime as defaultGetBrowserRuntime,
+  getStorageAPI as defaultGetStorageAPI
+} from './config.js';
+
+export function applyApiCore(API, dependencies = {}) {
+  const {
+    cacheManagerClass = CacheManager,
+    config = defaultConfig,
+    getBrowserRuntime = defaultGetBrowserRuntime,
+    getStorageAPI = defaultGetStorageAPI
+  } = dependencies;
+
   API._cacheManager = null;
   API._lastKnownUserId = undefined;
   API.LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
@@ -10,7 +24,7 @@ function applyApiCore(API) {
     enumerable: true,
     get() {
       if (!this._cacheManager && this.isExtension) {
-        this._cacheManager = new globalThis.CacheManager_Export(
+        this._cacheManager = new cacheManagerClass(
           () => this.getCurrentUserId(),
           () => this.getStorage(),
           {
@@ -26,7 +40,7 @@ function applyApiCore(API) {
     configurable: true,
     enumerable: true,
     get() {
-      return globalThis.getBrowserRuntime() !== null && globalThis.getStorageAPI() !== null;
+      return getBrowserRuntime() !== null && getStorageAPI() !== null;
     }
   });
 
@@ -40,7 +54,7 @@ function applyApiCore(API) {
     },
 
     getStorage() {
-      return globalThis.getStorageAPI();
+      return getStorageAPI();
     },
 
     async getLastKnownUserId() {
@@ -222,7 +236,7 @@ function applyApiCore(API) {
     async _requestWithAuth(endpoint, params = null, options = {}) {
       const idToken = await this.getIdToken();
 
-      let url = endpoint.startsWith('http') ? endpoint : `${CONFIG.cloudFunctionUrl}${endpoint}`;
+      let url = endpoint.startsWith('http') ? endpoint : `${config.cloudFunctionUrl}${endpoint}`;
       if (params) {
         const searchParams = params instanceof URLSearchParams
           ? params
@@ -260,12 +274,3 @@ function applyApiCore(API) {
 
   return API;
 }
-
-const ApiCore_Export = { applyApiCore };
-globalThis.ApiCore_Export = ApiCore_Export;
-
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { applyApiCore };
-}
-/* eslint-enable no-undef */

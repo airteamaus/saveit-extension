@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 // Mock debug function
 globalThis.debug = vi.fn();
@@ -62,23 +63,17 @@ globalThis.MOCK_DATA = [
   }
 ];
 
-// Mock global functions
-globalThis.getBrowserRuntime = vi.fn(() => null); // Standalone mode
-globalThis.getStorageAPI = vi.fn(() => null);
 globalThis.filterMockData = vi.fn((data, options) => data.filter(p => !p.deleted));
-globalThis.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
 
 describe('API - Standalone Mode Methods', () => {
   let API;
+  let harness;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    // Ensure standalone mode
-    getBrowserRuntime.mockReturnValue(null);
-    getStorageAPI.mockReturnValue(null);
-
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test.run.app' });
+    harness.setStandaloneMode();
+    API = harness.API;
   });
 
   describe('_getPageTags', () => {

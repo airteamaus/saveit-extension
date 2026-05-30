@@ -1,7 +1,7 @@
 // background.js - Service worker for SaveIt extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
-import './cache-manager.js';
+import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
@@ -149,7 +149,7 @@ async function getBackgroundLastKnownUserId() {
   }
 }
 
-const toolbarProjectsCacheManager = new globalThis.CacheManager_Export(
+const toolbarProjectsCacheManager = new CacheManager(
   getBackgroundCurrentUserId,
   getBackgroundStorage,
   {

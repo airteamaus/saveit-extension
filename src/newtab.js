@@ -1,11 +1,12 @@
 /* global ThemeManager, AuthMenu */
 
 import './config.js';
+import { API } from './api.js';
 import { createNewtabApp } from './newtab-app.js';
 import { ProjectManager } from './project-manager.js';
 
 const app = createNewtabApp({
-  API: globalThis.API,
+  API,
   AuthMenu,
   ProjectManager,
   ThemeManager,

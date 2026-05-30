@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 describe('API - Tag Operations', () => {
   let API;
+  let harness;
   let originalWindow;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Save original window state
     originalWindow = { ...global.window };
 
@@ -16,18 +18,9 @@ describe('API - Tag Operations', () => {
       SentryHelpers: null
     };
 
-    // Mock CONFIG
-    global.CONFIG = {
-      cloudFunctionUrl: 'https://test-function.run.app'
-    };
-
-    // Mock global functions from config-loader
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
-
-    // Load API module
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
+    harness.setStandaloneMode();
+    API = harness.API;
   });
 
   afterEach(() => {

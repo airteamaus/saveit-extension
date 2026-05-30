@@ -13,7 +13,7 @@ function debugLog(...args) {
  * - Automatic expiration (5 minutes default)
  * - Cache validation (user_id mismatch detection)
  */
-class CacheManager {
+export class CacheManager {
   constructor(getCurrentUserId, getStorage, options = {}) {
     this.getCurrentUserId = getCurrentUserId;
     this.getStorage = getStorage;
@@ -240,14 +240,3 @@ class CacheManager {
     }
   }
 }
-
-// Export for use in api.js
-const CacheManager_Export = CacheManager;
-globalThis.CacheManager_Export = CacheManager_Export;
-
-// Export for testing
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { CacheManager };
-}
-/* eslint-enable no-undef */

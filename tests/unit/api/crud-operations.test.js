@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 describe('API - CRUD Operations', () => {
   let API;
+  let harness;
   let originalWindow;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Save original window state
     originalWindow = { ...global.window };
 
@@ -16,24 +18,15 @@ describe('API - CRUD Operations', () => {
       SentryHelpers: null
     };
 
-    // Mock CONFIG
-    global.CONFIG = {
-      cloudFunctionUrl: 'https://test-function.run.app'
-    };
-
-    // Mock global functions from config-loader
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
+    harness.setStandaloneMode();
     global.MOCK_PROJECTS = [];
     global.getMockProjectsData = vi.fn(() => []);
     global.createMockProjectData = vi.fn(project => ({ id: 'project-1', ...project, page_count: 0 }));
     global.updateMockProjectData = vi.fn((projectId, updates) => ({ id: projectId, ...updates, page_count: 1 }));
     global.addPageToMockProjectData = vi.fn((projectId, pageId) => ({ id: pageId, project_ids: [projectId] }));
     global.removePageFromMockProjectData = vi.fn((projectId, pageId) => ({ id: pageId, project_ids: [] }));
-
-    // Load API module
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    API = harness.API;
     API._cacheManager = null;
   });
 
@@ -50,8 +43,7 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should return mock data in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
-      global.getStorageAPI = vi.fn(() => null);
+      harness.setStandaloneMode();
       global.MOCK_DATA = [
         { id: '1', title: 'Test Page', url: 'https://test.com' }
       ];
@@ -65,8 +57,7 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should use cache in extension mode when available', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
 
       const cachedData = {
         pages: [{ id: '1', title: 'Cached' }],
@@ -89,9 +80,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should skip cache when skipCache option is true', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
 
       // Mock Firebase auth
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
@@ -120,7 +110,7 @@ describe('API - CRUD Operations', () => {
 
   describe('deletePage', () => {
     it('should delete from mock data in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
       global.MOCK_DATA = [
         { id: '1', title: 'Page 1' },
         { id: '2', title: 'Page 2' }
@@ -135,9 +125,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should call DELETE endpoint in extension mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
 
       // Mock Firebase
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
@@ -171,9 +160,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should throw error when delete fails', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
 
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
@@ -191,7 +179,7 @@ describe('API - CRUD Operations', () => {
 
   describe('updatePage', () => {
     it('should update mock data in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
       global.MOCK_DATA = [
         { id: '1', title: 'Original', notes: '' }
       ];
@@ -204,9 +192,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should call PATCH endpoint in extension mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
 
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
@@ -238,7 +225,7 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should throw error when page not found in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
       global.MOCK_DATA = [];
       global.debug = vi.fn();
 
@@ -269,9 +256,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should send a minimal create payload in extension mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
       global.fetch = vi.fn(async () => ({
@@ -312,9 +298,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should omit null company_domain in extension update payloads', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
       global.fetch = vi.fn(async () => ({
@@ -354,9 +339,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should call projects endpoint in extension mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
       API._cacheManager = {
@@ -383,8 +367,7 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should return cached projects in extension mode when available', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
 
       API._cacheManager = {
         getCachedPages: vi.fn(async () => [{ id: 'project-1', name: 'Cached project' }]),
@@ -399,9 +382,8 @@ describe('API - CRUD Operations', () => {
     });
 
     it('should treat non-project responses as unsupported project backends', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
-      global.CONFIG = { cloudFunctionUrl: 'https://test.run.app' };
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
+      harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
       API._cacheManager = {
@@ -421,21 +403,21 @@ describe('API - CRUD Operations', () => {
 
   describe('Cache Operations', () => {
     it('should return null for getCachedPages in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
 
       const cached = await API.getCachedPages();
       expect(cached).toBeNull();
     });
 
     it('should do nothing for setCachedPages in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
 
       // Should not throw
       await expect(API.setCachedPages({ pages: [] })).resolves.toBeUndefined();
     });
 
     it('should do nothing for invalidateCache in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
 
       // Should not throw
       await expect(API.invalidateCache()).resolves.toBeUndefined();

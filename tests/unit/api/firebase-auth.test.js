@@ -1,10 +1,12 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { createApiTestHarness } from './test-api-harness.js';
 
 describe('API - Firebase Authentication', () => {
   let API;
+  let harness;
   let originalWindow;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     // Save original window state
     originalWindow = { ...global.window };
 
@@ -16,18 +18,9 @@ describe('API - Firebase Authentication', () => {
       SentryHelpers: null
     };
 
-    // Mock CONFIG
-    global.CONFIG = {
-      cloudFunctionUrl: 'https://test-function.run.app'
-    };
-
-    // Mock global functions from config-loader
-    global.getBrowserRuntime = vi.fn(() => null);
-    global.getStorageAPI = vi.fn(() => null);
-
-    // Load API module
-    const apiModule = await import('../../../src/api.js');
-    API = apiModule.API;
+    harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
+    harness.setStandaloneMode();
+    API = harness.API;
   });
 
   afterEach(() => {
@@ -38,31 +31,28 @@ describe('API - Firebase Authentication', () => {
 
   describe('getIdToken', () => {
     it('should return null in standalone mode', async () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
 
       const token = await API.getIdToken();
       expect(token).toBeNull();
     });
 
     it('should throw error when Firebase not initialized', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = null;
 
       await expect(API.getIdToken()).rejects.toThrow('Firebase not initialized');
     });
 
     it('should throw error when no user signed in', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = { currentUser: null };
 
       await expect(API.getIdToken()).rejects.toThrow('No user signed in');
     });
 
     it('should throw error when getIdToken not available', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = null;
 
@@ -70,8 +60,7 @@ describe('API - Firebase Authentication', () => {
     });
 
     it('should return token when user is signed in', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       const mockUser = { uid: 'user123' };
       global.window.firebaseAuth = { currentUser: mockUser };
       global.window.firebaseGetIdToken = vi.fn(async () => 'mock-id-token');
@@ -82,8 +71,7 @@ describe('API - Firebase Authentication', () => {
     });
 
     it('should wait for Firebase ready promise', async () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
 
       let resolveReady;
       global.window.firebaseReady = new Promise(resolve => {
@@ -107,15 +95,14 @@ describe('API - Firebase Authentication', () => {
 
   describe('getCurrentUserId', () => {
     it('should return null in standalone mode', () => {
-      global.getBrowserRuntime = vi.fn(() => null);
+      harness.setStandaloneMode();
 
       const userId = API.getCurrentUserId();
       expect(userId).toBeNull();
     });
 
     it('should return null when firebaseAuth not initialized', () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = null;
 
       const userId = API.getCurrentUserId();
@@ -123,8 +110,7 @@ describe('API - Firebase Authentication', () => {
     });
 
     it('should return null when no user signed in', () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = { currentUser: null };
 
       const userId = API.getCurrentUserId();
@@ -132,8 +118,7 @@ describe('API - Firebase Authentication', () => {
     });
 
     it('should return user ID when user is signed in', () => {
-      global.getBrowserRuntime = vi.fn(() => ({ id: 'test' }));
-      global.getStorageAPI = vi.fn(() => ({ local: {} }));
+      harness.setExtensionMode({ local: {} }, { id: 'test' });
       global.window.firebaseAuth = {
         currentUser: { uid: 'user-123-abc' }
       };
@@ -146,15 +131,15 @@ describe('API - Firebase Authentication', () => {
   describe('getStorage', () => {
     it('should return storage API from config-loader', () => {
       const mockStorage = { local: {}, sync: {} };
-      global.getStorageAPI = vi.fn(() => mockStorage);
+      harness.setStorageApi(mockStorage);
 
       const storage = API.getStorage();
       expect(storage).toBe(mockStorage);
-      expect(global.getStorageAPI).toHaveBeenCalled();
+      expect(harness.getStorageAPI).toHaveBeenCalled();
     });
 
     it('should return null when storage not available', () => {
-      global.getStorageAPI = vi.fn(() => null);
+      harness.setStorageApi(null);
 
       const storage = API.getStorage();
       expect(storage).toBeNull();

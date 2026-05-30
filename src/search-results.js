@@ -7,6 +7,7 @@ import {
   createElementFromHtml,
   replaceElementHtml
 } from './dom-render.js';
+import { API } from './api.js';
 import { SearchResultsStore } from './search-results-store.js';
 
 // State
@@ -16,7 +17,7 @@ let totalResults = 0;
 let isLoading = false;
 const RESULTS_PER_PAGE = 20;
 const SIMILARITY_THRESHOLD = 0.58;
-const searchResultsStore = new SearchResultsStore(() => globalThis.API);
+const searchResultsStore = new SearchResultsStore(() => API);
 
 // DOM elements
 const searchForm = document.getElementById('search-form');

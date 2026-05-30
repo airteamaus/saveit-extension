@@ -2,17 +2,16 @@
 // Automatically detects standalone mode (testing) vs extension mode (production)
 // and uses mock data or real Cloud Function accordingly
 
-const API = {};
+import { applyApiCore } from './api-core.js';
+import { applyApiPages } from './api-pages.js';
+import { applyApiSearch } from './api-search.js';
 
-globalThis.ApiCore_Export.applyApiCore(API);
-globalThis.ApiPages_Export.applyApiPages(API);
-globalThis.ApiSearch_Export.applyApiSearch(API);
-
-globalThis.API = API;
-
-// Export for testing
-/* eslint-disable no-undef */
-if (typeof module !== 'undefined' && module.exports) {
-  module.exports = { API };
+export function createAPI(dependencies = {}) {
+  const API = {};
+  applyApiCore(API, dependencies.core);
+  applyApiPages(API);
+  applyApiSearch(API);
+  return API;
 }
-/* eslint-enable no-undef */
+
+export const API = createAPI();
