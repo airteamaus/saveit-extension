@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.22] - 2026-05-30
+
+### 📝 Other Improvements
+
+- Fix newtab pinned feed state (77705d1)
+- Tighten newtab header layout (cee2b80)
+
 ## [1.10.21] - 2026-05-27
 
 ### 📝 Other Improvements
@@ -80,12 +87,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - refactor newtab drawer rendering (3179915)
 
 ## [1.10.13] - 2026-05-19
-
-### 📝 Other Improvements
-
-- Simplify toolbar project saving (59e5dbd)
-
-## [1.10.12] - 2026-05-17
 
 ### ✨ Features
 
@@ -278,6 +279,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Simplify toolbar project saving (59e5dbd)
 - Refine saved pages drawer workflow (c3f70db)
 - Harden dependency graph (5613e02)
 - Move Unsplash key to runtime config (e7ce5f5)
