@@ -177,4 +177,40 @@ describe('SavedPagesStore', () => {
       pinnedFirst: true
     });
   });
+
+  it('supports scoped project loads with matching fetch options', async () => {
+    const api = {
+      isExtension: true,
+      getCachedPages: vi.fn(async () => null),
+      setCachedPages: vi.fn(async () => {}),
+      getSavedPages: vi.fn(async () => ({
+        pages: makePages(2),
+        pagination: {
+          total: 2,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        meta: {
+          fromCache: false
+        }
+      }))
+    };
+    const store = new SavedPagesStore(api, {
+      initialFetchLimit: 100,
+      prefetchBatchLimit: 100,
+      fetchOptions: {
+        projectId: 'project-1'
+      },
+      warmCacheScope: { surface: 'saved-pages-drawer', projectId: 'project-1' }
+    });
+
+    await store.hydrate();
+
+    expect(api.getSavedPages).toHaveBeenCalledWith({
+      limit: 100,
+      sort: 'newest',
+      pinnedFirst: false,
+      projectId: 'project-1'
+    });
+  });
 });

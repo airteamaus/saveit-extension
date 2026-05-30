@@ -38,6 +38,19 @@ describe('project manager state helpers', () => {
     expect(getScopedPages(dashboard, pages).map(page => page.id)).toEqual(['page-2', 'page-3']);
   });
 
+  it('treats the default all-pages scope as unpinned pages only', () => {
+    const dashboard = {
+      selectedProjectId: null
+    };
+    const pages = [
+      { id: 'page-1', pinned: true },
+      { id: 'page-2', pinned: false },
+      { id: 'page-3' }
+    ];
+
+    expect(getScopedPages(dashboard, pages).map(page => page.id)).toEqual(['page-2', 'page-3']);
+  });
+
   it('recomputes missing counts and returns pills for assigned projects', () => {
     const dashboard = {
       allPages: [
@@ -67,7 +80,7 @@ describe('project manager state helpers', () => {
       selectedProjectId: 'project-1',
       totalPages: 12,
       allPages: [
-        { id: 'page-1', project_ids: ['project-1'] },
+        { id: 'page-1', project_ids: ['project-1'], pinned: true },
         { id: 'page-2', project_ids: ['project-1'] },
         { id: 'page-3', project_ids: ['project-2'] }
       ],
@@ -81,7 +94,7 @@ describe('project manager state helpers', () => {
     expect(getStatsTotal(dashboard)).toBe(2);
 
     dashboard.selectedProjectId = null;
-    expect(getStatsTotal(dashboard)).toBe(12);
+    expect(getStatsTotal(dashboard)).toBe(2);
   });
 
   it('derives the company domain from the current user email with a fallback', () => {

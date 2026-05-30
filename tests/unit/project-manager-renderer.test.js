@@ -33,6 +33,11 @@ describe('project manager renderer helpers', () => {
     renderProjectSidebar(container, {
       dashboard: {
         allItemsTotal: 4,
+        allPages: [
+          { id: 'page-1', pinned: true },
+          { id: 'page-2', pinned: false },
+          { id: 'page-3', pinned: false }
+        ],
         projectsLoading: false,
         selectedProjectId: 'project-1',
         projects: [
@@ -50,6 +55,8 @@ describe('project manager renderer helpers', () => {
     expect(container.innerHTML).toContain('project-action-archive');
     expect(container.textContent).toContain('Alpha');
     expect(container.textContent).toContain('Default feed');
+    expect(container.textContent).toContain('Pinned pages');
+    expect(container.innerHTML).toContain('<span class="project-nav-count">2</span>');
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {

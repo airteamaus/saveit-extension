@@ -1,5 +1,6 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
+import { createProjectSavedPagesStore } from './newtab-drawer-stores.js';
 import { upsertListPages } from './warm-cache-list-store.js';
 
 export function createDrawerDataController({
@@ -21,9 +22,11 @@ export function createDrawerDataController({
   syncProjectsStateFromStore,
   applyDrawerFilters,
   windowObj = window,
-  projectFetchLimit = 100
+  projectFetchLimit = 100,
+  createProjectSavedPagesStoreFn = createProjectSavedPagesStore
 }) {
   let drawerProjectsPromise = null;
+  const projectSavedPagesStores = new Map();
 
   function findDrawerPage(id) {
     return state.allPages.find(page => page.id === id) || null;
@@ -35,6 +38,68 @@ export function createDrawerDataController({
       state.loadedProjectPages = state.loadedProjectPages.map(page => (page.id === id ? updater(page) : page));
     }
     state.pages = state.pages.map(page => (page.id === id ? updater(page) : page));
+  }
+
+  function syncProjectDrawerStateFromStore(projectId, snapshot, { query = state.query, render = state.hasInitialized } = {}) {
+    if (!projectId || state.selectedProjectId !== projectId) {
+      return;
+    }
+
+    const projectPages = snapshot?.allPages || [];
+    state.allPages = upsertListPages(state.allPages, projectPages, Number.POSITIVE_INFINITY);
+    state.loadedProjectPages = projectPages;
+    projectManager.refreshProjectCounts(savedPagesView);
+    applyDrawerFilters(query);
+
+    if (render) {
+      renderDrawerResults();
+    }
+  }
+
+  function getProjectSavedPagesStore(projectId) {
+    if (!projectId || projectId === PINNED_PAGES_SCOPE_ID) {
+      return null;
+    }
+
+    if (!projectSavedPagesStores.has(projectId)) {
+      const store = createProjectSavedPagesStoreFn(api, projectId, {
+        initialFetchLimit: projectFetchLimit,
+        prefetchBatchLimit: projectFetchLimit
+      });
+      store.subscribe(() => {
+        syncProjectDrawerStateFromStore(projectId, store.getSnapshot(), {
+          query: state.query,
+          render: state.hasInitialized
+        });
+      });
+      projectSavedPagesStores.set(projectId, store);
+    }
+
+    return projectSavedPagesStores.get(projectId) || null;
+  }
+
+  async function updateCachedProjectStores(page, updater) {
+    const projectIds = Array.isArray(page?.project_ids) ? page.project_ids : [];
+
+    await Promise.all(projectIds.map(async projectId => {
+      const store = projectSavedPagesStores.get(projectId);
+      if (!store) {
+        return;
+      }
+
+      await store.updatePage(page.id, updater);
+    }));
+  }
+
+  async function removeFromCachedProjectStores(id, projectIds = []) {
+    await Promise.all(projectIds.map(async projectId => {
+      const store = projectSavedPagesStores.get(projectId);
+      if (!store) {
+        return;
+      }
+
+      await store.removePage(id);
+    }));
   }
 
   async function ensureDrawerProjectsLoaded() {
@@ -148,39 +213,35 @@ export function createDrawerDataController({
       updateDrawerUrl(true, trimmedQuery);
     }
 
-    renderDrawerLoadingState(trimmedQuery ? 'Searching project pages...' : 'Loading project pages...');
+    if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
+      state.isLoading = false;
+      state.hasInitialized = true;
+      savedPagesStore.reset({ emit: false });
+      getProjectSavedPagesStore(projectId)?.reset({ emit: false });
+      state.allPages = [];
+      state.loadedProjectPages = [];
+      state.pages = [];
+      renderDrawerSignInState();
+      return;
+    }
+
+    const projectSavedPagesStore = getProjectSavedPagesStore(projectId);
+    if (!projectSavedPagesStore?.getSnapshot().allPages.length) {
+      renderDrawerLoadingState(trimmedQuery ? 'Searching project pages...' : 'Loading project pages...');
+    }
 
     try {
       const projectsPromise = ensureDrawerProjectsLoaded();
-      const pages = [];
-      let cursor = null;
-
-      do {
-        const response = await api.getSavedPages({
-          limit: projectFetchLimit,
-          sort: 'newest',
-          pinnedFirst: false,
-          projectId,
-          cursor,
-          skipCache: true
-        });
-
-        if (requestId !== state.requestId) {
-          return;
-        }
-        pages.push(...(response?.pages || []));
-        cursor = response?.pagination?.hasNextPage ? response?.pagination?.nextCursor || null : null;
-      } while (cursor);
+      const snapshot = await projectSavedPagesStore.hydrate();
 
       if (requestId !== state.requestId) {
         return;
       }
 
-      const normalizedProjectPages = upsertListPages([], pages, Number.POSITIVE_INFINITY);
-      state.allPages = upsertListPages(state.allPages, normalizedProjectPages, Number.POSITIVE_INFINITY);
-      state.loadedProjectPages = normalizedProjectPages;
-      applyDrawerFilters(trimmedQuery);
-      projectManager.refreshProjectCounts(savedPagesView);
+      syncProjectDrawerStateFromStore(projectId, snapshot, {
+        query: trimmedQuery,
+        render: false
+      });
       state.hasInitialized = true;
       renderDrawerResults();
 
@@ -217,6 +278,7 @@ export function createDrawerDataController({
       await api.deletePage(id);
       const deletedPage = findDrawerPage(id);
       await savedPagesStore.removePage(id);
+      await removeFromCachedProjectStores(id, deletedPage?.project_ids || []);
       if (Array.isArray(state.loadedProjectPages)) {
         state.loadedProjectPages = state.loadedProjectPages.filter(page => page.id !== id);
       }
@@ -243,6 +305,7 @@ export function createDrawerDataController({
     const nextPinnedState = !page.pinned;
     updateDrawerPageCollections(id, entry => ({ ...entry, pinned: nextPinnedState }));
     void savedPagesView.persistAllPages();
+    void updateCachedProjectStores(page, entry => ({ ...entry, pinned: nextPinnedState }));
     renderDrawerResults();
 
     try {
@@ -296,15 +359,17 @@ export function createDrawerDataController({
         title: nextTitle,
         description: nextDescription
       });
-      updateDrawerPageCollections(id, entry => ({
+      const applyResponseToPage = entry => ({
         ...entry,
         ...(response && typeof response === 'object' ? response : {}),
         title: nextTitle,
         description: nextDescription
-      }));
+      });
+      updateDrawerPageCollections(id, applyResponseToPage);
       state.editingPageId = null;
       state.savingEditPageId = null;
       await savedPagesView.persistAllPages();
+      await updateCachedProjectStores(page, applyResponseToPage);
       applyDrawerFilters(state.query);
       renderDrawerResults();
     } catch (error) {

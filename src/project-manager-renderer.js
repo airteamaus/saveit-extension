@@ -68,9 +68,7 @@ export function renderProjectSidebar(container, {
     return;
   }
 
-  const totalCount = typeof dashboard.allItemsTotal === 'number'
-    ? dashboard.allItemsTotal
-    : (typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null);
+  const allPagesCount = (dashboard.allPages || []).filter(page => page.pinned !== true).length;
   const pinnedCount = (dashboard.allPages || []).filter(page => page.pinned).length;
   const selectedProject = getSelectedProject(dashboard);
   const isPinnedSelected = dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID;
@@ -142,8 +140,8 @@ export function renderProjectSidebar(container, {
         </button>
         <div class="project-nav-meta">
           <span class="project-nav-visibility">Default feed</span>
-          ${typeof totalCount === 'number'
-            ? `<div class="project-nav-meta-right"><span class="project-nav-count">${totalCount}</span></div>`
+          ${typeof allPagesCount === 'number'
+            ? `<div class="project-nav-meta-right"><span class="project-nav-count">${allPagesCount}</span></div>`
             : ''}
         </div>
       </div>

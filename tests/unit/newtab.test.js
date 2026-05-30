@@ -43,6 +43,7 @@ import {
   updateStatsDisplay
 } from '../../src/newtab-shared.js';
 import {
+  createProjectSavedPagesStore,
   createProjectsStore,
   createSavedPagesStore
 } from '../../src/newtab-drawer.js';
@@ -346,6 +347,24 @@ describe('newtab modules', () => {
         surface: 'projects'
       });
     });
+
+    it('creates a project-scoped saved pages store with a matching warm cache scope', () => {
+      const store = createProjectSavedPagesStore({}, 'project-1');
+
+      expect(store.options.warmCacheScope).toEqual({
+        surface: 'saved-pages-drawer',
+        sort: 'newest',
+        pinnedFirst: false,
+        projectId: 'project-1',
+        limit: 'all'
+      });
+      expect(store.buildInitialFetchOptions()).toEqual({
+        limit: 100,
+        sort: 'newest',
+        pinnedFirst: false,
+        projectId: 'project-1'
+      });
+    });
   });
 
   describe('getDrawerSearchableText', () => {
@@ -407,6 +426,39 @@ describe('newtab modules', () => {
       expect(state.currentFilter.search).toBe('alpha');
       expect(state.total).toBe(2);
       expect(state.pages.map(page => page.id)).toEqual(['page-1']);
+    });
+
+    it('treats the all-pages scope as unpinned pages only', () => {
+      const state = {
+        query: '',
+        currentFilter: {
+          search: '',
+          projectId: null,
+          cursor: null
+        },
+        selectedProjectId: null,
+        allItemsTotal: 3,
+        allPages: [
+          { id: 'page-1', title: 'Pinned alpha', pinned: true },
+          { id: 'page-2', title: 'Alpha note', pinned: false },
+          { id: 'page-3', title: 'Beta note', pinned: false }
+        ],
+        pages: [],
+        total: null
+      };
+      const projectManager = {
+        getScopedPages: vi.fn((_dashboard, pages) => pages.filter(page => page.pinned !== true))
+      };
+
+      applySavedPagesDrawerFilters({
+        state,
+        projectManager,
+        savedPagesView: {},
+        query: ''
+      });
+
+      expect(state.total).toBe(2);
+      expect(state.pages.map(page => page.id)).toEqual(['page-2', 'page-3']);
     });
 
     it('syncs store snapshots into drawer state and triggers a render', () => {
@@ -708,6 +760,32 @@ describe('newtab modules', () => {
        reset: vi.fn(),
        ...(overrides.savedPagesStore || {})
      };
+     let projectStoreSnapshot = {
+       allPages: [],
+       total: 0
+     };
+     const projectSavedPagesStore = {
+       getSnapshot: vi.fn(() => projectStoreSnapshot),
+       hydrate: vi.fn(async () => projectStoreSnapshot),
+       subscribe: vi.fn(() => () => {}),
+       updatePage: vi.fn(async (id, updater) => {
+         projectStoreSnapshot = {
+           ...projectStoreSnapshot,
+           allPages: projectStoreSnapshot.allPages.map(page => (
+             page.id === id ? updater(page) : page
+           ))
+         };
+       }),
+       removePage: vi.fn(async id => {
+         projectStoreSnapshot = {
+           ...projectStoreSnapshot,
+           allPages: projectStoreSnapshot.allPages.filter(page => page.id !== id)
+         };
+       }),
+       reset: vi.fn(),
+       ...(overrides.projectSavedPagesStore || {})
+     };
+     const createProjectSavedPagesStoreFn = overrides.createProjectSavedPagesStoreFn || vi.fn(() => projectSavedPagesStore);
      const projectsStore = {
        hydrate: vi.fn().mockResolvedValue({ projects: [] }),
        ...(overrides.projectsStore || {})
@@ -752,6 +830,7 @@ describe('newtab modules', () => {
          state.projects = snapshot.projects || [];
        }),
        applyDrawerFilters,
+       createProjectSavedPagesStoreFn,
        windowObj: {
          confirm: vi.fn(() => true),
          alert: vi.fn(),
@@ -770,16 +849,35 @@ describe('newtab modules', () => {
        state,
        api,
        savedPagesStore,
+       projectSavedPagesStore,
        projectsStore,
        projectManager,
        savedPagesView,
+       createProjectSavedPagesStoreFn,
        applyDrawerFilters,
        dependencies
      };
    }
 
-   it('loads project pages across pagination and applies the trimmed query', async () => {
-     const { controller, state, api, projectsStore, applyDrawerFilters, dependencies } =
+   it('hydrates project pages from the scoped warm-cache store and applies the trimmed query', async () => {
+     const projectSnapshot = {
+       allPages: [
+         { id: 'page-1', title: 'Alpha one', pinned: true, project_ids: ['project-1'] },
+         { id: 'page-2', title: 'Alpha two', pinned: false, project_ids: ['project-1'] },
+         { id: 'page-3', title: 'Alpha three', pinned: false, project_ids: ['project-1'] }
+       ],
+       total: 3
+     };
+     const {
+       controller,
+       state,
+       api,
+       projectSavedPagesStore,
+       projectsStore,
+       createProjectSavedPagesStoreFn,
+       applyDrawerFilters,
+       dependencies
+     } =
        createDrawerDataHarness({
          state: {
            selectedProjectId: 'project-1',
@@ -788,27 +886,10 @@ describe('newtab modules', () => {
            ],
            allItemsTotal: 4
          },
-         api: {
-           getSavedPages: vi.fn()
-             .mockResolvedValueOnce({
-               pages: [
-                 { id: 'page-1', title: 'Alpha one', pinned: true, project_ids: ['project-1'] },
-                 { id: 'page-2', title: 'Alpha two', pinned: false, project_ids: ['project-1'] }
-               ],
-               pagination: {
-                 total: 3,
-                 hasNextPage: true,
-                 nextCursor: 'cursor-2'
-               }
-             })
-             .mockResolvedValueOnce({
-               pages: [{ id: 'page-3', title: 'Alpha three', pinned: false, project_ids: ['project-1'] }],
-               pagination: {
-                 total: 3,
-                 hasNextPage: false,
-                 nextCursor: null
-               }
-             })
+         projectSavedPagesStore: {
+           getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+           hydrate: vi.fn().mockResolvedValue(projectSnapshot),
+           subscribe: vi.fn(() => () => {})
          },
          applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
            state,
@@ -830,22 +911,12 @@ describe('newtab modules', () => {
      await Promise.resolve();
 
      expect(projectsStore.hydrate).toHaveBeenCalledTimes(1);
-     expect(api.getSavedPages).toHaveBeenNthCalledWith(1, {
-       limit: 100,
-       sort: 'newest',
-       pinnedFirst: false,
-       projectId: 'project-1',
-       cursor: null,
-       skipCache: true
+     expect(createProjectSavedPagesStoreFn).toHaveBeenCalledWith(api, 'project-1', {
+       initialFetchLimit: 100,
+       prefetchBatchLimit: 100
      });
-     expect(api.getSavedPages).toHaveBeenNthCalledWith(2, {
-       limit: 100,
-       sort: 'newest',
-       pinnedFirst: false,
-       projectId: 'project-1',
-       cursor: 'cursor-2',
-       skipCache: true
-     });
+     expect(projectSavedPagesStore.hydrate).toHaveBeenCalledTimes(1);
+     expect(api.getSavedPages).not.toHaveBeenCalled();
      expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching project pages...');
      expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
      expect(state.allPages.map(page => page.id)).toEqual(['page-0', 'page-1', 'page-2', 'page-3']);
@@ -857,6 +928,60 @@ describe('newtab modules', () => {
      expect(dependencies.syncProjectsStateFromStore).toHaveBeenCalled();
    });
 
+   it('subscribes to project store refreshes and re-renders the selected project scope', async () => {
+     let projectSnapshot = {
+       allPages: [{ id: 'page-1', title: 'Cached alpha', project_ids: ['project-1'] }],
+       total: 1
+     };
+     let onProjectStoreChange = null;
+     const {
+       controller,
+       state,
+       dependencies
+     } = createDrawerDataHarness({
+       state: {
+         hasInitialized: true,
+         selectedProjectId: 'project-1'
+       },
+       projectSavedPagesStore: {
+         getSnapshot: vi.fn(() => projectSnapshot),
+         hydrate: vi.fn(async () => projectSnapshot),
+         subscribe: vi.fn(listener => {
+           onProjectStoreChange = listener;
+           return () => {};
+         })
+       },
+       applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
+         state,
+         projectManager: {
+           getScopedPages: (dashboard, pages) => pages.filter(page => (
+             page.project_ids?.includes(dashboard.selectedProjectId)
+           ))
+         },
+         savedPagesView: {
+           get selectedProjectId() {
+             return state.selectedProjectId;
+           }
+         },
+         query
+       }))
+     });
+
+     await controller.loadDrawerProjectPages('project-1');
+     projectSnapshot = {
+       allPages: [
+         { id: 'page-1', title: 'Cached alpha', project_ids: ['project-1'] },
+         { id: 'page-2', title: 'Fresh beta', project_ids: ['project-1'] }
+       ],
+       total: 2
+     };
+     onProjectStoreChange();
+
+     expect(state.loadedProjectPages.map(page => page.id)).toEqual(['page-1', 'page-2']);
+     expect(state.pages.map(page => page.id)).toEqual(['page-1', 'page-2']);
+     expect(dependencies.renderDrawerResults).toHaveBeenCalled();
+   });
+
    it('keeps pinned and all-pages sidebar counts tied to the canonical page collection when a project is selected', async () => {
      const { controller, state } = createDrawerDataHarness({
        state: {
@@ -866,19 +991,17 @@ describe('newtab modules', () => {
          ],
          allItemsTotal: 4
        },
-       api: {
-         getSavedPages: vi.fn().mockResolvedValue({
-           pages: [
+       projectSavedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue({
+           allPages: [
              { id: 'page-1', title: 'Alpha one', pinned: true, project_ids: ['project-1'] },
              { id: 'page-2', title: 'Alpha two', pinned: false, project_ids: ['project-1'] },
              { id: 'page-3', title: 'Alpha three', pinned: false, project_ids: ['project-1'] }
            ],
-           pagination: {
-             total: 3,
-             hasNextPage: false,
-             nextCursor: null
-           }
-         })
+           total: 3
+         }),
+         subscribe: vi.fn(() => () => {})
        },
        applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
          state,

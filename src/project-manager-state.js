@@ -25,7 +25,7 @@ export function getScopedPages(dashboard, pages) {
   }
 
   if (!dashboard.selectedProjectId) {
-    return [...pages];
+    return pages.filter(page => page.pinned !== true);
   }
 
   return pages.filter(page => page.project_ids?.includes(dashboard.selectedProjectId));
@@ -65,15 +65,7 @@ export function adjustProjectCount(dashboard, projectId, delta) {
 }
 
 export function getStatsTotal(dashboard) {
-  if (dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID) {
-    return getScopedPages(dashboard, dashboard.allPages).length;
-  }
-
-  if (dashboard.selectedProjectId) {
-    return getScopedPages(dashboard, dashboard.allPages).length;
-  }
-
-  return typeof dashboard.totalPages === 'number' ? dashboard.totalPages : null;
+  return getScopedPages(dashboard, dashboard.allPages || []).length;
 }
 
 export function getProjectMap(dashboard) {

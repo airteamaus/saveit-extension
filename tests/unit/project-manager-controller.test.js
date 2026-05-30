@@ -64,5 +64,10 @@ describe('project manager controller', () => {
     expect(controller.getScopedPages(dashboard, dashboard.allPages).map(page => page.id)).toEqual(['page-1', 'page-3']);
     expect(controller.getStatsTotal(dashboard)).toBe(2);
     expect(controller.getCompanyDomain(dashboard)).toBe('airteam.com.au');
+
+    dashboard.selectedProjectId = null;
+    dashboard.allPages[0].pinned = true;
+    expect(controller.getScopedPages(dashboard, dashboard.allPages).map(page => page.id)).toEqual(['page-2', 'page-3']);
+    expect(controller.getStatsTotal(dashboard)).toBe(2);
   });
 });

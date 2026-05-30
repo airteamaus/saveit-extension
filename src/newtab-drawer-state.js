@@ -62,9 +62,7 @@ export function applyDrawerFilters({
     ? state.loadedProjectPages
     : state.allPages;
   const scopedPages = projectManager.getScopedPages(savedPagesView, scopeSourcePages);
-  state.total = state.selectedProjectId
-    ? scopedPages.length
-    : (typeof state.allItemsTotal === 'number' ? state.allItemsTotal : null);
+  state.total = scopedPages.length;
 
   if (!trimmedQuery) {
     state.pages = [...scopedPages];
