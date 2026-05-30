@@ -66,28 +66,10 @@ export function renderPageTags(page = {}) {
   return tags.join('');
 }
 
-export function updateStatsDisplay(versionIndicator, pagination) {
+export function updateStatsDisplay(versionIndicator, _pagination) {
   if (!versionIndicator) return;
 
-  let statsSpan = versionIndicator.querySelector('.footer-stats');
-
-  if (!pagination || typeof pagination.total !== 'number') {
-    if (statsSpan) statsSpan.remove();
-    return;
-  }
-
-  const total = pagination.total;
-  const statsText = `(${total} ${total === 1 ? 'thing' : 'things'} saved)`;
-
-  if (!statsSpan) {
-    statsSpan = document.createElement('span');
-    statsSpan.className = 'footer-stats';
-    statsSpan.style.marginLeft = '4px';
-    statsSpan.style.opacity = '0.7';
-    versionIndicator.appendChild(statsSpan);
-  }
-
-  statsSpan.textContent = statsText;
+  versionIndicator.querySelector('.footer-stats')?.remove();
 }
 
 export function updateVersionIndicator(versionNumberEl) {

@@ -5,7 +5,7 @@ const DRAWER_INITIAL_FETCH_LIMIT = 50;
 const DRAWER_WARM_CACHE_SCOPE = {
   surface: 'saved-pages-drawer',
   sort: 'newest',
-  pinnedFirst: false,
+  pinnedFirst: true,
   limit: 'all'
 };
 
@@ -13,6 +13,7 @@ export function createSavedPagesStore(api) {
   return new SavedPagesStore(api, {
     initialFetchLimit: DRAWER_INITIAL_FETCH_LIMIT,
     prefetchBatchLimit: 100,
+    pinnedFirst: true,
     warmCacheScope: DRAWER_WARM_CACHE_SCOPE
   });
 }

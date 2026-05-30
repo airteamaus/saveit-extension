@@ -144,4 +144,37 @@ describe('SavedPagesStore', () => {
     expect(snapshot.allPages.find(page => page.id === 'page-2')?.pinned).toBe(true);
     expect(api.setCachedPages).toHaveBeenCalled();
   });
+
+  it('supports pinned-first canonical loads when requested', async () => {
+    const api = {
+      isExtension: true,
+      getCachedPages: vi.fn(async () => null),
+      setCachedPages: vi.fn(async () => {}),
+      getSavedPages: vi.fn(async () => ({
+        pages: makePages(2),
+        pagination: {
+          total: 2,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        meta: {
+          fromCache: false
+        }
+      }))
+    };
+    const store = new SavedPagesStore(api, {
+      initialFetchLimit: 50,
+      prefetchBatchLimit: 100,
+      pinnedFirst: true,
+      warmCacheScope: { surface: 'saved-pages-drawer', pinnedFirst: true }
+    });
+
+    await store.hydrate();
+
+    expect(api.getSavedPages).toHaveBeenCalledWith({
+      limit: 50,
+      sort: 'newest',
+      pinnedFirst: true
+    });
+  });
 });

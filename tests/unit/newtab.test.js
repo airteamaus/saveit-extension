@@ -78,15 +78,15 @@ describe('newtab modules', () => {
       versionIndicator = document.getElementById('version-indicator');
     });
 
-    it('renders footer stats when a numeric total is present', () => {
+    it('does not render footer stats even when a numeric total is present', () => {
       updateStatsDisplay(versionIndicator, { total: 42 });
 
-      expect(versionIndicator.querySelector('.footer-stats')?.textContent).toBe('(42 things saved)');
+      expect(versionIndicator.querySelector('.footer-stats')).toBeNull();
     });
 
-    it('removes footer stats when pagination is unavailable', () => {
+    it('removes any existing footer stats markup', () => {
+      versionIndicator.innerHTML = '<span class="footer-stats">(7 things saved)</span>';
       updateStatsDisplay(versionIndicator, { total: 7 });
-      updateStatsDisplay(versionIndicator, null);
 
       expect(versionIndicator.querySelector('.footer-stats')).toBeNull();
     });
@@ -329,13 +329,13 @@ describe('newtab modules', () => {
       expect(store.options.warmCacheScope).toEqual({
         surface: 'saved-pages-drawer',
         sort: 'newest',
-        pinnedFirst: false,
+        pinnedFirst: true,
         limit: 'all'
       });
       expect(store.buildInitialFetchOptions()).toEqual({
         limit: 50,
         sort: 'newest',
-        pinnedFirst: false
+        pinnedFirst: true
       });
     });
 

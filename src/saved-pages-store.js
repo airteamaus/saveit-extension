@@ -2,6 +2,8 @@ import { WarmCacheListStore } from './warm-cache-list-store.js';
 
 export class SavedPagesStore extends WarmCacheListStore {
   constructor(api, options = {}) {
+    const pinnedFirst = options.pinnedFirst === true;
+
     super(api, {
       maxItems: options.maxItems || Number.POSITIVE_INFINITY,
       initialFetchLimit: options.initialFetchLimit || 50,
@@ -13,25 +15,25 @@ export class SavedPagesStore extends WarmCacheListStore {
       buildInitialFetchOptions: (overrides = {}) => ({
         limit: options.initialFetchLimit || 50,
         sort: 'newest',
-        pinnedFirst: false,
+        pinnedFirst,
         ...overrides
       }),
       buildIncrementalFetchOptions: newerThanId => ({
         limit: options.initialFetchLimit || 50,
         sort: 'newest',
-        pinnedFirst: false,
+        pinnedFirst,
         newerThanId,
         skipCache: true
       }),
       buildUpdateCheckOptions: latestKnownId => ({
         sort: 'newest',
-        pinnedFirst: false,
+        pinnedFirst,
         latestKnownId
       }),
       buildLoadMoreFetchOptions: cursor => ({
         limit: options.prefetchBatchLimit || 100,
         sort: 'newest',
-        pinnedFirst: false,
+        pinnedFirst,
         cursor,
         skipCache: true
       })
