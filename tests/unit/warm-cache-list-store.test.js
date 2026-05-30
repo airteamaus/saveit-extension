@@ -362,4 +362,74 @@ describe('WarmCacheListStore', () => {
     expect(store.getSnapshot().allPages.find(page => page.id === 'page-2')?.pinned).toBe(true);
     expect(api.setCachedPages).toHaveBeenCalled();
   });
+
+  it('keeps stale cache state visible when the background refresh fails', async () => {
+    const cachedPages = makePages(2);
+    const refreshError = new Error('Network refresh failed');
+    const getList = vi.fn().mockRejectedValue(refreshError);
+    const { store } = createStore({
+      getList,
+      getCachedPagesState: vi.fn(async () => ({
+        status: 'stale',
+        response: buildListCachePayload(cachedPages, {
+          total: 2,
+          hasNextPage: false,
+          nextCursor: null
+        }, true),
+        error: null,
+        ageMs: 360001,
+        timestamp: Date.now() - 360001,
+        reason: 'expired',
+        usable: true
+      }))
+    });
+
+    const snapshot = await store.hydrate();
+
+    expect(snapshot.warmCacheState.status).toBe('stale');
+    expect(snapshot.dataState.status).toBe('stale');
+    expect(snapshot.dataState.source).toBe('warm-cache');
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().refreshState.status).toBe('error');
+    });
+    expect(store.getSnapshot().refreshState.error).toBe(refreshError);
+    expect(store.getSnapshot().allPages.map(page => page.id)).toEqual(['page-1', 'page-2']);
+  });
+
+  it('marks empty list state explicitly after a successful empty hydrate', async () => {
+    const getList = vi.fn().mockResolvedValue({
+      pages: [],
+      pagination: {
+        total: 0,
+        hasNextPage: false,
+        nextCursor: null
+      },
+      meta: {
+        fromCache: false
+      }
+    });
+    const { store } = createStore({
+      getList,
+      getCachedPagesState: vi.fn(async () => ({
+        status: 'empty',
+        response: null,
+        error: null,
+        ageMs: null,
+        timestamp: null,
+        reason: 'missing-entry',
+        usable: false
+      }))
+    });
+
+    const snapshot = await store.hydrate();
+
+    expect(snapshot.warmCacheState.status).toBe('empty');
+    expect(snapshot.dataState).toEqual({
+      status: 'empty',
+      source: 'network',
+      error: null
+    });
+    expect(snapshot.allPages).toEqual([]);
+    expect(snapshot.total).toBe(0);
+  });
 });

@@ -7,6 +7,25 @@ function debugLog(...args) {
   }
 }
 
+function createCacheReadResult(status, {
+  response = null,
+  error = null,
+  ageMs = null,
+  timestamp = null,
+  reason = null,
+  usable = false
+} = {}) {
+  return {
+    status,
+    response,
+    error,
+    ageMs,
+    timestamp,
+    reason,
+    usable
+  };
+}
+
 /**
  * CacheManager handles browser storage caching for saved pages
  * - User-isolated cache keys to prevent cross-user data leakage
@@ -87,16 +106,22 @@ export class CacheManager {
    * Cache is isolated per user to prevent cross-user data leakage
    * Returns full response object with pagination metadata
    */
-  async getCachedPages(scope = {}, options = {}) {
+  async getCachedPagesState(scope = {}, options = {}) {
     try {
       const userId = await this.resolveReadUserId();
       if (!userId) {
         debugLog('[getCachedPages] No user logged in, skipping cache');
-        return null;
+        return createCacheReadResult('empty', {
+          reason: 'missing-user'
+        });
       }
 
       const storage = this.getStorage();
-      if (!storage) return null;
+      if (!storage) {
+        return createCacheReadResult('empty', {
+          reason: 'storage-unavailable'
+        });
+      }
 
       const cacheKey = this.getCacheKey(userId, scope);
       const result = await storage.get(cacheKey);
@@ -104,37 +129,62 @@ export class CacheManager {
 
       if (!cached) {
         debugLog('[getCachedPages] No cache found for user:', userId);
-        return null;
+        return createCacheReadResult('empty', {
+          reason: 'missing-entry'
+        });
       }
 
-      // Validate that cached data belongs to current user (extra safety)
       if (cached.userId && cached.userId !== userId) {
         console.warn('[getCachedPages] Cache user_id mismatch! Clearing invalid cache.', {
           cached_user: cached.userId,
           current_user: userId
         });
         await storage.remove(cacheKey);
-        return null;
+        return createCacheReadResult('empty', {
+          reason: 'user-mismatch'
+        });
       }
 
-      const age = Date.now() - cached.timestamp;
-      if (age > this.CACHE_MAX_AGE_MS && options.allowExpired !== true) {
-        debugLog('[getCachedPages] Cache expired, fetching fresh data');
-        return null;
-      }
+      const ageMs = Date.now() - cached.timestamp;
+      const isStale = ageMs > this.CACHE_MAX_AGE_MS;
+      const status = isStale ? 'stale' : 'fresh';
 
-      const cacheState = age > this.CACHE_MAX_AGE_MS ? 'stale' : 'fresh';
-      debugLog(`[getCachedPages] Using ${cacheState} cached data (${Math.round(age / 1000)}s old)`, {
+      debugLog(`[getCachedPages] Using ${status} cached data (${Math.round(ageMs / 1000)}s old)`, {
         user_id: userId,
         pages_count: cached.response?.pages ? cached.response.pages.length : 0,
         total: cached.response?.pagination?.total,
-        first_item: cached.response?.pages?.[0] ? { id: cached.response.pages[0].id, title: cached.response.pages[0].title } : null
+        first_item: cached.response?.pages?.[0]
+          ? { id: cached.response.pages[0].id, title: cached.response.pages[0].title }
+          : null
       });
-      return cached.response; // Return full response object with pagination
+
+      return createCacheReadResult(status, {
+        response: cached.response,
+        ageMs,
+        timestamp: cached.timestamp,
+        reason: isStale ? 'expired' : 'hit',
+        usable: !isStale || options.allowExpired === true
+      });
     } catch (error) {
       console.error('[getCachedPages] Failed to read cache:', error);
-      return null;
+      return createCacheReadResult('error', {
+        error,
+        reason: 'read-failed'
+      });
     }
+  }
+
+  async getCachedPages(scope = {}, options = {}) {
+    const cacheState = await this.getCachedPagesState(scope, options);
+    if (cacheState.status === 'fresh') {
+      return cacheState.response;
+    }
+
+    if (cacheState.status === 'stale' && cacheState.usable) {
+      return cacheState.response;
+    }
+
+    return null;
   }
 
   /**

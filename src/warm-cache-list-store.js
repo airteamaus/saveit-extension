@@ -61,6 +61,66 @@ export function buildListCachePayload(pages, pagination, fromCache = false) {
   };
 }
 
+function createWarmCacheState(status = 'empty', {
+  ageMs = null,
+  timestamp = null,
+  error = null,
+  reason = null
+} = {}) {
+  return {
+    status,
+    ageMs,
+    timestamp,
+    error,
+    reason
+  };
+}
+
+function createRefreshState(status = 'idle', {
+  phase = null,
+  error = null,
+  reason = null
+} = {}) {
+  return {
+    status,
+    phase,
+    error,
+    reason
+  };
+}
+
+function createDataState(status = 'empty', {
+  source = 'none',
+  error = null
+} = {}) {
+  return {
+    status,
+    source,
+    error
+  };
+}
+
+function createRefreshResult(status, {
+  phase = null,
+  error = null,
+  reason = null
+} = {}) {
+  return {
+    status,
+    phase,
+    error,
+    reason
+  };
+}
+
+function hasWarmCachePayload(cacheState) {
+  return cacheState?.status === 'fresh' || cacheState?.status === 'stale';
+}
+
+export function hasRenderableWarmCache(snapshot = {}) {
+  return hasWarmCachePayload(snapshot?.warmCacheState);
+}
+
 function createInitialState() {
   return {
     allPages: [],
@@ -68,7 +128,10 @@ function createInitialState() {
     hasNextPage: false,
     nextCursor: null,
     isLoadingMore: false,
-    requestId: 0
+    requestId: 0,
+    warmCacheState: createWarmCacheState(),
+    refreshState: createRefreshState(),
+    dataState: createDataState()
   };
 }
 
@@ -120,7 +183,10 @@ export class WarmCacheListStore {
   getSnapshot() {
     return {
       ...this.state,
-      allPages: [...this.state.allPages]
+      allPages: [...this.state.allPages],
+      warmCacheState: { ...this.state.warmCacheState },
+      refreshState: { ...this.state.refreshState },
+      dataState: { ...this.state.dataState }
     };
   }
 
@@ -152,21 +218,64 @@ export class WarmCacheListStore {
       return this.getSnapshot();
     }
 
-    if (warmCache?.pages?.length) {
-      this.replaceData(warmCache.pages, warmCache.pagination, { requestId });
+    if (this.state.requestId !== requestId) {
+      return this.getSnapshot();
+    }
+
+    this.state.warmCacheState = createWarmCacheState(warmCache.status, {
+      ageMs: warmCache.ageMs,
+      timestamp: warmCache.timestamp,
+      error: warmCache.error,
+      reason: warmCache.reason
+    });
+
+    if (hasWarmCachePayload(warmCache)) {
+      this.replaceData(warmCache.pages, warmCache.pagination, {
+        requestId,
+        dataState: createDataState(warmCache.status, {
+          source: 'warm-cache'
+        })
+      });
       void this.refreshInitial(requestId);
       return this.getSnapshot();
     }
 
     this.emitChange();
 
-    const response = await this.options.getList(this.buildInitialFetchOptions());
+    let response;
+    try {
+      response = await this.options.getList(this.buildInitialFetchOptions());
+    } catch (error) {
+      if (this.state.requestId === requestId) {
+        this.state.refreshState = createRefreshState('error', {
+          phase: 'initial-load',
+          error,
+          reason: 'network-failed'
+        });
+        this.state.dataState = createDataState('error', {
+          source: 'network',
+          error
+        });
+        this.emitChange();
+      }
+
+      throw error;
+    }
+
     if (this.state.requestId !== requestId) {
       return this.getSnapshot();
     }
 
     if (response?.pages) {
-      this.applyResponse(response, { requestId });
+      this.applyResponse(response, {
+        requestId,
+        dataState: createDataState(
+          response.pages.length ? 'fresh' : 'empty',
+          {
+            source: response?.meta?.fromCache ? 'api-cache' : 'network'
+          }
+        )
+      });
       await this.persistWarmCache(requestId);
 
       if (response?.meta?.fromCache) {
@@ -181,13 +290,21 @@ export class WarmCacheListStore {
 
   async refreshInitial(requestId = this.state.requestId) {
     if (!this.options.getList) {
-      return false;
+      return createRefreshResult('skipped', {
+        reason: 'missing-get-list'
+      });
     }
 
     try {
+      this.state.refreshState = createRefreshState('checking', {
+        phase: 'update-check'
+      });
       const updateStatus = await this.checkForUpdates(requestId);
       if (this.state.requestId !== requestId) {
-        return false;
+        return createRefreshResult('skipped', {
+          phase: 'update-check',
+          reason: 'stale-request'
+        });
       }
 
       if (updateStatus?.hasUpdates === false) {
@@ -196,11 +313,25 @@ export class WarmCacheListStore {
           this.getActiveNextCursor(requestId) &&
           this.getAuthoritativeCount(requestId) < this.options.maxItems
         ) {
+          this.state.refreshState = createRefreshState('loading', {
+            phase: 'prefetch'
+          });
           void this.prefetchAllPages(requestId);
-          return true;
+          return createRefreshResult('updated', {
+            phase: 'prefetch',
+            reason: 'coverage-gap'
+          });
         }
 
-        return false;
+        this.state.refreshState = createRefreshState('idle', {
+          phase: 'up-to-date',
+          reason: 'no-updates'
+        });
+        this.emitChange();
+        return createRefreshResult('unchanged', {
+          phase: 'update-check',
+          reason: 'no-updates'
+        });
       }
 
       if (
@@ -209,33 +340,83 @@ export class WarmCacheListStore {
         updateStatus?.canIncrementalSync !== false &&
         this.options.getIncrementalList
       ) {
+        this.state.refreshState = createRefreshState('loading', {
+          phase: 'incremental-refresh'
+        });
         const incrementalResponse = await this.options.getIncrementalList(
           this.buildIncrementalFetchOptions(updateStatus.latestKnownId)
         );
 
         if (this.state.requestId !== requestId) {
-          return false;
+          return createRefreshResult('skipped', {
+            phase: 'incremental-refresh',
+            reason: 'stale-request'
+          });
         }
 
         if (incrementalResponse?.pages?.length && incrementalResponse?.pagination?.hasNextPage !== true) {
-          this.applyIncrementalResponse(incrementalResponse, { requestId });
+          this.applyIncrementalResponse(incrementalResponse, {
+            requestId,
+            dataState: createDataState('fresh', {
+              source: 'network'
+            })
+          });
           await this.persistWarmCache(requestId);
-          return true;
+          this.state.refreshState = createRefreshState('idle', {
+            phase: 'incremental-refresh',
+            reason: 'applied'
+          });
+          this.emitChange();
+          return createRefreshResult('updated', {
+            phase: 'incremental-refresh',
+            reason: 'applied'
+          });
         }
       }
 
+      this.state.refreshState = createRefreshState('loading', {
+        phase: 'full-refresh'
+      });
       const response = await this.options.getList(this.buildInitialFetchOptions({ skipCache: true }));
       if (this.state.requestId !== requestId || !response?.pages) {
-        return false;
+        return createRefreshResult('skipped', {
+          phase: 'full-refresh',
+          reason: 'stale-request'
+        });
       }
 
-      this.applyFreshResponse(response, { requestId, preserveExistingCoverage: true });
+      this.applyFreshResponse(response, {
+        requestId,
+        preserveExistingCoverage: true,
+        dataState: createDataState(
+          response.pages.length ? 'fresh' : 'empty',
+          {
+            source: 'network'
+          }
+        )
+      });
       await this.persistWarmCache(requestId);
+      this.state.refreshState = createRefreshState('loading', {
+        phase: 'prefetch'
+      });
       void this.prefetchAllPages(requestId);
-      return true;
+      return createRefreshResult('updated', {
+        phase: 'full-refresh',
+        reason: 'applied'
+      });
     } catch (error) {
       console.debug('[warm-cache-list-store] Initial refresh failed:', error);
-      return false;
+      this.state.refreshState = createRefreshState('error', {
+        phase: 'refresh',
+        error,
+        reason: 'refresh-failed'
+      });
+      this.emitChange();
+      return createRefreshResult('error', {
+        phase: 'refresh',
+        error,
+        reason: 'refresh-failed'
+      });
     }
   }
 
@@ -249,10 +430,16 @@ export class WarmCacheListStore {
       !this.getActiveHasNextPage(requestId) ||
       !this.getActiveNextCursor(requestId)
     ) {
-      return false;
+      return createRefreshResult('unchanged', {
+        phase: 'load-more',
+        reason: 'no-next-page'
+      });
     }
 
     this.state.isLoadingMore = true;
+    this.state.refreshState = createRefreshState('loading', {
+      phase: 'load-more'
+    });
     this.emitChange();
 
     this.loadingPromise = (async () => {
@@ -264,13 +451,25 @@ export class WarmCacheListStore {
         );
 
         if (this.state.requestId !== requestId) {
-          return false;
+          return createRefreshResult('skipped', {
+            phase: 'load-more',
+            reason: 'stale-request'
+          });
         }
 
         if (this.hasActiveRefreshBuffer(requestId)) {
           const didUpdate = this.extendRefreshBuffer(response, { requestId });
           await this.persistWarmCache(requestId);
-          return didUpdate;
+          if (didUpdate) {
+            this.state.refreshState = createRefreshState('idle', {
+              phase: 'load-more',
+              reason: 'extended-refresh-buffer'
+            });
+          }
+          return createRefreshResult(didUpdate ? 'updated' : 'unchanged', {
+            phase: 'load-more',
+            reason: didUpdate ? 'extended-refresh-buffer' : 'no-change'
+          });
         }
 
         const mergedPages = mergeListPages(
@@ -283,7 +482,15 @@ export class WarmCacheListStore {
           total: response?.pagination?.total,
           hasNextPage: response?.pagination?.hasNextPage,
           nextCursor: response?.pagination?.nextCursor
-        }, { requestId });
+        }, {
+          requestId,
+          dataState: createDataState(
+            mergedPages.length ? 'fresh' : 'empty',
+            {
+              source: this.state.dataState?.source === 'warm-cache' ? 'warm-cache' : 'network'
+            }
+          )
+        });
 
         const didAppendPages = mergedPages.length > previousCount;
         const didAdvanceCursor = Boolean(
@@ -299,10 +506,27 @@ export class WarmCacheListStore {
 
         await this.persistWarmCache(requestId);
 
-        return didAppendPages || didAdvanceCursor;
+        const didUpdate = didAppendPages || didAdvanceCursor;
+        this.state.refreshState = createRefreshState('idle', {
+          phase: 'load-more',
+          reason: didUpdate ? 'appended-pages' : 'no-change'
+        });
+        return createRefreshResult(didUpdate ? 'updated' : 'unchanged', {
+          phase: 'load-more',
+          reason: didUpdate ? 'appended-pages' : 'no-change'
+        });
       } catch (error) {
         console.error('[warm-cache-list-store] Failed to load more pages:', error);
-        return false;
+        this.state.refreshState = createRefreshState('error', {
+          phase: 'load-more',
+          error,
+          reason: 'load-more-failed'
+        });
+        return createRefreshResult('error', {
+          phase: 'load-more',
+          error,
+          reason: 'load-more-failed'
+        });
       } finally {
         if (this.state.requestId === requestId) {
           this.state.isLoadingMore = false;
@@ -322,13 +546,21 @@ export class WarmCacheListStore {
       this.getAuthoritativeCount(requestId) < this.options.maxItems
     ) {
       const loaded = await this.loadMore(requestId);
-      if (!loaded) break;
+      if (loaded.status !== 'updated') break;
+    }
+
+    if (this.state.requestId === requestId && this.state.refreshState.status !== 'error') {
+      this.state.refreshState = createRefreshState('idle', {
+        phase: 'prefetch',
+        reason: 'complete'
+      });
+      this.emitChange();
     }
 
     return this.getSnapshot();
   }
 
-  replaceData(pages, pagination, { requestId = this.state.requestId } = {}) {
+  replaceData(pages, pagination, { requestId = this.state.requestId, dataState = null } = {}) {
     if (this.state.requestId !== requestId) {
       return;
     }
@@ -338,10 +570,20 @@ export class WarmCacheListStore {
     this.state.total = typeof pagination?.total === 'number' ? pagination.total : this.state.allPages.length;
     this.state.hasNextPage = !hasReachedCap && pagination?.hasNextPage === true;
     this.state.nextCursor = this.state.hasNextPage ? pagination?.nextCursor || null : null;
+    this.state.dataState = dataState || createDataState(
+      this.state.allPages.length ? 'fresh' : 'empty',
+      {
+        source: 'local'
+      }
+    );
     this.emitChange();
   }
 
-  applyResponse(response, { requestId = this.state.requestId, preserveExistingCoverage = false } = {}) {
+  applyResponse(response, {
+    requestId = this.state.requestId,
+    preserveExistingCoverage = false,
+    dataState = null
+  } = {}) {
     if (this.state.requestId !== requestId || !response?.pages) {
       return false;
     }
@@ -351,11 +593,15 @@ export class WarmCacheListStore {
       preserveExistingCoverage
     });
 
-    this.replaceData(nextPages, nextPagination, { requestId });
+    this.replaceData(nextPages, nextPagination, { requestId, dataState });
     return true;
   }
 
-  applyFreshResponse(response, { requestId = this.state.requestId, preserveExistingCoverage = false } = {}) {
+  applyFreshResponse(response, {
+    requestId = this.state.requestId,
+    preserveExistingCoverage = false,
+    dataState = null
+  } = {}) {
     const authoritativeTotal = typeof response?.pagination?.total === 'number'
       ? response.pagination.total
       : response?.pages?.length || 0;
@@ -371,7 +617,7 @@ export class WarmCacheListStore {
       )
     ) {
       this.refreshBuffer = null;
-      return this.applyResponse(response, { requestId, preserveExistingCoverage });
+      return this.applyResponse(response, { requestId, preserveExistingCoverage, dataState });
     }
 
     this.refreshBuffer = {
@@ -389,7 +635,10 @@ export class WarmCacheListStore {
     return true;
   }
 
-  applyIncrementalResponse(response, { requestId = this.state.requestId } = {}) {
+  applyIncrementalResponse(response, {
+    requestId = this.state.requestId,
+    dataState = null
+  } = {}) {
     if (this.state.requestId !== requestId || !Array.isArray(response?.pages) || response.pages.length === 0) {
       return false;
     }
@@ -412,7 +661,7 @@ export class WarmCacheListStore {
       total,
       hasNextPage: this.state.hasNextPage,
       nextCursor: this.state.nextCursor
-    }, { requestId });
+    }, { requestId, dataState });
     return true;
   }
 
@@ -679,10 +928,50 @@ export class WarmCacheListStore {
 
   async getWarmCache() {
     if (!this.api?.isExtension || !this.options.warmCacheScope) {
-      return null;
+      return {
+        status: 'empty',
+        pages: [],
+        pagination: {
+          total: 0,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        error: null,
+        reason: 'warm-cache-disabled'
+      };
     }
 
-    return this.api.getCachedPages(this.options.warmCacheScope, { allowExpired: true });
+    const cacheState = this.api.getCachedPagesState
+      ? await this.api.getCachedPagesState(this.options.warmCacheScope, { allowExpired: true })
+      : await (async () => {
+        const response = await this.api.getCachedPages(this.options.warmCacheScope, { allowExpired: true });
+        return {
+          status: response ? 'fresh' : 'empty',
+          response,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'legacy-api',
+          usable: Boolean(response)
+        };
+      })();
+    const payload = cacheState.response;
+    const pages = Array.isArray(payload?.pages) ? payload.pages : [];
+
+    return {
+      status: cacheState.status,
+      pages,
+      pagination: {
+        total: typeof payload?.pagination?.total === 'number' ? payload.pagination.total : pages.length,
+        hasNextPage: payload?.pagination?.hasNextPage === true,
+        nextCursor: payload?.pagination?.hasNextPage === true ? payload?.pagination?.nextCursor || null : null
+      },
+      error: cacheState.error,
+      ageMs: cacheState.ageMs,
+      timestamp: cacheState.timestamp,
+      reason: cacheState.reason,
+      usable: cacheState.usable
+    };
   }
 
   async persistWarmCache(requestId = this.state.requestId) {

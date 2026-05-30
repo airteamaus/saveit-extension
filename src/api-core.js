@@ -203,6 +203,22 @@ export function applyApiCore(API, dependencies = {}) {
       return await this.cacheManager.getCachedPages(scope, options);
     },
 
+    async getCachedPagesState(scope = {}, options = {}) {
+      if (!this.isExtension) {
+        return {
+          status: 'empty',
+          response: null,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'not-extension',
+          usable: false
+        };
+      }
+
+      return await this.cacheManager.getCachedPagesState(scope, options);
+    },
+
     async setCachedPages(response, scope = {}) {
       if (!this.isExtension) return;
       return await this.cacheManager.setCachedPages(response, scope);

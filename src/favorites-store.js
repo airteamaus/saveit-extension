@@ -36,7 +36,25 @@ function createInitialState(initialLayout = {}) {
     hasNextPage: false,
     nextCursor: null,
     isLoadingMore: false,
-    requestId: 0
+    requestId: 0,
+    warmCacheState: {
+      status: 'empty',
+      ageMs: null,
+      timestamp: null,
+      error: null,
+      reason: null
+    },
+    refreshState: {
+      status: 'idle',
+      phase: null,
+      error: null,
+      reason: null
+    },
+    dataState: {
+      status: 'empty',
+      source: 'none',
+      error: null
+    }
   };
 }
 

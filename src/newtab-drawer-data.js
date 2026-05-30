@@ -1,7 +1,7 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
 import { createProjectSavedPagesStore } from './newtab-drawer-stores.js';
-import { upsertListPages } from './warm-cache-list-store.js';
+import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
 
 export function createDrawerDataController({
   api,
@@ -157,7 +157,8 @@ export function createDrawerDataController({
       return;
     }
 
-    if (!savedPagesStore.getSnapshot().allPages.length) {
+    const savedPagesSnapshot = savedPagesStore.getSnapshot();
+    if (!savedPagesSnapshot.allPages.length && !hasRenderableWarmCache(savedPagesSnapshot)) {
       renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
     }
 
@@ -226,7 +227,12 @@ export function createDrawerDataController({
     }
 
     const projectSavedPagesStore = getProjectSavedPagesStore(projectId);
-    if (!projectSavedPagesStore?.getSnapshot().allPages.length) {
+    const projectSnapshot = projectSavedPagesStore?.getSnapshot?.() || null;
+    if (
+      projectSavedPagesStore &&
+      !projectSnapshot?.allPages?.length &&
+      !hasRenderableWarmCache(projectSnapshot)
+    ) {
       renderDrawerLoadingState(trimmedQuery ? 'Searching project pages...' : 'Loading project pages...');
     }
 

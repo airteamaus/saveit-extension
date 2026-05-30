@@ -198,6 +198,63 @@ describe('CacheManager', () => {
     });
   });
 
+  describe('getCachedPagesState', () => {
+    it('reports fresh cache hits with metadata', async () => {
+      const mockResponse = {
+        pages: [{ id: '1', title: 'Fresh page' }],
+        pagination: { total: 1, hasNextPage: false, nextCursor: null }
+      };
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
+        userId: 'user-123',
+        response: mockResponse,
+        timestamp: Date.now()
+      };
+
+      const result = await cacheManager.getCachedPagesState();
+
+      expect(result.status).toBe('fresh');
+      expect(result.response).toEqual(mockResponse);
+      expect(result.usable).toBe(true);
+      expect(result.reason).toBe('hit');
+      expect(typeof result.ageMs).toBe('number');
+    });
+
+    it('reports stale cache hits even when direct reads reject them', async () => {
+      const mockResponse = {
+        pages: [{ id: '1', title: 'Stale page' }],
+        pagination: { total: 1, hasNextPage: false, nextCursor: null }
+      };
+      mockStorage._testData[cacheManager.getCacheKey('user-123')] = {
+        userId: 'user-123',
+        response: mockResponse,
+        timestamp: Date.now() - (6 * 60 * 1000)
+      };
+
+      const state = await cacheManager.getCachedPagesState();
+      const directRead = await cacheManager.getCachedPages();
+
+      expect(state.status).toBe('stale');
+      expect(state.response).toEqual(mockResponse);
+      expect(state.usable).toBe(false);
+      expect(state.reason).toBe('expired');
+      expect(directRead).toBeNull();
+    });
+
+    it('reports cache read failures explicitly', async () => {
+      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const storageError = new Error('Storage read failed');
+      mockStorage.get.mockRejectedValue(storageError);
+
+      const result = await cacheManager.getCachedPagesState();
+
+      expect(result.status).toBe('error');
+      expect(result.error).toBe(storageError);
+      expect(result.reason).toBe('read-failed');
+
+      consoleErrorSpy.mockRestore();
+    });
+  });
+
   describe('setCachedPages', () => {
     it('should not cache when no user is logged in', async () => {
       getCurrentUserId.mockReturnValue(null);

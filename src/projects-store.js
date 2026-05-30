@@ -53,21 +53,68 @@ export class ProjectsStore extends WarmCacheListStore {
 
   async getWarmCache() {
     if (!this.api?.isExtension || !this.options.warmCacheScope) {
-      return null;
+      return {
+        status: 'empty',
+        pages: [],
+        pagination: {
+          total: 0,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        error: null,
+        reason: 'warm-cache-disabled'
+      };
     }
 
-    const cachedProjects = await this.api.getCachedPages(this.options.warmCacheScope, {
-      allowExpired: true
-    });
-    if (!Array.isArray(cachedProjects)) {
-      return null;
+    const cacheState = this.api.getCachedPagesState
+      ? await this.api.getCachedPagesState(this.options.warmCacheScope, {
+        allowExpired: true
+      })
+      : await (async () => {
+        const response = await this.api.getCachedPages(this.options.warmCacheScope, {
+          allowExpired: true
+        });
+        return {
+          status: response ? 'fresh' : 'empty',
+          response,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'legacy-api',
+          usable: Boolean(response)
+        };
+      })();
+    const cachedProjects = Array.isArray(cacheState.response) ? cacheState.response : null;
+    if (!cachedProjects) {
+      return {
+        status: cacheState.status,
+        pages: [],
+        pagination: {
+          total: 0,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        error: cacheState.error,
+        ageMs: cacheState.ageMs,
+        timestamp: cacheState.timestamp,
+        reason: cacheState.reason,
+        usable: cacheState.usable
+      };
     }
 
-    return buildListCachePayload(cachedProjects, {
-      total: cachedProjects.length,
-      hasNextPage: false,
-      nextCursor: null
-    }, true);
+    return {
+      ...buildListCachePayload(cachedProjects, {
+        total: cachedProjects.length,
+        hasNextPage: false,
+        nextCursor: null
+      }, true),
+      status: cacheState.status,
+      error: cacheState.error,
+      ageMs: cacheState.ageMs,
+      timestamp: cacheState.timestamp,
+      reason: cacheState.reason,
+      usable: cacheState.usable
+    };
   }
 
   async persistWarmCache(requestId = this.state.requestId) {
