@@ -47,9 +47,9 @@ function createElement(documentObj, tagName, { className = '', text = '', attrib
 }
 
 function createIconElement(documentObj, action) {
-  const template = documentObj.createElement('template');
-  template.innerHTML = getProjectActionIcon(action).trim();
-  return template.content.firstElementChild;
+  const parser = new DOMParser();
+  const iconDocument = parser.parseFromString(getProjectActionIcon(action).trim(), 'image/svg+xml');
+  return documentObj.importNode(iconDocument.documentElement, true);
 }
 
 function createSidebarHeader(documentObj, { disableCreate = false } = {}) {

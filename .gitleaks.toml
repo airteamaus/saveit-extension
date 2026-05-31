@@ -1,0 +1,10 @@
+[allowlist]
+description = "Ignore local profiles, generated bundles, and build/test artifacts"
+paths = [
+  '''^coverage/''',
+  '''^firefox-dev-profile/''',
+  '''^playwright-report/''',
+  '''^src/bundles/''',
+  '''^test-results/''',
+  '''^web-ext-artifacts/'''
+]

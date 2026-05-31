@@ -2,7 +2,7 @@
 
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
-Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features semantic search, hierarchical topic navigation, and project collections inside the saved pages drawer on the new tab.
+Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features semantic search, hierarchical topic navigation, pinned and all-pages feeds, and project collections directly on the new tab.
 
 ## For Testers
 
@@ -29,10 +29,10 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 
 1. **Sign in**: Click the SaveIt button in your toolbar and sign in with Google
 2. **Save pages**: Click the SaveIt button on any page to save it
-3. **Open saved pages**: Open a new tab - SaveIt automatically replaces your new tab page
+3. **Open your library**: Open a new tab - SaveIt replaces the new tab page with your pinned feed, all pages feed, and project collections
 4. **Search & discover**: Use semantic search to find related content by topic
 5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
-6. **Organize projects**: Create project collections in the saved pages drawer, add pages to multiple projects, and share a project with your company domain when needed
+6. **Organize projects**: Create project collections from the new-tab sidebar, add pages to multiple projects, and share a project with your company domain when needed
 
 ### Known Limitations (Beta)
 

@@ -145,7 +145,7 @@ GitHub Actions automatically run on every PR and push.
 2. **Unit & Integration Tests** - Full test suite + coverage
 3. **Build** - Ensure extension builds successfully
 4. **E2E Tests** - Playwright tests in Firefox
-5. **Security Audit** - npm audit for vulnerabilities
+5. **Security Audit** - pnpm audit for vulnerabilities
 
 **Status:** Required to pass before merging
 
