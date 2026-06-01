@@ -19,7 +19,13 @@ export function renderDrawerCardMarkup(page, {
   const isEditing = page.id === editingPageId;
   const isSavingEdit = page.id === savingEditPageId;
   const domain = getPageDomain(page);
-  const summary = page.description || page.ai_summary_brief || '';
+  const rawSummary = page.description || page.ai_summary_brief || '';
+  const normalizedSummary = rawSummary.trim().toLowerCase();
+  const normalizedTitle = (page.title || '').trim().toLowerCase();
+  const normalizedDomain = (domain || '').trim().toLowerCase();
+  const summary = normalizedSummary && normalizedSummary !== normalizedTitle && normalizedSummary !== normalizedDomain
+    ? rawSummary
+    : '';
   const meta = [];
 
   if (domain) {
