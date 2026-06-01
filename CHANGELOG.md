@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.26] - 2026-06-01
+
+### 📝 Other Improvements
+
+- Fix npm vite override (5222d35)
+
 ## [1.10.25] - 2026-06-01
 
 ### 📝 Other Improvements
@@ -61,12 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix release updates workflow (b0aab23)
 
 ## [1.10.16] - 2026-05-26
-
-### 📝 Other Improvements
-
-- Refactor newtab saved pages layout (dfd724a)
-
-## [1.10.15] - 2026-05-20
 
 ### ✨ Features
 
@@ -259,6 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Refactor newtab saved pages layout (dfd724a)
 - commit remaining local changes (27e6fd7)
 - fix standalone newtab bootstrap (701c348)
 - harden dom render helper (60da2aa)
