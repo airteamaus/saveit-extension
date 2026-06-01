@@ -5,11 +5,18 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.25] - 2026-06-01
+
+### 📝 Other Improvements
+
+- Tighten newtab layout density (54e1315)
+- Clean up docs and tooling (ac1ef35)
+- Render project manager with DOM nodes (7f444e7)
+- Model warm cache states explicitly (fc9a5ff)
+- Split saved-pages API modules (6f65b1f)
+- Replace implicit API runtime wiring (e34315f)
+
 ## [1.10.24] - 2026-05-30
-
-No notable changes.
-
-## [1.10.23] - 2026-05-30
 
 ### 📝 Other Improvements
 
