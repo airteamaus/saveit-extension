@@ -1,5 +1,7 @@
 /* newtab.css - Saved pages new tab */
 
+/* Page shell */
+
 html,
 body {
   height: 100%;
@@ -64,6 +66,16 @@ body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  --saved-pages-panel-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
+  --saved-pages-panel-bg-strong: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary) 5%);
+  --saved-pages-panel-border: color-mix(in srgb, var(--color-border) 88%, transparent);
+  --saved-pages-panel-border-strong: color-mix(in srgb, var(--color-border) 84%, transparent);
+  --saved-pages-panel-border-active: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  --saved-pages-control-bg: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 6%);
+  --saved-pages-chip-bg: color-mix(in srgb, var(--color-surface) 90%, var(--color-border) 10%);
+  --saved-pages-dialog-bg: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 .saved-pages-page-header {
@@ -134,8 +146,8 @@ body {
   overflow-y: auto;
   overscroll-behavior: contain;
   border-radius: 16px;
-  background: color-mix(in srgb, var(--color-surface-secondary) 84%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  background: var(--saved-pages-panel-bg-strong);
+  border: 1px solid var(--saved-pages-panel-border);
 }
 
 .saved-pages-page-content {
@@ -166,8 +178,8 @@ body {
   gap: 6px;
   padding: 10px 12px;
   border-radius: 14px;
-  background: color-mix(in srgb, var(--color-surface-secondary) 82%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  background: var(--saved-pages-panel-bg);
+  border: 1px solid var(--saved-pages-panel-border);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -176,14 +188,14 @@ body {
 
 .saved-pages-drawer-card:hover {
   transform: translateY(-1px);
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
-  background: color-mix(in srgb, var(--color-surface-secondary) 92%, var(--color-primary) 5%);
+  border-color: var(--saved-pages-panel-border-active);
+  background: var(--saved-pages-panel-bg-hover);
 }
 
 .saved-pages-drawer-card:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, transparent);
   outline-offset: 2px;
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-card-header {
@@ -230,8 +242,8 @@ body {
   width: 26px;
   height: 26px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  border: 1px solid var(--saved-pages-panel-border);
+  background: var(--saved-pages-control-bg);
   color: var(--color-text-light);
   cursor: pointer;
   transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
@@ -240,8 +252,8 @@ body {
 .saved-pages-drawer-action-btn:hover {
   transform: translateY(-1px);
   color: var(--color-text);
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
-  background: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 6%);
+  border-color: var(--saved-pages-panel-border-active);
+  background: var(--saved-pages-control-bg-hover);
 }
 
 .saved-pages-drawer-action-btn svg {
@@ -251,7 +263,7 @@ body {
 
 .saved-pages-drawer-pin-btn.is-active {
   color: var(--color-primary);
-  border-color: color-mix(in srgb, var(--color-primary) 42%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-delete-btn:hover {
@@ -294,9 +306,9 @@ body {
 .saved-pages-drawer-edit-input,
 .saved-pages-drawer-edit-textarea {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 1px solid var(--saved-pages-panel-border);
   border-radius: 12px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  background: var(--saved-pages-control-bg);
   color: var(--color-text);
   padding: 10px 12px;
   font: inherit;
@@ -312,7 +324,7 @@ body {
 .saved-pages-drawer-edit-textarea:focus {
   outline: 2px solid color-mix(in srgb, var(--color-primary) 38%, transparent);
   outline-offset: 1px;
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-edit-actions {
@@ -325,8 +337,8 @@ body {
 .saved-pages-drawer-edit-cancel {
   padding: 8px 12px;
   border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  border: 1px solid var(--saved-pages-panel-border);
+  background: var(--saved-pages-control-bg);
   color: var(--color-text);
   font: inherit;
   cursor: pointer;
@@ -334,13 +346,13 @@ body {
 }
 
 .saved-pages-drawer-edit-save {
-  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
   background: color-mix(in srgb, var(--color-surface) 86%, var(--color-primary) 8%);
 }
 
 .saved-pages-drawer-edit-save:hover,
 .saved-pages-drawer-edit-cancel:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
   color: var(--color-primary);
 }
 
@@ -416,7 +428,7 @@ body {
   padding: 5px 9px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  background: var(--saved-pages-control-bg);
   color: var(--color-text);
   font-size: 0.75rem;
   line-height: 1.2;
@@ -472,7 +484,7 @@ body {
 .project-nav-row:hover,
 .project-nav-row.is-active,
 .project-nav-row:focus-within {
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
   background: color-mix(in srgb, var(--color-surface) 76%, var(--color-primary) 8%);
 }
 
@@ -499,7 +511,7 @@ body {
 .project-nav-count {
   padding: 1px 6px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-border) 10%);
+  background: var(--saved-pages-chip-bg);
   color: var(--color-text-light);
   font-size: 0.625rem;
   flex-shrink: 0;
@@ -528,8 +540,8 @@ body {
   gap: 2px;
   padding: 2px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 84%, transparent);
+  background: var(--saved-pages-control-bg);
+  border: 1px solid var(--saved-pages-panel-border-strong);
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
   transition: border-color 0.18s ease, background-color 0.18s ease;
 }
@@ -555,9 +567,9 @@ body {
 }
 
 .project-nav-action:hover {
-  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-border) 10%);
+  background: var(--saved-pages-chip-bg);
   color: var(--color-text);
-  border-color: color-mix(in srgb, var(--color-primary) 28%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .project-action-archive:hover {
@@ -572,7 +584,7 @@ body {
   gap: 6px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-border) 10%);
+  background: var(--saved-pages-chip-bg);
   color: var(--color-text-light);
   font-size: 0.75rem;
 }
@@ -611,7 +623,7 @@ body {
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
   border-radius: 24px;
-  background: color-mix(in srgb, var(--color-surface) 96%, transparent);
+  background: var(--saved-pages-dialog-bg);
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
@@ -669,13 +681,13 @@ body {
   align-items: center;
   gap: var(--spacing-md);
   padding: 10px 12px;
-  border: 1px solid color-mix(in srgb, var(--color-border) 88%, transparent);
+  border: 1px solid var(--saved-pages-panel-border);
   border-radius: var(--radius-md);
   cursor: pointer;
 }
 
 .project-editor-option:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .project-editor-option-main {
