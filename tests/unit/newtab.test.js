@@ -679,7 +679,8 @@ describe('newtab modules', () => {
         title: 'SaveIt',
         url: 'https://example.com/article',
         description: 'A useful page',
-        pinned: true
+        pinned: true,
+        manual_tags: ['machine learning']
       }, {
         getProjectPills: () => [{ id: 'project-1', name: 'Important' }],
         projectsUnavailable: false
@@ -689,6 +690,10 @@ describe('newtab modules', () => {
       expect(markup).toContain('data-page-id="page-1"');
       expect(markup).toContain('Important');
       expect(markup).toContain('data-action="pin"');
+      expect(markup).toContain('saved-pages-drawer-projects-btn');
+      expect(markup).toContain('data-action="projects"');
+      expect(markup).toContain('search-results.html?q=machine%20learning');
+      expect(markup).toContain('data-semantic-search-tag="machine learning"');
       expect(markup).toContain('data-action="delete"');
       expect(markup).toContain('data-action="edit"');
     });

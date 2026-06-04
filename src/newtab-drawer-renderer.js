@@ -77,6 +77,23 @@ export function renderDrawerCardMarkup(page, {
       </svg>
     </button>
   `;
+  const projectsButtonLabel = projectsUnavailable ? 'Projects unavailable' : 'Manage projects';
+  const projectsButtonHtml = `
+    <button
+      class="saved-pages-drawer-action-btn saved-pages-drawer-projects-btn btn-projects"
+      type="button"
+      data-action="projects"
+      data-id="${escapeHtml(page.id)}"
+      ${projectsUnavailable ? 'disabled' : ''}
+      title="${projectsButtonLabel}"
+      aria-label="${projectsButtonLabel}"
+      ${isEditing ? 'disabled' : ''}
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path>
+      </svg>
+    </button>
+  `;
   const editFormHtml = `
     <form class="saved-pages-drawer-edit-form" data-page-id="${escapeHtml(page.id)}">
       <label class="saved-pages-drawer-edit-field">
@@ -140,16 +157,7 @@ export function renderDrawerCardMarkup(page, {
               <path d="M8 3h8l-1 5 3 3v2H6v-2l3-3-1-5z"></path>
             </svg>
           </button>
-          <button
-            class="btn-projects"
-            type="button"
-            data-action="projects"
-            data-id="${escapeHtml(page.id)}"
-            ${projectsUnavailable ? 'disabled' : ''}
-            title="Manage projects"
-            aria-label="Manage projects"
-            ${isEditing ? 'disabled' : ''}
-          >${projectsUnavailable ? 'Projects unavailable' : 'Projects'}</button>
+          ${projectsButtonHtml}
           <button
             class="saved-pages-drawer-action-btn saved-pages-drawer-delete-btn"
             type="button"

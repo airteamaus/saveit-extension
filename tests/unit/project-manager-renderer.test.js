@@ -26,7 +26,7 @@ describe('project manager renderer helpers', () => {
     expect(container.textContent).toContain('Projects unavailable right now.');
   });
 
-  it('renders the sidebar project rows and archive icon actions', () => {
+  it('renders the sidebar project rows split into personal and shared sections', () => {
     document.body.innerHTML = '<div id="project-sidebar"></div>';
     const container = document.getElementById('project-sidebar');
 
@@ -41,7 +41,8 @@ describe('project manager renderer helpers', () => {
         projectsLoading: false,
         selectedProjectId: 'project-1',
         projects: [
-          { id: 'project-1', name: 'Alpha', page_count: 2, visibility: 'private' }
+          { id: 'project-1', name: 'Alpha', page_count: 2, visibility: 'private' },
+          { id: 'project-2', name: 'Bravo', page_count: 1, visibility: 'company' }
         ]
       },
       htmlUtils: {
@@ -54,8 +55,11 @@ describe('project manager renderer helpers', () => {
 
     expect(container.innerHTML).toContain('project-action-archive');
     expect(container.textContent).toContain('Alpha');
+    expect(container.textContent).toContain('Bravo');
     expect(container.textContent).toContain('Default feed');
     expect(container.textContent).toContain('Pinned pages');
+    expect(container.textContent).toContain('My projects');
+    expect(container.textContent).toContain('Shared projects');
     expect(container.innerHTML).toContain('<span class="project-nav-count">2</span>');
   });
 

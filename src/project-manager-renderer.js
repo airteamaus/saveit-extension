@@ -75,6 +75,13 @@ function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
   return header;
 }
 
+function createSectionLabel(documentObj, text) {
+  return createElement(documentObj, 'div', {
+    className: 'project-nav-section-label',
+    text
+  });
+}
+
 function createSidebarRow(documentObj, {
   projectId = '',
   name,
@@ -214,10 +221,10 @@ export function renderProjectSidebar(container, {
   const pinnedCount = (dashboard.allPages || []).filter(page => page.pinned).length;
   const selectedProject = getSelectedProject(dashboard);
   const isPinnedSelected = dashboard.selectedProjectId === PINNED_PAGES_SCOPE_ID;
-  const projectRows = (dashboard.projects || [])
+  const visibleProjects = (dashboard.projects || [])
     .filter(project => !project.archived)
-    .sort((a, b) => a.name.localeCompare(b.name))
-    .map(project => {
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const createProjectRow = project => {
       const activeClass = project.id === dashboard.selectedProjectId ? 'is-active' : '';
       const visibilityLabel = project.visibility === 'company' ? 'Shared' : 'Private';
 
@@ -245,8 +252,9 @@ export function renderProjectSidebar(container, {
           }
         ]
       });
-    })
-    ;
+    };
+  const privateProjects = visibleProjects.filter(project => project.visibility !== 'company');
+  const sharedProjects = visibleProjects.filter(project => project.visibility === 'company');
 
   const nav = createElement(documentObj, 'div', { className: 'project-nav' });
   nav.append(
@@ -263,16 +271,21 @@ export function renderProjectSidebar(container, {
       visibility: 'Default feed',
       count: typeof allPagesCount === 'number' ? allPagesCount : null,
       isActive: !selectedProject && !isPinnedSelected
-    }),
-    createElement(documentObj, 'div', {
-      className: 'project-nav-section-label',
-      text: 'My projects'
     })
   );
 
-  if (projectRows.length) {
-    projectRows.forEach(row => nav.append(row));
-  } else {
+  if (privateProjects.length) {
+    nav.append(createSectionLabel(documentObj, 'My projects'));
+    privateProjects.forEach(project => nav.append(createProjectRow(project)));
+  }
+
+  if (sharedProjects.length) {
+    nav.append(createSectionLabel(documentObj, 'Shared projects'));
+    sharedProjects.forEach(project => nav.append(createProjectRow(project)));
+  }
+
+  if (!privateProjects.length && !sharedProjects.length) {
+    nav.append(createSectionLabel(documentObj, 'My projects'));
     nav.append(createElement(documentObj, 'p', {
       className: 'project-sidebar-empty',
       text: 'No projects yet. Create one to group related pages.'

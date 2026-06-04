@@ -62,6 +62,10 @@ export function initSavedPagesDrawerEvents({
   });
 
   savedPagesDrawerResults?.addEventListener('click', (event) => {
+    if (event.target.closest('[data-semantic-search-tag]')) {
+      return;
+    }
+
     const actionButton = event.target.closest('[data-action]');
     if (!actionButton) {
       if (event.target.closest('.saved-pages-drawer-edit-form')) {
@@ -113,6 +117,7 @@ export function initSavedPagesDrawerEvents({
   savedPagesDrawerResults?.addEventListener('auxclick', (event) => {
     if (
       event.button !== 1 ||
+      event.target.closest('[data-semantic-search-tag]') ||
       event.target.closest('[data-action]') ||
       event.target.closest('.saved-pages-drawer-edit-form')
     ) {
@@ -139,7 +144,11 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
+    if (
+      (event.key !== 'Enter' && event.key !== ' ') ||
+      event.target.closest('[data-action]') ||
+      event.target.closest('[data-semantic-search-tag]')
+    ) {
       return;
     }
 

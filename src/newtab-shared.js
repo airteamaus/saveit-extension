@@ -46,20 +46,25 @@ export function truncateText(text = '', maxLength = 180) {
 
 export function renderPageTags(page = {}) {
   const tags = [];
+  const renderSearchTag = (label, className = 'tag') => {
+    const escapedLabel = escapeHtml(label);
+    const href = `search-results.html?q=${encodeURIComponent(label)}`;
+    return `<a class="${className} tag-search-link" href="${href}" data-semantic-search-tag="${escapedLabel}">${escapedLabel}</a>`;
+  };
 
   if (page.classifications?.length) {
     page.classifications.slice(0, 2).forEach(classification => {
       tags.push(
-        `<span class="tag ai-tag tag-${escapeHtml(classification.type)}">${escapeHtml(classification.label)}</span>`
+        renderSearchTag(classification.label, `tag ai-tag tag-${escapeHtml(classification.type)}`)
       );
     });
   } else if (page.primary_classification_label) {
-    tags.push(`<span class="tag ai-tag">${escapeHtml(page.primary_classification_label)}</span>`);
+    tags.push(renderSearchTag(page.primary_classification_label, 'tag ai-tag'));
   }
 
   if (page.manual_tags?.length) {
     page.manual_tags.slice(0, 1).forEach(tag => {
-      tags.push(`<span class="tag">${escapeHtml(tag)}</span>`);
+      tags.push(renderSearchTag(tag));
     });
   }
 
