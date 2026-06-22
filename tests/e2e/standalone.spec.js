@@ -22,14 +22,15 @@ test.describe('Standalone Mode', () => {
     await openStandaloneNewtab(page);
   });
 
-  test('should render the full-page saved pages shell with pinned selected by default', async ({ page }) => {
+  test('should render the full-page saved pages shell with all pages selected by default', async ({ page }) => {
     await expect(page.locator('#saved-pages-page')).toBeVisible();
     await expect(page.locator('#saved-pages-search-input')).toBeVisible();
     await expect(page.locator('#project-sidebar')).toContainText('Collections');
     await expect(page.locator('#project-sidebar')).toContainText('Pinned');
     await expect(page.locator('#project-sidebar')).toContainText('All pages');
-    await expect(page.locator('.project-nav-item[data-project-id="__pinned__"]')).toHaveClass(/is-active/);
-    await expect(page.locator('#saved-pages-results')).toContainText('No pages in Pinned');
+    await expect(page.locator('.project-nav-item[data-project-id=""]')).toHaveClass(/is-active/);
+    // All pages is the default scope, so the mock pages render as cards.
+    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible();
   });
 
   test('should filter all pages results with search', async ({ page }) => {
