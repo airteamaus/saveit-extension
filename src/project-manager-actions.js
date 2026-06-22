@@ -1,5 +1,3 @@
-import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
-
 export function updatePageProjectMembership(page, pageId, projectId, shouldAssign) {
   if (page.id !== pageId) {
     return page;
@@ -188,9 +186,9 @@ export function createProjectManagerActions({
       await dashboard.persistProjects?.();
 
       if (dashboard.selectedProjectId === projectId) {
-        dashboard.selectedProjectId = PINNED_PAGES_SCOPE_ID;
+        dashboard.selectedProjectId = null;
         if (dashboard.currentFilter) {
-          dashboard.currentFilter.projectId = PINNED_PAGES_SCOPE_ID;
+          dashboard.currentFilter.projectId = null;
           dashboard.currentFilter.cursor = null;
         }
         dashboard.tagInteractionManager.clearSelection();

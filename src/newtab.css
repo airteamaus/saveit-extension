@@ -455,30 +455,32 @@ body {
 .project-nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .project-nav-row {
+  position: relative;
   display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 8px 10px;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .project-nav-item {
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 0;
   border: none;
   background: transparent;
   color: var(--color-text);
   text-align: left;
   cursor: pointer;
-  min-width: 0;
+  overflow: hidden;
 }
 
 .project-nav-row:hover,
@@ -493,12 +495,12 @@ body {
   font-weight: 600;
   line-height: 1.25;
   color: var(--color-text);
-  white-space: normal;
-  word-break: break-word;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-size: 0.875rem;
 }
 
-.project-nav-visibility,
 .project-nav-meta,
 .project-sidebar-empty,
 .project-editor-option-meta,
@@ -515,35 +517,20 @@ body {
   color: var(--color-text-light);
   font-size: 0.625rem;
   flex-shrink: 0;
+  transition: opacity 0.18s ease;
 }
 
 .project-nav-meta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.project-nav-meta-right {
   display: inline-flex;
   align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
   gap: 6px;
-  min-width: 0;
+  flex-shrink: 0;
 }
 
 .project-nav-actions {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--saved-pages-control-bg);
-  border: 1px solid var(--saved-pages-panel-border-strong);
-  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
-  transition: border-color 0.18s ease, background-color 0.18s ease;
+  gap: 1px;
 }
 
 .project-nav-action {
@@ -714,16 +701,29 @@ body {
 }
 
 @media (hover: hover) and (pointer: fine) {
-  .project-nav-actions {
+  /* Take actions out of flow on fine pointers so the name and count align
+     exactly with the built-in rows (Pinned / All pages). They fade in over
+     the row's right edge on hover, instead of reserving width always. */
+  .project-nav-row.has-actions .project-nav-actions {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
     opacity: 0;
     pointer-events: none;
   }
 
   .project-nav-row:hover .project-nav-actions,
-  .project-nav-row:focus-within .project-nav-actions,
-  .project-nav-row.is-active .project-nav-actions {
+  .project-nav-row:focus-within .project-nav-actions {
     opacity: 1;
     pointer-events: auto;
+  }
+
+  /* The action toolbar shares the right edge with the count pill; fade the
+     count out while the toolbar is shown so they never overlap. */
+  .project-nav-row.has-actions:hover .project-nav-count,
+  .project-nav-row.has-actions:focus-within .project-nav-count {
+    opacity: 0;
   }
 }
 

@@ -85,7 +85,6 @@ function createSectionLabel(documentObj, text) {
 function createSidebarRow(documentObj, {
   projectId = '',
   name,
-  visibility,
   count,
   isActive = false,
   actions = []
@@ -108,16 +107,10 @@ function createSidebarRow(documentObj, {
   }));
   row.append(button);
 
-  const meta = createElement(documentObj, 'div', { className: 'project-nav-meta' });
-  meta.append(createElement(documentObj, 'span', {
-    className: 'project-nav-visibility',
-    text: visibility
-  }));
-
   if (typeof count === 'number' || actions.length) {
-    const metaRight = createElement(documentObj, 'div', { className: 'project-nav-meta-right' });
+    const meta = createElement(documentObj, 'div', { className: 'project-nav-meta' });
     if (typeof count === 'number') {
-      metaRight.append(createElement(documentObj, 'span', {
+      meta.append(createElement(documentObj, 'span', {
         className: 'project-nav-count',
         text: String(count)
       }));
@@ -143,13 +136,12 @@ function createSidebarRow(documentObj, {
         actionButton.append(createIconElement(documentObj, action.action));
         actionGroup.append(actionButton);
       });
-      metaRight.append(actionGroup);
+      meta.append(actionGroup);
     }
 
-    meta.append(metaRight);
+    row.append(meta);
   }
 
-  row.append(meta);
   return row;
 }
 
@@ -226,12 +218,10 @@ export function renderProjectSidebar(container, {
     .sort((a, b) => a.name.localeCompare(b.name));
   const createProjectRow = project => {
       const activeClass = project.id === dashboard.selectedProjectId ? 'is-active' : '';
-      const visibilityLabel = project.visibility === 'company' ? 'Shared' : 'Private';
 
       return createSidebarRow(documentObj, {
         projectId: project.id,
         name: project.name,
-        visibility: visibilityLabel,
         count: project.page_count || 0,
         isActive: Boolean(activeClass),
         actions: [
@@ -259,18 +249,16 @@ export function renderProjectSidebar(container, {
   const nav = createElement(documentObj, 'div', { className: 'project-nav' });
   nav.append(
     createSidebarRow(documentObj, {
-      projectId: PINNED_PAGES_SCOPE_ID,
-      name: 'Pinned',
-      visibility: 'Pinned pages',
-      count: pinnedCount,
-      isActive: isPinnedSelected
-    }),
-    createSidebarRow(documentObj, {
       projectId: '',
       name: 'All pages',
-      visibility: 'Default feed',
       count: typeof allPagesCount === 'number' ? allPagesCount : null,
       isActive: !selectedProject && !isPinnedSelected
+    }),
+    createSidebarRow(documentObj, {
+      projectId: PINNED_PAGES_SCOPE_ID,
+      name: 'Pinned',
+      count: pinnedCount,
+      isActive: isPinnedSelected
     })
   );
 
@@ -285,7 +273,6 @@ export function renderProjectSidebar(container, {
   }
 
   if (!privateProjects.length && !sharedProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'My projects'));
     nav.append(createElement(documentObj, 'p', {
       className: 'project-sidebar-empty',
       text: 'No projects yet. Create one to group related pages.'

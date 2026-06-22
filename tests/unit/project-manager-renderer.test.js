@@ -56,11 +56,17 @@ describe('project manager renderer helpers', () => {
     expect(container.innerHTML).toContain('project-action-archive');
     expect(container.textContent).toContain('Alpha');
     expect(container.textContent).toContain('Bravo');
-    expect(container.textContent).toContain('Default feed');
-    expect(container.textContent).toContain('Pinned pages');
     expect(container.textContent).toContain('My projects');
     expect(container.textContent).toContain('Shared projects');
     expect(container.innerHTML).toContain('<span class="project-nav-count">2</span>');
+
+    // All pages is the default first row, ahead of Pinned.
+    const names = [...container.querySelectorAll('.project-nav-name')].map(el => el.textContent.trim());
+    expect(names.indexOf('All pages')).toBeLessThan(names.indexOf('Pinned'));
+    expect(names[0]).toBe('All pages');
+
+    // No per-row visibility caption duplicates the section headers.
+    expect(container.querySelector('.project-nav-visibility')).toBeNull();
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {

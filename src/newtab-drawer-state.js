@@ -7,7 +7,7 @@ export function createInitialDrawerState() {
     query: '',
     currentFilter: {
       search: '',
-      projectId: PINNED_PAGES_SCOPE_ID,
+      projectId: null,
       cursor: null
     },
     pages: [],
@@ -17,7 +17,7 @@ export function createInitialDrawerState() {
     projectsLoading: false,
     projectsAvailable: true,
     projectsUnavailableMessage: '',
-    selectedProjectId: PINNED_PAGES_SCOPE_ID,
+    selectedProjectId: null,
     projectEditorState: {
       pageId: null,
       query: ''
