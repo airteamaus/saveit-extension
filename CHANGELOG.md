@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.30] - 2026-06-24
+
+### 📝 Other Improvements
+
+- Show search loading state with animation and scope card lookups (49f8cd6)
+
 ## [1.10.29] - 2026-06-24
 
 ### 📝 Other Improvements
@@ -62,12 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix cache manager script loading (35b3001)
 
 ## [1.10.20] - 2026-05-27
-
-### 📝 Other Improvements
-
-- Load projects locally before network (6537e9b)
-
-## [1.10.19] - 2026-05-26
 
 ### ✨ Features
 
@@ -260,6 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Load projects locally before network (6537e9b)
 - Fix release publishing workflow (86b7880)
 - Fix newtab project counts (f512865)
 - Improve newtab loading lifecycle (fae366d)
