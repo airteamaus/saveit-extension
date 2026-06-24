@@ -617,6 +617,41 @@ describe('newtab modules', () => {
       expect(projectManager.renderSidebar).toHaveBeenCalled();
       expect(projectManager.renderEditor).toHaveBeenCalled();
     });
+
+    it('renders the semantic loading video while a search is in flight', () => {
+      document.body.innerHTML = '<div id="results"></div>';
+      const resultsContainer = document.getElementById('results');
+      const state = {
+        query: 'JavaScript',
+        pages: [{ id: 'page-1', title: 'Saved match', url: 'https://example.com' }],
+        selectedProjectId: null,
+        semanticResults: [],
+        semanticQuery: 'JavaScript',
+        semanticLoading: true
+      };
+      const savedPagesView = { projectsAvailable: true };
+      const projectManager = {
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn()
+      };
+      const uiController = createDrawerUiController({
+        state,
+        projectManager,
+        resultsContainer,
+        getSavedPagesView: () => savedPagesView,
+        documentObj: document
+      });
+
+      uiController.renderResults();
+
+      const semanticSection = resultsContainer.querySelector('[data-section="semantic"]');
+      expect(semanticSection).not.toBeNull();
+      const video = semanticSection.querySelector('video');
+      expect(video).not.toBeNull();
+      expect(video.getAttribute('src')).toContain('vector_animation_for_searchin.mp4');
+    });
   });
 
   describe('drawer renderer helpers', () => {
@@ -1171,6 +1206,30 @@ describe('newtab modules', () => {
       expect(dependencies.renderDrawerResults).toHaveBeenCalledTimes(2);
     });
 
+    it('clears prior results when starting a new search so the loading state shows', async () => {
+      // First search returns results.
+      const searchContent = vi.fn()
+        .mockResolvedValueOnce({
+          results: [{ thing_data: { id: 'old', title: 'Old' } }],
+          pagination: { total: 1 }
+        })
+        .mockImplementationOnce(() => new Promise(() => {})); // second never resolves
+      const { controller, state } = createDrawerDataHarness({
+        state: { hasInitialized: true },
+        api: { searchContent }
+      });
+
+      await controller.loadSemanticResults('first');
+      expect(state.semanticResults.map(page => page.id)).toEqual(['old']);
+
+      // Second search starts; prior results must be cleared so the loading
+      // state is visible (e.g. when clicking a tag from a results page).
+      // The second search is left pending to assert the in-flight state.
+      controller.loadSemanticResults('second');
+      expect(state.semanticResults).toEqual([]);
+      expect(state.semanticLoading).toBe(true);
+    });
+
     it('drops a stale response when a newer query supersedes it', async () => {
       // First call never resolves; the second call should commit and the first
       // should be ignored on settle.
@@ -1219,6 +1278,116 @@ describe('newtab modules', () => {
 
       expect(state.semanticResults).toEqual([]);
       expect(state.semanticLoading).toBe(false);
+    });
+
+    // Integration test wiring the real renderer to a real DOM container, so
+    // interactions that the mock-renderer harness can't catch (section
+    // lifecycle, orphan pruning, card scoping) are exercised end-to-end.
+    it('renders and deletes a page through the real renderer without orphaning sections', async () => {
+      document.body.innerHTML = '<div id="results"></div>';
+      const resultsContainer = document.getElementById('results');
+
+      const pages = [
+        { id: 'page-1', title: 'Alpha', url: 'https://alpha.example', project_ids: [] },
+        { id: 'page-2', title: 'Bravo', url: 'https://bravo.example', project_ids: [] }
+      ];
+
+      const savedPagesStore = {
+        getSnapshot: vi.fn(() => ({ allPages: pages, total: pages.length })),
+        removePage: vi.fn(async id => {
+          const idx = pages.findIndex(p => p.id === id);
+          if (idx >= 0) pages.splice(idx, 1);
+          // Simulate the warm-cache store notifying its subscriber, which in
+          // the real extension re-enters renderDrawerResults mid-delete.
+          syncFromSnapshot();
+        }),
+        hydrate: vi.fn(),
+        reset: vi.fn()
+      };
+
+      const projectManager = {
+        getScopedPages: vi.fn((_, list) => list),
+        refreshProjectCounts: vi.fn(),
+        getProjectPills: vi.fn(() => []),
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn()
+      };
+
+      const state = {
+        hasInitialized: true,
+        query: '',
+        currentFilter: { search: '', projectId: null, cursor: null },
+        pages: [...pages],
+        allPages: [...pages],
+        loadedProjectPages: null,
+        projects: [],
+        selectedProjectId: null,
+        total: pages.length,
+        allItemsTotal: pages.length,
+        requestId: 0,
+        semanticResults: [],
+        semanticQuery: '',
+        semanticLoading: false,
+        semanticRequestId: 0
+      };
+      const savedPagesView = { projectsAvailable: true, selectedProjectId: null, persistAllPages: vi.fn() };
+
+      const uiController = createDrawerUiController({
+        state,
+        projectManager,
+        resultsContainer,
+        getSavedPagesView: () => savedPagesView,
+        documentObj: document
+      });
+
+      const applyDrawerFilters = (query = state.query) => applySavedPagesDrawerFilters({
+        state,
+        projectManager,
+        savedPagesView,
+        query
+      });
+
+      const syncFromSnapshot = () => {
+        state.allPages = [...pages];
+        applyDrawerFilters(state.query);
+        uiController.renderResults();
+      };
+
+      const controller = createDrawerDataController({
+        api: { deletePage: vi.fn().mockResolvedValue({ ok: true }) },
+        state,
+        savedPagesStore,
+        projectsStore: { hydrate: vi.fn().mockResolvedValue({ projects: [] }) },
+        projectManager,
+        savedPagesView,
+        getCurrentUser: vi.fn(() => null),
+        isDrawerOpen: vi.fn(() => false),
+        setDrawerSearchValue: vi.fn(),
+        updateDrawerUrl: vi.fn(),
+        renderDrawerLoadingState: vi.fn(),
+        renderDrawerErrorState: vi.fn(),
+        renderDrawerSignInState: vi.fn(),
+        renderDrawerResults: uiController.renderResults,
+        syncDrawerStateFromStore: (snapshot, opts) => syncSavedPagesDrawerStateFromStore({
+          snapshot, state, savedPagesView, projectManager, applyDrawerFilters, renderDrawerResults: uiController.renderResults, ...opts
+        }),
+        syncProjectsStateFromStore: vi.fn(),
+        applyDrawerFilters,
+        windowObj: { confirm: () => true, alert: vi.fn() }
+      });
+
+      // Initial render
+      uiController.renderResults();
+      expect(resultsContainer.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(2);
+
+      // Delete one page
+      await controller.handleDrawerDelete('page-1');
+
+      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      expect(cards).toHaveLength(1);
+      expect(cards[0].dataset.pageId).toBe('page-2');
+      // No orphaned state divs; only the pages section should remain.
+      expect(Array.from(resultsContainer.children).map(c => c.getAttribute('data-section'))).toEqual(['pages']);
     });
   });
   });

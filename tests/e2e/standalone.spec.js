@@ -51,19 +51,16 @@ test.describe('Standalone Mode', () => {
     expect(await page.locator('[data-section="semantic"]').count()).toBe(0);
 
     await page.fill('#saved-pages-search-input', 'JavaScript');
-    // Allow the debounced saved-page filter and the async semantic search to settle.
-    await page.waitForTimeout(600);
 
     // The inline semantic section appears below the saved-page matches with
     // its own heading, regardless of whether the mock returned any results.
     const semanticSection = page.locator('[data-section="semantic"]');
-    await expect(semanticSection).toBeVisible();
+    await expect(semanticSection).toBeVisible({ timeout: 5000 });
     await expect(semanticSection).toContainText('From across everything');
 
     // Clearing the search removes the semantic section again.
     await page.fill('#saved-pages-search-input', '');
-    await page.waitForTimeout(400);
-    expect(await page.locator('[data-section="semantic"]').count()).toBe(0);
+    await expect(page.locator('[data-section="semantic"]')).toHaveCount(0, { timeout: 5000 });
   });
 
   test('should switch themes', async ({ page }) => {

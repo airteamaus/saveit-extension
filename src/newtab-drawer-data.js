@@ -411,6 +411,9 @@ export function createDrawerDataController({
     const requestId = state.semanticRequestId + 1;
     state.semanticRequestId = requestId;
     state.semanticQuery = trimmedQuery;
+    // Clear prior results so the loading state is shown on every new search,
+    // including follow-on tag clicks from an existing results page.
+    state.semanticResults = [];
     state.semanticLoading = true;
     renderDrawerResults();
 

@@ -224,7 +224,10 @@ export function createDrawerRenderer({
       return null;
     }
 
-    return Array.from(resultsContainer.querySelectorAll('.saved-pages-drawer-card'))
+    // Scope to the pages section only so card lookups never match a card in
+    // the semantic-results section (which is reconciled separately).
+    const scope = resultsContainer.querySelector('[data-section="pages"]') || resultsContainer;
+    return Array.from(scope.querySelectorAll('.saved-pages-drawer-card'))
       .find(card => card.dataset.pageId === pageId) || null;
   }
 
@@ -358,12 +361,16 @@ export function createDrawerRenderer({
       return;
     }
 
-    if (loading && !hasResults) {
+    if (loading) {
       replaceElementHtml(section, `
         <p class="saved-pages-semantic-heading">From across everything</p>
-        <div class="saved-pages-drawer-state saved-pages-semantic-state">
-          <div class="saved-pages-drawer-spinner" aria-hidden="true"></div>
-          <p>Searching…</p>
+        <div class="saved-pages-semantic-loading" aria-live="polite">
+          <video
+            class="saved-pages-semantic-loading-video"
+            src="../assets/img/vector_animation_for_searchin.mp4"
+            autoplay loop muted playsinline
+            aria-hidden="true"
+          ></video>
         </div>
       `);
       return;
