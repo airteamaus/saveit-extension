@@ -648,9 +648,44 @@ describe('newtab modules', () => {
 
       const semanticSection = resultsContainer.querySelector('[data-section="semantic"]');
       expect(semanticSection).not.toBeNull();
-      const video = semanticSection.querySelector('video');
-      expect(video).not.toBeNull();
-      expect(video.getAttribute('src')).toContain('vector_animation_for_searchin.mp4');
+      const image = semanticSection.querySelector('img.saved-pages-semantic-loading-image');
+      expect(image).not.toBeNull();
+      expect(image.getAttribute('src')).toContain('Dog-Digging--Streamline-Ux.svg');
+    });
+
+    it('renders the semantic loading image even when no saved pages match the query', () => {
+      document.body.innerHTML = '<div id="results"></div>';
+      const resultsContainer = document.getElementById('results');
+      const state = {
+        query: 'zznomatch',
+        pages: [],
+        selectedProjectId: null,
+        semanticResults: [],
+        semanticQuery: 'zznomatch',
+        semanticLoading: true
+      };
+      const savedPagesView = { projectsAvailable: true };
+      const projectManager = {
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn()
+      };
+      const uiController = createDrawerUiController({
+        state,
+        projectManager,
+        resultsContainer,
+        getSavedPagesView: () => savedPagesView,
+        documentObj: document
+      });
+
+      uiController.renderResults();
+
+      // The loading image must render even though state.pages is empty —
+      // previously the empty-state branch replaced the whole container and
+      // hid the semantic loading indicator.
+      const image = resultsContainer.querySelector('img.saved-pages-semantic-loading-image');
+      expect(image).not.toBeNull();
     });
   });
 

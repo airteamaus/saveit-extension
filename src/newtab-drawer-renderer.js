@@ -365,12 +365,12 @@ export function createDrawerRenderer({
       replaceElementHtml(section, `
         <p class="saved-pages-semantic-heading">From across everything</p>
         <div class="saved-pages-semantic-loading" aria-live="polite">
-          <video
-            class="saved-pages-semantic-loading-video"
-            src="../assets/img/vector_animation_for_searchin.mp4"
-            autoplay loop muted playsinline
+          <img
+            class="saved-pages-semantic-loading-image"
+            src="../assets/img/Dog-Digging--Streamline-Ux.svg"
+            alt=""
             aria-hidden="true"
-          ></video>
+          />
         </div>
       `);
       return;

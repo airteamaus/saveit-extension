@@ -739,11 +739,12 @@ body {
   padding: 12px 0;
 }
 
-.saved-pages-semantic-loading-video {
-  width: 160px;
-  max-width: 60%;
+.saved-pages-semantic-loading-image {
+  width: 120px;
+  max-width: 50%;
   height: auto;
-  object-fit: contain;
+  /* SVG strokes use currentColor, so the illustration follows the active theme. */
+  color: var(--color-text-light);
 }
 
 @media (hover: hover) and (pointer: fine) {

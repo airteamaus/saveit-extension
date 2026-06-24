@@ -74,11 +74,13 @@ export function createDrawerUiController({
 
     const trimmedQuery = (state.query || '').trim();
     const hasQuery = Boolean(trimmedQuery);
+    const semanticActive = state.semanticLoading || (state.semanticResults?.length ?? 0) > 0;
 
-    // With a query, the saved-page list may be empty while semantic results
-    // still have matches. In that case keep the pane (so the semantic section
-    // can render) rather than swapping in the full-container empty state.
-    if (!state.pages.length && !hasQuery) {
+    // With a query (or semantic results in flight), the saved-page list may
+    // be empty while semantic matches are still loading. In that case keep the
+    // pane so the semantic section can render, rather than swapping in the
+    // full-container empty state that would hide the loading indicator.
+    if (!state.pages.length && !hasQuery && !semanticActive) {
       renderEmptyState(state.query);
       return;
     }
