@@ -736,12 +736,13 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  min-height: 240px;
   padding: 12px 0;
 }
 
 .saved-pages-semantic-loading-image {
-  width: 120px;
-  max-width: 50%;
+  width: 180px;
+  max-width: 75%;
   height: auto;
   /* SVG strokes use currentColor, so the illustration follows the active theme. */
   color: var(--color-text-light);
