@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.31] - 2026-06-24
+
+### 📝 Other Improvements
+
+- Use theme-aware SVG for search loading and fix it not showing (587ef5f)
+
 ## [1.10.30] - 2026-06-24
 
 ### 📝 Other Improvements
@@ -62,12 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Tighten newtab header layout (cee2b80)
 
 ## [1.10.21] - 2026-05-27
-
-### 📝 Other Improvements
-
-- Fix cache manager script loading (35b3001)
-
-## [1.10.20] - 2026-05-27
 
 ### ✨ Features
 
@@ -260,6 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Fix cache manager script loading (35b3001)
 - Load projects locally before network (6537e9b)
 - Fix release publishing workflow (86b7880)
 - Fix newtab project counts (f512865)
