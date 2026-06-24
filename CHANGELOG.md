@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.33] - 2026-06-24
+
+### 📝 Other Improvements
+
+- Enlarge loading illustration and vertically centre it (0ebc0e2)
+
 ## [1.10.32] - 2026-06-24
 
 ### 📝 Other Improvements
@@ -61,12 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replace implicit API runtime wiring (e34315f)
 
 ## [1.10.24] - 2026-05-30
-
-### 📝 Other Improvements
-
-- Fix newtab local-first feed scopes (2647212)
-
-## [1.10.22] - 2026-05-30
 
 ### ✨ Features
 
@@ -259,6 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Fix newtab local-first feed scopes (2647212)
 - Fix newtab pinned feed state (77705d1)
 - Tighten newtab header layout (cee2b80)
 - Fix cache manager script loading (35b3001)
