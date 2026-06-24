@@ -648,9 +648,10 @@ describe('newtab modules', () => {
 
       const semanticSection = resultsContainer.querySelector('[data-section="semantic"]');
       expect(semanticSection).not.toBeNull();
-      const image = semanticSection.querySelector('img.saved-pages-semantic-loading-image');
-      expect(image).not.toBeNull();
-      expect(image.getAttribute('src')).toContain('Dog-Digging--Streamline-Ux.svg');
+      const svg = semanticSection.querySelector('svg.saved-pages-semantic-loading-image');
+      expect(svg).not.toBeNull();
+      // Inlined SVG uses currentColor strokes, inheriting the theme color.
+      expect(svg.querySelector('path')?.getAttribute('stroke')).toBe('currentColor');
     });
 
     it('renders the semantic loading image even when no saved pages match the query', () => {
@@ -681,11 +682,11 @@ describe('newtab modules', () => {
 
       uiController.renderResults();
 
-      // The loading image must render even though state.pages is empty —
+      // The loading SVG must render even though state.pages is empty —
       // previously the empty-state branch replaced the whole container and
       // hid the semantic loading indicator.
-      const image = resultsContainer.querySelector('img.saved-pages-semantic-loading-image');
-      expect(image).not.toBeNull();
+      const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
+      expect(svg).not.toBeNull();
     });
   });
 

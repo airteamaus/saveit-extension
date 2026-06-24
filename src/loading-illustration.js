@@ -1,7 +1,9 @@
-<svg viewBox="-0.9 -0.9 180 180" xmlns="http://www.w3.org/2000/svg" id="Dog-Digging--Streamline-Ux" height="180" width="180">
-  <desc>
-    Dog Digging Streamline Illustration: https://streamlinehq.com
-  </desc>
+// Inlined illustration for the semantic search loading state. Inlined (rather
+// than referenced via <img src="*.svg">) so the currentColor strokes inherit
+// the active theme color from the document's CSS.
+export const LOADING_ILLUSTRATION_SVG = `
+<svg viewBox="-0.9 -0.9 180 180" xmlns="http://www.w3.org/2000/svg" class="saved-pages-semantic-loading-image" aria-hidden="true">
+  <title>Dog digging illustration</title>
   <path d="M94.761414 98.04207600000001a51.530094000000005 51.530094000000005 0 0 1 8.019 -5.05197" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
   <path d="M111.636954 96.169194A50.227452 50.227452 0 0 1 121.92444 94.2678" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
   <path d="M95.25681 103.98861a50.2524 50.2524 0 0 1 8.582112 -4.896936" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
@@ -26,3 +28,4 @@
   <path d="m8.91 112.437072 4.455 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
   <path d="m161.27100000000002 112.47449399999999 -144.342 0" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"></path>
 </svg>
+`;

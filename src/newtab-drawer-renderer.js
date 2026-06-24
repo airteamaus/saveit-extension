@@ -9,6 +9,7 @@ import {
   renderPageTags,
   truncateText
 } from './newtab-shared.js';
+import { LOADING_ILLUSTRATION_SVG } from './loading-illustration.js';
 
 export function renderDrawerCardMarkup(page, {
   editingPageId = null,
@@ -365,12 +366,7 @@ export function createDrawerRenderer({
       replaceElementHtml(section, `
         <p class="saved-pages-semantic-heading">From across everything</p>
         <div class="saved-pages-semantic-loading" aria-live="polite">
-          <img
-            class="saved-pages-semantic-loading-image"
-            src="../assets/img/Dog-Digging--Streamline-Ux.svg"
-            alt=""
-            aria-hidden="true"
-          />
+          ${LOADING_ILLUSTRATION_SVG}
         </div>
       `);
       return;
