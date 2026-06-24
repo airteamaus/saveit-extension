@@ -66,15 +66,18 @@ body {
   flex-direction: column;
   height: 100%;
   min-height: 0;
-  --saved-pages-panel-bg: color-mix(in srgb, var(--color-surface) 90%, transparent);
-  --saved-pages-panel-bg-strong: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-surface) 92%, var(--color-primary) 5%);
-  --saved-pages-panel-border: color-mix(in srgb, var(--color-border) 88%, transparent);
-  --saved-pages-panel-border-strong: color-mix(in srgb, var(--color-border) 84%, transparent);
+  /* Subtle UI: panels, cards, and controls are transparent (outlined only),
+     so fills don't compete with content. The search box keeps its own fill
+     via an inline rule. Hover/active states retain a faint tint for feedback. */
+  --saved-pages-panel-bg: transparent;
+  --saved-pages-panel-bg-strong: transparent;
+  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  --saved-pages-panel-border: transparent;
+  --saved-pages-panel-border-strong: transparent;
   --saved-pages-panel-border-active: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
-  --saved-pages-control-bg: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-surface) 88%, var(--color-primary) 6%);
-  --saved-pages-chip-bg: color-mix(in srgb, var(--color-surface) 90%, var(--color-border) 10%);
+  --saved-pages-control-bg: transparent;
+  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  --saved-pages-chip-bg: transparent;
   --saved-pages-dialog-bg: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
@@ -188,14 +191,12 @@ body {
 
 .saved-pages-drawer-card:hover {
   transform: translateY(-1px);
-  border-color: var(--saved-pages-panel-border-active);
   background: var(--saved-pages-panel-bg-hover);
 }
 
 .saved-pages-drawer-card:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, transparent);
   outline-offset: 2px;
-  border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-card-header {
@@ -269,7 +270,7 @@ body {
 .saved-pages-drawer-delete-btn:hover {
   color: var(--color-danger, #dc2626);
   border-color: color-mix(in srgb, #dc2626 32%, var(--color-border));
-  background: color-mix(in srgb, var(--color-surface) 90%, #dc2626 5%);
+  background: color-mix(in srgb, #dc2626 5%, transparent);
 }
 
 .saved-pages-drawer-card-summary {
@@ -347,7 +348,7 @@ body {
 
 .saved-pages-drawer-edit-save {
   border-color: var(--saved-pages-panel-border-active);
-  background: color-mix(in srgb, var(--color-surface) 86%, var(--color-primary) 8%);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
 }
 
 .saved-pages-drawer-edit-save:hover,
@@ -427,7 +428,7 @@ body {
 .project-editor-create,
 .btn-projects {
   padding: 5px 9px;
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--saved-pages-control-bg);
   color: var(--color-text);
@@ -484,11 +485,16 @@ body {
   overflow: hidden;
 }
 
-.project-nav-row:hover,
-.project-nav-row.is-active,
-.project-nav-row:focus-within {
+/* Selection state: the active collection shows a border to indicate which
+   scope is current. Hover and focus-within get only the background tint. */
+.project-nav-row.is-active {
   border-color: var(--saved-pages-panel-border-active);
-  background: color-mix(in srgb, var(--color-surface) 76%, var(--color-primary) 8%);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.project-nav-row:hover,
+.project-nav-row:focus-within {
+  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
 .project-nav-name {
