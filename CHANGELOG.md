@@ -5,12 +5,19 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.29] - 2026-06-24
+
+### 📝 Other Improvements
+
+- Render semantic search inline in newtab (0bf567b)
+- Update default-selection E2E test for All pages (ed8eee3)
+
 ## [1.10.28] - 2026-06-22
 
 ### 📝 Other Improvements
 
-- Tidy sidebar layout and make All pages the default (bbde52d)
-- Tidy newtab CSS tokens (d206d5b)
+- Tidy sidebar layout and make All pages the default (cb8eea4)
+- Tidy newtab CSS tokens (7527434)
 
 ## [1.10.27] - 2026-06-04
 
@@ -61,12 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Load projects locally before network (6537e9b)
 
 ## [1.10.19] - 2026-05-26
-
-### 📝 Other Improvements
-
-- Fix release publishing workflow (86b7880)
-
-## [1.10.18] - 2026-05-26
 
 ### ✨ Features
 
@@ -259,6 +260,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Fix release publishing workflow (86b7880)
 - Fix newtab project counts (f512865)
 - Improve newtab loading lifecycle (fae366d)
 - Fix release updates workflow (b0aab23)
