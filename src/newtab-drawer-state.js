@@ -26,7 +26,11 @@ export function createInitialDrawerState() {
     savingEditPageId: null,
     total: null,
     allItemsTotal: null,
-    requestId: 0
+    requestId: 0,
+    semanticResults: [],
+    semanticQuery: '',
+    semanticLoading: false,
+    semanticRequestId: 0
   };
 }
 

@@ -69,7 +69,7 @@ export {
 
 async function buildPagesBundle() {
   const entryContent = `
-// Firebase bundle for page surfaces (newtab.html and search-results.html)
+// Firebase bundle for page surfaces (newtab.html)
 import { initializeApp } from 'firebase/app';
 import {
   initializeAuth,

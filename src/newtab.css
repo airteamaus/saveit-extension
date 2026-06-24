@@ -395,6 +395,7 @@ body {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
+  margin-left: auto;
 }
 
 .project-sidebar-header {
@@ -696,8 +697,39 @@ body {
 }
 
 .tag-search-link {
+  display: inline-flex;
+  align-items: center;
   color: inherit;
   cursor: pointer;
+  font: inherit;
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+/* Semantic search results render as a separate section below the saved-page
+   list. The section's own heading/divider makes it clear these matches come
+   from across everything, not just the selected scope. */
+.saved-pages-semantic-heading {
+  margin: 16px 0 8px;
+  padding: 0 2px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-text-light);
+}
+
+.saved-pages-semantic-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.saved-pages-semantic-state {
+  min-height: auto;
+  padding: 12px;
+  opacity: 0.85;
 }
 
 @media (hover: hover) and (pointer: fine) {

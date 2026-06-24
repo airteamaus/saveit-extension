@@ -48,7 +48,6 @@ Mode detection is handled in `src/api.js`.
 
 - `src/newtab.js` - main new-tab UI, favorites, saved pages drawer
 - `src/project-manager.js` - project navigation and membership editing
-- `src/search-results.js` - semantic search page
 - `src/api.js` / `src/api-pages.js` - API layer
 - `src/cache-manager.js` - browser storage cache
 - `src/warm-cache-list-store.js` - local-first paginated list syncing

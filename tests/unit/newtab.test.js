@@ -692,7 +692,7 @@ describe('newtab modules', () => {
       expect(markup).toContain('data-action="pin"');
       expect(markup).toContain('saved-pages-drawer-projects-btn');
       expect(markup).toContain('data-action="projects"');
-      expect(markup).toContain('search-results.html?q=machine%20learning');
+      expect(markup).toContain('tag-search-link');
       expect(markup).toContain('data-semantic-search-tag="machine learning"');
       expect(markup).toContain('data-action="delete"');
       expect(markup).toContain('data-action="edit"');
@@ -740,11 +740,15 @@ describe('newtab modules', () => {
          pageId: null,
          query: ''
        },
-       total: null,
-       allItemsTotal: null,
-       requestId: 0,
-       ...(overrides.state || {})
-     };
+      total: null,
+      allItemsTotal: null,
+      requestId: 0,
+      semanticResults: [],
+      semanticQuery: '',
+      semanticLoading: false,
+      semanticRequestId: 0,
+      ...(overrides.state || {})
+    };
      const savedPagesView = {
        persistAllPages: vi.fn(),
        ...(overrides.savedPagesView || {})
@@ -1118,11 +1122,105 @@ describe('newtab modules', () => {
      expect(dependencies.renderDrawerResults).toHaveBeenCalledTimes(2);
      expect(state.editingPageId).toBeNull();
      expect(state.savingEditPageId).toBeNull();
-     expect(state.allPages[0]).toMatchObject({
-       title: 'Alpha edited',
-       description: 'After'
-     });
-   });
+    expect(state.allPages[0]).toMatchObject({
+      title: 'Alpha edited',
+      description: 'After'
+    });
+  });
+
+  describe('loadSemanticResults', () => {
+    it('clears semantic results for an empty query', async () => {
+      const { controller, state, dependencies, api } = createDrawerDataHarness({
+        state: { hasInitialized: true, semanticResults: [{ id: 'old' }], semanticLoading: true },
+        api: { searchContent: vi.fn() }
+      });
+
+      await controller.loadSemanticResults('   ');
+
+      expect(state.semanticResults).toEqual([]);
+      expect(state.semanticQuery).toBe('');
+      expect(state.semanticLoading).toBe(false);
+      expect(api.searchContent).not.toHaveBeenCalled();
+      expect(dependencies.renderDrawerResults).toHaveBeenCalled();
+    });
+
+    it('commits thing_data from the search response', async () => {
+      const searchContent = vi.fn().mockResolvedValue({
+        results: [
+          { thing_id: 't1', similarity: 0.9, thing_data: { id: 't1', title: 'Alpha semantic' } },
+          { thing_id: 't2', similarity: 0.8, thing_data: { id: 't2', title: 'Bravo semantic' } }
+        ],
+        pagination: { total: 2 }
+      });
+      const { controller, state, dependencies, api } = createDrawerDataHarness({
+        state: { hasInitialized: true },
+        api: { searchContent }
+      });
+
+      await controller.loadSemanticResults('machine learning');
+
+      expect(api.searchContent).toHaveBeenCalledWith('machine learning', {
+        limit: 50,
+        offset: 0,
+        threshold: 0.58
+      });
+      expect(state.semanticResults.map(page => page.id)).toEqual(['t1', 't2']);
+      expect(state.semanticQuery).toBe('machine learning');
+      expect(state.semanticLoading).toBe(false);
+      // Loading state renders immediately, then again after completion.
+      expect(dependencies.renderDrawerResults).toHaveBeenCalledTimes(2);
+    });
+
+    it('drops a stale response when a newer query supersedes it', async () => {
+      // First call never resolves; the second call should commit and the first
+      // should be ignored on settle.
+      let resolveFirst;
+      const searchContent = vi.fn()
+        .mockImplementationOnce(() => new Promise(resolve => { resolveFirst = resolve; }))
+        .mockResolvedValueOnce({
+          results: [{ thing_data: { id: 'second', title: 'Second' } }],
+          pagination: { total: 1 }
+        });
+      const { controller, state, api } = createDrawerDataHarness({
+        state: { hasInitialized: true },
+        api: { searchContent }
+      });
+
+      const first = controller.loadSemanticResults('first');
+      const second = controller.loadSemanticResults('second');
+      await second;
+      resolveFirst({ results: [{ thing_data: { id: 'first', title: 'First' } }] });
+      await first;
+
+      expect(state.semanticResults.map(page => page.id)).toEqual(['second']);
+      expect(api.searchContent).toHaveBeenCalledTimes(2);
+    });
+
+    it('clears results and does not throw when the API lacks searchContent', async () => {
+      const { controller, state } = createDrawerDataHarness({
+        state: { hasInitialized: true },
+        api: {}
+      });
+
+      await controller.loadSemanticResults('anything');
+
+      expect(state.semanticResults).toEqual([]);
+      expect(state.semanticLoading).toBe(false);
+    });
+
+    it('recovers gracefully when the search call rejects', async () => {
+      const searchContent = vi.fn().mockRejectedValue(new Error('boom'));
+      const { controller, state } = createDrawerDataHarness({
+        state: { hasInitialized: true },
+        api: { searchContent }
+      });
+
+      await controller.loadSemanticResults('explode');
+
+      expect(state.semanticResults).toEqual([]);
+      expect(state.semanticLoading).toBe(false);
+    });
+  });
   });
 
   describe('drawer view helpers', () => {

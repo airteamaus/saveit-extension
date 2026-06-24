@@ -61,8 +61,30 @@ export function initSavedPagesDrawerEvents({
     savedPagesDrawerSearchInput?.focus();
   });
 
+  function handleTagSearchFromEvent(event) {
+    const tagEl = event.target.closest('[data-semantic-search-tag]');
+    if (!tagEl) {
+      return false;
+    }
+
+    event.preventDefault();
+    const label = tagEl.dataset.semanticSearchTag || '';
+    if (!label) {
+      return true;
+    }
+
+    // Tag clicks become an inline search: fill the input and run both the
+    // saved-page filter and the semantic search.
+    setDrawerSearchValue(label);
+    if (savedPagesDrawerSearchInput) {
+      savedPagesDrawerSearchInput.value = label;
+    }
+    void loadDrawerResults(label);
+    return true;
+  }
+
   savedPagesDrawerResults?.addEventListener('click', (event) => {
-    if (event.target.closest('[data-semantic-search-tag]')) {
+    if (handleTagSearchFromEvent(event)) {
       return;
     }
 
@@ -117,7 +139,6 @@ export function initSavedPagesDrawerEvents({
   savedPagesDrawerResults?.addEventListener('auxclick', (event) => {
     if (
       event.button !== 1 ||
-      event.target.closest('[data-semantic-search-tag]') ||
       event.target.closest('[data-action]') ||
       event.target.closest('.saved-pages-drawer-edit-form')
     ) {
@@ -146,9 +167,13 @@ export function initSavedPagesDrawerEvents({
 
     if (
       (event.key !== 'Enter' && event.key !== ' ') ||
-      event.target.closest('[data-action]') ||
-      event.target.closest('[data-semantic-search-tag]')
+      event.target.closest('[data-action]')
     ) {
+      return;
+    }
+
+    // Enter/Space on a tag button triggers the inline tag search.
+    if (handleTagSearchFromEvent(event)) {
       return;
     }
 

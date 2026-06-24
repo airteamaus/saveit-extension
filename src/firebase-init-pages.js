@@ -1,4 +1,4 @@
-// Firebase initialization wrapper for page surfaces (newtab.html and search-results.html)
+// Firebase initialization wrapper for page surfaces (newtab.html)
 // Makes Firebase available globally to non-module scripts
 
 import { getBrowserRuntime } from './config.js';

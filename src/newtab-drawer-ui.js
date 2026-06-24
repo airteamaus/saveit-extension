@@ -68,16 +68,26 @@ export function createDrawerUiController({
   }
 
   function renderResults() {
-    if (!state.pages.length) {
-      renderEmptyState(state.query);
-      return;
-    }
-
     if (!resultsContainer) {
       return;
     }
 
+    const trimmedQuery = (state.query || '').trim();
+    const hasQuery = Boolean(trimmedQuery);
+
+    // With a query, the saved-page list may be empty while semantic results
+    // still have matches. In that case keep the pane (so the semantic section
+    // can render) rather than swapping in the full-container empty state.
+    if (!state.pages.length && !hasQuery) {
+      renderEmptyState(state.query);
+      return;
+    }
+
     drawerRenderer.renderResults(state.pages);
+    drawerRenderer.renderSemanticResults(state.semanticResults, {
+      loading: state.semanticLoading,
+      query: state.semanticQuery
+    });
   }
 
   function refreshDrawerCard(pageId) {

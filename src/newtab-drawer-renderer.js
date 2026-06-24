@@ -275,12 +275,56 @@ export function createDrawerRenderer({
     `);
   }
 
+  // The results container hosts up to two stable sub-containers so the two
+  // keyed card lists (saved pages and semantic matches) can be reconciled
+  // independently without wiping each other. These are lazily created on
+  // demand. Stale siblings left by full-container state renders (loading /
+  // empty / sign-in) are pruned so they don't linger over the card lists.
+  function ensureSection(dataSection, { ariaLabel } = {}) {
+    if (!resultsContainer) {
+      return null;
+    }
+
+    // Prune any non-section children (e.g. a leftover loading/empty state
+    // div) before (re)building the sections.
+    Array.from(resultsContainer.children).forEach(child => {
+      if (!child.hasAttribute('data-section')) {
+        child.remove();
+      }
+    });
+
+    let section = resultsContainer.querySelector(`[data-section="${dataSection}"]`);
+    if (!section) {
+      section = createElementFromHtml(`<div data-section="${dataSection}"${ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : ''}></div>`, documentObj);
+      resultsContainer.append(section);
+    }
+    return section;
+  }
+
   function renderResults(pages) {
     if (!resultsContainer) {
       return;
     }
 
-    reconcileKeyedChildren(resultsContainer, pages, {
+    const pagesSection = ensureSection('pages');
+    if (!pagesSection) {
+      renderChrome();
+      return;
+    }
+
+    if (!pages.length) {
+      // No saved-page matches. The pages section is kept (rather than the
+      // full-container empty state) so a semantic section can render below.
+      replaceElementHtml(pagesSection, `
+        <div class="empty-state saved-pages-drawer-state">
+          <p>No saved pages match this search.</p>
+        </div>
+      `);
+      renderChrome();
+      return;
+    }
+
+    reconcileKeyedChildren(pagesSection, pages, {
       getKey: page => page.id || null,
       getNodeKey: node => node?.dataset?.pageId || null,
       pruneUnkeyed: true,
@@ -292,6 +336,64 @@ export function createDrawerRenderer({
       }
     });
     renderChrome();
+  }
+
+  function renderSemanticResults(results, { loading = false, query = '' } = {}) {
+    if (!resultsContainer) {
+      return;
+    }
+
+    const trimmedQuery = (query || '').trim();
+    const hasResults = Array.isArray(results) && results.length > 0;
+
+    // No query and not loading: remove the section entirely so the saved-page
+    // list takes the full pane.
+    if (!trimmedQuery && !loading) {
+      resultsContainer.querySelector('[data-section="semantic"]')?.remove();
+      return;
+    }
+
+    const section = ensureSection('semantic', { ariaLabel: 'From across everything' });
+    if (!section) {
+      return;
+    }
+
+    if (loading && !hasResults) {
+      replaceElementHtml(section, `
+        <p class="saved-pages-semantic-heading">From across everything</p>
+        <div class="saved-pages-drawer-state saved-pages-semantic-state">
+          <div class="saved-pages-drawer-spinner" aria-hidden="true"></div>
+          <p>Searching…</p>
+        </div>
+      `);
+      return;
+    }
+
+    if (!hasResults) {
+      replaceElementHtml(section, `
+        <p class="saved-pages-semantic-heading">From across everything</p>
+        <div class="saved-pages-drawer-state saved-pages-semantic-state">
+          <p>No matches beyond your saved pages.</p>
+        </div>
+      `);
+      return;
+    }
+
+    replaceElementHtml(section, '<p class="saved-pages-semantic-heading">From across everything</p>');
+    const list = createElementFromHtml('<div class="saved-pages-semantic-list"></div>', documentObj);
+    section.append(list);
+
+    reconcileKeyedChildren(list, results, {
+      getKey: page => page.id || null,
+      getNodeKey: node => node?.dataset?.pageId || null,
+      pruneUnkeyed: true,
+      renderItem: (page, existingNode) => {
+        const nextCard = createDrawerCardElement(page);
+        return existingNode && existingNode.outerHTML === nextCard?.outerHTML
+          ? existingNode
+          : nextCard;
+      }
+    });
   }
 
   function refreshCard(pageId, pages, query, { onMissingPage } = {}) {
@@ -330,6 +432,7 @@ export function createDrawerRenderer({
     renderErrorState,
     renderLoadingState,
     renderResults,
+    renderSemanticResults,
     renderSignInState
   };
 }

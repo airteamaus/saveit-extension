@@ -386,6 +386,62 @@ export function createDrawerDataController({
     }
   }
 
+  async function loadSemanticResults(query) {
+    const trimmedQuery = (query || '').trim();
+
+    // Empty query: nothing to search semantically. Clear any prior results.
+    if (!trimmedQuery) {
+      state.semanticResults = [];
+      state.semanticQuery = '';
+      state.semanticLoading = false;
+      renderDrawerResults();
+      return;
+    }
+
+    // Only attempt semantic search when the API supports it; otherwise no-op
+    // rather than erroring, so the saved-page filter still works.
+    if (typeof api?.searchContent !== 'function') {
+      state.semanticResults = [];
+      state.semanticQuery = trimmedQuery;
+      state.semanticLoading = false;
+      renderDrawerResults();
+      return;
+    }
+
+    const requestId = state.semanticRequestId + 1;
+    state.semanticRequestId = requestId;
+    state.semanticQuery = trimmedQuery;
+    state.semanticLoading = true;
+    renderDrawerResults();
+
+    try {
+      const response = await api.searchContent(trimmedQuery, {
+        limit: 50,
+        offset: 0,
+        threshold: 0.58
+      });
+
+      // Drop stale responses so out-of-order completions can't clobber a
+      // newer query.
+      if (state.semanticRequestId !== requestId) {
+        return;
+      }
+
+      const results = Array.isArray(response?.results) ? response.results : [];
+      state.semanticResults = results.map(result => result?.thing_data).filter(Boolean);
+    } catch (error) {
+      console.error('[newtab] Semantic search failed:', error);
+      if (state.semanticRequestId === requestId) {
+        state.semanticResults = [];
+      }
+    } finally {
+      if (state.semanticRequestId === requestId) {
+        state.semanticLoading = false;
+        renderDrawerResults();
+      }
+    }
+  }
+
   async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
     const trimmedQuery = query.trim();
 
@@ -401,6 +457,10 @@ export function createDrawerDataController({
 
     applyDrawerFilters(trimmedQuery);
     renderDrawerResults();
+
+    // Semantic search is account-wide and independent of the saved-page
+    // filter, so fire it after rendering the local matches.
+    void loadSemanticResults(trimmedQuery);
   }
 
   return {
@@ -412,6 +472,7 @@ export function createDrawerDataController({
     handleDrawerUpdate,
     loadDrawerBasePages,
     loadDrawerProjectPages,
-    loadDrawerResults
+    loadDrawerResults,
+    loadSemanticResults
   };
 }

@@ -48,8 +48,9 @@ export function renderPageTags(page = {}) {
   const tags = [];
   const renderSearchTag = (label, className = 'tag') => {
     const escapedLabel = escapeHtml(label);
-    const href = `search-results.html?q=${encodeURIComponent(label)}`;
-    return `<a class="${className} tag-search-link" href="${href}" data-semantic-search-tag="${escapedLabel}">${escapedLabel}</a>`;
+    // Tag clicks trigger an inline semantic search instead of navigating to
+    // a separate page, so this is a button rather than a link.
+    return `<button type="button" class="${className} tag-search-link" data-semantic-search-tag="${escapedLabel}">${escapedLabel}</button>`;
   };
 
   if (page.classifications?.length) {
