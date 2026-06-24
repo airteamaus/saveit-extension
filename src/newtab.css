@@ -748,6 +748,21 @@ body {
   color: var(--color-text-light);
 }
 
+/* Wag the dog's tail/ears group. Pivots near the shoulder. Disabled for
+   users who prefer reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+  .loading-dog-tail {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+    animation: loading-tail-wag 0.7s ease-in-out infinite;
+  }
+
+  @keyframes loading-tail-wag {
+    0%, 100% { transform: rotate(-6deg); }
+    50%      { transform: rotate(6deg); }
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   /* Take actions out of flow on fine pointers so the name and count align
      exactly with the built-in rows (Pinned / All pages). They fade in over
