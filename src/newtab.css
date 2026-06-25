@@ -137,7 +137,7 @@ body {
   display: flex;
   align-items: stretch;
   gap: 16px;
-  padding-top: 10px;
+  padding-top: 0;
   overflow: hidden;
 }
 
@@ -145,9 +145,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  /* Align the first nav row ("All pages") with the first card. The content
-     column uses 54px; the nav row's own top padding makes up the difference. */
-  padding: 38px 10px 10px;
+  /* Align the first nav row ("All pages") with the first card. */
+  padding: 6px 10px 10px;
 }
 
 .saved-pages-page-sidebar {
@@ -167,7 +166,7 @@ body {
   flex-direction: column;
   /* Align the first card row with the "All pages" nav row. Compensates for the
      cards' 0.5em top margin so the title lines up with the sidebar nav text. */
-  padding-top: 46px;
+  padding-top: 14px;
 }
 
 .saved-pages-page-results {
