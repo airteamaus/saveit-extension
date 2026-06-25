@@ -1,0 +1,14 @@
+# Build artifacts
+src/bundles/
+web-ext-artifacts/
+
+# Test/generated output
+coverage/
+playwright-report/
+
+# Backend checkout and deps
+saveit-backend/
+node_modules/
+
+# Lockfiles (machine-managed)
+pnpm-lock.yaml

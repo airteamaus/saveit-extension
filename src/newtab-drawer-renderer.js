@@ -399,6 +399,24 @@ export function createDrawerRenderer({
     });
   }
 
+  // While a semantic search is in flight, the dog takes over the whole pane:
+  // all saved-page cards are hidden and only the centered illustration shows,
+  // whether the search came from a tag click or the search box.
+  function renderSemanticLoadingState() {
+    renderDrawerState(`
+      <div class="saved-pages-semantic-loading saved-pages-semantic-loading-pane" aria-live="polite">
+        ${LOADING_ILLUSTRATION_SVG}
+      </div>
+    `);
+  }
+
+  // Drop the saved-pages section so the semantic results can occupy the full
+  // pane without the local cards (or their empty-state) alongside.
+  function clearPagesSection() {
+    resultsContainer?.querySelector('[data-section="pages"]')?.remove();
+    renderChrome();
+  }
+
   function refreshCard(pageId, pages, query, { onMissingPage } = {}) {
     if (!pageId || !resultsContainer) {
       return;
@@ -430,11 +448,13 @@ export function createDrawerRenderer({
   }
 
   return {
+    clearPagesSection,
     refreshCard,
     renderEmptyState,
     renderErrorState,
     renderLoadingState,
     renderResults,
+    renderSemanticLoadingState,
     renderSemanticResults,
     renderSignInState
   };

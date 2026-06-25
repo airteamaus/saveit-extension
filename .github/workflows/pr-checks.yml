@@ -38,6 +38,12 @@ jobs:
       - name: Run ESLint
         run: pnpm run lint
 
+      - name: Run Stylelint
+        run: pnpm run lint:css
+
+      - name: Check formatting
+        run: pnpm run format:check
+
       - name: Validate manifest
         run: pnpm run validate
 

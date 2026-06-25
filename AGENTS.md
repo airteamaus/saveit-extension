@@ -142,6 +142,10 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 | Lint | `just lint` |
 | Lint and fix | `just lint-fix` |
 | ESLint only | `just lint-js` |
+| CSS lint | `just lint-css` |
+| CSS lint and fix | `just lint-css-fix` |
+| Format all files | `just format` |
+| Check formatting | `just format-check` |
 | Validate manifest | `just validate` |
 | Full local check | `just check` |
 | CI simulation | `just ci-check` |

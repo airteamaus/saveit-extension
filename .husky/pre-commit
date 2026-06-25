@@ -7,6 +7,20 @@ pnpm run lint || {
   exit 1
 }
 
+# Lint CSS
+echo "  → Linting CSS..."
+pnpm run lint:css || {
+  echo "❌ CSS linting failed. Run 'pnpm run lint:css:fix' to fix issues."
+  exit 1
+}
+
+# Check formatting
+echo "  → Checking formatting..."
+pnpm run format:check || {
+  echo "❌ Formatting check failed. Run 'pnpm run format' to fix."
+  exit 1
+}
+
 # Validate manifest (uses same exclusions as pnpm run validate)
 echo "  → Validating manifest..."
 pnpm run validate || {

@@ -1,33 +1,21 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
+// Collection row action icons. We use Streamline "Ultimate Light" icons
+// (stored as black-on-transparent PNGs in src/img) and render them with a CSS
+// mask painted by currentColor. That keeps the same theming behaviour the old
+// inline stroke="currentColor" SVGs had: they adapt to light/dark mode and the
+// archive icon still turns red on hover.
+const ACTION_ICON_FILES = {
+  rename: 'img/Pencil-Edit-Desktop--Streamline-Ultimate.png',
+  visibility: 'img/Share-1--Streamline-Ultimate.png',
+  archive: 'img/Archive--Streamline-Ultimate.png'
+};
+
 export function getProjectActionIcon(action) {
-  if (action === 'rename') {
-    return `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M12 20h9"></path>
-        <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-      </svg>
-    `;
-  }
-
-  if (action === 'visibility') {
-    return `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-        <circle cx="8.5" cy="7" r="4"></circle>
-        <path d="M20 8v6"></path>
-        <path d="M23 11h-6"></path>
-      </svg>
-    `;
-  }
-
-  return `
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-      <polyline points="21 8 21 21 3 21 3 8"></polyline>
-      <rect x="1" y="3" width="22" height="5"></rect>
-      <line x1="10" y1="12" x2="14" y2="12"></line>
-    </svg>
-  `;
+  const file = ACTION_ICON_FILES[action] || ACTION_ICON_FILES.archive;
+  // The span carries the visual via .project-action-icon--{action} CSS mask;
+  // the data attribute is kept for debugging/tests.
+  return `<span class="project-action-icon project-action-icon--${action}" data-action-icon="${action}" style="mask-image: url('${file}'); -webkit-mask-image: url('${file}');" aria-hidden="true"></span>`;
 }
 
 function createElement(documentObj, tagName, { className = '', text = '', attributes = {} } = {}) {
@@ -48,18 +36,14 @@ function createElement(documentObj, tagName, { className = '', text = '', attrib
 
 function createIconElement(documentObj, action) {
   const parser = new DOMParser();
-  const iconDocument = parser.parseFromString(getProjectActionIcon(action).trim(), 'image/svg+xml');
-  return documentObj.importNode(iconDocument.documentElement, true);
+  // Parsed as HTML (not image/svg+xml) because the icons are now masked spans
+  // rather than inline SVGs. documentElement gives the span itself.
+  const iconDocument = parser.parseFromString(getProjectActionIcon(action).trim(), 'text/html');
+  return documentObj.importNode(iconDocument.body.firstElementChild, true);
 }
 
 function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
   const header = createElement(documentObj, 'div', { className: 'project-sidebar-header' });
-  const titleWrap = createElement(documentObj, 'div');
-  titleWrap.append(createElement(documentObj, 'h2', {
-    className: 'project-sidebar-title',
-    text: 'Collections'
-  }));
-  header.append(titleWrap);
 
   if (disableCreate !== null) {
     header.append(createElement(documentObj, 'button', {
@@ -75,11 +59,21 @@ function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
   return header;
 }
 
-function createSectionLabel(documentObj, text) {
-  return createElement(documentObj, 'div', {
-    className: 'project-nav-section-label',
-    text
+function createSectionLabel(documentObj, text, dotColor = null) {
+  const label = createElement(documentObj, 'div', {
+    className: 'project-nav-section-label'
   });
+  // Colored dot ties each group to an accent (personal vs shared), matching
+  // the reference's colored section markers.
+  label.append(createElement(documentObj, 'span', {
+    className: 'project-nav-section-dot',
+    attributes: dotColor ? { style: `background: ${dotColor};` } : {}
+  }));
+  label.append(createElement(documentObj, 'span', {
+    className: 'project-nav-section-text',
+    text
+  }));
+  return label;
 }
 
 function createSidebarRow(documentObj, {
@@ -101,6 +95,11 @@ function createSidebarRow(documentObj, {
       'data-project-id': projectId
     }
   });
+  button.append(createElement(documentObj, 'span', {
+    className: 'project-nav-hash',
+    text: '#',
+    attributes: { 'aria-hidden': 'true' }
+  }));
   button.append(createElement(documentObj, 'span', {
     className: 'project-nav-name',
     text: name
@@ -263,12 +262,12 @@ export function renderProjectSidebar(container, {
   );
 
   if (privateProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'My projects'));
+    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)'));
     privateProjects.forEach(project => nav.append(createProjectRow(project)));
   }
 
   if (sharedProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'Shared projects'));
+    nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-shared)'));
     sharedProjects.forEach(project => nav.append(createProjectRow(project)));
   }
 

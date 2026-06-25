@@ -54,7 +54,19 @@ export function renderPageTags(page = {}) {
   };
 
   if (page.classifications?.length) {
-    page.classifications.slice(0, 2).forEach(classification => {
+    // Prefer the two most specific topic tags: they are the strongest recall
+    // cues and produce the most useful semantic searches. Fall back to domain
+    // then general only when there aren't enough topics, so a card never sits
+    // empty when good narrower classifications exist.
+    const byRelevance = (a, b) => (b.confidence ?? 0) - (a.confidence ?? 0);
+    const topics = page.classifications
+      .filter(c => c.type === 'topic')
+      .sort(byRelevance);
+    const domains = page.classifications
+      .filter(c => c.type === 'domain')
+      .sort(byRelevance);
+    const selected = [...topics, ...domains].slice(0, 2);
+    selected.forEach(classification => {
       tags.push(
         renderSearchTag(classification.label, `tag ai-tag tag-${escapeHtml(classification.type)}`)
       );

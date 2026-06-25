@@ -74,7 +74,11 @@ body {
   --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-primary) 5%, transparent);
   --saved-pages-panel-border: transparent;
   --saved-pages-panel-border-strong: transparent;
-  --saved-pages-panel-border-active: color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  --saved-pages-panel-border-active: color-mix(
+    in srgb,
+    var(--color-primary) 34%,
+    var(--color-border)
+  );
   --saved-pages-control-bg: transparent;
   --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-primary) 6%, transparent);
   --saved-pages-chip-bg: transparent;
@@ -182,16 +186,15 @@ body {
   padding: 10px 12px;
   border-radius: 14px;
   background: var(--saved-pages-panel-bg);
-  border: 1px solid var(--saved-pages-panel-border);
+  border: 1px solid transparent;
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background-color 0.18s ease;
+  transition: border-color 0.18s ease;
 }
 
 .saved-pages-drawer-card:hover {
-  transform: translateY(-1px);
-  background: var(--saved-pages-panel-bg-hover);
+  border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-card:focus-visible {
@@ -225,6 +228,7 @@ body {
 .saved-pages-drawer-card-title {
   margin: 0;
   font-size: 0.875rem;
+  font-weight: 600;
   line-height: 1.25;
   color: var(--color-text);
 }
@@ -247,11 +251,13 @@ body {
   background: var(--saved-pages-control-bg);
   color: var(--color-text-light);
   cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .saved-pages-drawer-action-btn:hover {
-  transform: translateY(-1px);
   color: var(--color-text);
   border-color: var(--saved-pages-panel-border-active);
   background: var(--saved-pages-control-bg-hover);
@@ -343,7 +349,10 @@ body {
   color: var(--color-text);
   font: inherit;
   cursor: pointer;
-  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .saved-pages-drawer-edit-save {
@@ -395,7 +404,7 @@ body {
 .saved-pages-drawer-card-tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
   margin-left: auto;
 }
 
@@ -407,8 +416,7 @@ body {
 }
 
 .project-sidebar-eyebrow,
-.project-editor-eyebrow,
-.project-nav-section-label {
+.project-editor-eyebrow {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--color-text-light);
@@ -416,7 +424,41 @@ body {
   letter-spacing: 0.04em;
 }
 
-.project-sidebar-title,
+/* Sidebar section labels (e.g. "My projects") carry a colored dot that ties
+   the group to its accent and a divider line above to separate groups. */
+.project-nav-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 6px 4px 4px;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: var(--color-text-light);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.project-nav-section-label:first-child {
+  border-top: none;
+  margin-top: 0;
+}
+
+.project-nav-section-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-text-light);
+}
+
+.project-nav-section-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .project-editor-title {
   margin: 0;
   font-size: 0.9375rem;
@@ -435,7 +477,10 @@ body {
   font-size: 0.75rem;
   line-height: 1.2;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .saved-pages-drawer-card .btn-projects {
@@ -455,41 +500,88 @@ body {
 }
 
 .project-nav {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
+  /* Room for the continuous accent rail drawn by ::before, which the # marks
+     sit on top of so the whole list reads as one connected channel rail. */
+  padding-left: 24px;
+}
+
+/* The vertical accent line running down the left of the channel list. A single
+   pseudo-element keeps it unbroken across rows rather than a per-row border.
+   A touch stronger than the border token so it stays visible on dark. */
+.project-nav::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: color-mix(in srgb, var(--color-text-light) 30%, transparent);
 }
 
 .project-nav-row {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 10px;
-  border: 1px solid transparent;
+  gap: 6px;
+  padding: 5px 10px 5px 0;
+  border: none;
   border-radius: var(--radius-md);
   background: transparent;
   cursor: pointer;
-  transition: border-color 0.2s ease, background-color 0.2s ease;
+  transition: background-color 0.2s ease;
 }
 
 .project-nav-item {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text);
+  color: var(--color-text-light);
   text-align: left;
   cursor: pointer;
   overflow: hidden;
 }
 
-/* Selection state: the active collection shows a border to indicate which
-   scope is current. Hover and focus-within get only the background tint. */
+/* The # marker column-aligns across rows and sits over the rail line. */
+.project-nav-hash {
+  flex-shrink: 0;
+  width: 14px;
+  margin-left: -18px;
+  font-weight: 400;
+  color: inherit;
+  opacity: 0.7;
+  text-align: center;
+}
+
+/* Selection state: the active channel takes the primary accent, with a
+   brighter segment of the rail behind it. Hover/focus get only a tint. */
 .project-nav-row.is-active {
-  border-color: var(--saved-pages-panel-border-active);
   background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.project-nav-row.is-active::before {
+  content: "";
+  position: absolute;
+  left: -14px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--color-primary);
+}
+
+.project-nav-row.is-active .project-nav-item,
+.project-nav-row.is-active .project-nav-hash {
+  color: var(--color-primary);
+  opacity: 1;
 }
 
 .project-nav-row:hover,
@@ -497,9 +589,13 @@ body {
   background: color-mix(in srgb, var(--color-primary) 5%, transparent);
 }
 
+.project-nav-row:hover .project-nav-item {
+  color: var(--color-text);
+}
+
 .project-nav-name {
   display: block;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.25;
   color: var(--color-text);
   white-space: nowrap;
@@ -550,18 +646,35 @@ body {
   border: 1px solid transparent;
   border-radius: 999px;
   background: transparent;
-  color: var(--color-text-light);
+  /* Actions are hidden until hover, so they don't need de-emphasis at rest;
+     the lighter tone was disappearing against the hovered row tint. */
+  color: var(--color-text);
   cursor: pointer;
-  transition: background-color 0.18s ease, border-color 0.18s ease, color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    color 0.18s ease;
 }
 
-.project-nav-action svg {
+/* Streamline Ultimate icons rendered as currentColor-painted masks so they
+   theming follows the button (light/dark, and the archive red hover). */
+.project-action-icon {
+  display: block;
   width: 12px;
   height: 12px;
+  background-color: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
 }
 
 .project-nav-action:hover {
-  background: var(--saved-pages-chip-bg);
+  /* chip-bg is transparent in the subtle theme, so give the icon a real
+     backing tint so it stays visible over the hovered row. */
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
   color: var(--color-text);
   border-color: var(--saved-pages-panel-border-active);
 }
@@ -600,7 +713,7 @@ body {
   position: fixed;
   inset: 0;
   z-index: 45;
-  background: rgba(15, 23, 42, 0.32);
+  background: rgba(9, 9, 11, 0.32);
   backdrop-filter: blur(2px);
   -webkit-backdrop-filter: blur(2px);
 }
@@ -618,7 +731,7 @@ body {
   border: 1px solid var(--color-border);
   border-radius: 24px;
   background: var(--saved-pages-dialog-bg);
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+  box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
   backdrop-filter: blur(22px);
   -webkit-backdrop-filter: blur(22px);
 }
@@ -746,6 +859,18 @@ body {
   padding: 12px 0;
 }
 
+/* Full-pane variant: the dog owns the entire results area during semantic
+   search, so it centers vertically and scales up a touch. */
+.saved-pages-semantic-loading-pane {
+  flex: 1;
+  min-height: 100%;
+  padding: 0;
+}
+
+.saved-pages-semantic-loading-pane .saved-pages-semantic-loading-image {
+  width: 220px;
+}
+
 .saved-pages-semantic-loading-image {
   width: 180px;
   max-width: 75%;
@@ -764,8 +889,14 @@ body {
   }
 
   @keyframes loading-tail-wag {
-    0%, 100% { transform: rotate(-6deg); }
-    50%      { transform: rotate(6deg); }
+    0%,
+    100% {
+      transform: rotate(-6deg);
+    }
+
+    50% {
+      transform: rotate(6deg);
+    }
   }
 }
 

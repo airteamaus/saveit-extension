@@ -67,6 +67,19 @@ describe('project manager renderer helpers', () => {
 
     // No per-row visibility caption duplicates the section headers.
     expect(container.querySelector('.project-nav-visibility')).toBeNull();
+
+    // The "Collections" heading is gone (the rail + section dots replace it).
+    expect(container.querySelector('.project-sidebar-title')).toBeNull();
+
+    // Every nav row carries a # channel prefix.
+    const hashes = [...container.querySelectorAll('.project-nav-hash')].map(el => el.textContent);
+    expect(hashes.length).toBe(names.length);
+    expect(hashes.every(h => h === '#')).toBe(true);
+
+    // Section labels carry colored dots: personal = primary, shared = green.
+    const dotColors = [...container.querySelectorAll('.project-nav-section-dot')].map(el => el.style.background);
+    expect(dotColors).toContain('var(--color-primary)');
+    expect(dotColors).toContain('var(--color-shared)');
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {
@@ -114,8 +127,17 @@ describe('project manager renderer helpers', () => {
     expect(onMissingPage).toHaveBeenCalled();
   });
 
-  it('returns distinct action icons for rename and archive actions', () => {
-    expect(getProjectActionIcon('rename')).toContain('M16.5 3.5');
-    expect(getProjectActionIcon('archive')).toContain('<rect x="1" y="3" width="22" height="5"></rect>');
+  it('returns distinct masked-icon spans for each action', () => {
+    const rename = getProjectActionIcon('rename');
+    const visibility = getProjectActionIcon('visibility');
+    const archive = getProjectActionIcon('archive');
+
+    // Each is a masked span pointing at a distinct Streamline icon file.
+    expect(rename).toContain('project-action-icon--rename');
+    expect(rename).toContain('Pencil-Edit-Desktop--Streamline-Ultimate.png');
+    expect(visibility).toContain('project-action-icon--visibility');
+    expect(visibility).toContain('Share-1--Streamline-Ultimate.png');
+    expect(archive).toContain('project-action-icon--archive');
+    expect(archive).toContain('Archive--Streamline-Ultimate.png');
   });
 });

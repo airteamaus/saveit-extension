@@ -40,6 +40,7 @@ import {
 import {
   createBookmarkIconElement,
   getFaviconUrl,
+  renderPageTags,
   updateStatsDisplay
 } from '../../src/newtab-shared.js';
 import {
@@ -90,6 +91,62 @@ describe('newtab modules', () => {
       updateStatsDisplay(versionIndicator, { total: 7 });
 
       expect(versionIndicator.querySelector('.footer-stats')).toBeNull();
+    });
+  });
+
+  describe('renderPageTags', () => {
+    const classifications = (entries) =>
+      entries.map(([type, label, confidence]) => ({ type, label, confidence }));
+
+    it('shows the two highest-confidence topic tags, ignoring broad ones', () => {
+      const html = renderPageTags({
+        classifications: classifications([
+          ['general', 'Computer Science', 0.95],
+          ['domain', 'Artificial Intelligence', 0.92],
+          ['topic', 'Chain-of-Thought Prompting', 0.88],
+          ['topic', 'Large Language Models', 0.90],
+          ['topic', 'Model Training', 0.74]
+        ])
+      });
+
+      expect(html).toContain('Large Language Models');
+      expect(html).toContain('Chain-of-Thought Prompting');
+      expect(html).not.toContain('Computer Science');
+      expect(html).not.toContain('Artificial Intelligence');
+      expect(html).not.toContain('Model Training');
+    });
+
+    it('falls back to a domain tag when only one topic is available', () => {
+      const html = renderPageTags({
+        classifications: classifications([
+          ['general', 'Cooking', 0.95],
+          ['domain', 'Baking', 0.90],
+          ['topic', 'Sourdough Starter', 0.85]
+        ])
+      });
+
+      expect(html).toContain('Sourdough Starter');
+      expect(html).toContain('Baking');
+      expect(html).not.toContain('Cooking');
+    });
+
+    it('renders the primary classification label when no classifications exist', () => {
+      const html = renderPageTags({ primary_classification_label: 'Philosophy' });
+
+      expect(html).toContain('Philosophy');
+    });
+
+    it('still appends one manual tag after the ai tags', () => {
+      const html = renderPageTags({
+        classifications: classifications([
+          ['general', 'Travel', 0.95],
+          ['topic', 'Motorcycle Touring', 0.88]
+        ]),
+        manual_tags: ['himalayas']
+      });
+
+      expect(html).toContain('Motorcycle Touring');
+      expect(html).toContain('himalayas');
     });
   });
 
@@ -646,12 +703,19 @@ describe('newtab modules', () => {
 
       uiController.renderResults();
 
-      const semanticSection = resultsContainer.querySelector('[data-section="semantic"]');
-      expect(semanticSection).not.toBeNull();
-      const svg = semanticSection.querySelector('svg.saved-pages-semantic-loading-image');
+      // While semantic search loads, the dog takes over the full pane: no
+      // saved-page cards and no pages/semantic sections, just the illustration.
+      const pagesSection = resultsContainer.querySelector('[data-section="pages"]');
+      expect(pagesSection).toBeNull();
+      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      expect(cards.length).toBe(0);
+
+      const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
       expect(svg).not.toBeNull();
       // Inlined SVG uses currentColor strokes, inheriting the theme color.
       expect(svg.querySelector('path')?.getAttribute('stroke')).toBe('currentColor');
+      // Rendered in the full-pane variant.
+      expect(svg.closest('.saved-pages-semantic-loading-pane')).not.toBeNull();
     });
 
     it('renders the semantic loading image even when no saved pages match the query', () => {
@@ -682,11 +746,12 @@ describe('newtab modules', () => {
 
       uiController.renderResults();
 
-      // The loading SVG must render even though state.pages is empty —
-      // previously the empty-state branch replaced the whole container and
-      // hid the semantic loading indicator.
+      // The loading dog owns the full pane even though state.pages is empty —
+      // no empty-state branch replaces it.
       const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
       expect(svg).not.toBeNull();
+      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      expect(cards.length).toBe(0);
     });
   });
 

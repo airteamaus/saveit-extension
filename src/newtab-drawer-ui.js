@@ -74,13 +74,38 @@ export function createDrawerUiController({
 
     const trimmedQuery = (state.query || '').trim();
     const hasQuery = Boolean(trimmedQuery);
-    const semanticActive = state.semanticLoading || (state.semanticResults?.length ?? 0) > 0;
 
-    // With a query (or semantic results in flight), the saved-page list may
-    // be empty while semantic matches are still loading. In that case keep the
-    // pane so the semantic section can render, rather than swapping in the
-    // full-container empty state that would hide the loading indicator.
-    if (!state.pages.length && !hasQuery && !semanticActive) {
+    // While a semantic search is loading, the dog takes over the full pane:
+    // hide all saved-page cards and show only the centered illustration.
+    if (state.semanticLoading) {
+      drawerRenderer.renderSemanticLoadingState();
+      return;
+    }
+
+    // Local saved-page results are a subset of the semantic matches, so once
+    // semantic results return they own the full pane — no separate local card
+    // list. (A query always yields at least the card the tag was clicked from.)
+    if (hasQuery) {
+      if ((state.semanticResults?.length ?? 0) > 0) {
+        drawerRenderer.clearPagesSection();
+        drawerRenderer.renderSemanticResults(state.semanticResults, {
+          loading: false,
+          query: state.semanticQuery
+        });
+        return;
+      }
+
+      // Query resolved with no semantic matches at all.
+      drawerRenderer.clearPagesSection();
+      drawerRenderer.renderSemanticResults([], {
+        loading: false,
+        query: state.semanticQuery
+      });
+      return;
+    }
+
+    // No query: the normal saved-page browse view.
+    if (!state.pages.length) {
       renderEmptyState(state.query);
       return;
     }

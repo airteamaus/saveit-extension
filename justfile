@@ -25,6 +25,22 @@ lint-js:
 lint-fix:
     npm run lint:fix
 
+# Lint CSS with Stylelint
+lint-css:
+    npm run lint:css
+
+# Lint and auto-fix CSS issues
+lint-css-fix:
+    npm run lint:css:fix
+
+# Format all files with Prettier
+format:
+    npm run format
+
+# Check formatting without writing
+format-check:
+    npm run format:check
+
 # Run unit and integration tests
 test:
     npm test
@@ -46,12 +62,13 @@ test-e2e-ui:
     npm run test:e2e:ui
 
 # Run all checks (lint, tests, build, validate)
-check: lint-js lint test validate test-build test-csp
+check: lint-js lint-css lint format-check test validate test-build test-csp
 
 # CI check - simulate GitHub Actions locally
 ci-check:
     @echo "Running CI checks locally..."
     @just lint-js
+    @just lint-css
     @just lint
     @just test
     @just test-coverage
