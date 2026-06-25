@@ -76,10 +76,11 @@ describe('project manager renderer helpers', () => {
     expect(hashes.length).toBe(names.length);
     expect(hashes.every(h => h === '#')).toBe(true);
 
-    // Section labels carry colored dots: personal = primary, shared = green.
+    // Section labels carry dots in the primary sage colour (both sections
+    // share the same accent now).
     const dotColors = [...container.querySelectorAll('.project-nav-section-dot')].map(el => el.style.background);
-    expect(dotColors).toContain('var(--color-primary)');
-    expect(dotColors).toContain('var(--color-shared)');
+    expect(dotColors.every(c => c === 'var(--color-primary)')).toBe(true);
+    expect(dotColors.length).toBe(2);
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {

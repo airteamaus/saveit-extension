@@ -89,8 +89,9 @@ body {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 0 4px;
-  border-bottom: 1px solid var(--color-border);
+  /* Indent the header to line up with the cards/results, which sit inside the
+     results container's 16px horizontal padding. */
+  padding: 0 16px 4px;
 }
 
 .saved-pages-page-logo {
@@ -144,7 +145,9 @@ body {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 10px;
+  /* Align the first nav row ("All pages") with the first card. The content
+     column uses 54px; the nav row's own top padding makes up the difference. */
+  padding: 38px 10px 10px;
 }
 
 .saved-pages-page-sidebar {
@@ -162,6 +165,10 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
+  /* Align the first card row with the "All pages" nav row, clearing the
+     sidebar's create-button header. Matches the sidebar header height plus
+     its padding and the gap to the first nav row. */
+  padding-top: 54px;
 }
 
 .saved-pages-page-results {
@@ -169,10 +176,13 @@ body {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 0 0 8px;
+  /* Match the page's horizontal margin so cards have breathing room on the
+     right edge that lines up with the left margin of the page. */
+  padding: 0 16px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  /* ~half an em above and below each card for vertical separation. */
+  gap: 0.875em;
 }
 
 .saved-pages-drawer-state {
@@ -183,7 +193,7 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 10px 12px;
+  padding: 0 12px 10px;
   border-radius: 14px;
   background: var(--saved-pages-panel-bg);
   border: 1px solid transparent;
@@ -280,7 +290,8 @@ body {
 }
 
 .saved-pages-drawer-card-summary {
-  margin: 0;
+  /* Indent to line up with the title text, past the 16px favicon + 6px gap. */
+  margin: 0 0 0 22px;
   font-size: 0.8125rem;
   line-height: 1.35;
   color: var(--color-text-light);
@@ -378,6 +389,8 @@ body {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+  /* Push project pills to the right edge of the card. */
+  justify-content: flex-end;
 }
 
 .saved-pages-drawer-card-footer {
@@ -389,6 +402,8 @@ body {
 }
 
 .saved-pages-drawer-card-meta {
+  /* Indent to line up with the title text, past the 16px favicon + 6px gap. */
+  margin-left: 22px;
   display: inline-flex;
   flex-wrap: wrap;
   gap: 4px;
@@ -411,7 +426,9 @@ body {
 .project-sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  /* The create button is the only child now (the title was removed), so push
+     it to the right edge of the sidebar. */
+  justify-content: flex-end;
   gap: var(--spacing-md);
 }
 
@@ -454,9 +471,17 @@ body {
 }
 
 .project-nav-section-text {
+  flex: 1;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* The create-project button sits on the right of the section label. */
+.project-nav-section-label .project-sidebar-create {
+  flex-shrink: 0;
+  margin-left: auto;
 }
 
 .project-editor-title {
@@ -485,6 +510,23 @@ body {
 
 .saved-pages-drawer-card .btn-projects {
   padding: 0;
+}
+
+/* The sidebar create button is an icon button (no text label). */
+.project-sidebar-create {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
+
+.project-sidebar-create-icon {
+  width: 14px;
+  height: 14px;
+  /* Sage green so the create icon reads as the primary action. */
+  color: var(--color-primary);
 }
 
 .saved-pages-drawer-projects-btn svg {
@@ -694,6 +736,13 @@ body {
   background: var(--saved-pages-chip-bg);
   color: var(--color-text-light);
   font-size: 0.75rem;
+}
+
+/* Card project pills take the highlighted-row tint (same as the selected
+   sidebar collection) so they read as tags rather than plain text. */
+.project-pill {
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-text);
 }
 
 .project-pill-remove {
