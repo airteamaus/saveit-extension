@@ -106,6 +106,13 @@ export function createDrawerUiController({
 
     // No query: the normal saved-page browse view.
     if (!state.pages.length) {
+      // A project always contains at least one page, so an empty list while
+      // loading means the API fetch is still in flight — show the digging dog
+      // rather than a premature "no pages" empty state.
+      if (state.isLoading) {
+        drawerRenderer.renderSemanticLoadingState();
+        return;
+      }
       renderEmptyState(state.query);
       return;
     }

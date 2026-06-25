@@ -675,6 +675,40 @@ describe('newtab modules', () => {
       expect(projectManager.renderEditor).toHaveBeenCalled();
     });
 
+    it('shows the digging dog instead of the empty state while a project is loading', () => {
+      document.body.innerHTML = '<div id="results"></div>';
+      const resultsContainer = document.getElementById('results');
+      // Empty pages but still loading: a project always has at least one page,
+      // so this means the API fetch is in flight, not a genuinely empty project.
+      const state = {
+        query: '',
+        pages: [],
+        selectedProjectId: 'project-1',
+        isLoading: true
+      };
+      const savedPagesView = { projectsAvailable: true };
+      const projectManager = {
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn()
+      };
+      const uiController = createDrawerUiController({
+        state,
+        projectManager,
+        resultsContainer,
+        getSavedPagesView: () => savedPagesView,
+        documentObj: document
+      });
+
+      uiController.renderResults();
+
+      // The loading dog owns the pane; the "no pages" empty state must not.
+      const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
+      expect(svg).not.toBeNull();
+      expect(resultsContainer.textContent).not.toContain('No pages in');
+    });
+
     it('renders the semantic loading video while a search is in flight', () => {
       document.body.innerHTML = '<div id="results"></div>';
       const resultsContainer = document.getElementById('results');
