@@ -165,10 +165,9 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* Align the first card row with the "All pages" nav row, clearing the
-     sidebar's create-button header. Matches the sidebar header height plus
-     its padding and the gap to the first nav row. */
-  padding-top: 54px;
+  /* Align the first card row with the "All pages" nav row. Compensates for the
+     cards' 0.5em top margin so the title lines up with the sidebar nav text. */
+  padding-top: 46px;
 }
 
 .saved-pages-page-results {
@@ -181,8 +180,6 @@ body {
   padding: 0 16px 8px;
   display: flex;
   flex-direction: column;
-  /* ~half an em above and below each card for vertical separation. */
-  gap: 0.875em;
 }
 
 .saved-pages-drawer-state {
@@ -193,6 +190,8 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  /* Half an em above and below each card for consistent vertical separation. */
+  margin: 0.5em 0;
   padding: 0 12px 10px;
   border-radius: 14px;
   background: var(--saved-pages-panel-bg);
