@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.11.4] - 2026-06-25
+
+### 📝 Other Improvements
+
+- Move page content up toward the header (3f7a96f)
+- Give cards a half-em vertical margin above and below (cdfaf17)
+
 ## [1.11.3] - 2026-06-25
 
 ### 📝 Other Improvements
@@ -56,12 +63,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Inline the loading SVG so currentColor inherits the theme (59bbece)
 
 ## [1.10.31] - 2026-06-24
-
-### 📝 Other Improvements
-
-- Use theme-aware SVG for search loading and fix it not showing (587ef5f)
-
-## [1.10.30] - 2026-06-24
 
 ### ✨ Features
 
@@ -254,6 +255,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Use theme-aware SVG for search loading and fix it not showing (587ef5f)
 - Show search loading state with animation and scope card lookups (49f8cd6)
 - Render semantic search inline in newtab (0bf567b)
 - Update default-selection E2E test for All pages (ed8eee3)
