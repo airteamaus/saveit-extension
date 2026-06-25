@@ -1,8 +1,8 @@
 :root {
   color-scheme: light dark;
 
-  --color-primary: #2563eb;
-  --color-primary-hover: #1d4ed8;
+  --color-primary: #5b8c7a;
+  --color-primary-hover: #4a7567;
   --color-secondary: #64748b;
   --color-shared: #16a34a;
   --color-danger: #dc2626;
@@ -44,8 +44,8 @@
   --meta-bg: light-dark(#ffffff, #171717);
   --meta-text: light-dark(#525252, #d4d4d4);
   --search-focus-shadow: light-dark(
-    0 0 0 3px rgba(37, 99, 235, 0.1),
-    0 0 0 3px rgba(37, 99, 235, 0.2)
+    0 0 0 3px rgba(91, 140, 122, 0.12),
+    0 0 0 3px rgba(91, 140, 122, 0.22)
   );
 }
 

@@ -58,8 +58,8 @@ body {
 .toolbar-popup-save-btn {
   margin-bottom: 10px;
   padding: 10px 12px;
-  border-color: #2563eb;
-  background: #2563eb;
+  border-color: #5b8c7a;
+  background: #5b8c7a;
   color: #ffffff;
   font-weight: 600;
 }
@@ -74,7 +74,7 @@ body {
 }
 
 .toolbar-popup-save-btn:hover {
-  background: #1d4ed8;
+  background: #4a7567;
 }
 
 .toolbar-popup-project-btn:hover {
