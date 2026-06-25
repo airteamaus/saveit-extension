@@ -43,23 +43,32 @@ function createIconElement(documentObj, action) {
 }
 
 function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
-  const header = createElement(documentObj, 'div', { className: 'project-sidebar-header' });
-
-  if (disableCreate !== null) {
-    header.append(createElement(documentObj, 'button', {
-      className: 'project-sidebar-create',
-      text: 'New',
-      attributes: {
-        type: 'button',
-        ...(disableCreate ? { disabled: 'disabled' } : {})
-      }
-    }));
-  }
-
-  return header;
+  // The header now holds nothing visible: the create button moved next to the
+  // "My projects" label. Kept as a stable attachment point so callers and
+  // tests that reference it still work.
+  void disableCreate;
+  return createElement(documentObj, 'div', { className: 'project-sidebar-header' });
 }
 
-function createSectionLabel(documentObj, text, dotColor = null) {
+// Create-project icon button. Lives next to the "My projects" section label.
+function createCreateButton(documentObj, { disableCreate = false } = {}) {
+  const createBtn = createElement(documentObj, 'button', {
+    className: 'project-sidebar-create',
+    attributes: {
+      type: 'button',
+      title: 'New project',
+      'aria-label': 'New project',
+      ...(disableCreate ? { disabled: 'disabled' } : {})
+    }
+  });
+  // Icon button (masked PNG painted by currentColor), matching the row
+  // action icons. The tag-plus icon reads as "create".
+  const iconFile = 'img/Tag-New--Streamline-Ultimate.png';
+  createBtn.innerHTML = `<span class="project-action-icon project-sidebar-create-icon" style="mask-image: url('${iconFile}'); -webkit-mask-image: url('${iconFile}');" aria-hidden="true"></span>`;
+  return createBtn;
+}
+
+function createSectionLabel(documentObj, text, dotColor = null, trailing = null) {
   const label = createElement(documentObj, 'div', {
     className: 'project-nav-section-label'
   });
@@ -73,6 +82,9 @@ function createSectionLabel(documentObj, text, dotColor = null) {
     className: 'project-nav-section-text',
     text
   }));
+  if (trailing) {
+    label.append(trailing);
+  }
   return label;
 }
 
@@ -261,17 +273,24 @@ export function renderProjectSidebar(container, {
     })
   );
 
+  // The create-project button sits on the right of the first section label
+  // (My projects, or Shared projects when there are no personal ones).
+  const createButton = createCreateButton(documentObj);
+
   if (privateProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)'));
+    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
     privateProjects.forEach(project => nav.append(createProjectRow(project)));
-  }
-
-  if (sharedProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-shared)'));
+    if (sharedProjects.length) {
+      nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-primary)'));
+      sharedProjects.forEach(project => nav.append(createProjectRow(project)));
+    }
+  } else if (sharedProjects.length) {
+    nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-primary)', createButton));
     sharedProjects.forEach(project => nav.append(createProjectRow(project)));
-  }
-
-  if (!privateProjects.length && !sharedProjects.length) {
+  } else {
+    // No projects at all: still show the "My projects" label so the create
+    // button is reachable, plus the empty hint.
+    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
     nav.append(createElement(documentObj, 'p', {
       className: 'project-sidebar-empty',
       text: 'No projects yet. Create one to group related pages.'
