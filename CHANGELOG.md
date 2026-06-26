@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.12.3] - 2026-06-26
+
+### 📝 Other Improvements
+
+- Load the drawer after auth resolves, not before (c3f7666)
+- Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
+
 ## [1.12.2] - 2026-06-26
 
 ### 📝 Other Improvements
@@ -60,12 +67,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refresh new-tab UI, add CSS tooling, and refine search flow (1893db4)
 
 ## [1.10.35] - 2026-06-24
-
-### 📝 Other Improvements
-
-- Make the UI more subtle: remove fills and static borders (09185f4)
-
-## [1.10.34] - 2026-06-24
 
 ### ✨ Features
 
@@ -258,6 +259,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Make the UI more subtle: remove fills and static borders (09185f4)
 - Animate the loading illustration: wagging tail and flying dirt (57a0a9e)
 - Enlarge loading illustration and vertically centre it (0ebc0e2)
 - Inline the loading SVG so currentColor inherits the theme (59bbece)
