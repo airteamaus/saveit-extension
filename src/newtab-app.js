@@ -112,7 +112,12 @@ export function createNewtabApp({
         authController,
         documentObj
       });
-      elements.importBtn?.addEventListener('click', () => importPanel.open());
+      // Import lives in the avatar dropdown; close the dropdown before opening
+      // the modal so it doesn't linger behind the panel.
+      elements.importBtn?.addEventListener('click', () => {
+        elements.userDropdown?.classList.add('hidden');
+        importPanel.open();
+      });
     },
     async start() {
       await startNewtabPageFn({
