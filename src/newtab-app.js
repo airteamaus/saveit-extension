@@ -96,7 +96,20 @@ export function createNewtabApp({
     onSignedOut: authLifecycle.onSignedOut
   });
 
-  const importPanel = createImportPanel({ api: API, documentObj });
+  const importPanel = createImportPanel({
+    api: API,
+    documentObj,
+    // After a successful import, force the drawer to reload from the server so
+    // the new pages appear without relying on the storage-change observer
+    // (which can miss the event if the drawer's local snapshot shadows it).
+    onImportComplete: () => {
+      try {
+        drawerController.load();
+      } catch {
+        /* drawer not initialised yet — a manual reload will pick it up */
+      }
+    }
+  });
 
   return {
     authController,
@@ -117,6 +130,16 @@ export function createNewtabApp({
       elements.importBtn?.addEventListener('click', () => {
         elements.userDropdown?.classList.add('hidden');
         importPanel.open();
+      });
+      // Refresh forces the drawer to reload from the server, bypassing the
+      // local snapshot — useful after a bulk import or when pages look stale.
+      elements.refreshBtn?.addEventListener('click', () => {
+        elements.userDropdown?.classList.add('hidden');
+        try {
+          drawerController.load();
+        } catch {
+          /* drawer not initialised yet */
+        }
       });
     },
     async start() {

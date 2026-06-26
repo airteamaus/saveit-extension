@@ -13,6 +13,7 @@ export function getNewtabElements(documentObj = document) {
     favoritesSection: documentObj.getElementById('favorites-section'),
     favoritesViewport: documentObj.getElementById('favorites-viewport'),
     importBtn: documentObj.getElementById('hero-import-btn'),
+    refreshBtn: documentObj.getElementById('hero-refresh-btn'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
     importPanelBackdrop: documentObj.getElementById('import-panel-backdrop'),
