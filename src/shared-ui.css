@@ -215,37 +215,6 @@ select {
   transform: translateY(0);
 }
 
-/* Import bookmarks button — secondary outline style so it reads as an action
-   distinct from the primary Sign in button. */
-.import-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 8px 14px;
-  background: transparent;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition:
-    border-color 0.18s ease,
-    background-color 0.18s ease;
-}
-
-.import-btn svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2;
-}
-
-.import-btn:hover {
-  border-color: var(--color-primary);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-}
-
 /* Import panel content (rendered inside the reused editor dialog shell). */
 .import-panel-dialog {
   max-width: 480px;

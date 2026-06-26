@@ -310,8 +310,12 @@ test.describe('Standalone Mode', () => {
 
     await openStandaloneNewtab(page);
 
-    // The import button is hidden until signed in; reveal it for this test.
-    await page.evaluate(() => document.getElementById('hero-import-btn')?.classList.remove('hidden'));
+    // Import lives behind the avatar dropdown. Reveal the menu (hidden until
+    // signed in in real use) and open the dropdown, then click Import.
+    await page.evaluate(() => {
+      document.getElementById('hero-user-menu')?.classList.remove('hidden');
+      document.getElementById('hero-user-dropdown')?.classList.remove('hidden');
+    });
     await page.locator('#hero-import-btn').click();
 
     // Preview step: shows 2 importable (github + HN), 2 skipped (bookmarklet + dup).
