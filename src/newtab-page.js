@@ -68,7 +68,12 @@ export async function startNewtabPage({
   updateVersionIndicator(versionNumberEl);
   drawerController.init();
   drawerController.showLoadingState?.('Loading saved pages...');
+
+  // Resolve auth BEFORE loading the drawer. The drawer's initial hydrate()
+  // runs a freshness check (headSavedPages) that needs a signed-in user to
+  // mint an auth token; loading before auth resolves throws "No user signed
+  // in" and the pages never appear.
+  await authController.init();
   void drawerController.preloadProjects?.();
   void drawerController.load?.();
-  await authController.init();
 }
