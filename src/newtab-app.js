@@ -1,4 +1,5 @@
 import { createNewtabAuthController } from './newtab-auth.js';
+import { createImportPanel } from './import-panel.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -95,10 +96,13 @@ export function createNewtabApp({
     onSignedOut: authLifecycle.onSignedOut
   });
 
+  const importPanel = createImportPanel({ api: API, documentObj });
+
   return {
     authController,
     drawerController,
     elements,
+    importPanel,
     projectManager,
     projectsStore,
     savedPagesStore,
@@ -108,6 +112,7 @@ export function createNewtabApp({
         authController,
         documentObj
       });
+      elements.importBtn?.addEventListener('click', () => importPanel.open());
     },
     async start() {
       await startNewtabPageFn({

@@ -288,4 +288,43 @@ test.describe('Standalone Mode', () => {
     });
     expect(archiveRed).toBeGreaterThan(150); // red channel dominant (#dc2626 = 220)
   });
+
+  test('imports bookmarks via the import panel: preview → progress → result', async ({ page }) => {
+    // Inject a fake bookmarks tree before the page boots. Standalone mode has
+    // no real browser.bookmarks API, so the reader would otherwise throw.
+    await page.addInitScript(() => {
+      const fakeTree = [
+        {
+          title: '',
+          children: [
+            { url: 'https://github.com', title: 'GitHub' },
+            { url: 'https://news.ycombinator.com', title: 'HN' },
+            { url: 'javascript:void(0)', title: 'bookmarklet (should be skipped)' },
+            { url: 'https://github.com', title: 'GitHub dup (should dedup)' }
+          ]
+        }
+      ];
+      globalThis.browser = globalThis.browser || {};
+      globalThis.browser.bookmarks = { getTree: async () => fakeTree };
+    });
+
+    await openStandaloneNewtab(page);
+
+    // The import button is hidden until signed in; reveal it for this test.
+    await page.evaluate(() => document.getElementById('hero-import-btn')?.classList.remove('hidden'));
+    await page.locator('#hero-import-btn').click();
+
+    // Preview step: shows 2 importable (github + HN), 2 skipped (bookmarklet + dup).
+    const dialog = page.locator('#import-panel-dialog');
+    await expect(dialog).toBeVisible({ timeout: 5000 });
+    await expect(dialog).toContainText('2 to import');
+    await expect(dialog).toContainText('Import 2 bookmarks');
+
+    // Run the import — standalone mock returns success immediately.
+    await dialog.locator('button', { hasText: 'Import 2 bookmarks' }).click();
+
+    // Result step: complete with counts.
+    await expect(dialog).toContainText('Import complete', { timeout: 5000 });
+    await expect(dialog).toContainText('Imported 2 bookmarks');
+  });
 });
