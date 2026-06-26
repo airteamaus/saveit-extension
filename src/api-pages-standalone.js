@@ -159,3 +159,18 @@ export function pinStandalonePage(id, pinned) {
   }
   throw new Error('Page not found');
 }
+
+// Standalone mock for bulk bookmark import. Mirrors the backend response
+// shape: { success, imported, skipped }. Used for UI development and tests.
+export function bulkImportStandalone({ bookmarks, projectId }) {
+  if (!Array.isArray(bookmarks)) {
+    throw new Error('bookmarks must be an array');
+  }
+  return {
+    success: true,
+    imported: bookmarks.length,
+    skipped: 0,
+    project_id: projectId ?? null,
+    request_id: 'mock-bulk-import'
+  };
+}

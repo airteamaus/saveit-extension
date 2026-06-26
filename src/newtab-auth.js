@@ -15,14 +15,19 @@ export function applyAuthUI(user, {
   menuRoot,
   avatarEl,
   userEmailEl,
-  signInBtn
+  signInBtn,
+  importBtn
 }) {
   AuthMenu.updateCompactMenu({ menuRoot, avatarEl, userEmailEl }, user);
 
   if (user) {
+    // Signed in: hide the sign-in button, reveal the import action.
     signInBtn?.classList.add('hidden');
+    importBtn?.classList.remove('hidden');
   } else {
+    // Signed out: show sign-in, hide import (it needs auth).
     signInBtn?.classList.remove('hidden');
+    importBtn?.classList.add('hidden');
   }
 }
 
@@ -40,7 +45,7 @@ export function createNewtabAuthController({
   onSignedOut,
   windowObj = window
 }) {
-  const { signInBtn, userMenu, userAvatar, userDropdown, userEmailEl } = elements;
+  const { signInBtn, importBtn, userMenu, userAvatar, userDropdown, userEmailEl } = elements;
 
   function updateAuthUi(user) {
     applyAuthUI(user, {
@@ -48,7 +53,8 @@ export function createNewtabAuthController({
       menuRoot: userMenu,
       avatarEl: userAvatar,
       userEmailEl,
-      signInBtn
+      signInBtn,
+      importBtn
     });
   }
 
