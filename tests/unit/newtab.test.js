@@ -221,7 +221,7 @@ describe('newtab modules', () => {
         expect(authController.hideDropdownForOutsideClick).toHaveBeenCalledWith(document.body);
       });
 
-      it('starts loading saved pages before auth init resolves', async () => {
+      it('waits for auth init to resolve before loading saved pages', async () => {
         const ThemeManager = { init: vi.fn() };
         const updateVersionIndicator = vi.fn();
         let resolveAuthInit;
@@ -248,16 +248,23 @@ describe('newtab modules', () => {
 
         await Promise.resolve();
 
+        // Theme/version/init/showLoadingState run immediately, but the drawer
+        // must NOT load before auth resolves — its hydrate() freshness check
+        // needs a signed-in user to mint an auth token.
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
         expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
-        expect(drawerController.preloadProjects).toHaveBeenCalled();
-        expect(drawerController.load).toHaveBeenCalled();
+        expect(drawerController.load).not.toHaveBeenCalled();
+        expect(drawerController.preloadProjects).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
 
         resolveAuthInit({ handledInitialState: true, user: { uid: 'user-1' } });
         await startPromise;
+
+        // After auth resolves, the drawer loads.
+        expect(drawerController.load).toHaveBeenCalled();
+        expect(drawerController.preloadProjects).toHaveBeenCalled();
       });
 
       it('still waits for auth init to settle before resolving startup', async () => {
