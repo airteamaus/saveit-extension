@@ -1,6 +1,6 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
-import { createProjectSavedPagesStore } from './newtab-drawer-stores.js';
+import { createDomainSavedPagesStore, createProjectSavedPagesStore } from './newtab-drawer-stores.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
 
 export function createDrawerDataController({
@@ -23,10 +23,12 @@ export function createDrawerDataController({
   applyDrawerFilters,
   windowObj = window,
   projectFetchLimit = 100,
-  createProjectSavedPagesStoreFn = createProjectSavedPagesStore
+  createProjectSavedPagesStoreFn = createProjectSavedPagesStore,
+  createDomainSavedPagesStoreFn = createDomainSavedPagesStore
 }) {
   let drawerProjectsPromise = null;
   const projectSavedPagesStores = new Map();
+  const domainSavedPagesStores = new Map();
 
   function findDrawerPage(id) {
     return state.allPages.find(page => page.id === id) || null;
@@ -76,6 +78,45 @@ export function createDrawerDataController({
     }
 
     return projectSavedPagesStores.get(projectId) || null;
+  }
+
+  // --- Domain warm-cache stores (mirror the project store pattern) ---
+
+  function syncDomainDrawerStateFromStore(domain, snapshot, { query = state.query, render = state.hasInitialized } = {}) {
+    if (!domain || state.selectedDomainId !== `domain:${domain}`) {
+      return;
+    }
+
+    const domainPages = snapshot?.allPages || [];
+    state.allPages = upsertListPages(state.allPages, domainPages, Number.POSITIVE_INFINITY);
+    state.loadedProjectPages = domainPages;
+    applyDrawerFilters(query);
+
+    if (render) {
+      renderDrawerResults();
+    }
+  }
+
+  function getDomainSavedPagesStore(domain) {
+    if (!domain) {
+      return null;
+    }
+
+    if (!domainSavedPagesStores.has(domain)) {
+      const store = createDomainSavedPagesStoreFn(api, domain, {
+        initialFetchLimit: projectFetchLimit,
+        prefetchBatchLimit: projectFetchLimit
+      });
+      store.subscribe(() => {
+        syncDomainDrawerStateFromStore(domain, store.getSnapshot(), {
+          query: state.query,
+          render: state.hasInitialized
+        });
+      });
+      domainSavedPagesStores.set(domain, store);
+    }
+
+    return domainSavedPagesStores.get(domain) || null;
   }
 
   async function updateCachedProjectStores(page, updater) {
@@ -491,8 +532,8 @@ export function createDrawerDataController({
     }
   }
 
-  // Load pages scoped to a domain. Domain scoping uses a direct server fetch
-  // (no per-domain warm-cache store), simpler than project scoping.
+  // Load pages scoped to a domain (broad category), using the same per-scope
+  // warm-cache approach as project pages.
   async function loadDrawerDomainPages(domain, { query = state.query, syncUrl = true } = {}) {
     if (!domain) {
       await loadDrawerBasePages({ query, syncUrl });
@@ -509,23 +550,48 @@ export function createDrawerDataController({
       updateDrawerUrl(true, trimmedQuery);
     }
 
+    if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
+      state.isLoading = false;
+      state.hasInitialized = true;
+      savedPagesStore.reset({ emit: false });
+      getDomainSavedPagesStore(domain)?.reset({ emit: false });
+      state.allPages = [];
+      state.loadedProjectPages = [];
+      state.pages = [];
+      renderDrawerSignInState();
+      return;
+    }
+
+    const domainSavedPagesStore = getDomainSavedPagesStore(domain);
+    const domainSnapshot = domainSavedPagesStore?.getSnapshot?.() || null;
+    if (
+      domainSavedPagesStore &&
+      !domainSnapshot?.allPages?.length &&
+      !hasRenderableWarmCache(domainSnapshot)
+    ) {
+      renderDrawerLoadingState(trimmedQuery ? 'Searching domain pages...' : 'Loading domain pages...');
+    }
+
     try {
-      const response = await api.getSavedPages({ domain, search: trimmedQuery, limit: 100, skipCache: true });
+      const snapshot = await domainSavedPagesStore.hydrate();
+
       if (requestId !== state.requestId) {
         return;
       }
-      const pages = Array.isArray(response?.pages) ? response.pages : [];
-      state.loadedProjectPages = pages;
-      state.allPages = pages;
-      applyDrawerFilters(trimmedQuery);
+
+      syncDomainDrawerStateFromStore(domain, snapshot, {
+        query: trimmedQuery,
+        render: false
+      });
       state.hasInitialized = true;
       renderDrawerResults();
     } catch (error) {
       if (requestId !== state.requestId) {
         return;
       }
+
       console.error('[newtab] Domain drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Failed to load pages for this domain.');
+      renderDrawerErrorState(error.message || 'Failed to load domain pages.');
     } finally {
       if (requestId === state.requestId) {
         state.isLoading = false;

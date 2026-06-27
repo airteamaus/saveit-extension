@@ -19,6 +19,16 @@ function buildProjectWarmCacheScope(projectId) {
   };
 }
 
+function buildDomainWarmCacheScope(domain) {
+  return {
+    surface: 'saved-pages-drawer',
+    sort: 'newest',
+    pinnedFirst: false,
+    domain,
+    limit: 'all'
+  };
+}
+
 export function createSavedPagesStore(api) {
   return new SavedPagesStore(api, {
     initialFetchLimit: DRAWER_INITIAL_FETCH_LIMIT,
@@ -37,6 +47,18 @@ export function createProjectSavedPagesStore(api, projectId, options = {}) {
       projectId
     },
     warmCacheScope: buildProjectWarmCacheScope(projectId)
+  });
+}
+
+export function createDomainSavedPagesStore(api, domain, options = {}) {
+  return new SavedPagesStore(api, {
+    initialFetchLimit: options.initialFetchLimit || 100,
+    prefetchBatchLimit: options.prefetchBatchLimit || 100,
+    pinnedFirst: false,
+    fetchOptions: {
+      domain
+    },
+    warmCacheScope: buildDomainWarmCacheScope(domain)
   });
 }
 
