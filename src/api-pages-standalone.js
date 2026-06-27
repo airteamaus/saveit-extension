@@ -192,5 +192,5 @@ export function getStandaloneDomains() {
   }
   return [...counts.entries()]
     .map(([domain, count]) => ({ domain, count }))
-    .sort((a, b) => b.count - a.count);
+    .sort((a, b) => a.domain.localeCompare(b.domain));
 }
