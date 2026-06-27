@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.2] - 2026-06-27
+
+### 📝 Other Improvements
+
+- Use warm cache for domain pages; sort domains alphabetically (5d6e1df)
+- Fix standalone domains mock to use classification categories (1ce3d3e)
+
 ## [1.13.1] - 2026-06-27
 
 ### 📝 Other Improvements
@@ -62,12 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refine sidebar, cards, and create-project affordance (04672c7)
 
 ## [1.11.2] - 2026-06-25
-
-### 📝 Other Improvements
-
-- Refine sidebar, cards, and create-project affordance (ade46ef)
-
-## [1.11.1] - 2026-06-25
 
 ### ✨ Features
 
@@ -260,6 +261,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Refine sidebar, cards, and create-project affordance (ade46ef)
 - Change primary color from blue to sage grey-green (eb2d073)
 - Show the digging dog while project pages load instead of a premature empty state (5b62152)
 - Refresh new-tab UI, add CSS tooling, and refine search flow (1893db4)
