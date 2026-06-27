@@ -5,6 +5,20 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.13.1] - 2026-06-27
+
+### 📝 Other Improvements
+
+- Fix standalone domains mock to use classification categories (7f8bcd4)
+- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
+
+## [1.13.0] - 2026-06-27
+
+### 📝 Other Improvements
+
+- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (a72e713)
+- Load the drawer after auth resolves, not before (5b81a74)
+
 ## [1.12.3] - 2026-06-26
 
 ### 📝 Other Improvements
@@ -54,19 +68,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refine sidebar, cards, and create-project affordance (ade46ef)
 
 ## [1.11.1] - 2026-06-25
-
-### 📝 Other Improvements
-
-- Change primary color from blue to sage grey-green (eb2d073)
-- Show the digging dog while project pages load instead of a premature empty state (5b62152)
-
-## [1.11.0] - 2026-06-25
-
-### 📝 Other Improvements
-
-- Refresh new-tab UI, add CSS tooling, and refine search flow (1893db4)
-
-## [1.10.35] - 2026-06-24
 
 ### ✨ Features
 
@@ -259,6 +260,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Change primary color from blue to sage grey-green (eb2d073)
+- Show the digging dog while project pages load instead of a premature empty state (5b62152)
+- Refresh new-tab UI, add CSS tooling, and refine search flow (1893db4)
 - Make the UI more subtle: remove fills and static borders (09185f4)
 - Animate the loading illustration: wagging tail and flying dirt (57a0a9e)
 - Enlarge loading illustration and vertically centre it (0ebc0e2)
