@@ -152,6 +152,7 @@ export function createSavedPagesDrawerController({
       openSavedPagesDrawer: shellController.openSavedPagesDrawer,
       closeSavedPagesDrawer: shellController.closeSavedPagesDrawer,
       loadDrawerResults: dataController.loadDrawerResults,
+      loadDrawerDomainPages: dataController.loadDrawerDomainPages,
       navigateDrawerCard: shellController.navigateDrawerCard,
       handleDrawerEditCancel: dataController.handleDrawerEditCancel,
       handleDrawerEditStart: dataController.handleDrawerEditStart,

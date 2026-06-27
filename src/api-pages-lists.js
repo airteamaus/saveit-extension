@@ -22,6 +22,10 @@ function buildSavedPagesParams(options) {
     params.projectId = options.projectId;
   }
 
+  if (options.domain) {
+    params.domain = options.domain;
+  }
+
   if (options.newerThanId) {
     params.newerThanId = options.newerThanId;
   }

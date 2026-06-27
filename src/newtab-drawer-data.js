@@ -184,6 +184,14 @@ export function createDrawerDataController({
           renderDrawerResults();
         });
       }
+
+      // Load domains for the sidebar section alongside projects (non-blocking).
+      void ensureDrawerDomainsLoaded().then(() => {
+        if (requestId !== state.requestId) {
+          return;
+        }
+        renderDrawerResults();
+      });
     } catch (error) {
       if (requestId !== state.requestId) {
         return;
@@ -466,7 +474,67 @@ export function createDrawerDataController({
     void loadSemanticResults(trimmedQuery);
   }
 
+  // Domains: fetch the user's distinct domains for the sidebar section. Cached
+  // by the API layer; re-fetched on demand.
+  async function ensureDrawerDomainsLoaded() {
+    if (state.domains && state.domains.length) {
+      return null;
+    }
+    try {
+      const domains = await api.getDomains();
+      state.domains = Array.isArray(domains) ? domains : [];
+      return state.domains;
+    } catch (error) {
+      console.error('Failed to load domains:', error);
+      state.domains = [];
+      return state.domains;
+    }
+  }
+
+  // Load pages scoped to a domain. Domain scoping uses a direct server fetch
+  // (no per-domain warm-cache store), simpler than project scoping.
+  async function loadDrawerDomainPages(domain, { query = state.query, syncUrl = true } = {}) {
+    if (!domain) {
+      await loadDrawerBasePages({ query, syncUrl });
+      return;
+    }
+
+    const requestId = ++state.requestId;
+    const trimmedQuery = query.trim();
+
+    state.isLoading = true;
+    setDrawerSearchValue(trimmedQuery);
+
+    if (syncUrl && isDrawerOpen()) {
+      updateDrawerUrl(true, trimmedQuery);
+    }
+
+    try {
+      const response = await api.getSavedPages({ domain, search: trimmedQuery, limit: 100, skipCache: true });
+      if (requestId !== state.requestId) {
+        return;
+      }
+      const pages = Array.isArray(response?.pages) ? response.pages : [];
+      state.loadedProjectPages = pages;
+      state.allPages = pages;
+      applyDrawerFilters(trimmedQuery);
+      state.hasInitialized = true;
+      renderDrawerResults();
+    } catch (error) {
+      if (requestId !== state.requestId) {
+        return;
+      }
+      console.error('[newtab] Domain drawer load failed:', error);
+      renderDrawerErrorState(error.message || 'Failed to load pages for this domain.');
+    } finally {
+      if (requestId === state.requestId) {
+        state.isLoading = false;
+      }
+    }
+  }
+
   return {
+    ensureDrawerDomainsLoaded,
     ensureDrawerProjectsLoaded,
     handleDrawerDelete,
     handleDrawerEditCancel,
@@ -474,6 +542,7 @@ export function createDrawerDataController({
     handleDrawerPin,
     handleDrawerUpdate,
     loadDrawerBasePages,
+    loadDrawerDomainPages,
     loadDrawerProjectPages,
     loadDrawerResults,
     loadSemanticResults

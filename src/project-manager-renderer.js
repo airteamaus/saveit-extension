@@ -297,6 +297,21 @@ export function renderProjectSidebar(container, {
     }));
   }
 
+  // Domains section: distinct domains with counts, scoped client-side on click.
+  const domains = Array.isArray(dashboard.domains) ? dashboard.domains : [];
+  if (domains.length) {
+    nav.append(createSectionLabel(documentObj, 'Domains', 'var(--color-primary)'));
+    domains.forEach(({ domain, count }) => {
+      const domainId = `domain:${domain}`;
+      nav.append(createSidebarRow(documentObj, {
+        projectId: domainId,
+        name: domain,
+        count: typeof count === 'number' ? count : null,
+        isActive: dashboard.selectedDomainId === domainId
+      }));
+    });
+  }
+
   container.replaceChildren(
     createSidebarHeader(documentObj),
     nav

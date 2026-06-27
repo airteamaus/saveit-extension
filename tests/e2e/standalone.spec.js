@@ -331,4 +331,25 @@ test.describe('Standalone Mode', () => {
     await expect(dialog).toContainText('Import complete', { timeout: 5000 });
     await expect(dialog).toContainText('Imported 2 bookmarks');
   });
+
+  test('renders a Domains section in the sidebar and scopes on click', async ({ page }) => {
+    await showAllPages(page);
+
+    // The Domains section appears after Shared projects.
+    await expect(page.locator('#project-sidebar')).toContainText('Domains');
+
+    // Domain rows use the domain: prefix on data-project-id.
+    const domainRows = page.locator('.project-nav-row[data-project-id^="domain:"]');
+    const count = await domainRows.count();
+    expect(count).toBeGreaterThan(0);
+
+    // Clicking a domain scopes the list to that domain.
+    const firstDomain = domainRows.first();
+    await firstDomain.click();
+
+    // The selected domain row is active.
+    await expect(firstDomain.locator('.project-nav-item')).toHaveClass(/is-active/);
+    // Cards render for the scoped domain.
+    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 5000 });
+  });
 });
