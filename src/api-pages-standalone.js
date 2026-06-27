@@ -174,3 +174,25 @@ export function bulkImportStandalone({ bookmarks, projectId }) {
     request_id: 'mock-bulk-import'
   };
 }
+
+// Standalone mock for getDomains: derives distinct domains + counts from the
+// loaded mock pages. Mirrors the backend response shape [{ domain, count }].
+export function getStandaloneDomains() {
+  const allPages = globalThis.MOCK_DATA || [];
+  const counts = new Map();
+  for (const page of allPages) {
+    let domain = page.domain;
+    if (!domain && page.url) {
+      try {
+        domain = new URL(page.url).hostname;
+      } catch {
+        domain = null;
+      }
+    }
+    if (!domain) continue;
+    counts.set(domain, (counts.get(domain) || 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([domain, count]) => ({ domain, count }))
+    .sort((a, b) => b.count - a.count);
+}

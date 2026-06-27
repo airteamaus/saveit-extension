@@ -41,6 +41,18 @@ export function createSavedPagesView({
     set projects(value) {
       state.projects = Array.isArray(value) ? value : [];
     },
+    get domains() {
+      return state.domains;
+    },
+    set domains(value) {
+      state.domains = Array.isArray(value) ? value : [];
+    },
+    get selectedDomainId() {
+      return state.selectedDomainId;
+    },
+    set selectedDomainId(value) {
+      state.selectedDomainId = value || null;
+    },
     get projectsLoading() {
       return state.projectsLoading;
     },

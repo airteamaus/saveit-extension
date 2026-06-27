@@ -25,6 +25,7 @@ export function initSavedPagesDrawerEvents({
   openSavedPagesDrawer,
   closeSavedPagesDrawer,
   loadDrawerResults,
+  loadDrawerDomainPages,
   navigateDrawerCard,
   handleDrawerEditCancel,
   handleDrawerEditStart,
@@ -228,7 +229,21 @@ export function initSavedPagesDrawerEvents({
     const projectRow = event.target.closest('.project-nav-row[data-project-id]');
     if (projectRow) {
       event.preventDefault();
-      void projectManager.selectProject(savedPagesView, projectRow.dataset.projectId || null);
+      const scopeId = projectRow.dataset.projectId || '';
+
+      // Domain rows use a "domain:" prefix; route them to domain scoping
+      // rather than the project selection path.
+      if (scopeId.startsWith('domain:')) {
+        const domain = scopeId.slice('domain:'.length);
+        savedPagesView.selectedDomainId = scopeId;
+        savedPagesView.selectedProjectId = null;
+        void loadDrawerDomainPages?.(domain);
+        return;
+      }
+
+      // Selecting a project (or All pages / Pinned) clears any domain scope.
+      savedPagesView.selectedDomainId = null;
+      void projectManager.selectProject(savedPagesView, scopeId || null);
     }
   });
 

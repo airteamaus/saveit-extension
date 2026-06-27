@@ -18,6 +18,8 @@ export function createInitialDrawerState() {
     projectsAvailable: true,
     projectsUnavailableMessage: '',
     selectedProjectId: null,
+    domains: [],
+    selectedDomainId: null,
     projectEditorState: {
       pageId: null,
       query: ''
