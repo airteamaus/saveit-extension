@@ -175,22 +175,20 @@ export function bulkImportStandalone({ bookmarks, projectId }) {
   };
 }
 
-// Standalone mock for getDomains: derives distinct domains + counts from the
-// loaded mock pages. Mirrors the backend response shape [{ domain, count }].
+// Standalone mock for getDomains: derives distinct broad categories (the
+// 'general' classification) + counts from the loaded mock pages. Mirrors the
+// backend response shape [{ domain, count }].
 export function getStandaloneDomains() {
   const allPages = globalThis.MOCK_DATA || [];
   const counts = new Map();
   for (const page of allPages) {
-    let domain = page.domain;
-    if (!domain && page.url) {
-      try {
-        domain = new URL(page.url).hostname;
-      } catch {
-        domain = null;
+    const classifications = page.classifications;
+    if (!Array.isArray(classifications)) continue;
+    for (const c of classifications) {
+      if (c?.type === 'general' && c.label) {
+        counts.set(c.label, (counts.get(c.label) || 0) + 1);
       }
     }
-    if (!domain) continue;
-    counts.set(domain, (counts.get(domain) || 0) + 1);
   }
   return [...counts.entries()]
     .map(([domain, count]) => ({ domain, count }))
