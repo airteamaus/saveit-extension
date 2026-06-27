@@ -331,6 +331,14 @@ function filterMockData(data, options) {
     filtered = filtered.filter(item => item.project_ids?.includes(options.projectId));
   }
 
+  if (options.domain) {
+    // Domain = broad category (the 'general' classification label).
+    filtered = filtered.filter(item =>
+      Array.isArray(item.classifications) &&
+      item.classifications.some(c => c?.type === 'general' && c.label === options.domain)
+    );
+  }
+
   if (options.search) {
     const query = options.search.toLowerCase();
     filtered = filtered.filter(item =>
