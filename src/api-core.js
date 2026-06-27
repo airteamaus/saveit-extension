@@ -140,7 +140,8 @@ export function applyApiCore(API, dependencies = {}) {
         pinnedFirst: options.pinnedFirst,
         search: options.search || '',
         cursor: options.cursor || null,
-        projectId: options.projectId || null
+        projectId: options.projectId || null,
+        domain: options.domain || null
       };
     },
 

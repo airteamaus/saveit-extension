@@ -64,7 +64,12 @@ export function applyDrawerFilters({
   state.query = trimmedQuery;
   state.currentFilter.search = trimmedQuery;
 
-  const scopeSourcePages = Array.isArray(state.loadedProjectPages) && state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID
+  // When a project or domain scope is active, use the scoped page set
+  // (loadedProjectPages holds domain pages too). Otherwise use all pages.
+  const hasScopedSource = Array.isArray(state.loadedProjectPages)
+    && ((state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID)
+      || state.selectedDomainId);
+  const scopeSourcePages = hasScopedSource
     ? state.loadedProjectPages
     : state.allPages;
   const scopedPages = projectManager.getScopedPages(savedPagesView, scopeSourcePages);

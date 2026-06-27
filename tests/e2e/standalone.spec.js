@@ -349,7 +349,17 @@ test.describe('Standalone Mode', () => {
 
     // The selected domain row is active.
     await expect(firstDomain.locator('.project-nav-item')).toHaveClass(/is-active/);
-    // Cards render for the scoped domain.
+
+    // Cards render for the scoped domain — fewer than the full list, proving
+    // the list was actually filtered (not all pages).
     await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 5000 });
+    const scopedCount = await page.locator('.saved-pages-drawer-card').count();
+    expect(scopedCount).toBeGreaterThan(0);
+
+    // Switch back to All pages and confirm the count is higher (unscoped).
+    await page.locator('.project-nav-item[data-project-id=""]').click();
+    await page.waitForTimeout(500);
+    const allCount = await page.locator('.saved-pages-drawer-card').count();
+    expect(allCount).toBeGreaterThan(scopedCount);
   });
 });
