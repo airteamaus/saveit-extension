@@ -99,7 +99,7 @@ describe('newtab drawer runtime', () => {
     expect(controller.handleSignedIn).toBe(syncCoordinator.handleSignedIn);
     expect(controller.handleSignedOut).toBe(syncCoordinator.handleSignedOut);
     expect(controller.preloadProjects).toBe(dataController.ensureDrawerProjectsLoaded);
-    controller.showLoadingState('Loading saved pages...');
-    expect(uiController.renderLoadingState).toHaveBeenCalledWith('Loading saved pages...');
+    controller.showLoadingState('Gathering your saved pages…');
+    expect(uiController.renderLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
   });
 });

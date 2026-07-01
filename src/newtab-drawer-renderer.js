@@ -196,8 +196,8 @@ export function getDrawerEmptyStateContent({ query = '', scopeLabel, hasSelected
     description: query
       ? `Try different words or clear the search in ${escapeHtml(scopeLabel)}.`
       : hasSelectedProject
-        ? 'Add pages to this project to see them here.'
-        : 'Save a page to see it here.'
+        ? 'Pages you add to this project will appear here.'
+        : 'Save a page and it will appear here.'
   };
 }
 
@@ -237,7 +237,7 @@ export function createDrawerRenderer({
     renderChrome();
   }
 
-  function renderLoadingState(message = 'Loading saved pages...') {
+  function renderLoadingState(message = 'Gathering your saved pages…') {
     renderDrawerState(`
       <div class="saved-pages-drawer-state">
         <div class="saved-pages-drawer-spinner" aria-hidden="true"></div>
@@ -249,8 +249,8 @@ export function createDrawerRenderer({
   function renderErrorState(message) {
     renderDrawerState(`
       <div class="saved-pages-drawer-state saved-pages-drawer-state-error">
-        <h2>Could not load saved pages</h2>
-        <p>${escapeHtml(message || 'Please try again.')}</p>
+        <h2>Could not reach your saved pages</h2>
+        <p>${escapeHtml(message || 'Please try again in a moment.')}</p>
       </div>
     `);
   }
@@ -274,7 +274,7 @@ export function createDrawerRenderer({
     renderDrawerState(`
       <div class="empty-state saved-pages-drawer-state">
         <h2>Sign in to browse saved pages</h2>
-        <p>Your saved pages appear here once you are signed in.</p>
+        <p>Sign in and your saved pages will appear here.</p>
       </div>
     `);
   }
@@ -447,11 +447,80 @@ export function createDrawerRenderer({
     existingCard.replaceWith(nextCard);
   }
 
+  // Sparse home view: a few recent cards + topic quick-access pills + a
+  // browse-all fallback. Rendered instead of the browse list when idle (no
+  // query, no scope). Cards reuse createDrawerCardElement for consistency with
+  // the browse view; topic pills carry data-semantic-search-tag so the existing
+  // click delegation routes them to search with no new event wiring.
+  function renderHomeView({ recentPages = [], topics = [] } = {}) {
+    if (!resultsContainer) {
+      return;
+    }
+
+    const homeSection = ensureSection('home');
+    if (!homeSection) {
+      renderChrome();
+      return;
+    }
+
+    const recentCardsHtml = recentPages.length
+      ? recentPages.map(() => '<div class="saved-pages-home-card-slot"></div>').join('')
+      : '';
+
+    const topicPillsHtml = topics.length
+      ? topics.map(({ label, count }) => `
+        <button
+          type="button"
+          class="saved-pages-home-topic"
+          data-semantic-search-tag="${escapeHtml(label)}"
+          title="Search pages about ${escapeHtml(label)}"
+        >
+          <span class="saved-pages-home-topic-label">${escapeHtml(label)}</span>
+          <span class="project-nav-count">${count}</span>
+        </button>`).join('')
+      : '';
+
+    replaceElementHtml(homeSection, `
+      <div class="saved-pages-home">
+        ${recentPages.length ? `
+          <section class="saved-pages-home-section">
+            <h2 class="saved-pages-home-heading">Recently saved</h2>
+            <div class="saved-pages-home-recent">
+              ${recentCardsHtml}
+            </div>
+          </section>` : ''}
+        ${topics.length ? `
+          <section class="saved-pages-home-section">
+            <h2 class="saved-pages-home-heading">Topics</h2>
+            <div class="saved-pages-home-topics">
+              ${topicPillsHtml}
+            </div>
+          </section>` : ''}
+        <button type="button" class="saved-pages-home-browse-all" data-action="browse-all">
+          Browse all →
+        </button>
+      </div>
+    `);
+
+    // Cards are real DOM nodes (reused from the browse renderer); slot them
+    // into the placeholders after setting the HTML shell.
+    const slots = homeSection.querySelectorAll('.saved-pages-home-card-slot');
+    recentPages.forEach((page, index) => {
+      const slot = slots[index];
+      if (slot) {
+        slot.replaceWith(createDrawerCardElement(page));
+      }
+    });
+
+    renderChrome();
+  }
+
   return {
     clearPagesSection,
     refreshCard,
     renderEmptyState,
     renderErrorState,
+    renderHomeView,
     renderLoadingState,
     renderResults,
     renderSemanticLoadingState,
