@@ -229,7 +229,7 @@ export function applyApiSearch(API) {
           async () => {
             const params = {
               search_text: query,
-              search_type: 'hybrid',
+              search_type: 'vector',
               limit: limit.toString(),
               offset: offset.toString(),
               threshold: threshold.toString()
