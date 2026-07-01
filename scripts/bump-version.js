@@ -124,17 +124,9 @@ try {
   process.exit(1);
 }
 
-// Git tag
-try {
-  execSync(`git tag v${newVersion}`, { stdio: 'inherit' });
-  console.log(`✓ Created tag v${newVersion}`);
-} catch (err) {
-  console.error('Error creating tag:', err.message);
-  console.error('Hint: If tag already exists, delete it with: git tag -d v' + newVersion);
-  process.exit(1);
-}
-
-// Update CHANGELOG.md
+// Update CHANGELOG.md. This amends the version-bump commit, so it MUST happen
+// before tagging — otherwise the tag points at the pre-amend commit and gets
+// orphaned (the tag would reference a commit no longer on the branch).
 try {
   console.log('Updating CHANGELOG.md...');
   execSync('node scripts/generate-changelog.js', { stdio: 'inherit' });
@@ -144,6 +136,16 @@ try {
 } catch (err) {
   console.warn('Warning: Failed to update CHANGELOG.md:', err.message);
   console.warn('You can manually run: node scripts/generate-changelog.js');
+}
+
+// Git tag — created AFTER the changelog amend so it points at the final commit.
+try {
+  execSync(`git tag v${newVersion}`, { stdio: 'inherit' });
+  console.log(`✓ Created tag v${newVersion}`);
+} catch (err) {
+  console.error('Error creating tag:', err.message);
+  console.error('Hint: If tag already exists, delete it with: git tag -d v' + newVersion);
+  process.exit(1);
 }
 
 // Ask if user wants to push immediately

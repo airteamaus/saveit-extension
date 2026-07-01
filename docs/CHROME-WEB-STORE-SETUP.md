@@ -67,37 +67,34 @@ This guide walks through setting up automated uploads to the Chrome Web Store.
 
 ## Step 5: Get Refresh Token
 
-You need to authorize the app once to get a refresh token.
+You need to authorize the app once to get a refresh token. This requires a
+**Desktop app** type OAuth client (Step 4.2) — the `chromewebstore` scope won't
+grant for a Web-application client, and the token is scope-specific (it cannot
+be reused from the extension's user-auth client).
 
-### Option A: Using chrome-webstore-upload-cli
+> **Note:** The `chrome-webstore-upload authorize` subcommand was **removed in
+> CLI v4** — do not use it. The OOB redirect (`urn:ietf:wg:oauth:2.0:oob`) shown
+> in older guides was **deprecated by Google in 2022**. Use the loopback flow
+> below.
 
-```bash
-# Install globally
-npm install -g chrome-webstore-upload-cli
+### Loopback OAuth flow (current, supported)
 
-# Run interactive authorization
-chrome-webstore-upload authorize \
-  --client-id YOUR_CLIENT_ID \
-  --client-secret YOUR_CLIENT_SECRET
+1. Open this URL in your browser, replacing `YOUR_CLIENT_ID` with the Desktop
+   client ID from Step 4.2. The `access_type=offline` and `prompt=consent`
+   params are required — without them Google issues only a short-lived access
+   token and no refresh token:
 
-# Follow the prompts:
-# 1. Opens browser for Google sign-in
-# 2. Grant permissions
-# 3. Copy the authorization code
-# 4. Paste into terminal
-# 5. Receive REFRESH_TOKEN
+```
+https://accounts.google.com/o/oauth2/auth?response_type=code&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fchromewebstore&client_id=YOUR_CLIENT_ID&redirect_uri=http%3A%2F%2F127.0.0.1%3A1&access_type=offline&prompt=consent
 ```
 
-### Option B: Manual OAuth Flow
+2. Sign in and grant permission. The browser will redirect to
+   `http://127.0.0.1:1/?code=4/...` and show a "can't connect" page — **that's
+   expected**. Copy the `code` value from the URL bar (everything between
+   `code=` and `&`, or to the end of the URL).
 
-1. Build authorization URL:
-```
-https://accounts.google.com/o/oauth2/auth?response_type=code&scope=https://www.googleapis.com/auth/chromewebstore&client_id=YOUR_CLIENT_ID&redirect_uri=urn:ietf:wg:oauth:2.0:oob
-```
-
-2. Visit URL in browser, sign in, grant permissions
-3. Copy the authorization code
-4. Exchange code for refresh token:
+3. Exchange the code for a refresh token. The `redirect_uri` must match the
+   loopback URL from step 1 exactly:
 
 ```bash
 curl -X POST https://oauth2.googleapis.com/token \
@@ -105,10 +102,13 @@ curl -X POST https://oauth2.googleapis.com/token \
   -d "client_secret=YOUR_CLIENT_SECRET" \
   -d "code=AUTHORIZATION_CODE" \
   -d "grant_type=authorization_code" \
-  -d "redirect_uri=urn:ietf:wg:oauth:2.0:oob"
+  -d "redirect_uri=http://127.0.0.1:1"
 ```
 
-5. Extract `refresh_token` from response → `CHROME_REFRESH_TOKEN`
+4. Extract `refresh_token` from the JSON response → `CHROME_REFRESH_TOKEN`
+
+Auth codes are single-use and expire in ~10 minutes. If you see
+`invalid_grant`, re-run from step 1.
 
 ---
 

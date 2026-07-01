@@ -24,12 +24,15 @@ CHECKS_FAILED=0
 
 check_pass() {
   echo -e "${GREEN}✓${NC} $1"
-  ((CHECKS_PASSED++))
+  # Use arithmetic expansion, not ((...)), which returns exit code 1 when the
+  # pre-increment value is 0 — under `set -e` that silently kills the script
+  # on the first pass/fail of the run.
+  CHECKS_PASSED=$((CHECKS_PASSED + 1))
 }
 
 check_fail() {
   echo -e "${RED}✗${NC} $1"
-  ((CHECKS_FAILED++))
+  CHECKS_FAILED=$((CHECKS_FAILED + 1))
 }
 
 check_warn() {
