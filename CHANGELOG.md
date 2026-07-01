@@ -5,6 +5,17 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - TBD
+
+### 📝 Other Improvements
+
+- Update dependencies to clear all 17 Dependabot vulnerabilities (6e2d7c4)
+- Fix three release tooling bugs found during v1.14.0 (fe4e69f)
+- Add sparse home view; warm the empty/loading/sign-in copy (1923102)
+- Remove dormant favorites carousel UI; warm the loading/error state copy (4f69c6f)
+- Bring toolbar popup into brand parity with shared token system (0bd2b94)
+- Rework visual foundation: quiet materiality, warm palette, token sweep (fa18deb)
+
 ## [1.14.0] - 2026-07-01
 
 ### 📝 Other Improvements
