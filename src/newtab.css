@@ -17,7 +17,7 @@ body {
 }
 
 .logo-hero {
-  font-size: 1.1875rem;
+  font-size: var(--font-size-4xl);
   font-weight: 700;
   user-select: none;
 }
@@ -34,7 +34,7 @@ body {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   color: var(--color-text-light);
 }
 
@@ -91,7 +91,7 @@ body {
   gap: 8px;
   /* Indent the header to line up with the cards/results, which sit inside the
      results container's 16px horizontal padding. */
-  padding: 0 16px 4px;
+  padding: 0 16px 12px;
 }
 
 .saved-pages-page-logo {
@@ -112,7 +112,7 @@ body {
 .saved-pages-page-search-input {
   padding: 3px 40px 3px 44px;
   background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  font-size: 0.8125rem;
+  font-size: var(--font-size-md);
 }
 
 .saved-pages-page-actions {
@@ -154,9 +154,9 @@ body {
   flex-shrink: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: 16px;
-  background: var(--saved-pages-panel-bg-strong);
-  border: 1px solid var(--saved-pages-panel-border);
+  border-radius: var(--radius-xl);
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
 }
 
 .saved-pages-page-content {
@@ -189,20 +189,27 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  /* Half an em above and below each card for consistent vertical separation. */
-  margin: 0.5em 0;
-  padding: 0 12px 10px;
-  border-radius: 14px;
-  background: var(--saved-pages-panel-bg);
-  border: 1px solid transparent;
+  margin: var(--spacing-sm) 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-xl);
+  /* Cards read as discrete objects at rest via a faint surface fill and a
+     visible soft border, rather than only resolving on hover. Hover then
+     elevates an already-legible object. */
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition: border-color 0.18s ease;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .saved-pages-drawer-card:hover {
+  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
   border-color: var(--saved-pages-panel-border-active);
+  box-shadow: var(--shadow-sm);
 }
 
 .saved-pages-drawer-card:focus-visible {
@@ -230,12 +237,12 @@ body {
   flex-shrink: 0;
   width: 16px;
   height: 16px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 
 .saved-pages-drawer-card-title {
   margin: 0;
-  font-size: 0.875rem;
+  font-size: var(--font-size-lg);
   font-weight: 600;
   line-height: 1.25;
   color: var(--color-text);
@@ -254,7 +261,7 @@ body {
   justify-content: center;
   width: 26px;
   height: 26px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--saved-pages-panel-border);
   background: var(--saved-pages-control-bg);
   color: var(--color-text-light);
@@ -288,9 +295,14 @@ body {
 }
 
 .saved-pages-drawer-card-summary {
-  /* Indent to line up with the title text, past the 16px favicon + 6px gap. */
+  /* Indent to line up with the title text, past the 16px favicon + 6px gap.
+     The padding-left keeps the text aligned; the paper backing makes a card
+     with a summary read as a richer content zone than a bare card. */
   margin: 0 0 0 22px;
-  font-size: 0.8125rem;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-paper) 70%, transparent);
+  font-size: var(--font-size-md);
   line-height: 1.35;
   color: var(--color-text-light);
   display: -webkit-box;
@@ -312,7 +324,7 @@ body {
 }
 
 .saved-pages-drawer-edit-label {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-light);
   text-transform: uppercase;
@@ -323,7 +335,7 @@ body {
 .saved-pages-drawer-edit-textarea {
   width: 100%;
   border: 1px solid var(--saved-pages-panel-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   background: var(--saved-pages-control-bg);
   color: var(--color-text);
   padding: 10px 12px;
@@ -334,6 +346,15 @@ body {
   min-height: 104px;
   resize: vertical;
   line-height: 1.5;
+}
+
+/* The notes/description textarea is the natural home for the amber notes
+   palette — warm = "your own writing". Distinct from the title input's sage
+   focus, so the two fields read as different kinds of content. */
+.saved-pages-drawer-edit-textarea:focus {
+  background: var(--notes-bg);
+  border-color: var(--notes-border);
+  color: var(--notes-text);
 }
 
 .saved-pages-drawer-edit-input:focus,
@@ -352,7 +373,7 @@ body {
 .saved-pages-drawer-edit-save,
 .saved-pages-drawer-edit-cancel {
   padding: 8px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--saved-pages-panel-border);
   background: var(--saved-pages-control-bg);
   color: var(--color-text);
@@ -407,7 +428,7 @@ body {
   gap: 4px;
   align-items: center;
   color: var(--color-text-light);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
 }
 
 .saved-pages-drawer-meta-separator {
@@ -432,7 +453,7 @@ body {
 
 .project-sidebar-eyebrow,
 .project-editor-eyebrow {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-text-light);
   text-transform: uppercase;
@@ -448,7 +469,7 @@ body {
   margin-top: 8px;
   padding: 6px 4px 4px;
   border-top: 1px solid var(--color-border);
-  font-size: 0.6875rem;
+  font-size: var(--font-size-xs);
   font-weight: 400;
   color: var(--color-text-light);
   text-transform: uppercase;
@@ -464,7 +485,7 @@ body {
   flex-shrink: 0;
   width: 7px;
   height: 7px;
-  border-radius: 50%;
+  border-radius: var(--radius-circle);
   background: var(--color-text-light);
 }
 
@@ -484,7 +505,7 @@ body {
 
 .project-editor-title {
   margin: 0;
-  font-size: 0.9375rem;
+  font-size: var(--font-size-xl);
   line-height: 1.3;
   color: var(--color-text);
 }
@@ -497,7 +518,7 @@ body {
   border-radius: var(--radius-md);
   background: var(--saved-pages-control-bg);
   color: var(--color-text);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   line-height: 1.2;
   cursor: pointer;
   transition:
@@ -614,7 +635,7 @@ body {
   top: 0;
   bottom: 0;
   width: 2px;
-  border-radius: 2px;
+  border-radius: var(--radius-sm);
   background: var(--color-primary);
 }
 
@@ -641,7 +662,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.875rem;
+  font-size: var(--font-size-lg);
 }
 
 .project-nav-meta,
@@ -649,16 +670,16 @@ body {
 .project-editor-option-meta,
 .project-editor-empty-inline,
 .project-editor-empty {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   color: var(--color-text-light);
 }
 
 .project-nav-count {
   padding: 1px 6px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
   color: var(--color-text-light);
-  font-size: 0.625rem;
+  font-size: var(--font-size-2xs);
   flex-shrink: 0;
   transition: opacity 0.18s ease;
 }
@@ -684,7 +705,7 @@ body {
   height: 24px;
   padding: 0;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: transparent;
   /* Actions are hidden until hover, so they don't need de-emphasis at rest;
      the lighter tone was disappearing against the hovered row tint. */
@@ -730,10 +751,10 @@ body {
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
   color: var(--color-text-light);
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
 }
 
 /* Card project pills take the highlighted-row tint (same as the selected
@@ -776,7 +797,7 @@ body {
   overflow: auto;
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
-  border-radius: 24px;
+  border-radius: var(--radius-2xl);
   background: var(--saved-pages-dialog-bg);
   box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
   backdrop-filter: blur(22px);
@@ -817,7 +838,7 @@ body {
 }
 
 .project-editor-search-label {
-  font-size: 0.8125rem;
+  font-size: var(--font-size-md);
   color: var(--color-text-light);
 }
 
@@ -855,7 +876,7 @@ body {
 }
 
 .saved-pages-drawer-card-tags .tag {
-  font-size: 0.75rem;
+  font-size: var(--font-size-sm);
   line-height: 1.2;
   text-decoration: underline;
   text-underline-offset: 0.2em;
@@ -879,7 +900,7 @@ body {
 .saved-pages-semantic-heading {
   margin: 16px 0 8px;
   padding: 0 2px;
-  font-size: 0.7rem;
+  font-size: var(--font-size-xs);
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -945,6 +966,90 @@ body {
       transform: rotate(6deg);
     }
   }
+}
+
+/* Sparse home view — shown on initial idle load instead of the browse list.
+   Centered, generous spacing (the "calm library" mood), with the display type
+   tier finally in use. Cards and pills reuse the browse view's materiality. */
+.saved-pages-home {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg);
+  max-width: 720px;
+  margin: var(--spacing-sm) auto var(--spacing-md);
+  padding: 0 var(--spacing-md);
+}
+
+.saved-pages-home-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.saved-pages-home-heading {
+  margin: 0;
+  font-size: var(--font-size-3xl);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.saved-pages-home-recent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm);
+}
+
+.saved-pages-home-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+}
+
+.saved-pages-home-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  padding: 6px 14px;
+  border: 1px solid color-mix(in srgb, var(--color-border) 60%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--font-size-md);
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.saved-pages-home-topic:hover {
+  border-color: var(--saved-pages-panel-border-active);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+}
+
+.saved-pages-home-topic-label {
+  white-space: nowrap;
+}
+
+.saved-pages-home-browse-all {
+  align-self: center;
+  padding: 8px 20px;
+  border: 1px solid color-mix(in srgb, var(--color-primary) 34%, var(--color-border));
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  color: var(--color-primary);
+  font: inherit;
+  font-size: var(--font-size-md);
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    background-color 0.18s ease;
+}
+
+.saved-pages-home-browse-all:hover {
+  border-color: var(--color-primary);
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
 }
 
 @media (hover: hover) and (pointer: fine) {
