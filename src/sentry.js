@@ -113,3 +113,21 @@ export function clearUser() {
 
   Sentry.setUser(null);
 }
+
+/**
+ * Wrap an async operation in a Sentry performance span so its duration appears
+ * on traces. When Sentry/tracing is disabled (dev/standalone, or sampling
+ * drops the trace), this just runs and returns the callback's result — so
+ * callers don't need their own feature check.
+ * @param {Object} options - Span config: { name, op, attributes? }
+ * @param {Function} callback - The async work to measure; its return value is
+ *   passed through.
+ * @returns The callback's resolved value.
+ */
+export async function startSpan(options, callback) {
+  if (!isSentryEnabled() || typeof Sentry.startSpan !== 'function') {
+    return callback();
+  }
+
+  return Sentry.startSpan(options, callback);
+}

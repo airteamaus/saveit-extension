@@ -466,12 +466,27 @@ export function createDrawerDataController({
     state.semanticLoading = true;
     renderDrawerResults();
 
+    // Run the search inside a Sentry span when available (production) so the
+    // client-experienced latency is traced; fall through to a direct call when
+    // Sentry/tracing is absent (dev, standalone, unit tests).
+    const runSearch = () => api.searchContent(trimmedQuery, {
+      limit: 50,
+      offset: 0,
+      threshold: 0.58
+    });
+    const spanOptions = { name: 'search.semantic', op: 'search', attributes: { 'search.query': trimmedQuery } };
+
     try {
-      const response = await api.searchContent(trimmedQuery, {
-        limit: 50,
-        offset: 0,
-        threshold: 0.58
-      });
+      const response = typeof window !== 'undefined' && window.SentryHelpers?.startSpan
+        ? await window.SentryHelpers.startSpan(spanOptions, runSearch)
+        : await runSearch();
+
+      // Surface the backend's per-phase timings so they're queryable in Sentry
+      // alongside the client-experienced span (older backends omit these).
+      const backendTimings = response?.metadata?.timings;
+      if (backendTimings) {
+        window.SentryHelpers?.captureMessage?.('search.backend_timings', backendTimings, 'info');
+      }
 
       // Drop stale responses so out-of-order completions can't clobber a
       // newer query.
