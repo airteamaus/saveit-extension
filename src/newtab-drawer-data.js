@@ -200,7 +200,7 @@ export function createDrawerDataController({
 
     const savedPagesSnapshot = savedPagesStore.getSnapshot();
     if (!savedPagesSnapshot.allPages.length && !hasRenderableWarmCache(savedPagesSnapshot)) {
-      renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages...' : 'Loading saved pages...');
+      renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages…' : 'Gathering your saved pages…');
     }
 
     try {
@@ -239,7 +239,7 @@ export function createDrawerDataController({
       }
 
       console.error('[newtab] Drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Failed to load saved pages.');
+      renderDrawerErrorState(error.message || 'Could not reach your saved pages.');
     } finally {
       if (requestId === state.requestId) {
         state.isLoading = false;
@@ -282,7 +282,7 @@ export function createDrawerDataController({
       !projectSnapshot?.allPages?.length &&
       !hasRenderableWarmCache(projectSnapshot)
     ) {
-      renderDrawerLoadingState(trimmedQuery ? 'Searching project pages...' : 'Loading project pages...');
+      renderDrawerLoadingState(trimmedQuery ? 'Searching project pages…' : 'Gathering project pages…');
     }
 
     try {
@@ -316,7 +316,7 @@ export function createDrawerDataController({
       }
 
       console.error('[newtab] Project drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Failed to load project pages.');
+      renderDrawerErrorState(error.message || 'Could not reach your project pages.');
     } finally {
       if (requestId === state.requestId) {
         state.isLoading = false;
@@ -497,6 +497,10 @@ export function createDrawerDataController({
   async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
     const trimmedQuery = query.trim();
 
+    // Any search intent (typed, submitted, cleared, topic-pill click) leaves
+    // the sparse home view for the browse list.
+    state.view = 'browse';
+
     if (!state.hasInitialized) {
       await loadDrawerBasePages({ query: trimmedQuery, syncUrl });
       return;
@@ -540,6 +544,8 @@ export function createDrawerDataController({
       return;
     }
 
+    // Selecting a domain scope leaves the sparse home view.
+    state.view = 'browse';
     const requestId = ++state.requestId;
     const trimmedQuery = query.trim();
 
@@ -569,7 +575,7 @@ export function createDrawerDataController({
       !domainSnapshot?.allPages?.length &&
       !hasRenderableWarmCache(domainSnapshot)
     ) {
-      renderDrawerLoadingState(trimmedQuery ? 'Searching domain pages...' : 'Loading domain pages...');
+      renderDrawerLoadingState(trimmedQuery ? 'Searching pages from this domain…' : 'Gathering pages from this domain…');
     }
 
     try {
@@ -591,7 +597,7 @@ export function createDrawerDataController({
       }
 
       console.error('[newtab] Domain drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Failed to load domain pages.');
+      renderDrawerErrorState(error.message || 'Could not reach pages from this domain.');
     } finally {
       if (requestId === state.requestId) {
         state.isLoading = false;

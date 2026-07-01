@@ -1,4 +1,5 @@
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
+import { getRecentPages, getTopicCounts } from './newtab-home.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
 export function getDrawerProjectScopeLabel(projectManager, savedPagesView) {
@@ -104,7 +105,18 @@ export function createDrawerUiController({
       return;
     }
 
-    // No query: the normal saved-page browse view.
+    // No query: show the sparse home view when idle (no scope selected), or
+    // fall through to the browse list once the user takes any intent action.
+    const hasScope = Boolean(state.selectedProjectId) || Boolean(state.selectedDomainId);
+    if (state.view === 'home' && !hasScope && state.allPages.length) {
+      drawerRenderer.renderHomeView({
+        recentPages: getRecentPages(state.allPages),
+        topics: getTopicCounts(state.allPages)
+      });
+      return;
+    }
+
+    // No query with a scope selected, or browse mode: the saved-page list.
     if (!state.pages.length) {
       // A project always contains at least one page, so an empty list while
       // loading means the API fetch is still in flight — show the digging dog

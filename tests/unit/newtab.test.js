@@ -34,10 +34,6 @@ import {
   getUserFacingSignInErrorMessage
 } from '../../src/newtab-auth.js';
 import {
-  createFavoritesController,
-  getFavoritesLayout
-} from '../../src/newtab-favorites.js';
-import {
   createBookmarkIconElement,
   getFaviconUrl,
   renderPageTags,
@@ -150,43 +146,31 @@ describe('newtab modules', () => {
     });
   });
 
-  describe('getFavoritesLayout', () => {
-    it('uses the mobile grid for narrow screens', () => {
-      expect(getFavoritesLayout(640, 700)).toMatchObject({
-        columns: 4,
-        rows: 2,
-        pageSize: 8,
-        tileWidth: 80
-      });
+  describe('newtab page helpers', () => {
+    it('returns trimmed submitted search queries', () => {
+      expect(getSubmittedSearchQuery({ value: '  alpha  ' })).toBe('alpha');
+      expect(getSubmittedSearchQuery(null)).toBe('');
     });
 
-    describe('newtab page helpers', () => {
-      it('returns trimmed submitted search queries', () => {
-        expect(getSubmittedSearchQuery({ value: '  alpha  ' })).toBe('alpha');
-        expect(getSubmittedSearchQuery(null)).toBe('');
-      });
+    it('collects newtab DOM elements by their expected ids', () => {
+      document.body.innerHTML = `
+        <section id="saved-pages-page-shell"></section>
+        <div id="saved-pages-page-header"></div>
+        <form id="search-form"></form>
+        <input id="search-input">
+        <button id="hero-sign-in-btn"></button>
+        <div id="hero-version-indicator"></div>
+      `;
 
-      it('collects newtab DOM elements by their expected ids', () => {
-        document.body.innerHTML = `
-          <section id="saved-pages-page-shell"></section>
-          <div id="saved-pages-page-header"></div>
-          <form id="search-form"></form>
-          <input id="search-input">
-          <button id="hero-sign-in-btn"></button>
-          <div id="favorites-section"></div>
-          <div id="hero-version-indicator"></div>
-        `;
+      const elements = getNewtabElements(document);
 
-        const elements = getNewtabElements(document);
-
-        expect(elements.searchForm?.id).toBe('search-form');
-        expect(elements.searchInput?.id).toBe('search-input');
-        expect(elements.signInBtn?.id).toBe('hero-sign-in-btn');
-        expect(elements.savedPagesPageShell?.id).toBe('saved-pages-page-shell');
-        expect(elements.savedPagesPageHeader?.id).toBe('saved-pages-page-header');
-        expect(elements.favoritesSection?.id).toBe('favorites-section');
-        expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
-      });
+      expect(elements.searchForm?.id).toBe('search-form');
+      expect(elements.searchInput?.id).toBe('search-input');
+      expect(elements.signInBtn?.id).toBe('hero-sign-in-btn');
+      expect(elements.savedPagesPageShell?.id).toBe('saved-pages-page-shell');
+      expect(elements.savedPagesPageHeader?.id).toBe('saved-pages-page-header');
+      expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
+    });
 
       it('binds auth event handlers', () => {
         document.body.innerHTML = `
@@ -254,7 +238,7 @@ describe('newtab modules', () => {
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
+        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
         expect(drawerController.load).not.toHaveBeenCalled();
         expect(drawerController.preloadProjects).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
@@ -290,99 +274,10 @@ describe('newtab modules', () => {
         });
 
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Loading saved pages...');
+        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
         expect(drawerController.preloadProjects).toHaveBeenCalled();
         expect(drawerController.load).toHaveBeenCalled();
       });
-    });
-
-    it('uses the taller desktop grid for wide screens', () => {
-      expect(getFavoritesLayout(1400, 900)).toMatchObject({
-        columns: 10,
-        rows: 3,
-        pageSize: 30,
-        tileWidth: 88
-      });
-    });
-  });
-
-  describe('favorites controller', () => {
-    it('renders the bookmark fallback icon and hover preview content', () => {
-      document.body.innerHTML = `
-        <section id="favorites-section">
-          <div id="favorites-viewport"></div>
-          <div id="favorites-row"></div>
-          <button id="favorites-prev-btn"></button>
-          <button id="favorites-next-btn"></button>
-          <div id="favorites-dots"></div>
-          <div id="favorite-hover-connector" class="hidden"></div>
-          <div id="favorite-hover-card" class="hidden"></div>
-        </section>
-      `;
-
-      const snapshot = {
-        pagedPages: [[{
-          id: 'page-1',
-          url: 'not-a-url',
-          title: 'Example page',
-          domain: 'example.com',
-          ai_summary_brief: 'AI summary',
-          manual_tags: ['alpha'],
-          saved_at: '2026-05-20T00:00:00.000Z',
-          pinned: true
-        }]],
-        currentPage: 0,
-        pageSize: 12,
-        columns: 6,
-        rows: 2,
-        tileWidth: 88,
-        gridWidth: 600
-      };
-      const store = {
-        getSnapshot: vi.fn(() => snapshot),
-        subscribe: vi.fn(),
-        applyLayout: vi.fn(),
-        goToPage: vi.fn()
-      };
-      const controller = createFavoritesController({
-        store,
-        elements: {
-          favoritesSection: document.getElementById('favorites-section'),
-          favoritesViewport: document.getElementById('favorites-viewport'),
-          favoritesRow: document.getElementById('favorites-row'),
-          favoritesPrevBtn: document.getElementById('favorites-prev-btn'),
-          favoritesNextBtn: document.getElementById('favorites-next-btn'),
-          favoritesDots: document.getElementById('favorites-dots'),
-          favoriteHoverConnector: document.getElementById('favorite-hover-connector'),
-          favoriteHoverCard: document.getElementById('favorite-hover-card')
-        },
-        windowObj: window,
-        documentObj: document
-      });
-
-      const favoritesSection = document.getElementById('favorites-section');
-      const favoriteHoverCard = document.getElementById('favorite-hover-card');
-
-      favoritesSection.getBoundingClientRect = () => ({
-        left: 0, top: 0, right: 800, bottom: 400, width: 800, height: 400
-      });
-      favoriteHoverCard.getBoundingClientRect = () => ({
-        left: 160, top: 40, right: 520, bottom: 200, width: 360, height: 160
-      });
-
-      controller.init();
-
-      const favoriteItem = document.querySelector('.favorite-item');
-      favoriteItem.getBoundingClientRect = () => ({
-        left: 20, top: 20, right: 108, bottom: 108, width: 88, height: 88
-      });
-      favoriteItem.dispatchEvent(new Event('mouseenter'));
-
-      expect(document.querySelector('.favorite-icon svg')).not.toBeNull();
-      expect(favoriteHoverCard.querySelector('.favorite-hover-card-title')?.textContent).toBe('Example page');
-      expect(favoriteHoverCard.querySelector('.favorite-hover-card-summary')?.textContent).toContain('AI summary');
-      expect(favoriteHoverCard.querySelector('.favorite-hover-card-meta')?.textContent).toContain('Pinned');
-    });
   });
 
   describe('drawer store factories', () => {
@@ -803,7 +698,7 @@ describe('newtab modules', () => {
         hasSelectedProject: true
       })).toEqual({
         title: 'No pages in Project Alpha',
-        description: 'Add pages to this project to see them here.'
+        description: 'Pages you add to this project will appear here.'
       });
     });
 
@@ -1103,7 +998,7 @@ describe('newtab modules', () => {
      });
      expect(projectSavedPagesStore.hydrate).toHaveBeenCalledTimes(1);
      expect(api.getSavedPages).not.toHaveBeenCalled();
-     expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching project pages...');
+     expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching project pages…');
      expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
      expect(state.allPages.map(page => page.id)).toEqual(['page-0', 'page-1', 'page-2', 'page-3']);
      expect(state.loadedProjectPages.map(page => page.id)).toEqual(['page-1', 'page-2', 'page-3']);
