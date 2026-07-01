@@ -5,6 +5,16 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.14.0] - 2026-07-01
+
+### 📝 Other Improvements
+
+- Add sparse home view; warm the empty/loading/sign-in copy (95633e2)
+- Remove dormant favorites carousel UI; warm the loading/error state copy (fc2b89c)
+- Bring toolbar popup into brand parity with shared token system (e6631e3)
+- Rework visual foundation: quiet materiality, warm palette, token sweep (c5ed31e)
+- Fix domain click loading all pages: scope source in applyDrawerFilters (4117539)
+
 ## [1.13.3] - 2026-06-27
 
 ### 📝 Other Improvements
@@ -62,13 +72,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move page content up toward the header (dd37bcc)
 
 ## [1.11.4] - 2026-06-25
-
-### 📝 Other Improvements
-
-- Move page content up toward the header (3f7a96f)
-- Give cards a half-em vertical margin above and below (cdfaf17)
-
-## [1.11.3] - 2026-06-25
 
 ### ✨ Features
 
@@ -261,7 +264,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Give cards a half-em vertical margin above and below (9164fbc)
+- Move page content up toward the header (3f7a96f)
+- Give cards a half-em vertical margin above and below (cdfaf17)
 - Refine sidebar, cards, and create-project affordance (04672c7)
 - Change primary color from blue to sage grey-green (eb2d073)
 - Show the digging dog while project pages load instead of a premature empty state (5b62152)
