@@ -237,6 +237,10 @@ test.describe('Standalone Mode', () => {
     // Hovering the action itself gives it a real backing tint (the old
     // hover background fell back to the transparent chip-bg).
     await action.hover();
+    // Let the :hover state and color-mix recomputation settle before reading
+    // the masked icon's paint color — without this the background can still
+    // read as transparent and the test flakes.
+    await page.waitForTimeout(150);
     const hoverBg = await action.evaluate(el => getComputedStyle(el).backgroundColor);
     expect(alpha(hoverBg)).toBeGreaterThan(0);
   });

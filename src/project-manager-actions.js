@@ -205,6 +205,9 @@ export function createProjectManagerActions({
 
     async selectProject(dashboard, projectId) {
       dashboard.selectedProjectId = projectId || null;
+      // Any explicit scope selection (including "All pages") leaves the sparse
+      // home view for the browse list.
+      dashboard.view = 'browse';
       dashboard.currentFilter.projectId = dashboard.selectedProjectId;
       dashboard.currentFilter.cursor = null;
       dashboard.tagInteractionManager.clearSelection();

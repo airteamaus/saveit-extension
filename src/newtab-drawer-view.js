@@ -65,6 +65,12 @@ export function createSavedPagesView({
     set selectedProjectId(value) {
       state.selectedProjectId = value || null;
     },
+    get view() {
+      return state.view;
+    },
+    set view(value) {
+      state.view = value === 'browse' ? 'browse' : 'home';
+    },
     get projectsAvailable() {
       return state.projectsAvailable;
     },
