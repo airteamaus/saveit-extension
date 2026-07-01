@@ -469,8 +469,12 @@ export function createDrawerDataController({
     // Run the search inside a Sentry span when available (production) so the
     // client-experienced latency is traced; fall through to a direct call when
     // Sentry/tracing is absent (dev, standalone, unit tests).
+    // limit 20: the results pane shows ~15 cards above the fold. Asking for 50
+    // hydrated thing-documents tripled Firestore hydration time (multiple
+    // sequential batches) for content the user never sees before scrolling.
+    // 20 keeps the first page fast; pagination can fetch more on scroll later.
     const runSearch = () => api.searchContent(trimmedQuery, {
-      limit: 50,
+      limit: 20,
       offset: 0,
       threshold: 0.58
     });

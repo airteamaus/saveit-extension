@@ -787,6 +787,52 @@ describe('newtab modules', () => {
       expect(markup).toContain('name="description"');
       expect(markup).toContain('data-action="cancel-edit"');
     });
+
+    it('does not fall back to ai_summary_brief when description is cleared', () => {
+      const summaryClass = 'saved-pages-drawer-card-summary';
+
+      // User explicitly cleared the description (optimistic state right after save)
+      const clearedMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: '',
+        ai_summary_brief: 'AI-generated summary that should not show',
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(clearedMarkup).not.toContain(summaryClass);
+      expect(clearedMarkup).not.toContain('AI-generated summary');
+
+      // Same after a reload: backend serializes a cleared description as null
+      const reloadedMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: null,
+        ai_summary_brief: 'AI-generated summary that should not show',
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(reloadedMarkup).not.toContain(summaryClass);
+      expect(reloadedMarkup).not.toContain('AI-generated summary');
+
+      // Sanity: a real user description still renders
+      const withDescMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: 'My notes',
+        ai_summary_brief: 'AI-generated summary',
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(withDescMarkup).toContain(summaryClass);
+      expect(withDescMarkup).toContain('My notes');
+    });
   });
 
   describe('drawer data helpers', () => {
@@ -1232,7 +1278,7 @@ describe('newtab modules', () => {
       await controller.loadSemanticResults('machine learning');
 
       expect(api.searchContent).toHaveBeenCalledWith('machine learning', {
-        limit: 50,
+        limit: 20,
         offset: 0,
         threshold: 0.58
       });
