@@ -3,3 +3,5 @@ allowBuilds:
   esbuild: true
   protobufjs: true
   spawn-sync: true
+minimumReleaseAgeExclude:
+  - vite@8.1.2
