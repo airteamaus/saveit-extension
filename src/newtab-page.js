@@ -4,14 +4,6 @@ export function getSubmittedSearchQuery(searchInput) {
 
 export function getNewtabElements(documentObj = document) {
   return {
-    favoriteHoverCard: documentObj.getElementById('favorite-hover-card'),
-    favoriteHoverConnector: documentObj.getElementById('favorite-hover-connector'),
-    favoritesDots: documentObj.getElementById('favorites-dots'),
-    favoritesNextBtn: documentObj.getElementById('favorites-next-btn'),
-    favoritesPrevBtn: documentObj.getElementById('favorites-prev-btn'),
-    favoritesRow: documentObj.getElementById('favorites-row'),
-    favoritesSection: documentObj.getElementById('favorites-section'),
-    favoritesViewport: documentObj.getElementById('favorites-viewport'),
     importBtn: documentObj.getElementById('hero-import-btn'),
     refreshBtn: documentObj.getElementById('hero-refresh-btn'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
@@ -67,7 +59,7 @@ export async function startNewtabPage({
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
   drawerController.init();
-  drawerController.showLoadingState?.('Loading saved pages...');
+  drawerController.showLoadingState?.('Gathering your saved pages…');
 
   // Resolve auth BEFORE loading the drawer. The drawer's initial hydrate()
   // runs a freshness check (headSavedPages) that needs a signed-in user to
