@@ -5,84 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>SaveIt</title>
   <link rel="icon" type="image/png" href="icon.png">
-  <style>
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      min-width: 320px;
-      background: #f8fafc;
-      color: #0f172a;
-      font: 14px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    }
-
-    body {
-      max-height: 520px;
-    }
-
-    .toolbar-popup-shell {
-      padding: 12px;
-    }
-
-    .toolbar-popup-header {
-      margin-bottom: 8px;
-    }
-
-    .toolbar-popup-eyebrow {
-      margin: 0 0 4px;
-      color: #475569;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-
-    .toolbar-popup-title {
-      margin: 0;
-      font-size: 18px;
-      line-height: 1.2;
-    }
-
-    .toolbar-popup-save-btn,
-    .toolbar-popup-project-btn {
-      width: 100%;
-      border: 1px solid #cbd5e1;
-      border-radius: 10px;
-      background: #ffffff;
-      color: inherit;
-      font: inherit;
-      text-align: left;
-    }
-
-    .toolbar-popup-save-btn {
-      margin-bottom: 10px;
-      padding: 10px 12px;
-      border-color: #5b8c7a;
-      background: #5b8c7a;
-      color: #ffffff;
-      font-weight: 600;
-    }
-
-    .toolbar-popup-section {
-      margin-bottom: 8px;
-    }
-
-    .toolbar-popup-section-title {
-      margin: 0 0 6px;
-    }
-
-    .toolbar-popup-project-list {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .toolbar-popup-empty,
-    .toolbar-popup-status {
-      margin: 0;
-      color: #475569;
-    }
-  </style>
+  <!-- Apply the stored theme before paint so the popup never flashes the
+       wrong theme when it opens. External script because the extension CSP
+       blocks inline scripts. The new-tab page owns the source of truth
+       (theme-manager.js); the popup reads the same localStorage key on each
+       open and reincarnates every open, so it stays in sync for free. -->
+  <script src="toolbar-popup-theme.js"></script>
+  <link rel="stylesheet" href="shared-ui.css">
   <link rel="stylesheet" href="toolbar-popup.css">
 </head>
 <body>
