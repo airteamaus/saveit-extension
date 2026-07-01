@@ -18,13 +18,19 @@ jobs:
         with:
           fetch-depth: 0  # Fetch all history for release notes generation
 
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'pnpm'
 
       - name: Install dependencies
-        run: npm install
+        run: pnpm install --frozen-lockfile
 
       - name: Add build date to manifest
         run: |
