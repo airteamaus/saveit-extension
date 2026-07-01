@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
-  createFavoritesRefreshHandler,
   createNewtabAuthLifecycle,
   createSavedPagesFooterUpdater
 } from '../../src/newtab-app-coordination.js';
@@ -19,16 +18,6 @@ describe('newtab app coordination', () => {
 
     expect(updateStatsDisplay).toHaveBeenNthCalledWith(1, { id: 'version-indicator' }, { total: 42 });
     expect(updateStatsDisplay).toHaveBeenNthCalledWith(2, { id: 'version-indicator' }, null);
-  });
-
-  it('refreshes favorites through the favorites controller loader', async () => {
-    const favoritesController = {
-      load: vi.fn().mockResolvedValue(undefined)
-    };
-
-    await createFavoritesRefreshHandler(favoritesController)();
-
-    expect(favoritesController.load).toHaveBeenCalled();
   });
 
   it('coordinates signed-in and signed-out auth lifecycle behavior', async () => {

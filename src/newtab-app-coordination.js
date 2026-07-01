@@ -10,12 +10,6 @@ export function createSavedPagesFooterUpdater({
   };
 }
 
-export function createFavoritesRefreshHandler(favoritesController) {
-  return () => {
-    void favoritesController.load();
-  };
-}
-
 export function createNewtabAuthLifecycle({
   drawerController
 }) {
