@@ -159,6 +159,7 @@ export function createSavedPagesDrawerController({
       handleDrawerPin: dataController.handleDrawerPin,
       handleDrawerUpdate: dataController.handleDrawerUpdate,
       handleDrawerDelete: dataController.handleDrawerDelete,
+      handleDrawerScrollNearEnd: dataController.handleDrawerScrollNearEnd,
       setDrawerSearchValue: shellController.setDrawerSearchValue,
       setDrawerToggleState: shellController.setDrawerToggleState,
       isDrawerOpen: shellController.isDrawerOpen,

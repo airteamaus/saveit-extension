@@ -142,6 +142,11 @@ export class WarmCacheListStore {
       maxItems: options.maxItems || Number.POSITIVE_INFINITY,
       initialFetchLimit: options.initialFetchLimit || 50,
       prefetchBatchLimit: options.prefetchBatchLimit || 100,
+      // When true, the store fetches only the initial batch and stops. Callers
+      // drive further fetching via loadMore() (e.g. on scroll). The warm-cache
+      // and freshness-check paths still run; only the eager full prefetch is
+      // suppressed.
+      lazy: options.lazy === true,
       warmCacheScope: options.warmCacheScope || null,
       getList: options.getList || null,
       getIncrementalList: options.getIncrementalList || null,
@@ -540,6 +545,13 @@ export class WarmCacheListStore {
   }
 
   async prefetchAllPages(requestId = this.state.requestId) {
+    // Lazy stores fetch only the initial batch; further fetching is driven by
+    // explicit loadMore() calls (e.g. on scroll). This keeps large libraries
+    // from hydrating in full on first paint.
+    if (this.options.lazy) {
+      return this.getSnapshot();
+    }
+
     while (
       this.state.requestId === requestId &&
       this.getActiveHasNextPage(requestId) &&

@@ -21,6 +21,7 @@ import {
   startNewtabPage
 } from '../../src/newtab-page.js';
 import {
+  createDrawerRenderer,
   getDrawerEmptyStateContent,
   renderDrawerCardMarkup
 } from '../../src/newtab-drawer-renderer.js';
@@ -232,13 +233,14 @@ describe('newtab modules', () => {
 
         await Promise.resolve();
 
-        // Theme/version/init/showLoadingState run immediately, but the drawer
-        // must NOT load before auth resolves — its hydrate() freshness check
-        // needs a signed-in user to mint an auth token.
+        // Theme/version/init run immediately, but the drawer must NOT load or
+        // paint a loading state before auth resolves. An eager loading state
+        // here flashes on screen before the warm cache can render real content,
+        // so startup must defer all rendering until load() runs.
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
+        expect(drawerController.showLoadingState).not.toHaveBeenCalled();
         expect(drawerController.load).not.toHaveBeenCalled();
         expect(drawerController.preloadProjects).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
@@ -274,7 +276,7 @@ describe('newtab modules', () => {
         });
 
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
+        expect(drawerController.showLoadingState).not.toHaveBeenCalled();
         expect(drawerController.preloadProjects).toHaveBeenCalled();
         expect(drawerController.load).toHaveBeenCalled();
       });
@@ -1257,6 +1259,166 @@ describe('newtab modules', () => {
     expect(state.allPages[0]).toMatchObject({
       title: 'Alpha edited',
       ai_summary_brief: 'After'
+    });
+  });
+
+  describe('render windowing', () => {
+    function makePages(count) {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `page-${i + 1}`,
+        title: `Page ${i + 1}`,
+        url: `https://example.com/${i + 1}`
+      }));
+    }
+
+    function makeRenderer({ renderLimit }) {
+      const container = document.createElement('div');
+      document.body.appendChild(container);
+      const renderer = createDrawerRenderer({
+        documentObj: document,
+        resultsContainer: container,
+        getRenderLimit: () => renderLimit,
+        renderChrome: () => {},
+        getProjectPills: () => [],
+        isProjectsUnavailable: () => false,
+        getProjectScopeLabel: () => 'All pages'
+      });
+      return { container, renderer, setRenderLimit: v => { renderLimit = v; } };
+    }
+
+    it('renders only the first renderLimit cards', () => {
+      const { container, renderer } = makeRenderer({ renderLimit: 10 });
+      renderer.renderResults(makePages(150));
+
+      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(10);
+    });
+
+    it('grows the rendered window when renderLimit increases, reusing existing nodes', () => {
+      let renderLimit = 10;
+      const { container, renderer, setRenderLimit } = makeRenderer({ renderLimit });
+      renderer.renderResults(makePages(150));
+      const firstCardBefore = container.querySelector('.saved-pages-drawer-card');
+
+      setRenderLimit(110);
+      renderer.renderResults(makePages(150));
+
+      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(110);
+      // Keyed reconciliation reuses the first node rather than rebuilding it.
+      expect(container.querySelector('.saved-pages-drawer-card')).toBe(firstCardBefore);
+    });
+
+    it('renders all pages when renderLimit is at or beyond the count', () => {
+      const { container, renderer } = makeRenderer({ renderLimit: 1000 });
+      renderer.renderResults(makePages(25));
+
+      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(25);
+    });
+  });
+
+  describe('handleDrawerScrollNearEnd', () => {
+    function pages(count) {
+      return Array.from({ length: count }, (_, i) => ({
+        id: `page-${i + 1}`,
+        title: `Page ${i + 1}`,
+        url: `https://example.com/${i + 1}`
+      }));
+    }
+
+    it('grows the render window and does not fetch when there is in-memory coverage', async () => {
+      const loadMore = vi.fn(async () => ({ status: 'updated' }));
+      const { controller, state, savedPagesStore, dependencies } = createDrawerDataHarness({
+        state: {
+          hasInitialized: true,
+          renderLimit: 10,
+          allPages: pages(150),
+          pages: pages(150)
+        },
+        savedPagesStore: {
+          getSnapshot: vi.fn(() => ({
+            allPages: pages(150),
+            total: 150,
+            hasNextPage: true,
+            isLoadingMore: false
+          })),
+          loadMore
+        }
+      });
+
+      await controller.handleDrawerScrollNearEnd();
+
+      expect(state.renderLimit).toBe(110);
+      // We still have in-memory pages beyond the window, so no fetch yet.
+      expect(loadMore).not.toHaveBeenCalled();
+      expect(dependencies.renderDrawerResults).toHaveBeenCalled();
+    });
+
+    it('calls loadMore once the render window passes in-memory coverage', async () => {
+      const loadMore = vi.fn(async () => ({ status: 'updated' }));
+      const { controller, state, savedPagesStore } = createDrawerDataHarness({
+        state: {
+          hasInitialized: true,
+          // Window already covers the 50 in-memory pages -> next scroll fetches.
+          renderLimit: 110,
+          allPages: pages(50),
+          pages: pages(50)
+        },
+        savedPagesStore: {
+          getSnapshot: vi.fn(() => ({
+            allPages: pages(50),
+            total: 200,
+            hasNextPage: true,
+            isLoadingMore: false
+          })),
+          loadMore
+        }
+      });
+
+      await controller.handleDrawerScrollNearEnd();
+
+      expect(loadMore).toHaveBeenCalledTimes(1);
+      expect(state.renderLimit).toBe(110);
+    });
+
+    it('is a no-op for project/domain scopes', async () => {
+      const loadMore = vi.fn(async () => ({ status: 'updated' }));
+      const { controller, state } = createDrawerDataHarness({
+        state: {
+          hasInitialized: true,
+          renderLimit: 10,
+          selectedProjectId: 'project-1',
+          allPages: pages(150),
+          pages: pages(150)
+        },
+        savedPagesStore: { loadMore }
+      });
+
+      await controller.handleDrawerScrollNearEnd();
+
+      // Scope guard returns before touching renderLimit or the store.
+      expect(state.renderLimit).toBe(10);
+      expect(loadMore).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetRenderLimit', () => {
+    it('resets renderLimit to the initial value on a new query', async () => {
+      const allPages = Array.from({ length: 150 }, (_, i) => ({
+        id: `page-${i + 1}`,
+        title: `Page ${i + 1}`,
+        url: `https://example.com/${i + 1}`
+      }));
+      const { controller, state } = createDrawerDataHarness({
+        state: {
+          hasInitialized: true,
+          renderLimit: 210,
+          allPages,
+          pages: [...allPages]
+        }
+      });
+
+      await controller.loadDrawerResults('new query');
+
+      expect(state.renderLimit).toBe(10);
     });
   });
 

@@ -44,6 +44,12 @@ export function createDrawerUiController({
     resultsContainer,
     getEditingPageId: () => state.editingPageId,
     getSavingEditPageId: () => state.savingEditPageId,
+    // Render-window cap (All-pages browse view only); grown on scroll. Scoped
+    // views (project/domain) are not windowed, so they bypass the cap.
+    getRenderLimit: () => {
+      const hasScope = Boolean(state.selectedProjectId) || Boolean(state.selectedDomainId);
+      return hasScope ? Number.POSITIVE_INFINITY : state.renderLimit;
+    },
     renderChrome: renderDrawerChrome,
     getProjectPills: page => getDrawerProjectPills(page),
     isProjectsUnavailable: () => getSavedPagesViewOrThrow().projectsAvailable === false,

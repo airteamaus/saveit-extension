@@ -1,5 +1,10 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
+// Render windowing for the All-pages browse view. Only this many cards render
+// on first paint; scrolling grows the window by RENDER_LIMIT_INCREMENT.
+export const INITIAL_RENDER_LIMIT = 10;
+export const RENDER_LIMIT_INCREMENT = 100;
+
 export function createInitialDrawerState() {
   return {
     hasInitialized: false,
@@ -15,6 +20,9 @@ export function createInitialDrawerState() {
     },
     pages: [],
     allPages: [],
+    // Cap on how many of `pages` are rendered to the DOM. Grown on scroll;
+    // reset to INITIAL_RENDER_LIMIT whenever the scope or query changes.
+    renderLimit: INITIAL_RENDER_LIMIT,
     loadedProjectPages: null,
     projects: [],
     projectsLoading: false,

@@ -169,6 +169,36 @@ test.describe('Standalone Mode', () => {
     void originalTitle;
   });
 
+  test('renders a windowed slice and grows the list on scroll (lazy render)', async ({ page }) => {
+    await showAllPages(page);
+
+    const cards = page.locator('.saved-pages-drawer-card');
+    // First paint renders only the initial window; the mock dataset is much
+    // larger (~176 items), so this proves the list is windowed, not full.
+    await expect(cards).toHaveCount(10, { timeout: 5000 });
+
+    // Scroll the results pane to the bottom to trigger the growth handler.
+    const results = page.locator('#saved-pages-results');
+    await results.evaluate(el => {
+      el.scrollTop = el.scrollHeight;
+    });
+    // Fire a second scroll after a tick to push past the rAF throttle.
+    await page.waitForTimeout(50);
+    await results.evaluate(el => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    // The window grew beyond the initial 10 (one or more increments of 100,
+    // capped at the dataset size). Assert a range rather than an exact count so
+    // the test is robust to how many throttled scroll events fire.
+    await expect(async () => {
+      const count = await cards.count();
+      expect(count).toBeGreaterThan(10);
+    }).toPass({ timeout: 5000 });
+    const finalCount = await cards.count();
+    expect(finalCount).toBeGreaterThanOrEqual(110);
+  });
+
   test('tags on cards keep roughly one character of horizontal space between them', async ({ page }) => {
     await showAllPages(page);
 
@@ -354,16 +384,31 @@ test.describe('Standalone Mode', () => {
     // The selected domain row is active.
     await expect(firstDomain.locator('.project-nav-item')).toHaveClass(/is-active/);
 
-    // Cards render for the scoped domain — fewer than the full list, proving
-    // the list was actually filtered (not all pages).
+    // Cards render for the scoped domain — proving the list was actually
+    // filtered to that domain (scoped views are not render-windowed).
     await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 5000 });
     const scopedCount = await page.locator('.saved-pages-drawer-card').count();
     expect(scopedCount).toBeGreaterThan(0);
 
-    // Switch back to All pages and confirm the count is higher (unscoped).
+    // Switch back to All pages. The unscoped list is render-windowed (first 10),
+    // so comparing raw counts no longer proves re-filtering. Instead, scroll to
+    // grow the All-pages window and confirm the unscoped set is larger than the
+    // scoped slice — i.e. the domain filter was removed.
     await page.locator('.project-nav-item[data-project-id=""]').click();
-    await page.waitForTimeout(500);
-    const allCount = await page.locator('.saved-pages-drawer-card').count();
-    expect(allCount).toBeGreaterThan(scopedCount);
+    await expect(page.locator('.saved-pages-drawer-card')).toHaveCount(10, { timeout: 5000 });
+
+    const results = page.locator('#saved-pages-results');
+    await results.evaluate(el => {
+      el.scrollTop = el.scrollHeight;
+    });
+    await page.waitForTimeout(50);
+    await results.evaluate(el => {
+      el.scrollTop = el.scrollHeight;
+    });
+
+    await expect(async () => {
+      const allCount = await page.locator('.saved-pages-drawer-card').count();
+      expect(allCount).toBeGreaterThan(scopedCount);
+    }).toPass({ timeout: 5000 });
   });
 });

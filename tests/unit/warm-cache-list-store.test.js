@@ -109,6 +109,49 @@ describe('WarmCacheListStore', () => {
     expect(getList).toHaveBeenCalledTimes(2);
   });
 
+  it('does not prefetch beyond the initial batch when lazy, but honors explicit loadMore', async () => {
+    const firstBatch = makePages(50);
+    const secondBatch = makePages(40, 51);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: firstBatch,
+        pagination: {
+          total: 90,
+          hasNextPage: true,
+          nextCursor: 'page-50'
+        },
+        meta: {
+          fromCache: false
+        }
+      })
+      .mockResolvedValueOnce({
+        pages: secondBatch,
+        pagination: {
+          total: 90,
+          hasNextPage: false,
+          nextCursor: null
+        },
+        meta: {
+          fromCache: false
+        }
+      });
+    const { store } = createStore({ getList }, { lazy: true });
+
+    await store.hydrate();
+    // Give any stray background work a chance, then assert no prefetch happened.
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    expect(store.getSnapshot().allPages).toHaveLength(50);
+    expect(getList).toHaveBeenCalledTimes(1);
+
+    // An explicit loadMore (as driven by scroll) still fetches the next batch.
+    await store.loadMore();
+
+    expect(store.getSnapshot().allPages).toHaveLength(90);
+    expect(getList).toHaveBeenCalledTimes(2);
+  });
+
   it('drops stale cached entries once a full authoritative refresh completes', async () => {
     const cachedPages = makePages(5);
     const getList = vi

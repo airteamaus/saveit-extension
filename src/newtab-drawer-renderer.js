@@ -209,6 +209,7 @@ export function createDrawerRenderer({
   resultsContainer,
   getEditingPageId,
   getSavingEditPageId,
+  getRenderLimit,
   renderChrome,
   getProjectPills,
   isProjectsUnavailable,
@@ -240,11 +241,16 @@ export function createDrawerRenderer({
     renderChrome();
   }
 
-  function renderLoadingState(message = 'Gathering your saved pages…') {
+  // Cold-start loading state. Reuses the semantic-search digging-dog
+  // illustration (theme-aware via currentColor, reduced-motion safe) so a
+  // genuinely empty warm cache shows the same friendly loader rather than a
+  // bare spinner + "Gathering…" copy. The message arg is accepted for
+  // signature compatibility but intentionally not rendered: the dog reads as
+  // "loading" without text, which avoids the brief flash of copy swapping in.
+  function renderLoadingState(_message) {
     renderDrawerState(`
-      <div class="saved-pages-drawer-state">
-        <div class="saved-pages-drawer-spinner" aria-hidden="true"></div>
-        <p>${escapeHtml(message)}</p>
+      <div class="saved-pages-semantic-loading saved-pages-semantic-loading-pane" aria-live="polite">
+        ${LOADING_ILLUSTRATION_SVG}
       </div>
     `);
   }
@@ -331,7 +337,16 @@ export function createDrawerRenderer({
       return;
     }
 
-    reconcileKeyedChildren(pagesSection, pages, {
+    // Render a windowed slice. `pages` holds the full filtered set (needed for
+    // count math and load-more decisions); only the first `renderLimit` cards
+    // become DOM nodes. reconcileKeyedChildren reuses existing nodes by key, so
+    // growing the window only creates the newly-revealed cards.
+    const renderLimit = typeof getRenderLimit === 'function' ? getRenderLimit() : pages.length;
+    const visiblePages = Number.isFinite(renderLimit) && renderLimit < pages.length
+      ? pages.slice(0, renderLimit)
+      : pages;
+
+    reconcileKeyedChildren(pagesSection, visiblePages, {
       getKey: page => page.id || null,
       getNodeKey: node => node?.dataset?.pageId || null,
       pruneUnkeyed: true,
