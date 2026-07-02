@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Lazy-render the All-pages view and fetch the rest on scroll (#15) (1133653)
+- Fix card summary edit reverting to unchanged content (#14) (1ec6d08)
+- Lower semantic search limit 50 → 20 to cut Firestore hydration cost (e13727b)
+- Send search_type 'vector' instead of 'hybrid' (ad796d3)
+- Add Sentry span around semantic search + surface backend timings (d263165)
+
+## [1.14.1] - 2026-07-01
+
+### 📝 Other Improvements
+
+- Fix release/upload workflows to use pnpm; relax vite spec (41c98b1)
+- Fix home view persisting after clicking "All pages"; stabilize hover E2E test (1759b91)
 - Update dependencies to clear all 17 Dependabot vulnerabilities (6e2d7c4)
 - Fix three release tooling bugs found during v1.14.0 (fe4e69f)
 - Add sparse home view; warm the empty/loading/sign-in copy (1923102)
@@ -76,13 +88,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add bookmark import from the browser (ea1630b)
 
 ## [1.12.0] - 2026-06-26
-
-### 📝 Other Improvements
-
-- Add bookmark import from the browser (76d2c33)
-- Move page content up toward the header (dd37bcc)
-
-## [1.11.4] - 2026-06-25
 
 ### ✨ Features
 
@@ -275,7 +280,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Move page content up toward the header (3f7a96f)
+- Add bookmark import from the browser (76d2c33)
+- Move page content up toward the header (dd37bcc)
 - Give cards a half-em vertical margin above and below (cdfaf17)
 - Refine sidebar, cards, and create-project affordance (04672c7)
 - Change primary color from blue to sage grey-green (eb2d073)
