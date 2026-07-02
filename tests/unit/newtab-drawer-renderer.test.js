@@ -1,0 +1,78 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { createDrawerRenderer } from '../../src/newtab-drawer-renderer.js';
+
+// Minimal renderer harness: a real results container and a no-op renderChrome
+// so renderLoadingState can be exercised in isolation. The loading state is a
+// full-pane swap of the results container, so we only need the container.
+function createRenderer() {
+  const resultsContainer = document.createElement('div');
+  return {
+    resultsContainer,
+    renderer: createDrawerRenderer({
+      documentObj: document,
+      resultsContainer,
+      getEditingPageId: () => null,
+      getSavingEditPageId: () => null,
+      getRenderLimit: () => Number.POSITIVE_INFINITY,
+      renderChrome: () => {},
+      getProjectPills: () => [],
+      isProjectsUnavailable: () => false,
+      getProjectScopeLabel: () => 'All pages'
+    })
+  };
+}
+
+describe('newtab drawer renderer loading state', () => {
+  it('renders the digging-dog illustration, not a spinner or loading copy', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderLoadingState();
+
+    const html = resultsContainer.innerHTML;
+    expect(html).toContain('saved-pages-semantic-loading-pane');
+    // The waggy-dog SVG is the loader; its presence is the contract.
+    expect(html).toContain('loading-dog-body');
+    // The old spinner element and "Gathering…" copy must be gone — they caused
+    // a flash of unstyled state on first paint.
+    expect(html).not.toContain('saved-pages-drawer-spinner');
+    expect(html).not.toContain('Gathering');
+  });
+
+  it('ignores the message argument (copy is intentionally not rendered)', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    // Cold-start callers still pass scope-specific copy; the renderer must not
+    // paint it, since swapping text in/out causes a visible flash.
+    renderer.renderLoadingState('Searching project pages…');
+
+    expect(resultsContainer.innerHTML).not.toContain('Searching project pages');
+    expect(resultsContainer.innerHTML).toContain('loading-dog-body');
+  });
+
+  it('renders the dog even when called with no arguments', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderLoadingState();
+
+    expect(resultsContainer.innerHTML).toContain('loading-dog-body');
+  });
+
+  it('invokes renderChrome so surrounding chrome stays consistent', () => {
+    const renderChrome = vi.fn();
+    const resultsContainer = document.createElement('div');
+    const renderer = createDrawerRenderer({
+      documentObj: document,
+      resultsContainer,
+      getRenderLimit: () => Number.POSITIVE_INFINITY,
+      renderChrome,
+      getProjectPills: () => [],
+      isProjectsUnavailable: () => false,
+      getProjectScopeLabel: () => 'All pages'
+    });
+
+    renderer.renderLoadingState();
+
+    expect(renderChrome).toHaveBeenCalledTimes(1);
+  });
+});

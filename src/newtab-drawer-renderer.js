@@ -241,11 +241,16 @@ export function createDrawerRenderer({
     renderChrome();
   }
 
-  function renderLoadingState(message = 'Gathering your saved pages…') {
+  // Cold-start loading state. Reuses the semantic-search digging-dog
+  // illustration (theme-aware via currentColor, reduced-motion safe) so a
+  // genuinely empty warm cache shows the same friendly loader rather than a
+  // bare spinner + "Gathering…" copy. The message arg is accepted for
+  // signature compatibility but intentionally not rendered: the dog reads as
+  // "loading" without text, which avoids the brief flash of copy swapping in.
+  function renderLoadingState(_message) {
     renderDrawerState(`
-      <div class="saved-pages-drawer-state">
-        <div class="saved-pages-drawer-spinner" aria-hidden="true"></div>
-        <p>${escapeHtml(message)}</p>
+      <div class="saved-pages-semantic-loading saved-pages-semantic-loading-pane" aria-live="polite">
+        ${LOADING_ILLUSTRATION_SVG}
       </div>
     `);
   }

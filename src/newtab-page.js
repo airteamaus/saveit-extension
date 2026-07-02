@@ -59,7 +59,12 @@ export async function startNewtabPage({
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
   drawerController.init();
-  drawerController.showLoadingState?.('Gathering your saved pages…');
+
+  // Do NOT paint an eager loading state here. The results pane starts empty
+  // and the warm-cache path renders real content directly on first paint;
+  // an interim spinner here causes a flash of unstyled state (blank →
+  // spinner → content). Cold starts show the loading dog from within
+  // loadDrawerBasePages once it confirms there's no warm cache to render.
 
   // Resolve auth BEFORE loading the drawer. The drawer's initial hydrate()
   // runs a freshness check (headSavedPages) that needs a signed-in user to

@@ -233,13 +233,14 @@ describe('newtab modules', () => {
 
         await Promise.resolve();
 
-        // Theme/version/init/showLoadingState run immediately, but the drawer
-        // must NOT load before auth resolves — its hydrate() freshness check
-        // needs a signed-in user to mint an auth token.
+        // Theme/version/init run immediately, but the drawer must NOT load or
+        // paint a loading state before auth resolves. An eager loading state
+        // here flashes on screen before the warm cache can render real content,
+        // so startup must defer all rendering until load() runs.
         expect(ThemeManager.init).toHaveBeenCalledWith('hero-theme-toggle-container');
         expect(updateVersionIndicator).toHaveBeenCalledWith({ id: 'version' });
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
+        expect(drawerController.showLoadingState).not.toHaveBeenCalled();
         expect(drawerController.load).not.toHaveBeenCalled();
         expect(drawerController.preloadProjects).not.toHaveBeenCalled();
         expect(authController.init).toHaveBeenCalled();
@@ -275,7 +276,7 @@ describe('newtab modules', () => {
         });
 
         expect(drawerController.init).toHaveBeenCalled();
-        expect(drawerController.showLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
+        expect(drawerController.showLoadingState).not.toHaveBeenCalled();
         expect(drawerController.preloadProjects).toHaveBeenCalled();
         expect(drawerController.load).toHaveBeenCalled();
       });
