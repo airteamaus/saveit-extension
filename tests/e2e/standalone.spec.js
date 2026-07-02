@@ -144,7 +144,7 @@ test.describe('Standalone Mode', () => {
     await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('SaveIt product');
   });
 
-  test('should edit a page title and description inline', async ({ page }) => {
+  test('should edit a page title and summary inline', async ({ page }) => {
     await showAllPages(page);
 
     // Cards are editable from the unfiltered browse view (search hides them
@@ -154,7 +154,7 @@ test.describe('Standalone Mode', () => {
     await card.locator('.saved-pages-drawer-edit-btn').click();
 
     await card.locator('input[name="title"]').fill('Edited Himalayan Journey');
-    await card.locator('textarea[name="description"]').fill('Updated description from Playwright.');
+    await card.locator('textarea[name="ai_summary_brief"]').fill('Updated summary from Playwright.');
     await card.locator('.saved-pages-drawer-edit-save').click();
 
     // The edited card is still in the unfiltered list with its new values.
@@ -164,7 +164,7 @@ test.describe('Standalone Mode', () => {
       .first();
     await expect(editedCard).toBeVisible();
     await expect(editedCard.locator('.saved-pages-drawer-card-title')).toContainText('Edited Himalayan Journey');
-    await expect(editedCard.locator('.saved-pages-drawer-card-summary')).toContainText('Updated description from Playwright.');
+    await expect(editedCard.locator('.saved-pages-drawer-card-summary')).toContainText('Updated summary from Playwright.');
 
     void originalTitle;
   });
