@@ -209,6 +209,7 @@ export function createDrawerRenderer({
   resultsContainer,
   getEditingPageId,
   getSavingEditPageId,
+  getRenderLimit,
   renderChrome,
   getProjectPills,
   isProjectsUnavailable,
@@ -331,7 +332,16 @@ export function createDrawerRenderer({
       return;
     }
 
-    reconcileKeyedChildren(pagesSection, pages, {
+    // Render a windowed slice. `pages` holds the full filtered set (needed for
+    // count math and load-more decisions); only the first `renderLimit` cards
+    // become DOM nodes. reconcileKeyedChildren reuses existing nodes by key, so
+    // growing the window only creates the newly-revealed cards.
+    const renderLimit = typeof getRenderLimit === 'function' ? getRenderLimit() : pages.length;
+    const visiblePages = Number.isFinite(renderLimit) && renderLimit < pages.length
+      ? pages.slice(0, renderLimit)
+      : pages;
+
+    reconcileKeyedChildren(pagesSection, visiblePages, {
       getKey: page => page.id || null,
       getNodeKey: node => node?.dataset?.pageId || null,
       pruneUnkeyed: true,

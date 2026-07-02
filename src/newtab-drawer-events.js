@@ -32,6 +32,7 @@ export function initSavedPagesDrawerEvents({
   handleDrawerPin,
   handleDrawerUpdate,
   handleDrawerDelete,
+  handleDrawerScrollNearEnd,
   setDrawerSearchValue,
   setDrawerToggleState,
   isDrawerOpen,
@@ -302,6 +303,42 @@ export function initSavedPagesDrawerEvents({
       projectManager.closeEditor(savedPagesView);
     }
   });
+  // Lazy-load more saved pages as the user scrolls toward the bottom of the
+  // results pane. Throttled per frame to avoid firing on every scroll event.
+  // Listens on the results container (the bounded scroll viewport) and on the
+  // window as a fallback for the narrow-width layout where the window scrolls.
+  let scrollRafQueued = false;
+  function onScrollNearEnd() {
+    if (scrollRafQueued) {
+      return;
+    }
+    scrollRafQueued = true;
+    windowObj.requestAnimationFrame(() => {
+      scrollRafQueued = false;
+      void handleDrawerScrollNearEnd?.();
+    });
+  }
+  function isNearScrollEnd(el) {
+    if (!el) {
+      return false;
+    }
+    const threshold = el.clientHeight * 1.5;
+    return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
+  }
+  savedPagesDrawerResults?.addEventListener('scroll', () => {
+    if (isNearScrollEnd(savedPagesDrawerResults)) {
+      onScrollNearEnd();
+    }
+  }, { passive: true });
+  windowObj.addEventListener('scroll', () => {
+    // Only acts as a fallback when the results container itself isn't the
+    // scroller (narrow layout). handleDrawerScrollNearEnd is a no-op for
+    // project/domain scopes, so this stays safe.
+    if (isNearScrollEnd(windowObj.document.scrollingElement)) {
+      onScrollNearEnd();
+    }
+  }, { passive: true });
+
   void openSavedPagesDrawer;
   setDrawerToggleState(true);
   setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);

@@ -1,6 +1,10 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
 import { createDomainSavedPagesStore, createProjectSavedPagesStore } from './newtab-drawer-stores.js';
+import {
+  INITIAL_RENDER_LIMIT,
+  RENDER_LIMIT_INCREMENT
+} from './newtab-drawer-state.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
 
 export function createDrawerDataController({
@@ -255,6 +259,7 @@ export function createDrawerDataController({
 
     const requestId = ++state.requestId;
     const trimmedQuery = query.trim();
+    resetRenderLimit();
 
     state.isLoading = true;
     setDrawerSearchValue(trimmedQuery);
@@ -516,6 +521,10 @@ export function createDrawerDataController({
   async function loadDrawerResults(query = '', { syncUrl = true } = {}) {
     const trimmedQuery = query.trim();
 
+    // A new query re-filters in memory; start the render window fresh so the
+    // first matches paint immediately and scroll re-grows it.
+    resetRenderLimit();
+
     // Any search intent (typed, submitted, cleared, topic-pill click) leaves
     // the sparse home view for the browse list.
     state.view = 'browse';
@@ -565,6 +574,7 @@ export function createDrawerDataController({
 
     // Selecting a domain scope leaves the sparse home view.
     state.view = 'browse';
+    resetRenderLimit();
     const requestId = ++state.requestId;
     const trimmedQuery = query.trim();
 
@@ -624,6 +634,51 @@ export function createDrawerDataController({
     }
   }
 
+  function resetRenderLimit() {
+    state.renderLimit = INITIAL_RENDER_LIMIT;
+  }
+
+  // Track in-flight lazy loads so concurrent scroll events don't stack calls.
+  let lazyLoadInFlight = false;
+
+  // Called by the scroll handler when the user nears the bottom of the list.
+  // Grows the render window, and — for the All-pages scope only — asks the
+  // store for the next cursor batch once we're rendering past what's in memory.
+  async function handleDrawerScrollNearEnd() {
+    const hasScope = Boolean(state.selectedProjectId) || Boolean(state.selectedDomainId);
+
+    // Project/domain views are not windowed; nothing to grow.
+    if (hasScope) {
+      return;
+    }
+
+    const fullCount = state.pages.length;
+    if (state.renderLimit < fullCount) {
+      state.renderLimit += RENDER_LIMIT_INCREMENT;
+      renderDrawerResults();
+    }
+
+    // If the render window already covers everything we have in memory, but the
+    // server still has more, fetch the next batch. The store's change event
+    // re-renders on arrival.
+    const snapshot = savedPagesStore.getSnapshot();
+    if (
+      !lazyLoadInFlight
+      && state.renderLimit >= state.allPages.length
+      && snapshot?.hasNextPage
+      && !snapshot?.isLoadingMore
+    ) {
+      lazyLoadInFlight = true;
+      try {
+        await savedPagesStore.loadMore();
+      } catch (error) {
+        console.error('[newtab] Lazy loadMore failed:', error);
+      } finally {
+        lazyLoadInFlight = false;
+      }
+    }
+  }
+
   return {
     ensureDrawerDomainsLoaded,
     ensureDrawerProjectsLoaded,
@@ -631,11 +686,13 @@ export function createDrawerDataController({
     handleDrawerEditCancel,
     handleDrawerEditStart,
     handleDrawerPin,
+    handleDrawerScrollNearEnd,
     handleDrawerUpdate,
     loadDrawerBasePages,
     loadDrawerDomainPages,
     loadDrawerProjectPages,
     loadDrawerResults,
-    loadSemanticResults
+    loadSemanticResults,
+    resetRenderLimit
   };
 }
