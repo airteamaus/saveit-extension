@@ -784,54 +784,68 @@ describe('newtab modules', () => {
 
       expect(markup).toContain('saved-pages-drawer-edit-form');
       expect(markup).toContain('name="title"');
-      expect(markup).toContain('name="description"');
+      expect(markup).toContain('name="ai_summary_brief"');
       expect(markup).toContain('data-action="cancel-edit"');
     });
 
-    it('does not fall back to ai_summary_brief when description is cleared', () => {
+    it('prefers ai_summary_brief and falls back to the page description', () => {
       const summaryClass = 'saved-pages-drawer-card-summary';
 
-      // User explicitly cleared the description (optimistic state right after save)
-      const clearedMarkup = renderDrawerCardMarkup({
+      // AI summary wins when both are present
+      const bothMarkup = renderDrawerCardMarkup({
         id: 'page-1',
         title: 'SaveIt',
-        description: '',
-        ai_summary_brief: 'AI-generated summary that should not show',
-        url: 'https://example.com/article'
-      }, {
-        getProjectPills: () => [],
-        projectsUnavailable: false
-      });
-      expect(clearedMarkup).not.toContain(summaryClass);
-      expect(clearedMarkup).not.toContain('AI-generated summary');
-
-      // Same after a reload: backend serializes a cleared description as null
-      const reloadedMarkup = renderDrawerCardMarkup({
-        id: 'page-1',
-        title: 'SaveIt',
-        description: null,
-        ai_summary_brief: 'AI-generated summary that should not show',
-        url: 'https://example.com/article'
-      }, {
-        getProjectPills: () => [],
-        projectsUnavailable: false
-      });
-      expect(reloadedMarkup).not.toContain(summaryClass);
-      expect(reloadedMarkup).not.toContain('AI-generated summary');
-
-      // Sanity: a real user description still renders
-      const withDescMarkup = renderDrawerCardMarkup({
-        id: 'page-1',
-        title: 'SaveIt',
-        description: 'My notes',
+        description: 'Page description',
         ai_summary_brief: 'AI-generated summary',
         url: 'https://example.com/article'
       }, {
         getProjectPills: () => [],
         projectsUnavailable: false
       });
-      expect(withDescMarkup).toContain(summaryClass);
-      expect(withDescMarkup).toContain('My notes');
+      expect(bothMarkup).toContain(summaryClass);
+      expect(bothMarkup).toContain('AI-generated summary');
+      expect(bothMarkup).not.toContain('Page description');
+
+      // Cleared AI summary (optimistic state right after save) falls back to description
+      const clearedMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: 'Page description',
+        ai_summary_brief: '',
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(clearedMarkup).toContain(summaryClass);
+      expect(clearedMarkup).toContain('Page description');
+
+      // Same after a reload: backend serializes a cleared AI summary as null
+      const reloadedMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: 'Page description',
+        ai_summary_brief: null,
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(reloadedMarkup).toContain(summaryClass);
+      expect(reloadedMarkup).toContain('Page description');
+
+      // Nothing to show when both are empty
+      const emptyMarkup = renderDrawerCardMarkup({
+        id: 'page-1',
+        title: 'SaveIt',
+        description: '',
+        ai_summary_brief: null,
+        url: 'https://example.com/article'
+      }, {
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      });
+      expect(emptyMarkup).not.toContain(summaryClass);
     });
   });
 
@@ -1213,13 +1227,13 @@ describe('newtab modules', () => {
      });
    });
 
-   it('updates page title and description inline and re-applies filters', async () => {
+   it('updates page title and summary inline and re-applies filters', async () => {
      const { controller, state, api, savedPagesView, applyDrawerFilters, dependencies } = createDrawerDataHarness({
        state: {
          query: 'alpha',
          editingPageId: 'page-1',
-         pages: [{ id: 'page-1', title: 'Alpha', description: 'Before', pinned: false }],
-         allPages: [{ id: 'page-1', title: 'Alpha', description: 'Before', pinned: false }]
+         pages: [{ id: 'page-1', title: 'Alpha', ai_summary_brief: 'Before', pinned: false }],
+         allPages: [{ id: 'page-1', title: 'Alpha', ai_summary_brief: 'Before', pinned: false }]
        },
        api: {
          updatePage: vi.fn().mockResolvedValue({ updated_at: '2026-05-26T00:00:00.000Z' })
@@ -1228,12 +1242,12 @@ describe('newtab modules', () => {
 
      await controller.handleDrawerUpdate('page-1', {
        title: 'Alpha edited',
-       description: 'After'
+       ai_summary_brief: 'After'
      });
 
      expect(api.updatePage).toHaveBeenCalledWith('page-1', {
        title: 'Alpha edited',
-       description: 'After'
+       ai_summary_brief: 'After'
      });
      expect(savedPagesView.persistAllPages).toHaveBeenCalled();
      expect(applyDrawerFilters).toHaveBeenCalledWith('alpha');
@@ -1242,7 +1256,7 @@ describe('newtab modules', () => {
      expect(state.savingEditPageId).toBeNull();
     expect(state.allPages[0]).toMatchObject({
       title: 'Alpha edited',
-      description: 'After'
+      ai_summary_brief: 'After'
     });
   });
 

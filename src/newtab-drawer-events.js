@@ -203,7 +203,7 @@ export function initSavedPagesDrawerEvents({
     const formData = new FormData(form);
     void handleDrawerUpdate(form.dataset.pageId, {
       title: formData.get('title') || '',
-      description: formData.get('description') || ''
+      ai_summary_brief: formData.get('ai_summary_brief') || ''
     });
   });
 

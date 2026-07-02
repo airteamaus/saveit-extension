@@ -20,7 +20,10 @@ export function renderDrawerCardMarkup(page, {
   const isEditing = page.id === editingPageId;
   const isSavingEdit = page.id === savingEditPageId;
   const domain = getPageDomain(page);
-  const rawSummary = page.description || page.ai_summary_brief || '';
+  // Show the AI summary, falling back to the scraped page description when the
+  // user clears the AI summary. Both fields are read-only here; the edit form
+  // writes ai_summary_brief.
+  const rawSummary = page.ai_summary_brief || page.description || '';
   const normalizedSummary = rawSummary.trim().toLowerCase();
   const normalizedTitle = (page.title || '').trim().toLowerCase();
   const normalizedDomain = (domain || '').trim().toLowerCase();
@@ -110,14 +113,14 @@ export function renderDrawerCardMarkup(page, {
         >
       </label>
       <label class="saved-pages-drawer-edit-field">
-        <span class="saved-pages-drawer-edit-label">Description</span>
+        <span class="saved-pages-drawer-edit-label">Summary</span>
         <textarea
           class="saved-pages-drawer-edit-textarea"
-          name="description"
+          name="ai_summary_brief"
           rows="4"
-          placeholder="Add a description"
+          placeholder="Add a summary"
           ${isSavingEdit ? 'disabled' : ''}
-        >${escapeHtml(page.description || '')}</textarea>
+        >${escapeHtml(page.ai_summary_brief || '')}</textarea>
       </label>
       <div class="saved-pages-drawer-edit-actions">
         <button
