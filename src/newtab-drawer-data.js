@@ -400,7 +400,7 @@ export function createDrawerDataController({
     }
 
     const nextTitle = (updates.title || '').trim();
-    const nextDescription = (updates.description || '').trim();
+    const nextAiSummaryBrief = (updates.ai_summary_brief || '').trim();
     if (!nextTitle) {
       windowObj.alert('Title is required.');
       return;
@@ -412,13 +412,13 @@ export function createDrawerDataController({
     try {
       const response = await api.updatePage(id, {
         title: nextTitle,
-        description: nextDescription
+        ai_summary_brief: nextAiSummaryBrief
       });
       const applyResponseToPage = entry => ({
         ...entry,
         ...(response && typeof response === 'object' ? response : {}),
         title: nextTitle,
-        description: nextDescription
+        ai_summary_brief: nextAiSummaryBrief
       });
       updateDrawerPageCollections(id, applyResponseToPage);
       state.editingPageId = null;
