@@ -211,15 +211,19 @@ export function createDrawerStoreSubscriptions({
             // cache-invalidation refresh) during the completion pause, and we
             // must not render the stale one captured at completion time.
             const currentSnapshot = savedPagesStore.getSnapshot();
-            if (
-              shouldSyncDrawerStoreUpdate({
-                suppressSavedPagesStoreSync: getSuppressSavedPagesStoreSync(),
-                hasInitialized: state.hasInitialized,
-                isExtension: api.isExtension,
-                hasCurrentUser: Boolean(getCurrentUser())
-              }) &&
-              isDrawerOpen()
-            ) {
+            // The completion handoff is not an incidental mid-load store update
+            // (which shouldSyncDrawerStoreUpdate exists to suppress) — it is the
+            // explicit "warm-up finished, paint the cards" signal. In
+            // particular it must NOT be gated on state.hasInitialized: the
+            // fire-and-forget prefetch can complete BEFORE the caller
+            // (loadDrawerBasePages) sets hasInitialized=true, and gating on it
+            // leaves the warming pane stuck at 100% forever. Only the
+            // genuinely-disqualifying conditions matter here: the drawer must
+            // still be open, and (in extension mode) a user must still be
+            // signed in.
+            const hasUser = Boolean(getCurrentUser());
+            const userOk = !api.isExtension || hasUser;
+            if (userOk && !getSuppressSavedPagesStoreSync() && isDrawerOpen()) {
               syncDrawerStateFromStore(currentSnapshot, { query: state.query, render: true });
             }
           }, 300);

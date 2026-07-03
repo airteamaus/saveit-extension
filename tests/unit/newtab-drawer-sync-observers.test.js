@@ -434,5 +434,91 @@ describe('drawer sync observers', () => {
         expect.objectContaining({ percent: 56, indeterminate: false })
       );
     });
+
+    it('integration: hands off to results rendering even when hasInitialized is still false at completion', async () => {
+      // Reproduces the "warming UI stays permanently at 100%, never shows cards"
+      // symptom. The race: prefetchAllPages is launched fire-and-forget DURING
+      // hydrate(), and can complete BEFORE loadDrawerBasePages (the caller) sets
+      // state.hasInitialized = true. The 300ms completion timer then fires with
+      // hasInitialized === false, the shouldSyncDrawerStoreUpdate gate returns
+      // false, and the handoff is skipped — leaving the warming pane stuck.
+      //
+      // The fix: the warming completion handoff must paint regardless of
+      // hasInitialized, because the warm-up completing IS the render trigger.
+      function makePages(count, start = 1) {
+        return Array.from({ length: count }, (_, index) => ({
+          id: `page-${start + index}`,
+          title: `Page ${start + index}`,
+          url: `https://example.com/${start + index}`
+        }));
+      }
+
+      const firstBatch = makePages(50);
+      const secondBatch = makePages(40, 51);
+      const getList = vi
+        .fn()
+        .mockResolvedValueOnce({
+          pages: firstBatch,
+          pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+          meta: { fromCache: false }
+        })
+        .mockResolvedValueOnce({
+          pages: secondBatch,
+          pagination: { total: 90, hasNextPage: false, nextCursor: null },
+          meta: { fromCache: false }
+        });
+
+      const api = {
+        isExtension: true,
+        getCachedPages: vi.fn(async () => null),
+        setCachedPages: vi.fn(async () => {})
+      };
+      const store = new WarmCacheListStore(api, {
+        initialFetchLimit: 50,
+        prefetchBatchLimit: 100,
+        warmCacheScope: { surface: 'test' },
+        getList,
+        buildInitialFetchOptions: (overrides = {}) => ({ limit: 50, sort: 'newest', ...overrides }),
+        buildLoadMoreFetchOptions: (cursor) => ({ limit: 100, sort: 'newest', cursor, skipCache: true })
+      });
+
+      const renderWarmingState = vi.fn();
+      const syncDrawerStateFromStore = vi.fn();
+      // Real production timing: hasInitialized starts FALSE and is only set
+      // true by the caller (loadDrawerBasePages) after hydrate() resolves. The
+      // prefetch can easily complete during that window.
+      const state = { hasInitialized: false, query: '' };
+      const { initStoreSubscriptions } = createDrawerStoreSubscriptions({
+        api: { isExtension: true },
+        state,
+        savedPagesStore: store,
+        projectsStore: { subscribe: () => () => {} },
+        getCurrentUser: () => ({ uid: 'u1' }),
+        isDrawerOpen: () => true,
+        getSuppressSavedPagesStoreSync: () => false,
+        notifySavedPagesTotalChange: vi.fn(),
+        syncDrawerStateFromStore,
+        syncProjectsStateFromStore: vi.fn(),
+        renderWarmingState
+      });
+      initStoreSubscriptions();
+
+      store.setLazy(false);
+      await store.hydrate();
+      // NOTE: deliberately NOT setting state.hasInitialized = true here, to
+      // model the race where the prefetch completes first.
+
+      // Wait for the warm-up + 300ms completion pause. The handoff MUST fire
+      // even though hasInitialized is still false.
+      await vi.waitFor(() => {
+        expect(syncDrawerStateFromStore).toHaveBeenCalled();
+      });
+
+      const handoffCall = syncDrawerStateFromStore.mock.calls.at(-1);
+      expect(handoffCall[1]).toEqual(expect.objectContaining({ render: true }));
+
+      const finalRender = renderWarmingState.mock.calls.at(-1);
+      expect(finalRender[0]).toEqual(expect.objectContaining({ percent: 100 }));
+    });
   });
 });
