@@ -255,6 +255,34 @@ export function createDrawerRenderer({
     `);
   }
 
+  // Post-login warming state: the digging dog plus a determinate progress bar.
+  // Replaces the sign-in / bare-loading panel while the cache warms fully.
+  // `percent` is a 0-100 integer; when `indeterminate` is true (e.g. the server
+  // has not yet returned a total) no percentage is shown and the bar gets the
+  // indeterminate modifier class for a shimmer animation.
+  function renderWarmingState({ percent = 0, indeterminate = false } = {}) {
+    const clampedPercent = Math.max(0, Math.min(100, Math.round(percent)));
+    // Indeterminate means the total is unknown: no percentage is shown anywhere
+    // (no label, no aria-valuenow, and no width:% on the fill — the shimmer
+    // animation styles it via the modifier class instead).
+    const barFillStyle = indeterminate ? '' : `width: ${clampedPercent}%`;
+    const barClass = indeterminate
+      ? 'saved-pages-warming-bar saved-pages-warming-bar-indeterminate'
+      : 'saved-pages-warming-bar';
+    const percentLabel = indeterminate ? '' : `<span class="saved-pages-warming-percent">${clampedPercent}%</span>`;
+
+    renderDrawerState(`
+      <div class="saved-pages-semantic-loading saved-pages-semantic-loading-pane saved-pages-warming-pane" aria-live="polite">
+        ${LOADING_ILLUSTRATION_SVG}
+        <div class="saved-pages-warming-copy">Gathering your saved pages…</div>
+        <div class="${barClass}" role="progressbar" aria-valuemin="0" aria-valuemax="100"${indeterminate ? '' : ` aria-valuenow="${clampedPercent}"`}>
+          <div class="saved-pages-warming-bar-fill"${barFillStyle ? ` style="${barFillStyle}"` : ''}></div>
+        </div>
+        ${percentLabel}
+      </div>
+    `);
+  }
+
   function renderErrorState(message) {
     renderDrawerState(`
       <div class="saved-pages-drawer-state saved-pages-drawer-state-error">
@@ -543,6 +571,7 @@ export function createDrawerRenderer({
     renderResults,
     renderSemanticLoadingState,
     renderSemanticResults,
-    renderSignInState
+    renderSignInState,
+    renderWarmingState
   };
 }

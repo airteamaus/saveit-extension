@@ -76,3 +76,55 @@ describe('newtab drawer renderer loading state', () => {
     expect(renderChrome).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('newtab drawer renderer warming state', () => {
+  it('renders the digging dog plus a determinate progress bar', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderWarmingState({ percent: 19 });
+
+    const html = resultsContainer.innerHTML;
+    expect(html).toContain('saved-pages-warming-pane');
+    expect(html).toContain('loading-dog-body');
+    expect(html).toContain('saved-pages-warming-bar');
+    expect(html).toContain('19%');
+  });
+
+  it('clamps the bar width to the given percentage', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderWarmingState({ percent: 42 });
+
+    const bar = resultsContainer.querySelector('.saved-pages-warming-bar-fill');
+    expect(bar.style.width).toBe('42%');
+  });
+
+  it('renders an indeterminate bar (no % text) when indeterminate is true', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderWarmingState({ indeterminate: true });
+
+    const html = resultsContainer.innerHTML;
+    expect(html).toContain('saved-pages-warming-bar');
+    expect(html).toContain('saved-pages-warming-bar-indeterminate');
+    expect(html).not.toMatch(/\d+%/);
+  });
+
+  it('invokes renderChrome so surrounding chrome stays consistent', () => {
+    const renderChrome = vi.fn();
+    const resultsContainer = document.createElement('div');
+    const renderer = createDrawerRenderer({
+      documentObj: document,
+      resultsContainer,
+      getRenderLimit: () => Number.POSITIVE_INFINITY,
+      renderChrome,
+      getProjectPills: () => [],
+      isProjectsUnavailable: () => false,
+      getProjectScopeLabel: () => 'All pages'
+    });
+
+    renderer.renderWarmingState({ percent: 5 });
+
+    expect(renderChrome).toHaveBeenCalledTimes(1);
+  });
+});
