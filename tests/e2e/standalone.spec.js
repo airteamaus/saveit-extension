@@ -7,8 +7,9 @@ import { fileURLToPath } from 'url';
 // ---------------------------------------------------------------------------
 // The warming flow requires: OAuth sign-in -> authController.init() resolves
 // -> onSignedIn -> drawerController.handleSignedIn -> savedPagesStore.setLazy(false)
-// -> prefetchAllPages() iterates in batches -> store emits refreshState
-// {phase:'prefetch', status:'loading'} -> the sync observer drives renderWarmingState
+// -> prefetchAllPages() iterates in batches (each loadMore emits a change event
+// while options.lazy === false) -> the sync observer's isWarmUpActive() is true
+// for the whole warm-up window -> it drives renderWarmingState
 // (.saved-pages-warming-pane / .saved-pages-warming-bar). None of that can run in
 // this standalone harness, for three independent reasons:
 //
@@ -27,8 +28,10 @@ import { fileURLToPath } from 'url';
 //    filterMockData which returns ALL rows on the cursorless initial load
 //    (src/mock-data.js), so hasNextPage is false on the first response.
 //    prefetchAllPages (src/warm-cache-list-store.js) therefore exits its loop on
-//    iteration one and the store never enters the prefetch/loading phase that
-//    isWarmUpActive (src/newtab-drawer-sync-observers.js) requires to paint the bar.
+//    iteration one — the store never emits the per-batch change events that
+//    isWarmUpActive (src/newtab-drawer-sync-observers.js) keys the warming bar on.
+//    (isWarmUpActive gates on options.lazy === false during the window, then on
+//    the terminal {phase:'prefetch', status:'idle', reason:'complete'} emit.)
 //
 // 3. handleSignedIn is the sole caller of setLazy(false) (grep confirms), and it
 //    is gated entirely behind the OAuth path above.
