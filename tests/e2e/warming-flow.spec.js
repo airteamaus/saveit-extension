@@ -145,4 +145,95 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
       await context.close();
     }
   });
+
+  test('session restoration (4 tabs, 1s apart) shows cards, never the warming UI', async () => {
+    // Regression guard for the bug where the warming UI flashed over the user's
+    // existing cards on every newtab open with a persisted login. After the fix,
+    // setLazy(false) is only called from the interactive Sign-in button — never
+    // from session restoration — so opening new tabs while logged in must render
+    // cards directly with no warming pane.
+    const { context } = await launchWithExtension();
+    try {
+      const results = [];
+
+      for (let i = 0; i < 4; i++) {
+        if (i > 0) {
+          await new Promise((r) => setTimeout(r, 1000));
+        }
+
+        const page = await context.newPage();
+        await page.goto('chrome://newtab/?debug=1', { waitUntil: 'load' });
+        await page.waitForFunction(
+          () => globalThis.__saveit?.app?.savedPagesStore,
+          null,
+          { timeout: 15000 }
+        );
+
+        // Probe the store's lazy default IMMEDIATELY after app exposure,
+        // before any test interaction. Must be true (commit #15's lazy opt-out).
+        const initialLazy = await page.evaluate(() => {
+          return globalThis.__saveit.app.savedPagesStore.options.lazy;
+        });
+        expect(initialLazy, `tab ${i + 1} store must default to lazy`).toBe(true);
+
+        // Install a fast single-batch getList so hydrate resolves quickly.
+        await page.evaluate(() => {
+          const win = window;
+          const makePages = (count, start) => Array.from({ length: count }, (_, j) => ({
+            id: `p-${start + j}`,
+            title: `Page ${start + j}`,
+            url: `https://example.com/${start + j}`
+          }));
+          const store = globalThis.__saveit.app.savedPagesStore;
+          store.options.getList = async () => ({
+            pages: makePages(20, 0),
+            pagination: { total: 20, hasNextPage: false, nextCursor: null },
+            meta: { fromCache: false }
+          });
+        });
+
+        // Simulate SESSION RESTORATION: logged-in user, but do NOT call
+        // setLazy(false) (only the interactive Sign-in button does that).
+        // Open the drawer + hydrate, exactly as onAuthStateChanged -> handleSignedIn
+        // -> loadDrawerBasePages would on a real session restore.
+        await page.evaluate(async () => {
+          window.firebaseAuth = { currentUser: { uid: 'test-user', email: 'test@example.com' } };
+          const app = globalThis.__saveit.app;
+          app.drawerController.open();
+          await app.savedPagesStore.hydrate();
+        });
+
+        // Sample the DOM over a short window to catch any warming-pane flash.
+        let sawWarmingPane = false;
+        for (let s = 0; s < 10; s++) {
+          const dom = await page.evaluate(() => ({
+            warmingPane: !!document.querySelector('.saved-pages-warming-pane'),
+            cards: document.querySelectorAll('.saved-pages-drawer-card').length
+          }));
+          if (dom.warmingPane) sawWarmingPane = true;
+          if (dom.cards > 0) break;
+          await page.waitForTimeout(30);
+        }
+
+        const finalDom = await page.evaluate(() => ({
+          warmingPane: !!document.querySelector('.saved-pages-warming-pane'),
+          cards: document.querySelectorAll('.saved-pages-drawer-card').length
+        }));
+
+        results.push({ tab: i + 1, sawWarmingPane, finalDom });
+        await page.close();
+      }
+
+      for (const r of results) {
+        process.stdout.write(
+          `[TAB ${r.tab}] sawWarmingPane=${r.sawWarmingPane} final=${JSON.stringify(r.finalDom)}\n`
+        );
+        expect(r.sawWarmingPane, `tab ${r.tab} should never show the warming pane`).toBe(false);
+        expect(r.finalDom.cards, `tab ${r.tab} should render cards`).toBeGreaterThan(0);
+        expect(r.finalDom.warmingPane, `tab ${r.tab} warming pane must be absent`).toBe(false);
+      }
+    } finally {
+      await context.close();
+    }
+  });
 });

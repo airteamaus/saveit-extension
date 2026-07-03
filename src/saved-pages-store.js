@@ -11,6 +11,11 @@ export class SavedPagesStore extends WarmCacheListStore {
       maxItems: options.maxItems || Number.POSITIVE_INFINITY,
       initialFetchLimit: options.initialFetchLimit || 50,
       prefetchBatchLimit: options.prefetchBatchLimit || 100,
+      // Forward lazy so the All-pages store can opt out of eager full warm-up
+      // (commit #15). Without this, options.lazy is dropped here and the
+      // WarmCacheListStore constructor defaults it to false, making every
+      // store eagerly prefetch — which surfaces the warming UI on every load.
+      lazy: options.lazy === true,
       warmCacheScope: options.warmCacheScope || null,
       getList: fetchOptions => api?.getSavedPages?.(fetchOptions),
       getIncrementalList: fetchOptions => api?.getSavedPages?.(fetchOptions),
