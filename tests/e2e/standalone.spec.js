@@ -2,6 +2,42 @@ import { test, expect } from '@playwright/test';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+// ---------------------------------------------------------------------------
+// Why the post-login cache-warming flow has NO E2E coverage here
+// ---------------------------------------------------------------------------
+// The warming flow requires: OAuth sign-in -> authController.init() resolves
+// -> onSignedIn -> drawerController.handleSignedIn -> savedPagesStore.setLazy(false)
+// -> prefetchAllPages() iterates in batches -> store emits refreshState
+// {phase:'prefetch', status:'loading'} -> the sync observer drives renderWarmingState
+// (.saved-pages-warming-pane / .saved-pages-warming-bar). None of that can run in
+// this standalone harness, for three independent reasons:
+//
+// 1. No OAuth path in standalone. newtab.html loads Firebase only through the
+//    extension bundle firebase-init-pages.js; under file:// that bundle never
+//    sets window.firebaseReady, so createNewtabAuthController.init() (src/newtab-auth.js)
+//    returns { handledInitialState:false } and onAuthStateChanged is never wired.
+//    Consequently onSignedIn -> handleSignedIn (src/newtab-app-coordination.js) never
+//    fires. There is no mock-user hook, debug flag, or test seam to force it.
+//
+// 2. Mock data loads synchronously and short-circuits the warm-up loop. Even if
+//    setLazy(false) were forced, getMockPages (src/api-pages-standalone.js) calls
+//    filterMockData which returns ALL rows on the cursorless initial load
+//    (src/mock-data.js), so hasNextPage is false on the first response.
+//    prefetchAllPages (src/warm-cache-list-store.js) therefore exits its loop on
+//    iteration one and the store never enters the prefetch/loading phase that
+//    isWarmUpActive (src/newtab-drawer-sync-observers.js) requires to paint the bar.
+//
+// 3. handleSignedIn is the sole caller of setLazy(false) (grep confirms), and it
+//    is gated entirely behind the OAuth path above.
+//
+// Real coverage of the warming UI lives in the unit tests:
+//   - tests/unit/newtab-drawer-sync-observers.test.js (warming bar %, completion pause)
+//   - tests/unit/newtab-drawer-sync-lifecycle.test.js (handleSignedIn -> setLazy(false))
+// The regression guard below ('does not show the post-login warming pane...') is NOT
+// coverage of the warming flow; it guards that standalone mode never accidentally
+// surfaces warming UI it can't drive to completion.
+// ---------------------------------------------------------------------------
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
 
@@ -167,6 +203,20 @@ test.describe('Standalone Mode', () => {
     await expect(editedCard.locator('.saved-pages-drawer-card-summary')).toContainText('Updated summary from Playwright.');
 
     void originalTitle;
+  });
+
+  // Regression guard, NOT coverage of the warming flow (see the file header for
+  // why the warming flow can't be E2E-tested here). Standalone mode never warms,
+  // so the warming pane must never appear — this catches a future change that
+  // accidentally lights it up outside the OAuth-gated path.
+  test('does not show the post-login warming pane in standalone mode', async ({ page }) => {
+    await showAllPages(page);
+    // The drawer is open and rendering cards; warming UI should be absent at
+    // rest and stay absent (it only ever appears mid-warm-up, which standalone
+    // can't reach). Give it a beat to be sure nothing paints transiently.
+    await page.waitForTimeout(100);
+    await expect(page.locator('.saved-pages-warming-pane')).toHaveCount(0);
+    await expect(page.locator('.saved-pages-warming-bar')).toHaveCount(0);
   });
 
   test('renders a windowed slice and grows the list on scroll (lazy render)', async ({ page }) => {
