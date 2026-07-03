@@ -557,9 +557,10 @@ export class WarmCacheListStore {
     // explicit loadMore() calls (e.g. on scroll). This keeps large libraries
     // from hydrating in full on first paint.
     if (this.options.lazy) {
-      // Keep the flag honest: a store that opted out via setLazy(false) and
-      // then re-entered this early return (e.g. reset back to lazy) still
-      // ends up lazy afterwards. A store that was always lazy is a no-op.
+      // Defensive reset: the eager path below restores lazy=true in its finally,
+      // so this early-return path must too — otherwise a store that was flipped
+      // to non-lazy and then back could drift. For an always-lazy store this is
+      // a no-op.
       this.options.lazy = true;
       return this.getSnapshot();
     }
@@ -583,7 +584,7 @@ export class WarmCacheListStore {
       }
     } finally {
       // Restore lazy semantics for the rest of the session so scroll-driven
-      // pagination keeps the optimization from commit #15.
+      // pagination keeps its lazy optimization afterwards.
       this.options.lazy = true;
     }
 

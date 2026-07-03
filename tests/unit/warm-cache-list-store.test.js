@@ -226,6 +226,28 @@ describe('WarmCacheListStore', () => {
     expect(store.options.lazy).toBe(true);
   });
 
+  it('resets lazy to true even when a loadMore batch rejects mid-warm', async () => {
+    const firstBatch = makePages(50);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: firstBatch,
+        pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+        meta: { fromCache: false }
+      })
+      .mockRejectedValueOnce(new Error('network down'));
+
+    const { store } = createStore({ getList }, { lazy: true });
+
+    store.setLazy(false);
+    await store.hydrate();
+    // Wait for the fire-and-forget prefetch to settle (it should reject, not throw
+    // synchronously). The lazy flag must be restored regardless.
+    await vi.waitFor(() => {
+      expect(store.options.lazy).toBe(true);
+    });
+  });
+
   it('does not change the lazy flag when setLazy is not called (regression guard)', async () => {
     const firstBatch = makePages(50);
     const getList = vi.fn().mockResolvedValueOnce({
