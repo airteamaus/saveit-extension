@@ -155,14 +155,17 @@ export function createDrawerStoreSubscriptions({
   }
 
   function isWarmUpActive(snapshot) {
-    const phase = snapshot?.refreshState?.phase;
-    const status = snapshot?.refreshState?.status;
-    // Active while prefetching (loading) OR just-finished (idle/complete),
-    // which the caller transitions out of via the completion pause.
-    return (
-      phase === 'prefetch' &&
-      (status === 'loading' || (status === 'idle' && snapshot.refreshState.reason === 'complete'))
-    );
+    // The warm-up window is bounded by the store's lazy flag: handleSignedIn
+    // sets lazy=false, and prefetchAllPages self-resets it to true on
+    // completion. Inside that window, loadMore() emits change events with
+    // phase 'load-more' (not 'prefetch'), so we can't gate on the phase.
+    // The phase is consulted ONLY to detect the terminal completion emit,
+    // which carries { phase: 'prefetch', status: 'idle', reason: 'complete' }.
+    const isCompletion =
+      snapshot?.refreshState?.phase === 'prefetch' &&
+      snapshot?.refreshState?.status === 'idle' &&
+      snapshot?.refreshState?.reason === 'complete';
+    return savedPagesStore.options.lazy === false || isCompletion;
   }
 
   function initStoreSubscriptions() {

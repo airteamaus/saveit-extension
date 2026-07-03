@@ -6,6 +6,7 @@ import {
   shouldSyncDrawerStoreUpdate
 } from '../../src/newtab-drawer-sync-observers.js';
 import { createDrawerSyncCoordinator } from '../../src/newtab-drawer-sync.js';
+import { WarmCacheListStore } from '../../src/warm-cache-list-store.js';
 
 describe('drawer sync observers', () => {
   describe('shouldSyncDrawerStoreUpdate', () => {
@@ -57,6 +58,7 @@ describe('drawer sync observers', () => {
         subscribe: vi.fn((callback) => {
           savedPagesSubscribers.push(callback);
         }),
+        options: { lazy: true },
         getSnapshot: vi.fn(() => ({ allPages: [{ id: 'page-1' }], total: 3 }))
       },
       projectsStore: {
@@ -166,6 +168,7 @@ describe('drawer sync observers', () => {
     function createWarmingHarness({ snapshot, drawerOpen = true } = {}) {
       const savedPagesStore = {
         _listeners: [],
+        options: { lazy: false },
         subscribe(listener) {
           this._listeners.push(listener);
           return () => {
@@ -290,6 +293,7 @@ describe('drawer sync observers', () => {
       // seam so a key mismatch fails here instead of in production.
       const savedPagesStore = {
         _listeners: [],
+        options: { lazy: false },
         subscribe(listener) {
           this._listeners.push(listener);
           return () => {
@@ -336,6 +340,98 @@ describe('drawer sync observers', () => {
       // warming branch guard would be false and this spy would never be called.
       expect(renderDrawerWarmingState).toHaveBeenCalledWith(
         expect.objectContaining({ percent: 30 })
+      );
+    });
+
+    it('integration: renders the warming bar per-batch during a real store warm-up (not just at completion)', async () => {
+      // Regression guard for the phase-vocabulary mismatch: loadMore() emits
+      // change events with phase 'load-more' during a real warm-up, NOT
+      // 'prefetch'. The old isWarmUpActive gated on phase === 'prefetch', so
+      // the warming branch was dead for every per-batch event and the bar only
+      // flashed once at 100% on completion. This wires a REAL WarmCacheListStore
+      // to the REAL subscriber so the disconnect can't hide behind a hand-faked
+      // snapshot.
+      function makePages(count, start = 1) {
+        return Array.from({ length: count }, (_, index) => ({
+          id: `page-${start + index}`,
+          title: `Page ${start + index}`,
+          url: `https://example.com/${start + index}`
+        }));
+      }
+
+      const firstBatch = makePages(50);
+      const secondBatch = makePages(40, 51);
+      const getList = vi
+        .fn()
+        .mockResolvedValueOnce({
+          pages: firstBatch,
+          pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+          meta: { fromCache: false }
+        })
+        .mockResolvedValueOnce({
+          pages: secondBatch,
+          pagination: { total: 90, hasNextPage: false, nextCursor: null },
+          meta: { fromCache: false }
+        });
+
+      const api = {
+        isExtension: true,
+        getCachedPages: vi.fn(async () => null),
+        setCachedPages: vi.fn(async () => {})
+      };
+      const store = new WarmCacheListStore(api, {
+        initialFetchLimit: 50,
+        prefetchBatchLimit: 100,
+        warmCacheScope: { surface: 'test' },
+        getList,
+        buildInitialFetchOptions: (overrides = {}) => ({
+          limit: 50,
+          sort: 'newest',
+          ...overrides
+        }),
+        buildLoadMoreFetchOptions: (cursor) => ({
+          limit: 100,
+          sort: 'newest',
+          cursor,
+          skipCache: true
+        })
+      });
+
+      const renderWarmingState = vi.fn();
+      const { initStoreSubscriptions } = createDrawerStoreSubscriptions({
+        api: { isExtension: true },
+        state: { hasInitialized: true, query: '' },
+        savedPagesStore: store,
+        projectsStore: { subscribe: () => () => {} },
+        getCurrentUser: () => ({ uid: 'u1' }),
+        isDrawerOpen: () => true,
+        getSuppressSavedPagesStoreSync: () => false,
+        notifySavedPagesTotalChange: vi.fn(),
+        syncDrawerStateFromStore: vi.fn(),
+        syncProjectsStateFromStore: vi.fn(),
+        renderWarmingState
+      });
+      initStoreSubscriptions();
+
+      store.setLazy(false);
+      await store.hydrate();
+
+      // The warm-up is fire-and-forget; poll until the store self-resets lazy
+      // to true (the finally in prefetchAllPages), which happens just after
+      // the completion emit.
+      await vi.waitFor(() => {
+        expect(store.options.lazy).toBe(true);
+      });
+
+      // The bar must have rendered DURING the warm-up with a partial (non-100)
+      // determinate percentage — proving per-batch rendering, not just a single
+      // flash at completion. First batch is 50/90 ≈ 56%.
+      const determinatePartialRenders = renderWarmingState.mock.calls.filter(
+        ([progress]) => !progress.indeterminate && progress.percent < 100
+      );
+      expect(determinatePartialRenders.length).toBeGreaterThan(0);
+      expect(determinatePartialRenders[0][0]).toEqual(
+        expect.objectContaining({ percent: 56, indeterminate: false })
       );
     });
   });
