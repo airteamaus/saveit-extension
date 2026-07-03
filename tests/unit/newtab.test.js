@@ -896,13 +896,14 @@ describe('newtab modules', () => {
        updatePage: vi.fn(),
        ...(overrides.api || {})
      };
-     const savedPagesStore = {
-       getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
-       hydrate: vi.fn(),
-       removePage: vi.fn(),
-       reset: vi.fn(),
-       ...(overrides.savedPagesStore || {})
-     };
+    const savedPagesStore = {
+      getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+      hydrate: vi.fn(),
+      removePage: vi.fn(),
+      reset: vi.fn(),
+      options: { lazy: true },
+      ...(overrides.savedPagesStore || {})
+    };
      let projectStoreSnapshot = {
        allPages: [],
        total: 0
@@ -964,10 +965,11 @@ describe('newtab modules', () => {
        isDrawerOpen: vi.fn(() => false),
        setDrawerSearchValue: vi.fn(),
        updateDrawerUrl: vi.fn(),
-       renderDrawerLoadingState: vi.fn(),
-       renderDrawerErrorState: vi.fn(),
-       renderDrawerSignInState: vi.fn(),
-       renderDrawerResults: vi.fn(),
+      renderDrawerLoadingState: vi.fn(),
+      renderDrawerErrorState: vi.fn(),
+      renderDrawerSignInState: vi.fn(),
+      renderDrawerWarmingState: vi.fn(),
+      renderDrawerResults: vi.fn(),
        syncDrawerStateFromStore: vi.fn(),
        syncProjectsStateFromStore: vi.fn(snapshot => {
          state.projects = snapshot.projects || [];

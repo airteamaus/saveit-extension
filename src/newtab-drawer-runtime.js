@@ -128,6 +128,7 @@ export function createSavedPagesDrawerController({
     renderDrawerLoadingState,
     renderDrawerErrorState,
     renderDrawerSignInState,
+    renderDrawerWarmingState,
     renderDrawerResults,
     syncDrawerStateFromStore,
     syncProjectsStateFromStore,
