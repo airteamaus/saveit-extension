@@ -146,6 +146,86 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
     }
   });
 
+  test('logout then interactive login shows the warming UI, then cards', async () => {
+    // Reproduces the "left with 'No pages in All pages' empty state after
+    // logout -> login" symptom. Drives the real handleSignIn -> handleSignedIn
+    // chain (not direct hydrate) so the full lifecycle is exercised.
+    const { context } = await launchWithExtension();
+    try {
+      const page = await context.newPage();
+      await page.goto('chrome://newtab/?debug=1', { waitUntil: 'load' });
+      await page.waitForFunction(
+        () => globalThis.__saveit?.app?.savedPagesStore,
+        null,
+        { timeout: 15000 }
+      );
+
+      // Install a controlled multi-batch getList. Track call count globally so
+      // we can confirm hydrate actually invoked it.
+      await page.evaluate(() => {
+        const win = window;
+        const makePages = (count, start) => Array.from({ length: count }, (_, i) => ({
+          id: `p-${start + i}`,
+          title: `Page ${start + i}`,
+          url: `https://example.com/${start + i}`
+        }));
+        const store = globalThis.__saveit.app.savedPagesStore;
+        win.__getListCalls = 0;
+        store.options.getList = async () => {
+          win.__getListCalls += 1;
+          await new win.Promise((r) => win.setTimeout(r, 150));
+          if (win.__getListCalls === 1) {
+            return {
+              pages: makePages(50, 0),
+              pagination: { total: 90, hasNextPage: true, nextCursor: 'p-49' },
+              meta: { fromCache: false }
+            };
+          }
+          return {
+            pages: makePages(40, 50),
+            pagination: { total: 90, hasNextPage: false, nextCursor: null },
+            meta: { fromCache: false }
+          };
+        };
+      });
+
+      // Simulate the interactive sign-in flow end-to-end:
+      //   handleSignIn fires onInteractiveSignIn (-> setLazy(false))
+      //   then OAuth "completes" -> onAuthStateChanged -> handleSignedIn
+      await page.evaluate(async () => {
+        const win = window;
+        const app = globalThis.__saveit.app;
+
+        // Arm the warm-up exactly as the Sign-in button would.
+        app.savedPagesStore.setLazy(false);
+
+        // OAuth "completes": set the user so getCurrentUser() returns it.
+        win.firebaseAuth = { currentUser: { uid: 'test-user', email: 'test@example.com' } };
+
+        // handleSignedIn: resets the store and triggers loadDrawerResults,
+        // which (with hasInitialized=false) calls loadDrawerBasePages -> hydrate.
+        try {
+          await app.drawerController.handleSignedIn();
+          win.console.log('[FLOW] handleSignedIn resolved ok');
+        } catch (e) {
+          win.console.log('[FLOW] handleSignedIn threw: ' + e);
+        }
+      });
+
+      // handleSignedIn runs the cold-load path: warming pane -> hydrate -> cards.
+      // The warming pane must appear. (Per-batch partial % is asserted in the
+      // dedicated warming test; here we confirm the pane renders at all after a
+      // logout->login, then hands off to cards.)
+      await expect(page.locator('.saved-pages-warming-pane')).toBeVisible({ timeout: 15000 });
+
+      // ...then hand off to cards.
+      await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.saved-pages-warming-pane')).toHaveCount(0);
+    } finally {
+      await context.close();
+    }
+  });
+
   test('session restoration (4 tabs, 1s apart) shows cards, never the warming UI', async () => {
     // Regression guard for the bug where the warming UI flashed over the user's
     // existing cards on every newtab open with a persisted login. After the fix,

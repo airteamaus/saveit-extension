@@ -49,7 +49,16 @@ export function createDrawerSyncLifecycle({
 
   async function handleSignedIn() {
     if (isDrawerOpen()) {
-      if (state.hasInitialized) {
+      // If the drawer already has renderable pages (e.g. a warm cache painted
+      // during session restoration before auth resolved), keep them visible and
+      // just refresh results — resetting would cause an unnecessary flash.
+      // But if there's nothing renderable (the signed-out sign-in state, whose
+      // render sets hasInitialized=true even though nothing was loaded), we
+      // MUST reset and reload — otherwise loadDrawerBasePages never runs and
+      // the user is left staring at "No pages" after a real sign-out -> sign-in.
+      const snapshot = savedPagesStore.getSnapshot?.();
+      const hasRenderable = snapshot?.allPages?.length > 0;
+      if (state.hasInitialized && hasRenderable) {
         await loadDrawerResults(getSearchQuery(), { syncUrl: false });
         return;
       }

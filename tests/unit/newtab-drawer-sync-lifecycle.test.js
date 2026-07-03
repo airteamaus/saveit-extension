@@ -94,7 +94,10 @@ describe('drawer sync lifecycle', () => {
     const loadDrawerResults = vi.fn().mockResolvedValue(undefined);
     const savedPagesStore = {
       hydrate: vi.fn().mockResolvedValue(undefined),
-      reset: vi.fn()
+      reset: vi.fn(),
+      // The fast-path requires renderable pages (a warm cache painted before
+      // auth resolved). Without these, sign-in must reset + reload.
+      getSnapshot: () => ({ allPages: [{ id: 'p1' }] })
     };
     const lifecycle = createDrawerSyncLifecycle({
       api: { getSavedPages: vi.fn(), isExtension: false },
@@ -116,6 +119,38 @@ describe('drawer sync lifecycle', () => {
     expect(savedPagesStore.reset).not.toHaveBeenCalled();
     expect(savedPagesStore.hydrate).not.toHaveBeenCalled();
     expect(loadDrawerResults).toHaveBeenCalledWith('alpha', { syncUrl: false });
+  });
+
+  it('resets and reloads on sign-in when the drawer has no renderable pages (e.g. after sign-out)', async () => {
+    // Regression guard: after sign-out the drawer renders the sign-in/empty
+    // state (hasInitialized=true, allPages empty). A subsequent sign-in MUST
+    // reset and reload — otherwise loadDrawerBasePages never runs and the user
+    // is left staring at "No pages".
+    const loadDrawerResults = vi.fn().mockResolvedValue(undefined);
+    const savedPagesStore = {
+      hydrate: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn(),
+      getSnapshot: () => ({ allPages: [] })
+    };
+    const lifecycle = createDrawerSyncLifecycle({
+      api: { getSavedPages: vi.fn(), isExtension: false },
+      state: { hasInitialized: true },
+      savedPagesStore,
+      projectsStore: { reset: vi.fn() },
+      getCurrentUser: vi.fn(() => ({ uid: 'user-1' })),
+      isDrawerOpen: vi.fn(() => true),
+      getSearchQuery: vi.fn(() => ''),
+      notifySavedPagesTotalChange: vi.fn(),
+      loadDrawerResults,
+      renderDrawerSignInState: vi.fn(),
+      resetDrawerState: vi.fn(),
+      setSuppressSavedPagesStoreSync: vi.fn()
+    });
+
+    await lifecycle.handleSignedIn();
+
+    expect(savedPagesStore.reset).toHaveBeenCalledWith({ emit: false });
+    expect(loadDrawerResults).toHaveBeenCalledWith('', { syncUrl: false });
   });
 
   it('still resets before reloading when sign-in completes before the drawer initializes', async () => {
