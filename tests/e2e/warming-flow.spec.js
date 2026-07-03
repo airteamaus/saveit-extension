@@ -218,6 +218,25 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
       // logout->login, then hands off to cards.)
       await expect(page.locator('.saved-pages-warming-pane')).toBeVisible({ timeout: 15000 });
 
+      // No-flicker assertion: once cards appear, the warming pane must NEVER
+      // come back. The pre-refactor bug was cards painting mid-warm (first
+      // batch), then the warming dog overwriting them (late prefetch batch) and
+      // getting stuck. Sample the DOM across the transition and assert the
+      // sequence is strictly: warming → cards (never cards → warming).
+      let sawCards = false;
+      let flickeredBackToWarming = false;
+      for (let s = 0; s < 40; s++) {
+        const dom = await page.evaluate(() => ({
+          warming: !!document.querySelector('.saved-pages-warming-pane'),
+          cards: document.querySelectorAll('.saved-pages-drawer-card').length
+        }));
+        if (dom.cards > 0) sawCards = true;
+        if (sawCards && dom.warming) flickeredBackToWarming = true;
+        if (sawCards && !dom.warming) break;
+        await page.waitForTimeout(50);
+      }
+      expect(flickeredBackToWarming, 'cards must never be overwritten by the warming pane').toBe(false);
+
       // ...then hand off to cards.
       await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 10000 });
       await expect(page.locator('.saved-pages-warming-pane')).toHaveCount(0);

@@ -1,5 +1,6 @@
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+import { computeWarmingProgress, isWarmUpComplete } from './newtab-drawer-state.js';
 
 export function shouldSyncDrawerStoreUpdate({
   suppressSavedPagesStoreSync = false,
@@ -107,7 +108,13 @@ export function createDrawerStoreSubscriptions({
   notifySavedPagesTotalChange,
   syncDrawerStateFromStore,
   syncProjectsStateFromStore,
-  renderWarmingState,
+  // Renders the drawer via the central dispatcher. The warming UI is now a
+  // branch of the dispatcher (gated on state.warmUpInProgress), not a direct
+  // paint — so the subscriber drives the warming bar by setting the flag +
+  // progress on state, then calling renderDrawerResults(). This makes the
+  // dispatcher the single render authority and eliminates the race where the
+  // warming pane and cards fought over the drawer.
+  renderDrawerResults,
   // Bind timers to the page window, not the module scope. In a browser
   // extension the module-scope setTimeout (captured at definition time) does
   // not always fire its callback — the window-bound one does. The existing
@@ -116,62 +123,23 @@ export function createDrawerStoreSubscriptions({
   windowObj = window,
   timers = { setTimeout: windowObj.setTimeout.bind(windowObj), clearTimeout: windowObj.clearTimeout.bind(windowObj) }
 }) {
-  // Warming-UI state. Lives here because the subscriber that drives it lives
-  // here. Reset whenever a non-warming render path runs (e.g. sign-out, a
-  // fresh load that hits the warm-cache fast path).
-  let warming = { active: false, lastPercent: 0, determinate: false, completionTimer: null };
+  // The only warming-specific state that doesn't live on `state` is the
+  // completion timer handle (it's an implementation detail of the 300ms hold).
+  let completionTimer = null;
 
-  function clearWarmingCompletionTimer() {
-    if (warming.completionTimer) {
-      timers.clearTimeout(warming.completionTimer);
-      warming.completionTimer = null;
+  function clearCompletionTimer() {
+    if (completionTimer) {
+      timers.clearTimeout(completionTimer);
+      completionTimer = null;
     }
   }
 
-  function resetWarming() {
-    clearWarmingCompletionTimer();
-    warming = { active: false, lastPercent: 0, determinate: false, completionTimer: null };
-  }
-
-  // Computes the warming percentage for a snapshot. Returns { percent, indeterminate }.
-  // Once we've shown a determinate reading we never go back below it (clamp),
-  // and an unknown total caps the displayed value at 99 until completion.
-  function computeWarmingProgress(snapshot) {
-    // The warming UI runs only on the All-pages store (maxItems = Infinity),
-    // so total need not be capped against a finite maxItems here.
-    const total =
-      typeof snapshot?.total === 'number' && snapshot.total > 0
-        ? snapshot.total
-        : null;
-    const loaded = Array.isArray(snapshot?.allPages) ? snapshot.allPages.length : 0;
-
-    if (total == null) {
-      return {
-        percent: warming.determinate ? Math.min(warming.lastPercent, 99) : 0,
-        indeterminate: !warming.determinate
-      };
-    }
-
-    const computed = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
-    // Clamp: never decrease once determinate.
-    const percent = warming.determinate ? Math.max(warming.lastPercent, computed) : computed;
-    warming.determinate = true;
-    warming.lastPercent = percent;
-    return { percent, indeterminate: false };
-  }
-
+  // The warm-up window is bounded by the store's lazy flag: onInteractiveSignIn
+  // sets lazy=false, and prefetchAllPages self-resets it to true on completion.
+  // While that window is open (lazy===false), loadMore() emits change events
+  // that should drive the warming bar.
   function isWarmUpActive(snapshot) {
-    // The warm-up window is bounded by the store's lazy flag: handleSignedIn
-    // sets lazy=false, and prefetchAllPages self-resets it to true on
-    // completion. Inside that window, loadMore() emits change events with
-    // phase 'load-more' (not 'prefetch'), so we can't gate on the phase.
-    // The phase is consulted ONLY to detect the terminal completion emit,
-    // which carries { phase: 'prefetch', status: 'idle', reason: 'complete' }.
-    const isCompletion =
-      snapshot?.refreshState?.phase === 'prefetch' &&
-      snapshot?.refreshState?.status === 'idle' &&
-      snapshot?.refreshState?.reason === 'complete';
-    return savedPagesStore.options.lazy === false || isCompletion;
+    return savedPagesStore.options.lazy === false || isWarmUpComplete(snapshot);
   }
 
   function initStoreSubscriptions() {
@@ -182,54 +150,41 @@ export function createDrawerStoreSubscriptions({
 
       // Drive the warming UI while it's active. This takes priority over the
       // normal sync path so the progress bar updates on every batch.
-      if (isWarmUpActive(snapshot) && typeof renderWarmingState === 'function' && isDrawerOpen()) {
-        // Starting (or continuing) a warm-up. Tear down any pending completion
-        // timer from a prior warm-up so it can't fire mid-warm and wipe this
-        // one's progress state or render a stale snapshot.
-        if (warming.completionTimer) {
-          clearWarmingCompletionTimer();
-        }
-        if (!warming.active) {
-          warming.active = true;
-        }
+      if (isWarmUpActive(snapshot) && typeof renderDrawerResults === 'function' && isDrawerOpen()) {
+        // Tear down any pending completion timer from a prior warm-up so it
+        // can't fire mid-warm and clear the flag prematurely.
+        clearCompletionTimer();
 
-        const complete =
-          snapshot.refreshState.status === 'idle' && snapshot.refreshState.reason === 'complete';
-        const progress = complete
-          ? { percent: 100, indeterminate: false }
-          : computeWarmingProgress(snapshot);
+        const complete = isWarmUpComplete(snapshot);
+        const progress = computeWarmingProgress(snapshot, state, { complete });
+        state.warmUpInProgress = true;
+        state.warmUpProgress = progress;
 
-        // Always paint 100% on completion, even if we were indeterminate.
-        if (complete) {
-          warming.determinate = true;
-          warming.lastPercent = 100;
-        }
+        // Route through the dispatcher — the single render authority. It sees
+        // warmUpInProgress and renders the warming pane, never cards.
+        renderDrawerResults();
 
-        renderWarmingState(progress);
-
-        if (complete && !warming.completionTimer) {
-          // Brief completion pause so the user sees the bar fill, then hand
-          // off to the normal results-render path.
-          warming.completionTimer = timers.setTimeout(() => {
-            warming.completionTimer = null;
-            resetWarming();
-            // Read a fresh snapshot: the store may have advanced (e.g. a
-            // cache-invalidation refresh) during the completion pause, and we
-            // must not render the stale one captured at completion time.
-            const currentSnapshot = savedPagesStore.getSnapshot();
-            // The completion handoff is not an incidental mid-load store update
-            // (which shouldSyncDrawerStoreUpdate exists to suppress) — it is the
-            // explicit "warm-up finished, paint the cards" signal. It must not
-            // be gated on state.hasInitialized: the fire-and-forget prefetch
-            // can complete BEFORE the caller (loadDrawerBasePages) sets
-            // hasInitialized=true, and gating on it leaves the warming pane
-            // stuck at 100% forever. Only the genuinely-disqualifying
-            // conditions matter here: the drawer must still be open, and (in
-            // extension mode) a user must still be signed in.
-            const hasUser = Boolean(getCurrentUser());
-            const userOk = !api.isExtension || hasUser;
-            if (userOk && !getSuppressSavedPagesStoreSync() && isDrawerOpen()) {
-              syncDrawerStateFromStore(currentSnapshot, { query: state.query, render: true });
+        if (complete && !completionTimer) {
+          // Brief completion pause so the user sees the bar fill to 100%,
+          // then clear the flag so the next dispatcher call renders cards.
+          completionTimer = timers.setTimeout(() => {
+            completionTimer = null;
+            state.warmUpInProgress = false;
+            state.warmUpLastPercent = 0;
+            state.warmUpDeterminate = false;
+            // The store snapshot already populated state.allPages via the
+            // loadDrawerBasePages -> syncDrawerStateFromStore path; the
+            // dispatcher reads it now that the warming flag is clear.
+            // Guard: only paint cards if the drawer is still open and (in
+            // extension mode) a user is still signed in.
+            const userOk = !api.isExtension || Boolean(getCurrentUser());
+            if (userOk && isDrawerOpen()) {
+              const currentSnapshot = savedPagesStore.getSnapshot();
+              if (!getSuppressSavedPagesStoreSync()) {
+                syncDrawerStateFromStore(currentSnapshot, { query: state.query, render: true });
+              } else {
+                renderDrawerResults();
+              }
             }
           }, 300);
         }
@@ -239,8 +194,11 @@ export function createDrawerStoreSubscriptions({
 
       // If we were warming and are no longer (e.g. store reset, sign-out),
       // drop warming state so a future warm-up starts fresh.
-      if (warming.active && !isWarmUpActive(snapshot)) {
-        resetWarming();
+      if (state.warmUpInProgress && !isWarmUpActive(snapshot)) {
+        clearCompletionTimer();
+        state.warmUpInProgress = false;
+        state.warmUpLastPercent = 0;
+        state.warmUpDeterminate = false;
       }
 
       if (

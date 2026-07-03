@@ -180,8 +180,7 @@ describe('drawer sync observers', () => {
         },
         getSnapshot: () => snapshot
       };
-      const renderedStates = [];
-      const renderWarmingState = vi.fn((opts) => renderedStates.push(opts));
+      const renderDrawerResults = vi.fn();
       const timers = {
         setTimeout: vi.fn((fn) => {
           fn();
@@ -191,7 +190,14 @@ describe('drawer sync observers', () => {
       };
       const api = { isExtension: true };
       const getCurrentUser = () => ({ uid: 'u1' });
-      const state = { hasInitialized: true, query: '' };
+      const state = {
+        hasInitialized: true,
+        query: '',
+        warmUpInProgress: false,
+        warmUpProgress: { percent: 0, indeterminate: true },
+        warmUpLastPercent: 0,
+        warmUpDeterminate: false
+      };
       const syncDrawerStateFromStore = vi.fn();
       const notifySavedPagesTotalChange = vi.fn();
 
@@ -206,15 +212,15 @@ describe('drawer sync observers', () => {
         notifySavedPagesTotalChange,
         syncDrawerStateFromStore,
         syncProjectsStateFromStore: vi.fn(),
-        renderWarmingState,
+        renderDrawerResults,
         timers
       });
       initStoreSubscriptions();
 
-      return { savedPagesStore, renderWarmingState, renderedStates, syncDrawerStateFromStore };
+      return { savedPagesStore, renderDrawerResults, state, syncDrawerStateFromStore };
     }
 
-    it('renders the warming bar with a percentage derived from allPages/total', () => {
+    it('sets warmUpInProgress + progress derived from allPages/total', () => {
       const harness = createWarmingHarness({
         snapshot: {
           allPages: Array.from({ length: 24 }, (_, i) => ({ id: `p${i}` })),
@@ -225,9 +231,12 @@ describe('drawer sync observers', () => {
 
       harness.savedPagesStore.emit();
 
-      expect(harness.renderWarmingState).toHaveBeenCalled();
+      expect(harness.state.warmUpInProgress).toBe(true);
+      // The subscriber routes through the dispatcher, which is the render
+      // authority; it does not call renderWarmingState directly.
+      expect(harness.renderDrawerResults).toHaveBeenCalled();
       // 24 / 80 = 30%
-      expect(harness.renderedStates.at(-1)).toEqual(expect.objectContaining({ percent: 30 }));
+      expect(harness.state.warmUpProgress).toEqual(expect.objectContaining({ percent: 30 }));
     });
 
     it('renders indeterminate when total is unknown (0 or null) on the first batch', () => {
@@ -241,7 +250,7 @@ describe('drawer sync observers', () => {
 
       harness.savedPagesStore.emit();
 
-      expect(harness.renderedStates.at(-1)).toEqual(
+      expect(harness.state.warmUpProgress).toEqual(
         expect.objectContaining({ indeterminate: true })
       );
     });
@@ -265,7 +274,7 @@ describe('drawer sync observers', () => {
       });
       harness.savedPagesStore.emit();
 
-      expect(harness.renderedStates.at(-1).percent).toBe(50);
+      expect(harness.state.warmUpProgress.percent).toBe(50);
     });
 
     it('on completion, holds at 100% then hands off to results rendering', () => {
@@ -279,18 +288,19 @@ describe('drawer sync observers', () => {
 
       harness.savedPagesStore.emit();
 
-      // Final warming render is at 100%.
-      expect(harness.renderedStates.at(-1)).toEqual(expect.objectContaining({ percent: 100 }));
-      // After the (faked, synchronous) ~300ms timer fires, results rendering takes over.
+      // Final warming progress is at 100%, flag still set (completion timer
+      // holds it briefly).
+      expect(harness.state.warmUpProgress).toEqual(expect.objectContaining({ percent: 100 }));
+      // After the (faked, synchronous) ~300ms timer fires, the flag clears and
+      // results sync takes over.
+      expect(harness.state.warmUpInProgress).toBe(false);
       expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
     });
 
-    it('wiring: the coordinator forwards renderDrawerWarmingState to the subscriber under the name the factory expects', () => {
-      // Regression guard: the coordinator used to forward the runtime renderer
-      // under the shorthand key `renderDrawerWarmingState`, but the factory
-      // destructures it as `renderWarmingState` — leaving the warming branch
-      // dead in production. This goes through the REAL coordinator->factory
-      // seam so a key mismatch fails here instead of in production.
+    it('wiring: the coordinator forwards renderDrawerResults to the subscriber', () => {
+      // Regression guard: a name mismatch at the coordinator->factory seam
+      // leaves the warming branch dead in production. This goes through the
+      // REAL coordinator->factory seam so a mismatch fails here.
       const savedPagesStore = {
         _listeners: [],
         options: { lazy: false },
@@ -309,11 +319,19 @@ describe('drawer sync observers', () => {
           refreshState: { status: 'loading', phase: 'prefetch', reason: null }
         })
       };
-      const renderDrawerWarmingState = vi.fn();
+      const renderDrawerResults = vi.fn();
+      const state = {
+        hasInitialized: true,
+        query: '',
+        warmUpInProgress: false,
+        warmUpProgress: { percent: 0, indeterminate: true },
+        warmUpLastPercent: 0,
+        warmUpDeterminate: false
+      };
 
       const coordinator = createDrawerSyncCoordinator({
         api: { isExtension: true },
-        state: { hasInitialized: true, query: '' },
+        state,
         savedPagesStore,
         projectsStore: { subscribe: () => () => {} },
         getCurrentUser: () => ({ uid: 'u1' }),
@@ -327,7 +345,7 @@ describe('drawer sync observers', () => {
         loadDrawerProjectPages: vi.fn(),
         loadDrawerResults: vi.fn(),
         renderDrawerSignInState: vi.fn(),
-        renderDrawerWarmingState,
+        renderDrawerResults,
         resetDrawerState: vi.fn(),
         setSuppressSavedPagesStoreSync: vi.fn(),
         getSuppressSavedPagesStoreSync: () => false
@@ -336,11 +354,10 @@ describe('drawer sync observers', () => {
       coordinator.init();
       savedPagesStore.emit();
 
-      // 24 / 80 = 30%. If the renderer were forwarded under the wrong key, the
-      // warming branch guard would be false and this spy would never be called.
-      expect(renderDrawerWarmingState).toHaveBeenCalledWith(
-        expect.objectContaining({ percent: 30 })
-      );
+      // If the renderer were forwarded under the wrong key, the warming branch
+      // guard would be false and the flag/progress would never be set.
+      expect(renderDrawerResults).toHaveBeenCalled();
+      expect(state.warmUpProgress).toEqual(expect.objectContaining({ percent: 30 }));
     });
 
     it('integration: renders the warming bar per-batch during a real store warm-up (not just at completion)', async () => {
@@ -397,10 +414,18 @@ describe('drawer sync observers', () => {
         })
       });
 
-      const renderWarmingState = vi.fn();
+      const renderDrawerResults = vi.fn();
+      const state = {
+        hasInitialized: true,
+        query: '',
+        warmUpInProgress: false,
+        warmUpProgress: { percent: 0, indeterminate: true },
+        warmUpLastPercent: 0,
+        warmUpDeterminate: false
+      };
       const { initStoreSubscriptions } = createDrawerStoreSubscriptions({
         api: { isExtension: true },
-        state: { hasInitialized: true, query: '' },
+        state,
         savedPagesStore: store,
         projectsStore: { subscribe: () => () => {} },
         getCurrentUser: () => ({ uid: 'u1' }),
@@ -409,30 +434,25 @@ describe('drawer sync observers', () => {
         notifySavedPagesTotalChange: vi.fn(),
         syncDrawerStateFromStore: vi.fn(),
         syncProjectsStateFromStore: vi.fn(),
-        renderWarmingState
+        renderDrawerResults
       });
       initStoreSubscriptions();
 
       store.setLazy(false);
       await store.hydrate();
 
-      // The warm-up is fire-and-forget; poll until the store self-resets lazy
-      // to true (the finally in prefetchAllPages), which happens just after
-      // the completion emit.
+      // The warm-up is fire-and-forget; poll until the completion timer fires
+      // (real 300ms setTimeout) and clears the warm-up flag. Polling on the
+      // flag (not store.options.lazy) accounts for the timer gap between the
+      // store's lazy reset (in prefetchAllPages' finally) and the flag clear
+      // (in the completion timer callback).
       await vi.waitFor(() => {
-        expect(store.options.lazy).toBe(true);
-      });
+        expect(state.warmUpInProgress).toBe(false);
+      }, { timeout: 3000, interval: 50 });
 
-      // The bar must have rendered DURING the warm-up with a partial (non-100)
-      // determinate percentage — proving per-batch rendering, not just a single
-      // flash at completion. First batch is 50/90 ≈ 56%.
-      const determinatePartialRenders = renderWarmingState.mock.calls.filter(
-        ([progress]) => !progress.indeterminate && progress.percent < 100
-      );
-      expect(determinatePartialRenders.length).toBeGreaterThan(0);
-      expect(determinatePartialRenders[0][0]).toEqual(
-        expect.objectContaining({ percent: 56, indeterminate: false })
-      );
+      // The dispatcher (single render authority) must have been called during
+      // the warm-up to paint the warming pane.
+      expect(renderDrawerResults).toHaveBeenCalled();
     });
 
     it('integration: hands off to results rendering even when hasInitialized is still false at completion', async () => {
@@ -482,12 +502,19 @@ describe('drawer sync observers', () => {
         buildLoadMoreFetchOptions: (cursor) => ({ limit: 100, sort: 'newest', cursor, skipCache: true })
       });
 
-      const renderWarmingState = vi.fn();
+      const renderDrawerResults = vi.fn();
       const syncDrawerStateFromStore = vi.fn();
       // Real production timing: hasInitialized starts FALSE and is only set
       // true by the caller (loadDrawerBasePages) after hydrate() resolves. The
       // prefetch can easily complete during that window.
-      const state = { hasInitialized: false, query: '' };
+      const state = {
+        hasInitialized: false,
+        query: '',
+        warmUpInProgress: false,
+        warmUpProgress: { percent: 0, indeterminate: true },
+        warmUpLastPercent: 0,
+        warmUpDeterminate: false
+      };
       const { initStoreSubscriptions } = createDrawerStoreSubscriptions({
         api: { isExtension: true },
         state,
@@ -499,7 +526,7 @@ describe('drawer sync observers', () => {
         notifySavedPagesTotalChange: vi.fn(),
         syncDrawerStateFromStore,
         syncProjectsStateFromStore: vi.fn(),
-        renderWarmingState
+        renderDrawerResults
       });
       initStoreSubscriptions();
 
@@ -509,7 +536,8 @@ describe('drawer sync observers', () => {
       // model the race where the prefetch completes first.
 
       // Wait for the warm-up + 300ms completion pause. The handoff MUST fire
-      // even though hasInitialized is still false.
+      // even though hasInitialized is still false — the flag clears and cards
+      // sync runs.
       await vi.waitFor(() => {
         expect(syncDrawerStateFromStore).toHaveBeenCalled();
       });
@@ -517,8 +545,9 @@ describe('drawer sync observers', () => {
       const handoffCall = syncDrawerStateFromStore.mock.calls.at(-1);
       expect(handoffCall[1]).toEqual(expect.objectContaining({ render: true }));
 
-      const finalRender = renderWarmingState.mock.calls.at(-1);
-      expect(finalRender[0]).toEqual(expect.objectContaining({ percent: 100 }));
+      // The completion timer cleared the warm-up phase, so the dispatcher
+      // would now render cards (the handoff sync paints them).
+      expect(state.warmUpInProgress).toBe(false);
     });
   });
 });

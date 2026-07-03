@@ -84,6 +84,16 @@ export function createDrawerUiController({
       return;
     }
 
+    // The warm-up phase owns the drawer exclusively. While a post-login full
+    // cache warm-up is in progress, never render cards/empty/dog — only the
+    // warming pane. This is the single render authority: both loadDrawerBasePages
+    // and the warming subscriber route through here, so they can never paint
+    // conflicting phases (the race that caused cards-flash-then-dog-stuck).
+    if (state.warmUpInProgress) {
+      drawerRenderer.renderWarmingState(state.warmUpProgress);
+      return;
+    }
+
     const trimmedQuery = (state.query || '').trim();
     const hasQuery = Boolean(trimmedQuery);
 

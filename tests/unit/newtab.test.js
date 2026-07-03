@@ -881,6 +881,10 @@ describe('newtab modules', () => {
       semanticQuery: '',
       semanticLoading: false,
       semanticRequestId: 0,
+      warmUpInProgress: false,
+      warmUpProgress: { percent: 0, indeterminate: true },
+      warmUpLastPercent: 0,
+      warmUpDeterminate: false,
       ...(overrides.state || {})
     };
      const savedPagesView = {
@@ -968,7 +972,6 @@ describe('newtab modules', () => {
       renderDrawerLoadingState: vi.fn(),
       renderDrawerErrorState: vi.fn(),
       renderDrawerSignInState: vi.fn(),
-      renderDrawerWarmingState: vi.fn(),
       renderDrawerResults: vi.fn(),
        syncDrawerStateFromStore: vi.fn(),
        syncProjectsStateFromStore: vi.fn(snapshot => {
@@ -1231,15 +1234,16 @@ describe('newtab modules', () => {
      });
    });
 
-   it('renders the warming bar instead of the loading dog when the store is in non-lazy prefetch mode', async () => {
+   it('arms the warm-up phase (not the loading dog) when the store is in non-lazy prefetch mode', async () => {
      // Cold start: empty allPages, no renderable warm cache, and the store
-     // flipped to non-lazy (post-login prefetch). Task 6 routes this through
-     // renderDrawerWarmingState rather than renderDrawerLoadingState.
+     // flipped to non-lazy (post-login prefetch). The data controller sets
+     // state.warmUpInProgress and routes through the dispatcher, which renders
+     // the warming pane (never cards/empty/dog while a warm-up is in progress).
      const snapshot = {
        allPages: [{ id: 'page-1', title: 'Cached page' }],
        total: 1
      };
-     const { controller, dependencies } = createDrawerDataHarness({
+     const { controller, dependencies, state } = createDrawerDataHarness({
        api: {
          isExtension: true,
          getLastKnownUserId: vi.fn().mockResolvedValue('user-1')
@@ -1253,19 +1257,21 @@ describe('newtab modules', () => {
 
      await controller.loadDrawerBasePages();
 
-     expect(dependencies.renderDrawerWarmingState).toHaveBeenCalledWith({ indeterminate: true });
+     expect(state.warmUpInProgress).toBe(true);
+     expect(state.warmUpProgress).toEqual({ percent: 0, indeterminate: true });
+     expect(dependencies.renderDrawerResults).toHaveBeenCalled();
      expect(dependencies.renderDrawerLoadingState).not.toHaveBeenCalled();
    });
 
    it('still renders the loading dog on a cold start when the store is lazy', async () => {
      // Regression guard: the default (lazy) cold start keeps the original
-     // renderDrawerLoadingState path. Only the non-lazy branch switches to the
-     // warming bar.
+     // renderDrawerLoadingState path. Only the non-lazy branch arms the
+     // warm-up phase.
      const snapshot = {
        allPages: [{ id: 'page-1', title: 'Cached page' }],
        total: 1
      };
-     const { controller, dependencies } = createDrawerDataHarness({
+     const { controller, dependencies, state } = createDrawerDataHarness({
        api: {
          isExtension: true,
          getLastKnownUserId: vi.fn().mockResolvedValue('user-1')
@@ -1280,7 +1286,7 @@ describe('newtab modules', () => {
      await controller.loadDrawerBasePages();
 
      expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
-     expect(dependencies.renderDrawerWarmingState).not.toHaveBeenCalled();
+     expect(state.warmUpInProgress).toBe(false);
    });
 
    it('updates page title and summary inline and re-applies filters', async () => {

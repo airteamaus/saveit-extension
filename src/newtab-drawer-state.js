@@ -43,8 +43,64 @@ export function createInitialDrawerState() {
     semanticResults: [],
     semanticQuery: '',
     semanticLoading: false,
-    semanticRequestId: 0
+    semanticRequestId: 0,
+    // Post-login full cache warm-up phase. This is the single source of truth
+    // for "the warming UI owns the drawer right now." While true, the dispatcher
+    // renders the warming pane and never cards/empty/dog — eliminating the race
+    // where loadDrawerBasePages paints cards mid-warm and the warming subscriber
+    // tramples them. Set by the subscriber when the warm-up is active; cleared on
+    // completion (or by resetDrawerState on sign-out). The clamp fields persist
+    // the warming bar's monotonic progress across renders; warmUpProgress holds
+    // the last computed {percent, indeterminate} for the dispatcher to read.
+    warmUpInProgress: false,
+    warmUpProgress: { percent: 0, indeterminate: true },
+    warmUpLastPercent: 0,
+    warmUpDeterminate: false
   };
+}
+
+// Computes the warming progress bar value from the store snapshot, persisting
+// the clamp state on `state` so the bar never decreases across renders. Once a
+// determinate reading has been shown, it never goes back below it; an unknown
+// total keeps the last known % but caps it at 99 (so an indeterminate server
+// response can't lock the bar at 100 before completion).
+//
+// `complete` forces 100% — used by the subscriber on the terminal
+// {prefetch, idle, complete} emit so the bar always fills at the end.
+export function computeWarmingProgress(snapshot, state, { complete = false } = {}) {
+  if (complete) {
+    state.warmUpDeterminate = true;
+    state.warmUpLastPercent = 100;
+    return { percent: 100, indeterminate: false };
+  }
+
+  const total = typeof snapshot?.total === 'number' && snapshot.total > 0
+    ? snapshot.total
+    : null;
+  const loaded = Array.isArray(snapshot?.allPages) ? snapshot.allPages.length : 0;
+
+  if (total == null) {
+    return {
+      percent: state.warmUpDeterminate ? Math.min(state.warmUpLastPercent, 99) : 0,
+      indeterminate: !state.warmUpDeterminate
+    };
+  }
+
+  const computed = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+  const percent = state.warmUpDeterminate ? Math.max(state.warmUpLastPercent, computed) : computed;
+  state.warmUpDeterminate = true;
+  state.warmUpLastPercent = percent;
+  return { percent, indeterminate: false };
+}
+
+// Returns true when the store snapshot reflects the terminal warm-up emit. The
+// warm-up window itself is bounded by state.warmUpInProgress (set by the
+// subscriber); this predicate only detects the completion transition that
+// clears it.
+export function isWarmUpComplete(snapshot) {
+  return snapshot?.refreshState?.phase === 'prefetch'
+    && snapshot?.refreshState?.status === 'idle'
+    && snapshot?.refreshState?.reason === 'complete';
 }
 
 export function getDrawerSearchableText(page = {}) {

@@ -21,7 +21,6 @@ export function createDrawerDataController({
   renderDrawerLoadingState,
   renderDrawerErrorState,
   renderDrawerSignInState,
-  renderDrawerWarmingState,
   renderDrawerResults,
   syncDrawerStateFromStore,
   syncProjectsStateFromStore,
@@ -205,13 +204,15 @@ export function createDrawerDataController({
 
     const savedPagesSnapshot = savedPagesStore.getSnapshot();
     if (!savedPagesSnapshot.allPages.length && !hasRenderableWarmCache(savedPagesSnapshot)) {
-      // Post-login the store is in non-lazy prefetch mode (set by
-      // handleSignedIn). Show the warming bar instead of the bare dog so the
-      // user sees progress immediately. The subscriber in
-      // createDrawerStoreSubscriptions takes over bar updates once the first
-      // batch lands.
-      if (savedPagesStore.options.lazy === false && renderDrawerWarmingState) {
-        renderDrawerWarmingState({ indeterminate: true });
+      // Post-login the store is in non-lazy prefetch mode (set by the
+      // interactive Sign-in button). Arm the warming phase on state so the
+      // dispatcher renders the warming pane (not the bare dog, and not cards
+      // mid-warm-up). The subscriber takes over progress updates once the
+      // first batch lands.
+      if (savedPagesStore.options.lazy === false) {
+        state.warmUpInProgress = true;
+        state.warmUpProgress = { percent: 0, indeterminate: true };
+        renderDrawerResults();
       } else {
         renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages…' : 'Gathering your saved pages…');
       }
