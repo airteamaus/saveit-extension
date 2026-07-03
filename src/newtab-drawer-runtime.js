@@ -86,11 +86,9 @@ export function createSavedPagesDrawerController({
   const renderDrawerLoadingState = (...args) => uiController.renderLoadingState(...args);
   const renderDrawerErrorState = (...args) => uiController.renderErrorState(...args);
   const renderDrawerSignInState = (...args) => uiController.renderSignInState(...args);
+  const renderDrawerWarmingState = (...args) => uiController.renderWarmingState(...args);
   const renderDrawerResults = (...args) => uiController.renderResults(...args);
-  const {
-    syncDrawerStateFromStore,
-    syncProjectsStateFromStore
-  } = createDrawerStateSyncHelpersFn({
+  const { syncDrawerStateFromStore, syncProjectsStateFromStore } = createDrawerStateSyncHelpersFn({
     state,
     projectManager,
     getSavedPagesView: () => savedPagesView,
@@ -105,7 +103,7 @@ export function createSavedPagesDrawerController({
     projectsStore,
     getCurrentUser,
     getDataController: () => dataController,
-    setSuppressSavedPagesStoreSync: value => {
+    setSuppressSavedPagesStoreSync: (value) => {
       suppressSavedPagesStoreSync = value === true;
     },
     renderDrawerLoadingState,
@@ -184,10 +182,11 @@ export function createSavedPagesDrawerController({
     loadDrawerProjectPages: dataController.loadDrawerProjectPages,
     loadDrawerResults: dataController.loadDrawerResults,
     renderDrawerSignInState,
+    renderDrawerWarmingState,
     resetDrawerState: () => {
       Object.assign(state, createInitialDrawerStateFn());
     },
-    setSuppressSavedPagesStoreSync: value => {
+    setSuppressSavedPagesStoreSync: (value) => {
       suppressSavedPagesStoreSync = value === true;
     },
     getSuppressSavedPagesStoreSync: () => suppressSavedPagesStoreSync,

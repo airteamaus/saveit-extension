@@ -22,6 +22,7 @@ export function createDrawerSyncCoordinator({
   loadDrawerProjectPages,
   loadDrawerResults,
   renderDrawerSignInState,
+  renderDrawerWarmingState,
   resetDrawerState,
   setSuppressSavedPagesStoreSync,
   getSuppressSavedPagesStoreSync,
@@ -63,7 +64,8 @@ export function createDrawerSyncCoordinator({
     getSuppressSavedPagesStoreSync,
     notifySavedPagesTotalChange,
     syncDrawerStateFromStore,
-    syncProjectsStateFromStore
+    syncProjectsStateFromStore,
+    renderDrawerWarmingState
   });
 
   function init() {

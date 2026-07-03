@@ -51,9 +51,10 @@ export function createDrawerUiController({
       return hasScope ? Number.POSITIVE_INFINITY : state.renderLimit;
     },
     renderChrome: renderDrawerChrome,
-    getProjectPills: page => getDrawerProjectPills(page),
+    getProjectPills: (page) => getDrawerProjectPills(page),
     isProjectsUnavailable: () => getSavedPagesViewOrThrow().projectsAvailable === false,
-    getProjectScopeLabel: () => getDrawerProjectScopeLabel(projectManager, getSavedPagesViewOrThrow())
+    getProjectScopeLabel: () =>
+      getDrawerProjectScopeLabel(projectManager, getSavedPagesViewOrThrow())
   });
 
   function renderLoadingState(message = 'Loading saved pages...') {
@@ -72,6 +73,10 @@ export function createDrawerUiController({
 
   function renderSignInState() {
     drawerRenderer.renderSignInState();
+  }
+
+  function renderWarmingState(options = {}) {
+    drawerRenderer.renderWarmingState(options);
   }
 
   function renderResults() {
@@ -161,6 +166,7 @@ export function createDrawerUiController({
     renderProjectEditor,
     renderProjectSidebar,
     renderResults,
-    renderSignInState
+    renderSignInState,
+    renderWarmingState
   };
 }

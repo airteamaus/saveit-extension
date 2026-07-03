@@ -9,28 +9,34 @@ import {
 describe('drawer sync observers', () => {
   describe('shouldSyncDrawerStoreUpdate', () => {
     it('blocks store sync while suppressed', () => {
-      expect(shouldSyncDrawerStoreUpdate({
-        suppressSavedPagesStoreSync: true,
-        hasInitialized: true,
-        isExtension: false
-      })).toBe(false);
+      expect(
+        shouldSyncDrawerStoreUpdate({
+          suppressSavedPagesStoreSync: true,
+          hasInitialized: true,
+          isExtension: false
+        })
+      ).toBe(false);
     });
 
     it('blocks store sync before the drawer is initialized', () => {
-      expect(shouldSyncDrawerStoreUpdate({
-        suppressSavedPagesStoreSync: false,
-        hasInitialized: false,
-        isExtension: false
-      })).toBe(false);
+      expect(
+        shouldSyncDrawerStoreUpdate({
+          suppressSavedPagesStoreSync: false,
+          hasInitialized: false,
+          isExtension: false
+        })
+      ).toBe(false);
     });
 
     it('allows sync when the drawer is initialized and auth preconditions are met', () => {
-      expect(shouldSyncDrawerStoreUpdate({
-        suppressSavedPagesStoreSync: false,
-        hasInitialized: true,
-        isExtension: true,
-        hasCurrentUser: true
-      })).toBe(true);
+      expect(
+        shouldSyncDrawerStoreUpdate({
+          suppressSavedPagesStoreSync: false,
+          hasInitialized: true,
+          isExtension: true,
+          hasCurrentUser: true
+        })
+      ).toBe(true);
     });
   });
 
@@ -47,13 +53,13 @@ describe('drawer sync observers', () => {
         query: 'alpha'
       },
       savedPagesStore: {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback) => {
           savedPagesSubscribers.push(callback);
         }),
         getSnapshot: vi.fn(() => ({ allPages: [{ id: 'page-1' }], total: 3 }))
       },
       projectsStore: {
-        subscribe: vi.fn(callback => {
+        subscribe: vi.fn((callback) => {
           projectsSubscribers.push(callback);
         }),
         getSnapshot: vi.fn(() => ({ allPages: [{ id: 'project-1' }] }))
@@ -71,13 +77,19 @@ describe('drawer sync observers', () => {
     projectsSubscribers[0]();
 
     expect(notifySavedPagesTotalChange).toHaveBeenCalled();
-    expect(syncDrawerStateFromStore).toHaveBeenCalledWith({ allPages: [{ id: 'page-1' }], total: 3 }, {
-      query: 'alpha',
-      render: true
-    });
-    expect(syncProjectsStateFromStore).toHaveBeenCalledWith({ allPages: [{ id: 'project-1' }] }, {
-      render: true
-    });
+    expect(syncDrawerStateFromStore).toHaveBeenCalledWith(
+      { allPages: [{ id: 'page-1' }], total: 3 },
+      {
+        query: 'alpha',
+        render: true
+      }
+    );
+    expect(syncProjectsStateFromStore).toHaveBeenCalledWith(
+      { allPages: [{ id: 'project-1' }] },
+      {
+        render: true
+      }
+    );
   });
 
   beforeEach(() => {
@@ -90,7 +102,7 @@ describe('drawer sync observers', () => {
     globalThis.browser = {
       storage: {
         onChanged: {
-          addListener: vi.fn(callback => {
+          addListener: vi.fn((callback) => {
             listener = callback;
           })
         }
@@ -98,7 +110,7 @@ describe('drawer sync observers', () => {
     };
     const windowObj = {
       clearTimeout: vi.fn(),
-      setTimeout: vi.fn(callback => {
+      setTimeout: vi.fn((callback) => {
         callback();
         return 1;
       })
@@ -129,12 +141,15 @@ describe('drawer sync observers', () => {
     });
 
     observer.initSavedPagesCacheSync();
-    listener({
-      savedPages_cache_all: {
-        oldValue: { pages: [] },
-        newValue: undefined
-      }
-    }, 'local');
+    listener(
+      {
+        savedPages_cache_all: {
+          oldValue: { pages: [] },
+          newValue: undefined
+        }
+      },
+      'local'
+    );
 
     expect(refreshFavorites).toHaveBeenCalled();
     expect(projectsStore.hydrate).toHaveBeenCalled();
@@ -144,5 +159,126 @@ describe('drawer sync observers', () => {
       syncUrl: false
     });
     expect(loadDrawerProjectPages).not.toHaveBeenCalled();
+  });
+
+  describe('createDrawerStoreSubscriptions warming UI', () => {
+    function createWarmingHarness({ snapshot, drawerOpen = true } = {}) {
+      const savedPagesStore = {
+        _listeners: [],
+        subscribe(listener) {
+          this._listeners.push(listener);
+          return () => {
+            this._listeners = this._listeners.filter((l) => l !== listener);
+          };
+        },
+        emit() {
+          this._listeners.forEach((l) => l());
+        },
+        getSnapshot: () => snapshot
+      };
+      const renderedStates = [];
+      const renderWarmingState = vi.fn((opts) => renderedStates.push(opts));
+      const timers = {
+        setTimeout: vi.fn((fn) => {
+          fn();
+          return 0;
+        }),
+        clearTimeout: vi.fn()
+      };
+      const api = { isExtension: true };
+      const getCurrentUser = () => ({ uid: 'u1' });
+      const state = { hasInitialized: true, query: '' };
+      const syncDrawerStateFromStore = vi.fn();
+      const notifySavedPagesTotalChange = vi.fn();
+
+      const { initStoreSubscriptions } = createDrawerStoreSubscriptions({
+        api,
+        state,
+        savedPagesStore,
+        projectsStore: { subscribe: () => () => {} },
+        getCurrentUser,
+        isDrawerOpen: () => drawerOpen,
+        getSuppressSavedPagesStoreSync: () => false,
+        notifySavedPagesTotalChange,
+        syncDrawerStateFromStore,
+        syncProjectsStateFromStore: vi.fn(),
+        renderWarmingState,
+        timers
+      });
+      initStoreSubscriptions();
+
+      return { savedPagesStore, renderWarmingState, renderedStates, syncDrawerStateFromStore };
+    }
+
+    it('renders the warming bar with a percentage derived from allPages/total', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 24 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'loading', phase: 'prefetch', reason: null }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      expect(harness.renderWarmingState).toHaveBeenCalled();
+      // 24 / 80 = 30%
+      expect(harness.renderedStates.at(-1)).toEqual(expect.objectContaining({ percent: 30 }));
+    });
+
+    it('renders indeterminate when total is unknown (0 or null) on the first batch', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: [{ id: 'p1' }],
+          total: 0,
+          refreshState: { status: 'loading', phase: 'prefetch', reason: null }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      expect(harness.renderedStates.at(-1)).toEqual(
+        expect.objectContaining({ indeterminate: true })
+      );
+    });
+
+    it('clamps the percentage and never decreases once determinate', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 40 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'loading', phase: 'prefetch', reason: null }
+        }
+      });
+
+      harness.savedPagesStore.emit(); // 50%
+      // Next batch reports a smaller numerator temporarily (e.g. dedupe) — must
+      // not regress the displayed percentage.
+      harness.savedPagesStore.getSnapshot = () => ({
+        allPages: Array.from({ length: 30 }, (_, i) => ({ id: `p${i}` })),
+        total: 80,
+        refreshState: { status: 'loading', phase: 'prefetch', reason: null }
+      });
+      harness.savedPagesStore.emit();
+
+      expect(harness.renderedStates.at(-1).percent).toBe(50);
+    });
+
+    it('on completion, holds at 100% then hands off to results rendering', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 80 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'idle', phase: 'prefetch', reason: 'complete' }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      // Final warming render is at 100%.
+      expect(harness.renderedStates.at(-1)).toEqual(expect.objectContaining({ percent: 100 }));
+      // After the (faked, synchronous) ~300ms timer fires, results rendering takes over.
+      expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
+    });
   });
 });
