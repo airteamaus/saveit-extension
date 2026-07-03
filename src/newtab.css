@@ -947,6 +947,74 @@ body {
   color: var(--color-text-light);
 }
 
+/* Post-login warming state: the digging dog plus a determinate progress bar.
+   Sits inside .saved-pages-semantic-loading-pane so it inherits the pane's
+   vertical centering and min-height. */
+.saved-pages-warming-pane {
+  gap: 4px;
+}
+
+.saved-pages-warming-copy {
+  color: var(--color-text-light);
+  font-size: var(--font-size-xl);
+  margin-top: var(--spacing-sm);
+}
+
+.saved-pages-warming-bar {
+  width: 320px;
+  max-width: 80%;
+  height: 6px;
+  background: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-top: var(--spacing-md);
+  position: relative;
+}
+
+.saved-pages-warming-bar-fill {
+  height: 100%;
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.saved-pages-warming-percent {
+  color: var(--color-text-light);
+  font-size: var(--font-size-md);
+  margin-top: var(--spacing-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Indeterminate variant: a shimmer sweeps across an empty track when the
+   server hasn't returned a total yet. Disabled under reduced-motion. */
+.saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
+  width: 40% !important;
+  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 50%, transparent 100%);
+  animation: saved-pages-warming-shimmer 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saved-pages-warming-bar-fill {
+    transition: none;
+  }
+
+  .saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
+    animation: none;
+    background: var(--color-primary);
+    opacity: 0.5;
+  }
+}
+
+@keyframes saved-pages-warming-shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
+}
+
 /* Wag the dog's tail/ears group. Pivots near the shoulder. Disabled for
    users who prefer reduced motion. */
 @media (prefers-reduced-motion: no-preference) {
