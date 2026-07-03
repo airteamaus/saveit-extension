@@ -9,6 +9,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- Single render authority: eliminate the warming/cards flicker via warmUpInProgress (abfc6d7)
+- Fix logout->login leaving empty drawer: reload when no renderable pages (8337da3)
+- Fix session-restore warming flash: SavedPagesStore must forward lazy (e19acb7)
+- Fix warming handoff: bind completion timer to window, not module scope (7f42b47)
+- Fix warming UI stuck at 100%: handoff must not gate on hasInitialized (212f9b2)
+- Fix warming UI regression on session restore + stack layout vertically (5e64591)
+- Align standalone E2E comment with the post-fix activation model (89cb510)
+- Fix critical bug: warming bar now renders per-batch, not just at completion (90cc313)
+- Correct Blocker 1 mechanism in standalone E2E comment (46db64e)
+- Document why post-login warming flow is not E2E-covered (bdfe66d)
+- Cover the cold-load warming branch at unit level (87bea59)
+- Show warming bar (not bare dog) on the cold post-login load (b718c64)
+- Fix renderWarmingState wiring + harden warming state machine (5b0e591)
+- Drive post-login warming UI from the saved-pages subscriber (1c8506e)
+- Flip saved-pages store to non-lazy on sign-in (648ff58)
+- Add warming pane + progress bar styles (48c0da7)
+- Lock in renderWarmingState guarantees: ARIA + clamping (4a2315f)
+- Add renderWarmingState: dog + determinate progress bar (30e9048)
+- Cover loadMore-throw reset path; tighten prefetch comments (142c2b9)
+- Add setLazy + self-resetting prefetch for post-login warm-up (511a9ed)
+- Add implementation plan: post-login cache warming with progress (011a1f5)
+- Add spec: post-login cache warming with progress (7540785)
+
+## [1.15.0] - 2026-07-02
+
+### 📝 Other Improvements
+
 - Lazy-render the All-pages view and fetch the rest on scroll (#15) (1133653)
 - Fix card summary edit reverting to unchanged content (#14) (1ec6d08)
 - Lower semantic search limit 50 → 20 to cut Firestore hydration cost (e13727b)
@@ -81,13 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Move Import bookmarks into the avatar dropdown menu (aeb1713)
 
 ## [1.12.1] - 2026-06-26
-
-### 📝 Other Improvements
-
-- Move Import bookmarks into the avatar dropdown menu (160a038)
-- Add bookmark import from the browser (ea1630b)
-
-## [1.12.0] - 2026-06-26
 
 ### ✨ Features
 
@@ -280,7 +300,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Add bookmark import from the browser (76d2c33)
+- Move Import bookmarks into the avatar dropdown menu (160a038)
+- Add bookmark import from the browser (ea1630b)
 - Move page content up toward the header (dd37bcc)
 - Give cards a half-em vertical margin above and below (cdfaf17)
 - Refine sidebar, cards, and create-project affordance (04672c7)
