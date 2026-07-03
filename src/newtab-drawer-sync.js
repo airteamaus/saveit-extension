@@ -65,7 +65,8 @@ export function createDrawerSyncCoordinator({
     notifySavedPagesTotalChange,
     syncDrawerStateFromStore,
     syncProjectsStateFromStore,
-    renderWarmingState: renderDrawerWarmingState
+    renderWarmingState: renderDrawerWarmingState,
+    windowObj
   });
 
   function init() {

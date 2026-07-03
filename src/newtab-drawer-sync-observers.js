@@ -108,7 +108,13 @@ export function createDrawerStoreSubscriptions({
   syncDrawerStateFromStore,
   syncProjectsStateFromStore,
   renderWarmingState,
-  timers = { setTimeout, clearTimeout }
+  // Bind timers to the page window, not the module scope. In a browser
+  // extension the module-scope setTimeout (captured at definition time) does
+  // not always fire its callback — the window-bound one does. The existing
+  // cache-invalidation observer already relies on windowObj.setTimeout for the
+  // same reason.
+  windowObj = window,
+  timers = { setTimeout: windowObj.setTimeout.bind(windowObj), clearTimeout: windowObj.clearTimeout.bind(windowObj) }
 }) {
   // Warming-UI state. Lives here because the subscriber that drives it lives
   // here. Reset whenever a non-warming render path runs (e.g. sign-out, a
@@ -213,14 +219,13 @@ export function createDrawerStoreSubscriptions({
             const currentSnapshot = savedPagesStore.getSnapshot();
             // The completion handoff is not an incidental mid-load store update
             // (which shouldSyncDrawerStoreUpdate exists to suppress) — it is the
-            // explicit "warm-up finished, paint the cards" signal. In
-            // particular it must NOT be gated on state.hasInitialized: the
-            // fire-and-forget prefetch can complete BEFORE the caller
-            // (loadDrawerBasePages) sets hasInitialized=true, and gating on it
-            // leaves the warming pane stuck at 100% forever. Only the
-            // genuinely-disqualifying conditions matter here: the drawer must
-            // still be open, and (in extension mode) a user must still be
-            // signed in.
+            // explicit "warm-up finished, paint the cards" signal. It must not
+            // be gated on state.hasInitialized: the fire-and-forget prefetch
+            // can complete BEFORE the caller (loadDrawerBasePages) sets
+            // hasInitialized=true, and gating on it leaves the warming pane
+            // stuck at 100% forever. Only the genuinely-disqualifying
+            // conditions matter here: the drawer must still be open, and (in
+            // extension mode) a user must still be signed in.
             const hasUser = Boolean(getCurrentUser());
             const userOk = !api.isExtension || hasUser;
             if (userOk && !getSuppressSavedPagesStoreSync() && isDrawerOpen()) {
