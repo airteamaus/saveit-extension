@@ -48,11 +48,6 @@ export function createDrawerSyncLifecycle({
   }
 
   async function handleSignedIn() {
-    // A one-time full eager warm-up drives the post-login progress bar. The
-    // store self-resets lazy=true when the warm-up finishes, so this only
-    // affects the current sign-in moment.
-    savedPagesStore.setLazy(false);
-
     if (isDrawerOpen()) {
       if (state.hasInitialized) {
         await loadDrawerResults(getSearchQuery(), { syncUrl: false });

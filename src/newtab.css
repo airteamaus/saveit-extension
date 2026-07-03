@@ -948,9 +948,10 @@ body {
 }
 
 /* Post-login warming state: the digging dog plus a determinate progress bar.
-   Sits inside .saved-pages-semantic-loading-pane so it inherits the pane's
-   vertical centering and min-height. */
+   Stacks vertically (dog, then copy, then bar, then %) on top of the flex
+   container from .saved-pages-semantic-loading, which defaults to row. */
 .saved-pages-warming-pane {
+  flex-direction: column;
   gap: 4px;
 }
 

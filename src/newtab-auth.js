@@ -39,6 +39,11 @@ export function createNewtabAuthController({
   elements,
   onSignedIn,
   onSignedOut,
+  // Fires when the user *interactively* clicks Sign in (before the OAuth flow
+  // runs), as distinct from `onSignedIn`, which also fires on session
+  // restoration when newtab opens with an existing login. Used to opt into a
+  // one-time full cache warm-up only after an explicit sign-in.
+  onInteractiveSignIn,
   windowObj = window
 }) {
   const { signInBtn, userMenu, userAvatar, userDropdown, userEmailEl } = elements;
@@ -73,6 +78,10 @@ export function createNewtabAuthController({
 
   async function handleSignIn() {
     try {
+      // Signal the interactive sign-in *before* the OAuth flow resolves, so any
+      // one-time warm-up is armed before the resulting onAuthStateChanged ->
+      // onSignedIn -> handleSignedIn runs (which triggers hydrate/prefetch).
+      onInteractiveSignIn?.();
       await AuthMenu.signIn(() => getBrowserRuntime());
     } catch (error) {
       console.error('Sign-in failed:', error);

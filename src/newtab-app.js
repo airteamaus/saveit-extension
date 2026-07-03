@@ -93,7 +93,11 @@ export function createNewtabApp({
     AuthMenu,
     elements: getAuthControllerElements(elements),
     onSignedIn: authLifecycle.onSignedIn,
-    onSignedOut: authLifecycle.onSignedOut
+    onSignedOut: authLifecycle.onSignedOut,
+    // Arm a one-time full warm-up *only* on explicit sign-in — not on session
+    // restoration when newtab opens already logged in (which would flash the
+    // warming UI over the user's existing cards on every page load).
+    onInteractiveSignIn: () => savedPagesStore.setLazy(false)
   });
 
   const importPanel = createImportPanel({
