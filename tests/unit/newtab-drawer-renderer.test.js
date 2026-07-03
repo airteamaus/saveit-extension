@@ -88,6 +88,8 @@ describe('newtab drawer renderer warming state', () => {
     expect(html).toContain('loading-dog-body');
     expect(html).toContain('saved-pages-warming-bar');
     expect(html).toContain('19%');
+    const bar = resultsContainer.querySelector('.saved-pages-warming-bar');
+    expect(bar.getAttribute('aria-valuenow')).toBe('19');
   });
 
   it('clamps the bar width to the given percentage', () => {
@@ -108,6 +110,10 @@ describe('newtab drawer renderer warming state', () => {
     expect(html).toContain('saved-pages-warming-bar');
     expect(html).toContain('saved-pages-warming-bar-indeterminate');
     expect(html).not.toMatch(/\d+%/);
+    const bar = resultsContainer.querySelector('.saved-pages-warming-bar');
+    expect(bar.getAttribute('aria-valuenow')).toBeNull();
+    const fill = resultsContainer.querySelector('.saved-pages-warming-bar-fill');
+    expect(fill.style.width).toBe('');
   });
 
   it('invokes renderChrome so surrounding chrome stays consistent', () => {
@@ -126,5 +132,17 @@ describe('newtab drawer renderer warming state', () => {
     renderer.renderWarmingState({ percent: 5 });
 
     expect(renderChrome).toHaveBeenCalledTimes(1);
+  });
+
+  it('clamps out-of-range percentages to the 0-100 bounds', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderWarmingState({ percent: 150 });
+    let fill = resultsContainer.querySelector('.saved-pages-warming-bar-fill');
+    expect(fill.style.width).toBe('100%');
+
+    renderer.renderWarmingState({ percent: -5 });
+    fill = resultsContainer.querySelector('.saved-pages-warming-bar-fill');
+    expect(fill.style.width).toBe('0%');
   });
 });
