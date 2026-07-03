@@ -131,9 +131,11 @@ export function createDrawerStoreSubscriptions({
   // Once we've shown a determinate reading we never go back below it (clamp),
   // and an unknown total caps the displayed value at 99 until completion.
   function computeWarmingProgress(snapshot) {
+    // The warming UI runs only on the All-pages store (maxItems = Infinity),
+    // so total need not be capped against a finite maxItems here.
     const total =
       typeof snapshot?.total === 'number' && snapshot.total > 0
-        ? Math.min(snapshot.total, Number.POSITIVE_INFINITY)
+        ? snapshot.total
         : null;
     const loaded = Array.isArray(snapshot?.allPages) ? snapshot.allPages.length : 0;
 
@@ -172,6 +174,12 @@ export function createDrawerStoreSubscriptions({
       // Drive the warming UI while it's active. This takes priority over the
       // normal sync path so the progress bar updates on every batch.
       if (isWarmUpActive(snapshot) && typeof renderWarmingState === 'function' && isDrawerOpen()) {
+        // Starting (or continuing) a warm-up. Tear down any pending completion
+        // timer from a prior warm-up so it can't fire mid-warm and wipe this
+        // one's progress state or render a stale snapshot.
+        if (warming.completionTimer) {
+          clearWarmingCompletionTimer();
+        }
         if (!warming.active) {
           warming.active = true;
         }
@@ -196,6 +204,10 @@ export function createDrawerStoreSubscriptions({
           warming.completionTimer = timers.setTimeout(() => {
             warming.completionTimer = null;
             resetWarming();
+            // Read a fresh snapshot: the store may have advanced (e.g. a
+            // cache-invalidation refresh) during the completion pause, and we
+            // must not render the stale one captured at completion time.
+            const currentSnapshot = savedPagesStore.getSnapshot();
             if (
               shouldSyncDrawerStoreUpdate({
                 suppressSavedPagesStoreSync: getSuppressSavedPagesStoreSync(),
@@ -205,7 +217,7 @@ export function createDrawerStoreSubscriptions({
               }) &&
               isDrawerOpen()
             ) {
-              syncDrawerStateFromStore(snapshot, { query: state.query, render: true });
+              syncDrawerStateFromStore(currentSnapshot, { query: state.query, render: true });
             }
           }, 300);
         }

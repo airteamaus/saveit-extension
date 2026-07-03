@@ -5,6 +5,7 @@ import {
   createDrawerStoreSubscriptions,
   shouldSyncDrawerStoreUpdate
 } from '../../src/newtab-drawer-sync-observers.js';
+import { createDrawerSyncCoordinator } from '../../src/newtab-drawer-sync.js';
 
 describe('drawer sync observers', () => {
   describe('shouldSyncDrawerStoreUpdate', () => {
@@ -279,6 +280,63 @@ describe('drawer sync observers', () => {
       expect(harness.renderedStates.at(-1)).toEqual(expect.objectContaining({ percent: 100 }));
       // After the (faked, synchronous) ~300ms timer fires, results rendering takes over.
       expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
+    });
+
+    it('wiring: the coordinator forwards renderDrawerWarmingState to the subscriber under the name the factory expects', () => {
+      // Regression guard: the coordinator used to forward the runtime renderer
+      // under the shorthand key `renderDrawerWarmingState`, but the factory
+      // destructures it as `renderWarmingState` — leaving the warming branch
+      // dead in production. This goes through the REAL coordinator->factory
+      // seam so a key mismatch fails here instead of in production.
+      const savedPagesStore = {
+        _listeners: [],
+        subscribe(listener) {
+          this._listeners.push(listener);
+          return () => {
+            this._listeners = this._listeners.filter((l) => l !== listener);
+          };
+        },
+        emit() {
+          this._listeners.forEach((l) => l());
+        },
+        getSnapshot: () => ({
+          allPages: Array.from({ length: 24 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'loading', phase: 'prefetch', reason: null }
+        })
+      };
+      const renderDrawerWarmingState = vi.fn();
+
+      const coordinator = createDrawerSyncCoordinator({
+        api: { isExtension: true },
+        state: { hasInitialized: true, query: '' },
+        savedPagesStore,
+        projectsStore: { subscribe: () => () => {} },
+        getCurrentUser: () => ({ uid: 'u1' }),
+        isDrawerOpen: () => true,
+        getSearchQuery: () => '',
+        notifySavedPagesTotalChange: vi.fn(),
+        refreshFavorites: vi.fn(),
+        syncDrawerStateFromStore: vi.fn(),
+        syncProjectsStateFromStore: vi.fn(),
+        loadDrawerBasePages: vi.fn(),
+        loadDrawerProjectPages: vi.fn(),
+        loadDrawerResults: vi.fn(),
+        renderDrawerSignInState: vi.fn(),
+        renderDrawerWarmingState,
+        resetDrawerState: vi.fn(),
+        setSuppressSavedPagesStoreSync: vi.fn(),
+        getSuppressSavedPagesStoreSync: () => false
+      });
+
+      coordinator.init();
+      savedPagesStore.emit();
+
+      // 24 / 80 = 30%. If the renderer were forwarded under the wrong key, the
+      // warming branch guard would be false and this spy would never be called.
+      expect(renderDrawerWarmingState).toHaveBeenCalledWith(
+        expect.objectContaining({ percent: 30 })
+      );
     });
   });
 });
