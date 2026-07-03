@@ -13,11 +13,14 @@ import { fileURLToPath } from 'url';
 // this standalone harness, for three independent reasons:
 //
 // 1. No OAuth path in standalone. newtab.html loads Firebase only through the
-//    extension bundle firebase-init-pages.js; under file:// that bundle never
-//    sets window.firebaseReady, so createNewtabAuthController.init() (src/newtab-auth.js)
-//    returns { handledInitialState:false } and onAuthStateChanged is never wired.
-//    Consequently onSignedIn -> handleSignedIn (src/newtab-app-coordination.js) never
-//    fires. There is no mock-user hook, debug flag, or test seam to force it.
+//    extension bundle firebase-init-pages.js; under file:// that bundle resolves
+//    window.firebaseReady to false (isExtension() is false) and never initializes
+//    window.firebaseAuth / window.firebaseOnAuthStateChanged.
+//    createNewtabAuthController.init() (src/newtab-auth.js) awaits that promise,
+//    then falls through to its no-auth else-branch returning
+//    { handledInitialState:false }; onAuthStateChanged is never wired. Consequently
+//    onSignedIn -> handleSignedIn (src/newtab-app-coordination.js) never fires.
+//    There is no mock-user hook, debug flag, or test seam to force it.
 //
 // 2. Mock data loads synchronously and short-circuits the warm-up loop. Even if
 //    setLazy(false) were forced, getMockPages (src/api-pages-standalone.js) calls
