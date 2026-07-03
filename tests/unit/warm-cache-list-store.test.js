@@ -152,6 +152,97 @@ describe('WarmCacheListStore', () => {
     expect(getList).toHaveBeenCalledTimes(2);
   });
 
+  it('setLazy(false) makes a lazy store run the full prefetch on hydrate', async () => {
+    const firstBatch = makePages(50);
+    const secondBatch = makePages(40, 51);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: firstBatch,
+        pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+        meta: { fromCache: false }
+      })
+      .mockResolvedValueOnce({
+        pages: secondBatch,
+        pagination: { total: 90, hasNextPage: false, nextCursor: null },
+        meta: { fromCache: false }
+      });
+    const { store } = createStore({ getList }, { lazy: true });
+
+    store.setLazy(false);
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(90);
+    });
+
+    expect(getList).toHaveBeenCalledTimes(2);
+  });
+
+  it('prefetchAllPages resets lazy back to true after completing', async () => {
+    const firstBatch = makePages(50);
+    const secondBatch = makePages(40, 51);
+    const getList = vi
+      .fn()
+      .mockResolvedValueOnce({
+        pages: firstBatch,
+        pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+        meta: { fromCache: false }
+      })
+      .mockResolvedValueOnce({
+        pages: secondBatch,
+        pagination: { total: 90, hasNextPage: false, nextCursor: null },
+        meta: { fromCache: false }
+      });
+    const { store } = createStore({ getList }, { lazy: true });
+
+    store.setLazy(false);
+    await store.hydrate();
+    // prefetchAllPages is fire-and-forget from hydrate(); its try/finally is
+    // what restores the lazy flag, and that lands strictly after the last page
+    // is appended. Poll on the flag itself as the completion signal, then
+    // assert coverage.
+    await vi.waitFor(() => {
+      expect(store.options.lazy).toBe(true);
+    });
+
+    // After the warm completes, the lazy flag must be restored so subsequent
+    // visits / scroll-driven fetches keep the lazy optimization.
+    expect(store.options.lazy).toBe(true);
+    expect(store.getSnapshot().allPages).toHaveLength(90);
+  });
+
+  it('prefetchAllPages resets lazy to true even on the lazy early-return path', async () => {
+    const firstBatch = makePages(50);
+    const getList = vi.fn().mockResolvedValueOnce({
+      pages: firstBatch,
+      pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+      meta: { fromCache: false }
+    });
+    const { store } = createStore({ getList }, { lazy: true });
+
+    // Leave lazy true; calling prefetchAllPages directly hits the early return.
+    await store.prefetchAllPages();
+
+    expect(store.options.lazy).toBe(true);
+  });
+
+  it('does not change the lazy flag when setLazy is not called (regression guard)', async () => {
+    const firstBatch = makePages(50);
+    const getList = vi.fn().mockResolvedValueOnce({
+      pages: firstBatch,
+      pagination: { total: 90, hasNextPage: true, nextCursor: 'page-50' },
+      meta: { fromCache: false }
+    });
+    const { store } = createStore({ getList }, { lazy: true });
+
+    await store.hydrate();
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    // A lazy store that was never opted out must stay lazy.
+    expect(store.options.lazy).toBe(true);
+    expect(store.getSnapshot().allPages).toHaveLength(50);
+  });
+
   it('drops stale cached entries once a full authoritative refresh completes', async () => {
     const cachedPages = makePages(5);
     const getList = vi

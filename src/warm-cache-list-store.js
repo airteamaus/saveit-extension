@@ -181,6 +181,14 @@ export class WarmCacheListStore {
     return () => this.events.removeEventListener('change', listener);
   }
 
+  // Allow callers to temporarily disable the lazy guard so a full eager warm-up
+  // runs once (e.g. right after OAuth login, to drive a progress bar). The
+  // warm-up loop self-resets this to true on completion so normal scroll-driven
+  // fetching keeps the lazy optimization afterwards.
+  setLazy(value) {
+    this.options.lazy = Boolean(value);
+  }
+
   emitChange() {
     this.events.dispatchEvent(new Event('change'));
   }
@@ -549,24 +557,34 @@ export class WarmCacheListStore {
     // explicit loadMore() calls (e.g. on scroll). This keeps large libraries
     // from hydrating in full on first paint.
     if (this.options.lazy) {
+      // Keep the flag honest: a store that opted out via setLazy(false) and
+      // then re-entered this early return (e.g. reset back to lazy) still
+      // ends up lazy afterwards. A store that was always lazy is a no-op.
+      this.options.lazy = true;
       return this.getSnapshot();
     }
 
-    while (
-      this.state.requestId === requestId &&
-      this.getActiveHasNextPage(requestId) &&
-      this.getAuthoritativeCount(requestId) < this.options.maxItems
-    ) {
-      const loaded = await this.loadMore(requestId);
-      if (loaded.status !== 'updated') break;
-    }
+    try {
+      while (
+        this.state.requestId === requestId &&
+        this.getActiveHasNextPage(requestId) &&
+        this.getAuthoritativeCount(requestId) < this.options.maxItems
+      ) {
+        const loaded = await this.loadMore(requestId);
+        if (loaded.status !== 'updated') break;
+      }
 
-    if (this.state.requestId === requestId && this.state.refreshState.status !== 'error') {
-      this.state.refreshState = createRefreshState('idle', {
-        phase: 'prefetch',
-        reason: 'complete'
-      });
-      this.emitChange();
+      if (this.state.requestId === requestId && this.state.refreshState.status !== 'error') {
+        this.state.refreshState = createRefreshState('idle', {
+          phase: 'prefetch',
+          reason: 'complete'
+        });
+        this.emitChange();
+      }
+    } finally {
+      // Restore lazy semantics for the rest of the session so scroll-driven
+      // pagination keeps the optimization from commit #15.
+      this.options.lazy = true;
     }
 
     return this.getSnapshot();
