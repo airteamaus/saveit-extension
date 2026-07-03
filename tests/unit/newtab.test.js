@@ -1231,6 +1231,58 @@ describe('newtab modules', () => {
      });
    });
 
+   it('renders the warming bar instead of the loading dog when the store is in non-lazy prefetch mode', async () => {
+     // Cold start: empty allPages, no renderable warm cache, and the store
+     // flipped to non-lazy (post-login prefetch). Task 6 routes this through
+     // renderDrawerWarmingState rather than renderDrawerLoadingState.
+     const snapshot = {
+       allPages: [{ id: 'page-1', title: 'Cached page' }],
+       total: 1
+     };
+     const { controller, dependencies } = createDrawerDataHarness({
+       api: {
+         isExtension: true,
+         getLastKnownUserId: vi.fn().mockResolvedValue('user-1')
+       },
+       savedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue(snapshot),
+         options: { lazy: false }
+       }
+     });
+
+     await controller.loadDrawerBasePages();
+
+     expect(dependencies.renderDrawerWarmingState).toHaveBeenCalledWith({ indeterminate: true });
+     expect(dependencies.renderDrawerLoadingState).not.toHaveBeenCalled();
+   });
+
+   it('still renders the loading dog on a cold start when the store is lazy', async () => {
+     // Regression guard: the default (lazy) cold start keeps the original
+     // renderDrawerLoadingState path. Only the non-lazy branch switches to the
+     // warming bar.
+     const snapshot = {
+       allPages: [{ id: 'page-1', title: 'Cached page' }],
+       total: 1
+     };
+     const { controller, dependencies } = createDrawerDataHarness({
+       api: {
+         isExtension: true,
+         getLastKnownUserId: vi.fn().mockResolvedValue('user-1')
+       },
+       savedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue(snapshot),
+         options: { lazy: true }
+       }
+     });
+
+     await controller.loadDrawerBasePages();
+
+     expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Gathering your saved pages…');
+     expect(dependencies.renderDrawerWarmingState).not.toHaveBeenCalled();
+   });
+
    it('updates page title and summary inline and re-applies filters', async () => {
      const { controller, state, api, savedPagesView, applyDrawerFilters, dependencies } = createDrawerDataHarness({
        state: {
