@@ -134,13 +134,16 @@ export function createDrawerStoreSubscriptions({
     }
   }
 
-  // The warm-up window is bounded by the store's lazy flag: onInteractiveSignIn
-  // sets lazy=false, and prefetchAllPages self-resets it to true on completion.
-  // While that window is open (lazy===false), loadMore() emits change events
-  // that should drive the warming bar.
-  function isWarmUpActive(snapshot) {
-    return savedPagesStore.options.lazy === false || isWarmUpComplete(snapshot);
-  }
+  // The warming window is opened by loadDrawerBasePages when the store is in
+  // non-lazy prefetch mode (set by the interactive Sign-in button via
+  // onInteractiveSignIn -> setLazy(false)). It arms state.warmUpInProgress.
+  // The subscriber then drives the progress bar on each store emit, and arms
+  // the completion timer once the store reaches an idle refreshState.
+  //
+  // The window is bounded by state.warmUpInProgress (the armed flag), NOT by
+  // the store's idle status. Gating on idle alone would show the warming bar
+  // on every routine new-tab open, since a warm-cache hydrate also ends in
+  // idle — that's the normal session-restore path and must stay invisible.
 
   function initStoreSubscriptions() {
     savedPagesStore.subscribe(() => {
@@ -150,12 +153,16 @@ export function createDrawerStoreSubscriptions({
 
       // Drive the warming UI while it's active. This takes priority over the
       // normal sync path so the progress bar updates on every batch.
-      if (isWarmUpActive(snapshot) && typeof renderDrawerResults === 'function' && isDrawerOpen()) {
-        // Tear down any pending completion timer from a prior warm-up so it
-        // can't fire mid-warm and clear the flag prematurely.
+      if (state.warmUpInProgress && typeof renderDrawerResults === 'function' && isDrawerOpen()) {
+        // Any idle refreshState is completion, regardless of which hydrate
+        // path produced it (prefetch, warm-cache hit, or fromCache ->
+        // refreshInitial). Loading/checking keep the bar in progress.
+        const complete = isWarmUpComplete(snapshot);
+
+        // Tear down any pending completion timer from a prior emit so it can't
+        // fire mid-warm and clear the flag prematurely.
         clearCompletionTimer();
 
-        const complete = isWarmUpComplete(snapshot);
         const progress = computeWarmingProgress(snapshot, state, { complete });
         state.warmUpInProgress = true;
         state.warmUpProgress = progress;
@@ -192,9 +199,9 @@ export function createDrawerStoreSubscriptions({
         return;
       }
 
-      // If we were warming and are no longer (e.g. store reset, sign-out),
-      // drop warming state so a future warm-up starts fresh.
-      if (state.warmUpInProgress && !isWarmUpActive(snapshot)) {
+      // If we were warming and the drawer closed or store reset, drop warming
+      // state so a future warm-up starts fresh.
+      if (state.warmUpInProgress && !isDrawerOpen()) {
         clearCompletionTimer();
         state.warmUpInProgress = false;
         state.warmUpLastPercent = 0;

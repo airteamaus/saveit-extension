@@ -165,7 +165,12 @@ describe('drawer sync observers', () => {
   });
 
   describe('createDrawerStoreSubscriptions warming UI', () => {
-    function createWarmingHarness({ snapshot, drawerOpen = true } = {}) {
+    // In production, loadDrawerBasePages arms state.warmUpInProgress before
+    // the store emits (newtab-drawer-data.js:213). The subscriber only drives
+    // the bar once warming is armed — gating on the flag (not on store idle
+    // status) is what keeps the warming pane off routine new-tab opens. Tests
+    // that exercise the warming branch therefore arm it explicitly.
+    function createWarmingHarness({ snapshot, drawerOpen = true, armWarming = true } = {}) {
       const savedPagesStore = {
         _listeners: [],
         options: { lazy: false },
@@ -193,7 +198,7 @@ describe('drawer sync observers', () => {
       const state = {
         hasInitialized: true,
         query: '',
-        warmUpInProgress: false,
+        warmUpInProgress: armWarming,
         warmUpProgress: { percent: 0, indeterminate: true },
         warmUpLastPercent: 0,
         warmUpDeterminate: false
@@ -297,6 +302,87 @@ describe('drawer sync observers', () => {
       expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
     });
 
+    // Regression: hydrate() has fast paths (warm-cache hit, fromCache API
+    // response) that bypass prefetchAllPages and delegate to refreshInitial,
+    // whose terminal states are {idle, 'up-to-date', 'no-updates'} or
+    // {idle, 'incremental-refresh', 'applied'}. The warming bar used to only
+    // recognize {idle, 'prefetch', 'complete'} as completion, so the common
+    // "log out, log back in, nothing changed" path left the bar pinned at
+    // 100% forever. Any idle refreshState must count as completion.
+    it('completes on the warm-cache "no-updates" terminal state (refreshInitial path)', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 80 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'idle', phase: 'up-to-date', reason: 'no-updates' }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      expect(harness.state.warmUpProgress).toEqual(expect.objectContaining({ percent: 100 }));
+      expect(harness.state.warmUpInProgress).toBe(false);
+      expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
+    });
+
+    it('completes on the warm-cache "incremental applied" terminal state', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 80 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'idle', phase: 'incremental-refresh', reason: 'applied' }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      expect(harness.state.warmUpInProgress).toBe(false);
+      expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
+    });
+
+    it('does NOT complete on a loading/checking intermediate state', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 40 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          refreshState: { status: 'checking', phase: 'update-check', reason: null }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      // Still warming — checking is an intermediate state, not terminal. The
+      // bar updates (50%) but no completion handoff fires.
+      expect(harness.state.warmUpInProgress).toBe(true);
+      expect(harness.state.warmUpProgress.percent).toBe(50);
+      expect(harness.syncDrawerStateFromStore).not.toHaveBeenCalled();
+    });
+
+    // Critical regression guard: the warming pane must NOT appear on routine
+    // new-tab opens. On session restore the store is lazy:true and warming is
+    // never armed by loadDrawerBasePages, so a subsequent idle emit (warm-cache
+    // hydrate finishing) must route through the normal sync path, not the
+    // warming branch. The old gate (isWarmUpActive, which OR'd in
+    // isWarmUpComplete) showed the warming bar on every open.
+    it('does not activate warming on a routine open (warmUpInProgress not armed)', () => {
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 40 }, (_, i) => ({ id: `p${i}` })),
+          total: 80,
+          // A terminal idle state — but warming was never armed.
+          refreshState: { status: 'idle', phase: 'up-to-date', reason: 'no-updates' }
+        },
+        armWarming: false
+      });
+
+      harness.savedPagesStore.emit();
+
+      // Warming never activates; the normal sync path runs instead.
+      expect(harness.state.warmUpInProgress).toBe(false);
+      expect(harness.renderDrawerResults).not.toHaveBeenCalled();
+      expect(harness.syncDrawerStateFromStore).toHaveBeenCalled();
+    });
+
     it('wiring: the coordinator forwards renderDrawerResults to the subscriber', () => {
       // Regression guard: a name mismatch at the coordinator->factory seam
       // leaves the warming branch dead in production. This goes through the
@@ -323,7 +409,8 @@ describe('drawer sync observers', () => {
       const state = {
         hasInitialized: true,
         query: '',
-        warmUpInProgress: false,
+        // Armed by loadDrawerBasePages before the store emits, as in production.
+        warmUpInProgress: true,
         warmUpProgress: { percent: 0, indeterminate: true },
         warmUpLastPercent: 0,
         warmUpDeterminate: false
@@ -439,6 +526,9 @@ describe('drawer sync observers', () => {
       initStoreSubscriptions();
 
       store.setLazy(false);
+      // Mirror loadDrawerBasePages: it arms the warming flag before hydrate()
+      // runs, so the subscriber drives the bar on each batch emit.
+      state.warmUpInProgress = true;
       await store.hydrate();
 
       // The warm-up is fire-and-forget; poll until the completion timer fires
@@ -531,6 +621,10 @@ describe('drawer sync observers', () => {
       initStoreSubscriptions();
 
       store.setLazy(false);
+      // Mirror loadDrawerBasePages: it arms the warming flag before hydrate()
+      // runs. Prefetch can complete (and the completion timer fire) before the
+      // caller sets hasInitialized — that's the race under test.
+      state.warmUpInProgress = true;
       await store.hydrate();
       // NOTE: deliberately NOT setting state.hasInitialized = true here, to
       // model the race where the prefetch completes first.

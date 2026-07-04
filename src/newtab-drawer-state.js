@@ -93,14 +93,24 @@ export function computeWarmingProgress(snapshot, state, { complete = false } = {
   return { percent, indeterminate: false };
 }
 
-// Returns true when the store snapshot reflects the terminal warm-up emit. The
-// warm-up window itself is bounded by state.warmUpInProgress (set by the
-// subscriber); this predicate only detects the completion transition that
-// clears it.
+// Returns true when the store snapshot reflects a terminal idle state — i.e.
+// the store has finished whatever work the warm-up was waiting on.
+//
+// Originally this only recognized prefetchAllPages' terminal emit
+// ({prefetch, idle, complete}). But hydrate() has two fast paths that bypass
+// prefetchAllPages entirely: a warm-cache hit, and an API response marked
+// fromCache. Both delegate to refreshInitial(), whose terminal states are
+// {idle, 'up-to-date', 'no-updates'} or {idle, 'incremental-refresh', 'applied'}.
+// Recognizing only the prefetch terminal left the warming bar pinned at 100%
+// on the common "log out, log back in, nothing changed" path, because the
+// completion timer that clears warmUpInProgress was never armed.
+//
+// Any idle refreshState is a completion signal: once the store is idle it has
+// no further work pending, so if we're still showing the warming UI we should
+// hand off to results. Non-idle states (loading/checking/error) leave the bar
+// in progress; error is handled separately by the dispatcher's error branch.
 export function isWarmUpComplete(snapshot) {
-  return snapshot?.refreshState?.phase === 'prefetch'
-    && snapshot?.refreshState?.status === 'idle'
-    && snapshot?.refreshState?.reason === 'complete';
+  return snapshot?.refreshState?.status === 'idle';
 }
 
 export function getDrawerSearchableText(page = {}) {

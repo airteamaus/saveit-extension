@@ -8,10 +8,11 @@ import { fileURLToPath } from 'url';
 // The warming flow requires: OAuth sign-in -> authController.init() resolves
 // -> onSignedIn -> drawerController.handleSignedIn -> savedPagesStore.setLazy(false)
 // -> prefetchAllPages() iterates in batches (each loadMore emits a change event
-// while options.lazy === false) -> the sync observer's isWarmUpActive() is true
-// for the whole warm-up window -> it drives renderWarmingState
-// (.saved-pages-warming-pane / .saved-pages-warming-bar). None of that can run in
-// this standalone harness, for three independent reasons:
+// while options.lazy === false) -> loadDrawerBasePages arms state.warmUpInProgress
+// -> the sync observer drives the warming pane for the whole warm-up window
+// (.saved-pages-warming-pane / .saved-pages-warming-bar) until the store reaches
+// an idle refreshState and the 300ms completion timer clears the flag. None of
+// that can run in this standalone harness, for three independent reasons:
 //
 // 1. No OAuth path in standalone. newtab.html loads Firebase only through the
 //    extension bundle firebase-init-pages.js; under file:// that bundle resolves
@@ -29,9 +30,9 @@ import { fileURLToPath } from 'url';
 //    (src/mock-data.js), so hasNextPage is false on the first response.
 //    prefetchAllPages (src/warm-cache-list-store.js) therefore exits its loop on
 //    iteration one — the store never emits the per-batch change events that
-//    isWarmUpActive (src/newtab-drawer-sync-observers.js) keys the warming bar on.
-//    (isWarmUpActive gates on options.lazy === false during the window, then on
-//    the terminal {phase:'prefetch', status:'idle', reason:'complete'} emit.)
+//    drive the warming bar. (The subscriber gates on state.warmUpInProgress,
+//    armed by loadDrawerBasePages; the bar hands off when the store reaches any
+//    idle refreshState — not just the prefetch terminal.)
 //
 // 3. handleSignedIn is the sole caller of setLazy(false) (grep confirms), and it
 //    is gated entirely behind the OAuth path above.
