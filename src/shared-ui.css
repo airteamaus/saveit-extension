@@ -433,6 +433,20 @@ select {
   color: currentColor;
 }
 
+.dropdown-item-label {
+  flex: 1;
+}
+
+/* Checkmark shown on toggle items (mirror sync, etc.) when active. */
+.dropdown-item-check {
+  color: var(--color-text-light);
+  flex-shrink: 0;
+}
+
+.dropdown-item[aria-pressed="true"] .dropdown-item-check {
+  color: var(--color-accent, #10b981);
+}
+
 .theme-toggle-compact {
   display: flex;
   justify-content: center;

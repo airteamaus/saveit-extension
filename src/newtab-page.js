@@ -6,6 +6,7 @@ export function getNewtabElements(documentObj = document) {
   return {
     importBtn: documentObj.getElementById('hero-import-btn'),
     refreshBtn: documentObj.getElementById('hero-refresh-btn'),
+    mirrorToggle: documentObj.getElementById('hero-mirror-toggle'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
     importPanelBackdrop: documentObj.getElementById('import-panel-backdrop'),
@@ -47,6 +48,52 @@ export function bindNewtabEventHandlers({
   documentObj.addEventListener('click', event => {
     authController.hideDropdownForOutsideClick(event.target);
   });
+}
+
+// Wire the bookmark-mirror toggle: read its current state on init, flip the
+// persisted flag via a runtime message on click. The background owns the
+// state and triggers the seed reconcile; the UI just reflects and requests.
+export function initMirrorToggle({ elements, runtime }) {
+  const toggle = elements.mirrorToggle;
+  if (!toggle) {
+    return;
+  }
+
+  const renderState = (enabled) => {
+    toggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    const check = toggle.querySelector('.dropdown-item-check');
+    if (check) {
+      check.hidden = !enabled;
+    }
+  };
+
+  // Best-effort initial read. Non-extension contexts (file:// standalone
+  // preview) have no runtime — leave the toggle in its default off state.
+  if (runtime?.sendMessage) {
+    runtime.sendMessage({ action: 'getBookmarkMirrorState' }, (response) => {
+      if (runtime.lastError || !response?.success) {
+        return;
+      }
+      renderState(Boolean(response.enabled));
+    });
+
+    toggle.addEventListener('click', () => {
+      const next = toggle.getAttribute('aria-pressed') !== 'true';
+      renderState(next); // optimistic, so the click feels instant
+      runtime.sendMessage(
+        { action: 'setBookmarkMirrorEnabled', enabled: next },
+        (response) => {
+          if (runtime.lastError || !response?.success) {
+            // Revert on failure.
+            renderState(!next);
+            return;
+          }
+          // Close the dropdown so the user sees the bookmark tree, not the menu.
+          elements.userDropdown?.classList.add('hidden');
+        }
+      );
+    });
+  }
 }
 
 export async function startNewtabPage({

@@ -8,6 +8,7 @@ import {
 import {
   bindNewtabEventHandlers,
   getNewtabElements,
+  initMirrorToggle,
   startNewtabPage
 } from './newtab-page.js';
 import {
@@ -145,6 +146,10 @@ export function createNewtabApp({
           /* drawer not initialised yet */
         }
       });
+      // Mirror toggle lives in the avatar dropdown. Reading/writing state via
+      // runtime messages so the background context owns the persisted state
+      // and triggers the seed reconcile on enable.
+      initMirrorToggle({ elements, runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime });
     },
     async start() {
       await startNewtabPageFn({

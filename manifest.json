@@ -16,6 +16,7 @@
   },
   "permissions": [
     "activeTab",
+    "alarms",
     "bookmarks",
     "notifications",
     "storage",

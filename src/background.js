@@ -4,6 +4,8 @@ import { createBackgroundAuth } from './background-auth.js';
 import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
+import { reconcile, mirrorSavedPage } from './bookmark-mirror.js';
+import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 
 const logger = createLogger('background');
@@ -203,6 +205,102 @@ async function fetchBackgroundApi(path = '', { method = 'GET', body } = {}) {
   return await response.json().catch(() => null);
 }
 
+// Minimal API surface for the bookmark mirror. The full newtab facade isn't
+// loaded in the background; we expose just the three methods reconcile() needs,
+// backed by the same authenticated fetch. Cursor pagination mirrors the
+// newtab path (limit + cursor until hasNextPage is false).
+const mirrorApi = {
+  async getSavedPages({ limit = 100, sort = 'newest', cursor } = {}) {
+    const params = { limit, sort };
+    if (cursor) {
+      params.cursor = cursor;
+    }
+    return fetchBackgroundApi('', params);
+  },
+  async getProjects() {
+    const projects = await fetchBackgroundApi('/projects');
+    return Array.isArray(projects) ? projects : [];
+  }
+};
+
+// --- bookmark mirror scheduling ------------------------------------------
+// Two triggers: a 4-hour periodic alarm for full reconciles, plus a one-shot
+// 30s debounce after each save so an on-save-created bookmark gets claimed
+// into the ownership map (and any cross-device drift gets picked up) promptly
+// without hammering the server on a burst of saves.
+
+const MIRROR_ALARM = 'bookmarkMirror';
+const MIRROR_ALARM_PERIOD_MIN = 240; // 4h
+const POST_SAVE_RECONCILE_ALARM = 'bookmarkMirror-postSave';
+const POST_SAVE_RECONCILE_DELAY_MIN = 0.5; // 30s
+
+let postSaveReconcileArmed = false;
+
+function schedulePostSaveReconcile() {
+  if (postSaveReconcileArmed) {
+    return; // already armed this burst — collapse into one reconcile
+  }
+  if (!browserApi.alarms?.create) {
+    return; // alarms API unavailable — next periodic tick will catch up
+  }
+  postSaveReconcileArmed = true;
+  browserApi.alarms.create(POST_SAVE_RECONCILE_ALARM, {
+    delayInMinutes: POST_SAVE_RECONCILE_DELAY_MIN
+  });
+}
+
+async function runMirrorReconcile({ forceFull = false } = {}) {
+  try {
+    const result = await reconcile({
+      bookmarksApi: browserApi.bookmarks,
+      api: mirrorApi,
+      storage: browserApi.storage.local,
+      forceFull,
+      onWarn: (msg) => logger.warn('mirror reconcile warning', { msg })
+    });
+    logger.log('mirror reconcile done', result);
+  } catch (error) {
+    logger.error('mirror reconcile failed', error);
+  }
+}
+
+function registerMirrorAlarms() {
+  if (!browserApi.alarms?.create || !browserApi.alarms?.onAlarm) {
+    return;
+  }
+  // Periodic full reconcile. Using alarms (not setInterval) because MV3
+  // service workers are torn down when idle — only alarms reliably wake them.
+  browserApi.alarms.create(MIRROR_ALARM, {
+    periodInMinutes: MIRROR_ALARM_PERIOD_MIN
+  });
+  browserApi.alarms.onAlarm.addListener((alarm) => {
+    if (alarm?.name === MIRROR_ALARM) {
+      void runMirrorReconcile({ forceFull: false });
+    } else if (alarm?.name === POST_SAVE_RECONCILE_ALARM) {
+      postSaveReconcileArmed = false;
+      void runMirrorReconcile({ forceFull: false });
+    }
+  });
+}
+
+// Seed the mirror on install/update: if the user already had it enabled (e.g.
+// after an extension reload), kick a one-time full reconcile so it doesn't
+// wait up to 4h for the first alarm.
+browserApi.runtime.onInstalled?.addListener(() => {
+  registerMirrorAlarms();
+  (async () => {
+    const state = await getMirrorState(browserApi.storage.local);
+    if (state.enabled) {
+      await runMirrorReconcile({ forceFull: true });
+    }
+  })();
+});
+
+// Also register on every background startup so the alarm survives SW restarts
+// even without an install event.
+browserApi.runtime.onStartup?.addListener(registerMirrorAlarms);
+registerMirrorAlarms();
+
 function getUserSaveErrorMessage(error) {
   let userMessage = error.message;
 
@@ -300,6 +398,26 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
     logger.error('Failed to invalidate cache', cacheError);
   }
 
+  // Best-effort bookmark mirror. On-save creates the bookmark immediately so
+  // it appears without waiting for the next alarm-driven reconcile; a
+  // follow-up reconcile (debounced) then claims it into the ownership map.
+  // Wrapped so a bookmarks failure can never break a successful save.
+  try {
+    const result = await mirrorSavedPage({
+      bookmarksApi: browserApi.bookmarks,
+      storage: browserApi.storage.local,
+      api: mirrorApi,
+      url: tab.url,
+      title: tab.title,
+      projectId
+    });
+    if (result.created) {
+      schedulePostSaveReconcile();
+    }
+  } catch (mirrorError) {
+    logger.error('Bookmark mirror create failed', mirrorError);
+  }
+
   await showBadgeFeedback('success', 2000);
 
   browserApi.notifications.create({
@@ -363,6 +481,38 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch(async (error) => {
         const userMessage = await handleSaveError(error, null);
         sendResponse({ success: false, error: userMessage });
+      });
+    return true;
+  }
+
+  if (message.action === 'getBookmarkMirrorState') {
+    getMirrorState(browserApi.storage.local)
+      .then((state) => {
+        // Only the toggle surfaces to the UI; folder/ownership internals stay
+        // in the background.
+        sendResponse({ success: true, enabled: Boolean(state.enabled) });
+      })
+      .catch((error) => {
+        logger.error('Failed to read mirror state', error);
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
+  }
+
+  if (message.action === 'setBookmarkMirrorEnabled') {
+    (async () => {
+      await setMirrorEnabled(browserApi.storage.local, Boolean(message.enabled));
+      // On enable, seed immediately so the folder tree appears without waiting
+      // up to 4h for the alarm. On disable, do nothing — existing bookmarks
+      // are left in place (the user can delete the SaveIt/ folder manually).
+      if (message.enabled) {
+        await runMirrorReconcile({ forceFull: true });
+      }
+    })()
+      .then(() => sendResponse({ success: true }))
+      .catch((error) => {
+        logger.error('Failed to set mirror enabled', error);
+        sendResponse({ success: false, error: error.message });
       });
     return true;
   }
