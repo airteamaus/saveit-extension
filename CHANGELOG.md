@@ -9,28 +9,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Single render authority: eliminate the warming/cards flicker via warmUpInProgress (abfc6d7)
-- Fix logout->login leaving empty drawer: reload when no renderable pages (8337da3)
-- Fix session-restore warming flash: SavedPagesStore must forward lazy (e19acb7)
-- Fix warming handoff: bind completion timer to window, not module scope (7f42b47)
-- Fix warming UI stuck at 100%: handoff must not gate on hasInitialized (212f9b2)
-- Fix warming UI regression on session restore + stack layout vertically (5e64591)
-- Align standalone E2E comment with the post-fix activation model (89cb510)
-- Fix critical bug: warming bar now renders per-batch, not just at completion (90cc313)
-- Correct Blocker 1 mechanism in standalone E2E comment (46db64e)
-- Document why post-login warming flow is not E2E-covered (bdfe66d)
-- Cover the cold-load warming branch at unit level (87bea59)
-- Show warming bar (not bare dog) on the cold post-login load (b718c64)
-- Fix renderWarmingState wiring + harden warming state machine (5b0e591)
-- Drive post-login warming UI from the saved-pages subscriber (1c8506e)
-- Flip saved-pages store to non-lazy on sign-in (648ff58)
-- Add warming pane + progress bar styles (48c0da7)
-- Lock in renderWarmingState guarantees: ARIA + clamping (4a2315f)
-- Add renderWarmingState: dog + determinate progress bar (30e9048)
-- Cover loadMore-throw reset path; tighten prefetch comments (142c2b9)
-- Add setLazy + self-resetting prefetch for post-login warm-up (511a9ed)
-- Add implementation plan: post-login cache warming with progress (011a1f5)
-- Add spec: post-login cache warming with progress (7540785)
+- Add bookmark mirror: sync saved pages to browser bookmarks (a87d638)
+- Fix warming bar stuck at 100% on warm-cache post-login path (05c4964)
+
+## [1.16.0] - 2026-07-03
+
+### 📝 Other Improvements
+
+- Single render authority: eliminate the warming/cards flicker via warmUpInProgress (8f672e8)
+- Fix logout->login leaving empty drawer: reload when no renderable pages (33082ac)
+- Fix session-restore warming flash: SavedPagesStore must forward lazy (5a238bd)
+- Fix warming handoff: bind completion timer to window, not module scope (3bae894)
+- Fix warming UI stuck at 100%: handoff must not gate on hasInitialized (555adb7)
+- Fix warming UI regression on session restore + stack layout vertically (94e598c)
+- Align standalone E2E comment with the post-fix activation model (3bc7424)
+- Fix critical bug: warming bar now renders per-batch, not just at completion (11019d5)
+- Correct Blocker 1 mechanism in standalone E2E comment (dfb129d)
+- Document why post-login warming flow is not E2E-covered (272e699)
+- Cover the cold-load warming branch at unit level (6469d10)
+- Show warming bar (not bare dog) on the cold post-login load (b98fe01)
+- Fix renderWarmingState wiring + harden warming state machine (ac6ca77)
+- Drive post-login warming UI from the saved-pages subscriber (9f14bf7)
+- Flip saved-pages store to non-lazy on sign-in (1555eb1)
+- Add warming pane + progress bar styles (1c13a0a)
+- Lock in renderWarmingState guarantees: ARIA + clamping (0d5e1de)
+- Add renderWarmingState: dog + determinate progress bar (f2e7fe5)
+- Cover loadMore-throw reset path; tighten prefetch comments (8ffead1)
+- Add setLazy + self-resetting prefetch for post-login warm-up (b470e05)
+- Add implementation plan: post-login cache warming with progress (cf0c6c6)
+- Add spec: post-login cache warming with progress (fec94ca)
 
 ## [1.15.0] - 2026-07-02
 
@@ -101,13 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
 
 ## [1.12.2] - 2026-06-26
-
-### 📝 Other Improvements
-
-- Add Refresh saved pages to the avatar menu; reload drawer after import (b7a0f8d)
-- Move Import bookmarks into the avatar dropdown menu (aeb1713)
-
-## [1.12.1] - 2026-06-26
 
 ### ✨ Features
 
@@ -300,7 +300,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Move Import bookmarks into the avatar dropdown menu (160a038)
+- Add Refresh saved pages to the avatar menu; reload drawer after import (b7a0f8d)
+- Move Import bookmarks into the avatar dropdown menu (aeb1713)
 - Add bookmark import from the browser (ea1630b)
 - Move page content up toward the header (dd37bcc)
 - Give cards a half-em vertical margin above and below (cdfaf17)
