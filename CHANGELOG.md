@@ -5,6 +5,16 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - TBD
+
+### ✨ Features
+
+- **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (74eb6ba)
+
+## [1.18.2] - 2026-07-07
+
+No notable changes.
+
 ## [1.18.1] - 2026-07-07
 
 ### 🐛 Bug Fixes
@@ -100,13 +110,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Use warm cache for domain pages; sort domains alphabetically (4d62903)
 
 ## [1.13.2] - 2026-06-27
-
-### 📝 Other Improvements
-
-- Use warm cache for domain pages; sort domains alphabetically (5d6e1df)
-- Fix standalone domains mock to use classification categories (1ce3d3e)
-
-## [1.13.1] - 2026-06-27
 
 ### ✨ Features
 
@@ -299,7 +302,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Fix standalone domains mock to use classification categories (7f8bcd4)
+- Use warm cache for domain pages; sort domains alphabetically (5d6e1df)
+- Fix standalone domains mock to use classification categories (1ce3d3e)
 - Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
 - Load the drawer after auth resolves, not before (5b81a74)
 - Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
