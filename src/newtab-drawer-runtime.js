@@ -20,6 +20,8 @@ export function createSavedPagesDrawerController({
   elements,
   onSavedPagesTotalChange,
   refreshFavorites,
+  // Optional toast callback for transient failure feedback within the drawer.
+  notify,
   windowObj = window,
   documentObj = document,
   dependencies = {}
@@ -132,6 +134,7 @@ export function createSavedPagesDrawerController({
     syncProjectsStateFromStore,
     applyDrawerFilters,
     windowObj,
+    notify,
     projectFetchLimit: 100
   });
 

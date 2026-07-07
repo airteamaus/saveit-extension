@@ -156,6 +156,20 @@ describe('ProjectManager', () => {
     expect(global.alert).toHaveBeenCalledWith('Project name already exists');
   });
 
+  it('routes create-project failures through notify (toast) when provided', async () => {
+    // Constructed with a notify callback — the failure should surface via the
+    // toast, not the blocking alert.
+    const notify = vi.fn();
+    const managerWithToast = new ProjectManager(api, htmlUtils, { notify });
+    api.createProject.mockRejectedValueOnce(new Error('Project name already exists'));
+
+    const result = await managerWithToast.createProject(dashboard, 'Duplicate name');
+
+    expect(result).toBeNull();
+    expect(notify).toHaveBeenCalledWith('Project name already exists', { type: 'error' });
+    expect(global.alert).not.toHaveBeenCalled();
+  });
+
   it('renders an unavailable message when the backend does not support projects', () => {
     dashboard.projectsAvailable = false;
     dashboard.projectsUnavailableMessage = 'Project collections are not supported by the connected backend yet.';

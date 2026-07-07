@@ -169,6 +169,23 @@ export function initSavedPagesDrawerEvents({
       if (event.key === 'Escape') {
         event.preventDefault();
         handleDrawerEditCancel();
+        return;
+      }
+
+      // Submit on Enter from the title input (single-line), and on
+      // Cmd/Ctrl+Enter from anywhere in the form (the textarea needs Enter
+      // for newlines). Browsers' implicit form submission on Enter is
+      // unreliable across inputs/buttons, so drive it explicitly.
+      const isTitleInput = event.target.matches?.('input[name="title"]');
+      const isModifierSubmit = event.key === 'Enter' && (event.metaKey || event.ctrlKey);
+      if (event.key === 'Enter' && (isTitleInput || isModifierSubmit)) {
+        event.preventDefault();
+        const form = event.target.closest('.saved-pages-drawer-edit-form');
+        if (form?.requestSubmit) {
+          form.requestSubmit();
+        } else if (form) {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        }
       }
       return;
     }

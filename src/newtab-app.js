@@ -71,7 +71,12 @@ export function createNewtabApp({
   } = dependencies;
 
   const elements = getNewtabElementsFn(documentObj);
-  const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn });
+
+  // Toast host for transient confirmations/failures. Created early so the
+  // drawer controller, project manager, and mirror toggle can share it.
+  const toast = createToastRegion({ container: elements.toastRegion, documentObj });
+
+  const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn }, { notify: toast.show });
   const savedPagesStore = createSavedPagesStoreFn(API);
   const projectsStore = createProjectsStoreFn(API);
 
@@ -86,7 +91,8 @@ export function createNewtabApp({
     projectManager,
     elements: getDrawerControllerElements(elements),
     onSavedPagesTotalChange: updateSavedPagesFooter,
-    refreshFavorites: undefined
+    refreshFavorites: undefined,
+    notify: toast.show
   });
   const authLifecycle = createNewtabAuthLifecycleFn({
     drawerController
@@ -142,10 +148,6 @@ export function createNewtabApp({
       }
     }
   });
-
-  // Toast host for transient confirmations. Created once so callers (mirror
-  // toggle, future alert-replacements) share a single region.
-  const toast = createToastRegion({ container: elements.toastRegion, documentObj });
 
   return {
     authController,

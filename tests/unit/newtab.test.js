@@ -1322,6 +1322,25 @@ describe('newtab modules', () => {
     });
   });
 
+  it('surfaces a toast (not a blocking alert) when notify is wired and a save fails validation', async () => {
+    const notify = vi.fn();
+    const { controller, dependencies } = createDrawerDataHarness({
+      state: {
+        editingPageId: 'page-1',
+        pages: [{ id: 'page-1', title: 'Alpha', pinned: false }],
+        allPages: [{ id: 'page-1', title: 'Alpha', pinned: false }]
+      },
+      dependencies: { notify }
+    });
+
+    // Empty title fails validation -> reportFailure -> notify (toast).
+    await controller.handleDrawerUpdate('page-1', { title: '   ', ai_summary_brief: '' });
+
+    expect(notify).toHaveBeenCalledWith('Title is required.', { type: 'error' });
+    // The blocking alert must not fire when notify is provided.
+    expect(dependencies.windowObj.alert).not.toHaveBeenCalled();
+  });
+
   describe('render windowing', () => {
     function makePages(count) {
       return Array.from({ length: count }, (_, i) => ({

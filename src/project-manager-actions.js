@@ -21,6 +21,9 @@ export function createProjectManagerActions({
   alertFn = (...args) => globalThis.alert?.(...args),
   promptFn = (...args) => globalThis.prompt?.(...args),
   confirmFn = (...args) => globalThis.confirm?.(...args),
+  // Optional toast callback for transient failure feedback. When absent the
+  // create-failure path falls back to the blocking alertFn.
+  notify,
   refreshProjectCounts,
   adjustProjectCount,
   renderEditor,
@@ -29,6 +32,13 @@ export function createProjectManagerActions({
   isProjectsUnavailable,
   getProjectsUnavailableMessage
 }) {
+  const reportCreateFailure = (message) => {
+    if (typeof notify === 'function') {
+      try { notify(message, { type: 'error' }); } catch { /* toast must not break the action */ }
+    } else {
+      alertFn(message);
+    }
+  };
   return {
     async loadProjects(dashboard) {
       if (dashboard.projectsStore?.hydrate) {
@@ -125,7 +135,7 @@ export function createProjectManagerActions({
         return newProject;
       } catch (error) {
         console.error('Failed to create project:', error);
-        alertFn(error.message || 'Failed to create project. Please try again.');
+        reportCreateFailure(error.message || 'Failed to create project. Please try again.');
         return null;
       }
     },
