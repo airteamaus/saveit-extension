@@ -1,6 +1,7 @@
 import { createNewtabAuthController } from './newtab-auth.js';
 import { createImportPanel } from './import-panel.js';
 import { createSharingCentre } from './sharing-centre.js';
+import { createToastRegion } from './toast.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -142,6 +143,10 @@ export function createNewtabApp({
     }
   });
 
+  // Toast host for transient confirmations. Created once so callers (mirror
+  // toggle, future alert-replacements) share a single region.
+  const toast = createToastRegion({ container: elements.toastRegion, documentObj });
+
   return {
     authController,
     drawerController,
@@ -151,6 +156,7 @@ export function createNewtabApp({
     projectsStore,
     savedPagesStore,
     sharingCentre,
+    toast,
     bind() {
       bindNewtabEventHandlersFn({
         elements,
@@ -186,8 +192,12 @@ export function createNewtabApp({
       });
       // Mirror toggle lives in the avatar dropdown. Reading/writing state via
       // runtime messages so the background context owns the persisted state
-      // and triggers the seed reconcile on enable.
-      initMirrorToggle({ elements, runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime });
+      // and triggers the seed reconcile on enable. Toast confirms each change.
+      initMirrorToggle({
+        elements,
+        runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime,
+        notify: toast.show
+      });
     },
     async start() {
       await startNewtabPageFn({

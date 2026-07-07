@@ -442,14 +442,16 @@ select {
   flex: 1;
 }
 
-/* Checkmark shown on toggle items (mirror sync, etc.) when active. */
-.dropdown-item-check {
+/* Toggle items (e.g. mirror sync): when pressed, the leading icon itself
+   turns green to signal the active state. No trailing checkmark — the icon
+   is the state. */
+.dropdown-item-icon {
   color: var(--color-text-light);
   flex-shrink: 0;
 }
 
-.dropdown-item[aria-pressed="true"] .dropdown-item-check {
-  color: var(--color-accent, #10b981);
+.dropdown-item[aria-pressed="true"] .dropdown-item-icon {
+  color: var(--color-shared);
 }
 
 .theme-toggle-compact {

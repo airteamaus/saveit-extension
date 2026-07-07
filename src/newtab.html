@@ -85,13 +85,10 @@
                 Sharing
               </button>
               <button id="hero-mirror-toggle" class="dropdown-item" type="button" aria-pressed="false" title="Keep a SaveIt/ folder in your browser bookmarks in sync with your saved pages">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <svg class="dropdown-item-icon mirror-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
                 </svg>
-                <span class="dropdown-item-label">Sync to browser bookmarks</span>
-                <svg class="dropdown-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true" hidden>
-                  <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
+                <span class="dropdown-item-label">Sync browser</span>
               </button>
               <div class="user-info">
                 <span id="hero-user-email" class="user-email"></span>
@@ -148,6 +145,9 @@
     aria-modal="true"
     aria-labelledby="sharing-centre-title"
   ></div>
+
+  <!-- Toast notifications (e.g. mirror-toggle confirmations). Auto-dismiss. -->
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="false"></div>
 
   <!-- Minimal script dependencies -->
   <script src="polyfill-loader.js"></script>
