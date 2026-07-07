@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- **ui:** Enter-to-save in page editor; route action failures through toast (d87ae01)
+- **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
+
+## [1.18.3] - 2026-07-07
+
+### ✨ Features
+
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (74eb6ba)
 
 ## [1.18.2] - 2026-07-07
@@ -103,13 +110,6 @@ No notable changes.
 - Fix domain click loading all pages: scope source in applyDrawerFilters (4117539)
 
 ## [1.13.3] - 2026-06-27
-
-### 📝 Other Improvements
-
-- Fix domain click loading all pages: scope source in applyDrawerFilters (95cfbd4)
-- Use warm cache for domain pages; sort domains alphabetically (4d62903)
-
-## [1.13.2] - 2026-06-27
 
 ### ✨ Features
 
@@ -302,7 +302,8 @@ No notable changes.
 
 ### 📝 Other Improvements
 
-- Use warm cache for domain pages; sort domains alphabetically (5d6e1df)
+- Fix domain click loading all pages: scope source in applyDrawerFilters (95cfbd4)
+- Use warm cache for domain pages; sort domains alphabetically (4d62903)
 - Fix standalone domains mock to use classification categories (1ce3d3e)
 - Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
 - Load the drawer after auth resolves, not before (5b81a74)
