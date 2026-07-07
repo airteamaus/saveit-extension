@@ -7,10 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
+
 ### 📝 Other Improvements
 
-- Add bookmark mirror: sync saved pages to browser bookmarks (a87d638)
-- Fix warming bar stuck at 100% on warm-cache post-login path (05c4964)
+- Cancel duplicate release runs per tag via concurrency group (73e0407)
+
+## [1.17.0] - 2026-07-04
+
+### 📝 Other Improvements
+
+- Add bookmark mirror: sync saved pages to browser bookmarks (782aaa1)
+- Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
 
 ## [1.16.0] - 2026-07-03
 
@@ -101,13 +111,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Load the drawer after auth resolves, not before (5b81a74)
 
 ## [1.12.3] - 2026-06-26
-
-### 📝 Other Improvements
-
-- Load the drawer after auth resolves, not before (c3f7666)
-- Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
-
-## [1.12.2] - 2026-06-26
 
 ### ✨ Features
 
@@ -300,7 +303,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Add Refresh saved pages to the avatar menu; reload drawer after import (b7a0f8d)
+- Load the drawer after auth resolves, not before (c3f7666)
+- Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
 - Move Import bookmarks into the avatar dropdown menu (aeb1713)
 - Add bookmark import from the browser (ea1630b)
 - Move page content up toward the header (dd37bcc)
