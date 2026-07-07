@@ -3,8 +3,8 @@
 import { createProjectManagerController } from './project-manager-controller.js';
 
 class ProjectManager {
-  constructor(api, htmlUtils) {
-    Object.assign(this, createProjectManagerController({ api, htmlUtils }));
+  constructor(api, htmlUtils, { notify } = {}) {
+    Object.assign(this, createProjectManagerController({ api, htmlUtils, notify }));
   }
 }
 

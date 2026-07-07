@@ -18,6 +18,7 @@ export function createProjectManagerController({
   api,
   htmlUtils,
   alertFn = (...args) => globalThis.alert?.(...args),
+  notify,
   documentObj = document
 }) {
   const controller = {
@@ -70,6 +71,7 @@ export function createProjectManagerController({
   const actions = createProjectManagerActions({
     api,
     alertFn,
+    notify,
     refreshProjectCounts: dashboard => controller.refreshProjectCounts(dashboard),
     adjustProjectCount: (dashboard, projectId, delta) => controller.adjustProjectCount(dashboard, projectId, delta),
     renderEditor: dashboard => ui.renderEditor(dashboard),

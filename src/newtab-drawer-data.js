@@ -26,6 +26,9 @@ export function createDrawerDataController({
   syncProjectsStateFromStore,
   applyDrawerFilters,
   windowObj = window,
+  // Optional toast callback (message, { type }) for transient failure feedback.
+  // Falls back to a blocking windowObj.alert when not provided.
+  notify,
   projectFetchLimit = 100,
   createProjectSavedPagesStoreFn = createProjectSavedPagesStore,
   createDomainSavedPagesStoreFn = createDomainSavedPagesStore
@@ -33,6 +36,16 @@ export function createDrawerDataController({
   let drawerProjectsPromise = null;
   const projectSavedPagesStores = new Map();
   const domainSavedPagesStores = new Map();
+
+  // Surface a transient failure message via toast when available, else fall
+  // back to a blocking alert so older callers / tests still see the message.
+  const reportFailure = (message) => {
+    if (typeof notify === 'function') {
+      try { notify(message, { type: 'error' }); } catch { /* toast must never break the action */ }
+    } else {
+      windowObj.alert(message);
+    }
+  };
 
   function findDrawerPage(id) {
     return state.allPages.find(page => page.id === id) || null;
@@ -363,7 +376,7 @@ export function createDrawerDataController({
       renderDrawerResults();
     } catch (error) {
       console.error('[newtab] Failed to delete page:', error);
-      windowObj.alert('Failed to delete page. Please try again.');
+      reportFailure('Failed to delete page. Please try again.');
     }
   }
 
@@ -386,7 +399,7 @@ export function createDrawerDataController({
       void savedPagesView.persistAllPages();
       renderDrawerResults();
       console.error('[newtab] Failed to update pin:', error);
-      windowObj.alert('Failed to update pin status. Please try again.');
+      reportFailure('Failed to update pin status. Please try again.');
     }
   }
 
@@ -418,7 +431,7 @@ export function createDrawerDataController({
     const nextTitle = (updates.title || '').trim();
     const nextAiSummaryBrief = (updates.ai_summary_brief || '').trim();
     if (!nextTitle) {
-      windowObj.alert('Title is required.');
+      reportFailure('Title is required.');
       return;
     }
 
@@ -447,7 +460,7 @@ export function createDrawerDataController({
       state.savingEditPageId = null;
       renderDrawerResults();
       console.error('[newtab] Failed to update page:', error);
-      windowObj.alert('Failed to update page. Please try again.');
+      reportFailure('Failed to update page. Please try again.');
     }
   }
 
