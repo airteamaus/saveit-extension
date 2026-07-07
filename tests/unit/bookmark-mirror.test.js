@@ -429,11 +429,75 @@ describe('ensureMirrorFolders', () => {
       projects: [{ id: 'p1', name: 'Cooking' }],
       existingTree: null
     });
-
     expect(statePatch.rootFolderId).toBeTruthy();
     expect(statePatch.unfiledFolderId).toBeTruthy();
     expect(statePatch.projectFolders.p1).toEqual({ id: folders.byProject.p1, name: 'Cooking' });
     expect(statePatch.unfiledFolderId).toBe(folders.unfiledId);
+  });
+
+  it('never creates directly on the immovable root node (regression for "Can\'t modify the root bookmark folders")', async () => {
+    // Real browsers throw "Can't modify the root bookmark folders" if you
+    // bookmarks.create with parentId === the top-level root id. The fake API
+    // below mirrors that constraint so this test catches the v1.17/v1.18 bug
+    // where SaveIt/ was created on the immovable root.
+    const tree = [{
+      id: '0', // immovable root, like Chrome's real bookmark tree root
+      title: '',
+      children: [
+        { id: '1', title: 'Bookmarks bar', children: [] },
+        { id: '2', title: 'Other bookmarks', children: [] }
+      ]
+    }];
+    let nextId = 100;
+    const api = {
+      async getTree() { return tree; },
+      async getChildren(id) {
+        const find = (nodes) => {
+          for (const n of nodes) {
+            if (n.id === id) return n;
+            if (n.children) { const f = find(n.children); if (f) return f; }
+          }
+          return null;
+        };
+        return find(tree)?.children || [];
+      },
+      async create({ parentId, title }) {
+        if (parentId === '0') {
+          throw new Error("Can't modify the root bookmark folders.");
+        }
+        const node = { id: `b${nextId++}`, parentId, title, children: [] };
+        const find = (nodes) => {
+          for (const n of nodes) {
+            if (n.id === parentId) return n;
+            if (n.children) { const f = find(n.children); if (f) return f; }
+          }
+          return null;
+        };
+        const parent = find(tree);
+        (parent.children ||= []).push(node);
+        return node;
+      },
+      async update() { return null; }
+    };
+
+    const { statePatch } = await ensureMirrorFolders({
+      bookmarksApi: api,
+      state: getDefaultMirrorState(),
+      projects: [],
+      existingTree: null
+    });
+
+    // SaveIt/ must have been created under a writable container (id '1'),
+    // not the immovable root ('0') — otherwise create() above would have thrown.
+    expect(statePatch.rootFolderId).toBeTruthy();
+    const saveIt = (function find(nodes) {
+      for (const n of nodes) {
+        if (n.id === statePatch.rootFolderId) return n;
+        if (n.children) { const f = find(n.children); if (f) return f; }
+      }
+      return null;
+    })(tree);
+    expect(saveIt.parentId).toBe('1');
   });
 
   it('reuses an existing SaveIt/ folder rather than duplicating', async () => {

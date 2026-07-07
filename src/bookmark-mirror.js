@@ -207,13 +207,21 @@ export async function ensureMirrorFolders({
   }
 
   const tree = existingTree || await bookmarksApi.getTree();
-  // Root nodes have no url and contain children. Use the first one as the
-  // parent for SaveIt/ (the bookmarks toolbar in both browsers is rooted
-  // under one of these; the first root works universally for a top-level
-  // folder).
-  const writableRoot = (Array.isArray(tree) ? tree : []).find(
-    (node) => Array.isArray(node.children)
-  ) || tree?.[0];
+  // bookmarks.getTree() returns a single immovable root node whose children
+  // are the writable top-level containers (Bookmarks bar / Other bookmarks /
+  // Mobile bookmarks in Chrome; the toolbar/other roots in Firefox). Creating
+  // directly on that immovable root throws "Can't modify the root bookmark
+  // folders", so descend one level and use the first writable container
+  // (one that itself holds children) as the parent for SaveIt/.
+  const treeRoot = Array.isArray(tree) && tree.length ? tree[0] : null;
+  const writableContainers = treeRoot && Array.isArray(treeRoot.children)
+    ? treeRoot.children.filter((node) => Array.isArray(node.children))
+    : [];
+  // Fallback: some trees aren't wrapped in an outer root (test fixtures), so
+  // accept top-level containers directly.
+  const writableRoot = writableContainers[0]
+    || (Array.isArray(tree) ? tree.find((node) => Array.isArray(node.children)) : null)
+    || treeRoot;
 
   if (!writableRoot) {
     throw new Error('No writable bookmarks root found');
