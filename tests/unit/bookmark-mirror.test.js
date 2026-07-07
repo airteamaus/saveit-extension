@@ -149,9 +149,14 @@ function createFakeApi({ pages = [], projects = [], freshness = null }) {
 }
 
 const FOLDERS = (overrides = {}) => ({
-  rootId: 'root-saveit',
-  unfiledId: 'folder-unfiled',
-  byProject: { 'p1': 'folder-p1', 'p2': 'folder-p2' },
+  byBucket: {
+    'project:p1': 'folder-p1',
+    'project:p2': 'folder-p2',
+    'domain:Software Development': 'folder-sd',
+    'domain:__other__': 'folder-other'
+  },
+  bySubBucket: {},
+  bucketPlan: {},
   childrenByFolderId: {},
   ...overrides
 });
@@ -163,8 +168,8 @@ describe('getDefaultMirrorState', () => {
     const s = getDefaultMirrorState();
     expect(s.enabled).toBe(false);
     expect(s.rootFolderId).toBeNull();
-    expect(s.unfiledFolderId).toBeNull();
     expect(s.projectFolders).toEqual({});
+    expect(s.domainFolders).toEqual({});
     expect(s.ownership).toEqual({});
     expect(s.lastFullReconcileAt).toBeNull();
   });
@@ -223,16 +228,33 @@ describe('getMirrorState / setMirrorState', () => {
 });
 
 describe('buildDesiredSet', () => {
-  it('expands a page in N projects into N desired entries', () => {
+  it('expands a page in N projects into N project buckets + 1 domain bucket', () => {
     const desired = buildDesiredSet([
-      { id: 'a', url: 'https://a.com', title: 'A', project_ids: ['p1', 'p2'] }
+      {
+        id: 'a', url: 'https://a.com', title: 'A',
+        project_ids: ['p1', 'p2'],
+        primary_classification_label: 'Software Development'
+      }
     ]);
-    expect(desired.a.projects).toEqual(['p1', 'p2']);
+    expect(desired.a.buckets).toEqual([
+      'project:p1', 'project:p2', 'domain:Software Development'
+    ]);
   });
 
-  it('treats a page with no projects as Unfiled ([null])', () => {
+  it('treats a page with no classification as domain:__other__', () => {
     const desired = buildDesiredSet([{ id: 'a', url: 'https://a.com', title: 'A' }]);
-    expect(desired.a.projects).toEqual([null]);
+    expect(desired.a.buckets).toEqual(['domain:__other__']);
+  });
+
+  it('derives the general label from classifications when primary is absent', () => {
+    const desired = buildDesiredSet([{
+      id: 'a', url: 'https://a.com', title: 'A',
+      classifications: [
+        { type: 'topic', label: 'React', confidence: 0.9 },
+        { type: 'general', label: 'Software Development', confidence: 0.95 }
+      ]
+    }]);
+    expect(desired.a.buckets).toContain('domain:Software Development');
   });
 
   it('skips pages missing id or url', () => {
@@ -242,6 +264,38 @@ describe('buildDesiredSet', () => {
       { id: 'ok', url: 'https://ok.com', title: 'OK' }
     ]);
     expect(Object.keys(desired)).toEqual(['ok']);
+  });
+});
+
+describe('computeBucketPlan', () => {
+  it('marks buckets over the threshold as needing sub-buckets', async () => {
+    const { computeBucketPlan } = await import('../../src/bookmark-mirror.js');
+    // 11 pages all in the same domain bucket → needs sub-buckets.
+    const pages = Array.from({ length: 11 }, (_, i) => ({
+      id: `p${i}`, url: `https://x${i}.com`, title: `P${i}`,
+      classifications: [
+        { type: 'general', label: 'Software Development', confidence: 0.9 },
+        { type: 'domain', label: 'Frontend', confidence: 0.8 }
+      ]
+    }));
+    const desired = buildDesiredSet(pages);
+    const plan = computeBucketPlan(desired);
+    const bucket = plan.buckets['domain:Software Development'];
+    expect(bucket.count).toBe(11);
+    expect(bucket.needsSubbuckets).toBe(true);
+    expect(bucket.subBuckets).toHaveProperty('Frontend', 11);
+  });
+
+  it('does not sub-bucket buckets at or below the threshold', async () => {
+    const { computeBucketPlan } = await import('../../src/bookmark-mirror.js');
+    const pages = Array.from({ length: 10 }, (_, i) => ({
+      id: `p${i}`, url: `https://x${i}.com`, title: `P${i}`,
+      classifications: [{ type: 'general', label: 'Cooking', confidence: 0.9 }]
+    }));
+    const desired = buildDesiredSet(pages);
+    const plan = computeBucketPlan(desired);
+    expect(plan.buckets['domain:Cooking'].needsSubbuckets).toBe(false);
+    expect(plan.buckets['domain:Cooking'].subBuckets).toBeNull();
   });
 });
 
@@ -265,26 +319,26 @@ describe('computeReconcileOps', () => {
     expect(ops).toEqual({ create: [], move: [], update: [], remove: [], adopt: [] });
   });
 
-  it('new page in Unfiled → create', () => {
-    const desired = { p1: { projects: [null], url: 'https://a.com', title: 'A' } };
+  it('new page in a project → create in that project bucket', () => {
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const ops = computeReconcileOps(desired, {}, FOLDERS());
     expect(ops.create).toEqual([
-      { saveItPageId: 'p1', projectId: null, url: 'https://a.com', title: 'A', parentId: 'folder-unfiled' }
+      { saveItPageId: 'p1', bucketKey: 'project:p1', url: 'https://a.com', title: 'A', parentId: 'folder-p1' }
     ]);
     expect(ops.adopt).toHaveLength(0);
   });
 
-  it('page in a project → create with that project\'s folder', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
+  it('new page in a domain bucket → create in that domain folder', () => {
+    const desired = { p1: { buckets: ['domain:Software Development'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const ops = computeReconcileOps(desired, {}, FOLDERS());
-    expect(ops.create[0].parentId).toBe('folder-p1');
+    expect(ops.create[0].parentId).toBe('folder-sd');
   });
 
   it('page deleted from server → remove all owned nodes for it', () => {
     const ownership = {
       p1: [
-        { projectId: 'p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
-        { projectId: 'p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
+        { bucketKey: 'project:p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
+        { bucketKey: 'project:p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
       ]
     };
     const ops = computeReconcileOps({}, ownership, FOLDERS());
@@ -292,12 +346,12 @@ describe('computeReconcileOps', () => {
     expect(ops.create).toHaveLength(0);
   });
 
-  it('page left one project (still in another) → remove only that node', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
+  it('page left one bucket (still in another) → remove only that node', () => {
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const ownership = {
       p1: [
-        { projectId: 'p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
-        { projectId: 'p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
+        { bucketKey: 'project:p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
+        { bucketKey: 'project:p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
       ]
     };
     const ops = computeReconcileOps(desired, ownership, FOLDERS());
@@ -307,25 +361,25 @@ describe('computeReconcileOps', () => {
   });
 
   it('title drifted → update', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'New Title' } };
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'New Title', subLabels: {} } };
     const ownership = {
-      p1: [{ projectId: 'p1', bookmarkId: 'b1', title: 'Old Title', parentId: 'folder-p1' }]
+      p1: [{ bucketKey: 'project:p1', bookmarkId: 'b1', title: 'Old Title', parentId: 'folder-p1' }]
     };
     const ops = computeReconcileOps(desired, ownership, FOLDERS());
     expect(ops.update).toEqual([{ bookmarkId: 'b1', title: 'New Title' }]);
   });
 
   it('owned node in wrong folder → move', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const ownership = {
-      p1: [{ projectId: 'p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-wrong' }]
+      p1: [{ bucketKey: 'project:p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-wrong' }]
     };
     const ops = computeReconcileOps(desired, ownership, FOLDERS());
     expect(ops.move).toEqual([{ bookmarkId: 'b1', parentId: 'folder-p1' }]);
   });
 
   it('stray whose URL matches a desired page → adopt (no create, no duplicate)', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const folders = FOLDERS({
       childrenByFolderId: {
         'folder-p1': [{ id: 'stray1', url: 'HTTPS://A.COM/', title: 'Old' }]
@@ -333,39 +387,24 @@ describe('computeReconcileOps', () => {
     });
     const ops = computeReconcileOps(desired, {}, folders);
     expect(ops.create).toHaveLength(0);
-    expect(ops.adopt).toEqual([{ bookmarkId: 'stray1', saveItPageId: 'p1', projectId: 'p1' }]);
-    // Adopted stray with mismatched title is also queued for update.
+    expect(ops.adopt).toEqual([{ bookmarkId: 'stray1', saveItPageId: 'p1', bucketKey: 'project:p1', parentId: 'folder-p1' }]);
     expect(ops.update).toEqual([{ bookmarkId: 'stray1', title: 'A' }]);
   });
 
   it('stray whose URL does NOT match any desired page → left alone (no op)', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const folders = FOLDERS({
       childrenByFolderId: {
         'folder-p1': [{ id: 'stray1', url: 'https://unrelated.com', title: 'X' }]
       }
     });
     const ops = computeReconcileOps(desired, {}, folders);
-    expect(ops.create).toHaveLength(1); // a.com still needs creating
-    expect(ops.adopt).toHaveLength(0);
-  });
-
-  it('stray in a DIFFERENT folder than the target → not adopted (only same-folder strays)', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
-    const folders = FOLDERS({
-      childrenByFolderId: {
-        'folder-p1': [],
-        'folder-unfiled': [{ id: 'stray1', url: 'https://a.com', title: 'A' }]
-      }
-    });
-    const ops = computeReconcileOps(desired, {}, folders);
-    expect(ops.adopt).toHaveLength(0);
     expect(ops.create).toHaveLength(1);
+    expect(ops.adopt).toHaveLength(0);
   });
 
   it('a stray consumed by one pair is not double-adopted by another', () => {
-    // Same URL in two projects, only one stray exists in p1's folder.
-    const desired = { p1: { projects: ['p1', 'p2'], url: 'https://a.com', title: 'A' } };
+    const desired = { p1: { buckets: ['project:p1', 'project:p2'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const folders = FOLDERS({
       childrenByFolderId: {
         'folder-p1': [{ id: 'stray1', url: 'https://a.com', title: 'A' }],
@@ -374,43 +413,51 @@ describe('computeReconcileOps', () => {
     });
     const ops = computeReconcileOps(desired, {}, folders);
     expect(ops.adopt).toHaveLength(1);
-    expect(ops.create).toHaveLength(1); // the p2 entry still needs creating
+    expect(ops.create).toHaveLength(1);
   });
 
-  it('page in 3 projects, owned in 3 → no ops', () => {
-    const desired = { p1: { projects: ['p1', 'p2', 'p3'], url: 'https://a.com', title: 'A' } };
-    const folders = FOLDERS({ byProject: { p1: 'f1', p2: 'f2', p3: 'f3' } });
+  it('page in 2 buckets, owned in both → no ops', () => {
+    const desired = { p1: { buckets: ['project:p1', 'project:p2'], url: 'https://a.com', title: 'A', subLabels: {} } };
+    const folders = FOLDERS();
     const ownership = {
       p1: [
-        { projectId: 'p1', bookmarkId: 'b1', title: 'A', parentId: 'f1' },
-        { projectId: 'p2', bookmarkId: 'b2', title: 'A', parentId: 'f2' },
-        { projectId: 'p3', bookmarkId: 'b3', title: 'A', parentId: 'f3' }
+        { bucketKey: 'project:p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
+        { bucketKey: 'project:p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
       ]
     };
     const ops = computeReconcileOps(desired, ownership, folders);
     expect(ops).toEqual({ create: [], move: [], update: [], remove: [], adopt: [] });
   });
 
-  it('multi-project page drops to 1 → 2 removes, 1 keep', () => {
-    const desired = { p1: { projects: ['p1'], url: 'https://a.com', title: 'A' } };
-    const folders = FOLDERS({ byProject: { p1: 'f1', p2: 'f2', p3: 'f3' } });
+  it('multi-bucket page drops to 1 → 1 remove, 1 keep', () => {
+    const desired = { p1: { buckets: ['project:p1'], url: 'https://a.com', title: 'A', subLabels: {} } };
+    const folders = FOLDERS();
     const ownership = {
       p1: [
-        { projectId: 'p1', bookmarkId: 'b1', title: 'A', parentId: 'f1' },
-        { projectId: 'p2', bookmarkId: 'b2', title: 'A', parentId: 'f2' },
-        { projectId: 'p3', bookmarkId: 'b3', title: 'A', parentId: 'f3' }
+        { bucketKey: 'project:p1', bookmarkId: 'b1', title: 'A', parentId: 'folder-p1' },
+        { bucketKey: 'project:p2', bookmarkId: 'b2', title: 'A', parentId: 'folder-p2' }
       ]
     };
     const ops = computeReconcileOps(desired, ownership, folders);
-    expect(ops.remove.map((o) => o.bookmarkId).sort()).toEqual(['b2', 'b3']);
+    expect(ops.remove.map((o) => o.bookmarkId).sort()).toEqual(['b2']);
     expect(ops.create).toHaveLength(0);
   });
 
-  it('skips a desired pair whose project folder is unknown (defensive)', () => {
-    const desired = { p1: { projects: ['unknown-proj'], url: 'https://a.com', title: 'A' } };
+  it('skips a desired pair whose bucket folder is unknown (defensive)', () => {
+    const desired = { p1: { buckets: ['project:unknown'], url: 'https://a.com', title: 'A', subLabels: {} } };
     const ops = computeReconcileOps(desired, {}, FOLDERS());
     expect(ops.create).toHaveLength(0);
     expect(ops.adopt).toHaveLength(0);
+  });
+
+  it('sub-bucketed bucket resolves parentId from bySubBucket', () => {
+    const desired = { p1: { buckets: ['domain:Software Development'], url: 'https://a.com', title: 'A', subLabels: { 'domain:Software Development': 'Frontend' } } };
+    const folders = FOLDERS({
+      bucketPlan: { 'domain:Software Development': { needsSubbuckets: true } },
+      bySubBucket: { 'domain:Software Development': { Frontend: 'folder-sd-frontend' } }
+    });
+    const ops = computeReconcileOps(desired, {}, folders);
+    expect(ops.create[0].parentId).toBe('folder-sd-frontend');
   });
 });
 
@@ -421,18 +468,55 @@ describe('ensureMirrorFolders', () => {
     children: [{ id: 'toolbar', title: 'Bookmarks Toolbar', children: [] }]
   }];
 
-  it('creates SaveIt/, Unfiled/, and project folders when none exist', async () => {
+  const domainLabelFor = (key) => key === '__other__' ? 'Other' : key;
+
+  it('creates SaveIt/ and one folder per project + domain bucket', async () => {
     const api = createFakeBookmarksApi(baseTree());
+    const bucketPlan = {
+      buckets: {
+        'project:p1': { count: 2, needsSubbuckets: false, kind: 'project', ref: 'p1', subBuckets: null },
+        'domain:Software Development': { count: 3, needsSubbuckets: false, kind: 'domain', ref: 'Software Development', subBuckets: null },
+        'domain:__other__': { count: 1, needsSubbuckets: false, kind: 'domain', ref: '__other__', subBuckets: null }
+      }
+    };
     const { statePatch, folders } = await ensureMirrorFolders({
       bookmarksApi: api,
       state: getDefaultMirrorState(),
       projects: [{ id: 'p1', name: 'Cooking' }],
+      bucketPlan,
+      domainLabelFor,
       existingTree: null
     });
     expect(statePatch.rootFolderId).toBeTruthy();
-    expect(statePatch.unfiledFolderId).toBeTruthy();
-    expect(statePatch.projectFolders.p1).toEqual({ id: folders.byProject.p1, name: 'Cooking' });
-    expect(statePatch.unfiledFolderId).toBe(folders.unfiledId);
+    expect(statePatch.projectFolders.p1).toEqual({ id: folders.byBucket['project:p1'], name: 'Cooking' });
+    expect(statePatch.domainFolders['Software Development']).toEqual({ id: folders.byBucket['domain:Software Development'], name: 'Software Development' });
+    expect(statePatch.domainFolders['__other__']).toEqual({ id: folders.byBucket['domain:__other__'], name: 'Other' });
+  });
+
+  it('creates sub-bucket folders under a bucket that exceeds the threshold', async () => {
+    const api = createFakeBookmarksApi([{
+      id: 'root', title: '', children: [{ id: 'toolbar', title: 'toolbar', children: [] }]
+    }]);
+    const bucketPlan = {
+      buckets: {
+        'domain:Software Development': {
+          count: 11, needsSubbuckets: true, kind: 'domain', ref: 'Software Development',
+          subBuckets: { Frontend: 6, Backend: 5 }
+        }
+      }
+    };
+    const { folders } = await ensureMirrorFolders({
+      bookmarksApi: api,
+      state: { ...getDefaultMirrorState(), rootFolderId: null },
+      projects: [],
+      bucketPlan,
+      domainLabelFor,
+      existingTree: null
+    });
+    const sdFolderId = folders.byBucket['domain:Software Development'];
+    expect(sdFolderId).toBeTruthy();
+    expect(folders.bySubBucket['domain:Software Development'].Frontend).toBeTruthy();
+    expect(folders.bySubBucket['domain:Software Development'].Backend).toBeTruthy();
   });
 
   it('never creates directly on the immovable root node (regression for "Can\'t modify the root bookmark folders")', async () => {
@@ -484,11 +568,11 @@ describe('ensureMirrorFolders', () => {
       bookmarksApi: api,
       state: getDefaultMirrorState(),
       projects: [],
+      bucketPlan: { buckets: {} },
+      domainLabelFor,
       existingTree: null
     });
 
-    // SaveIt/ must have been created under a writable container (id '1'),
-    // not the immovable root ('0') — otherwise create() above would have thrown.
     expect(statePatch.rootFolderId).toBeTruthy();
     const saveIt = (function find(nodes) {
       for (const n of nodes) {
@@ -514,6 +598,8 @@ describe('ensureMirrorFolders', () => {
       bookmarksApi: api,
       state: getDefaultMirrorState(),
       projects: [],
+      bucketPlan: { buckets: {} },
+      domainLabelFor,
       existingTree: null
     });
     expect(statePatch.rootFolderId).toBe('existing-saveit');
@@ -534,20 +620,24 @@ describe('ensureMirrorFolders', () => {
       rootFolderId: 'saveit',
       projectFolders: { p1: { id: 'p1folder', name: 'OldName' } }
     };
+    const bucketPlan = {
+      buckets: { 'project:p1': { count: 1, needsSubbuckets: false, kind: 'project', ref: 'p1', subBuckets: null } }
+    };
     const { statePatch } = await ensureMirrorFolders({
       bookmarksApi: api,
       state,
       projects: [{ id: 'p1', name: 'NewName' }],
+      bucketPlan,
+      domainLabelFor,
       existingTree: null
     });
     expect(statePatch.projectFolders.p1).toEqual({ id: 'p1folder', name: 'NewName' });
-    // The folder node in the tree should now have the new title.
     const saveItFolder = api._tree[0].children[0].children.find((c) => c.id === 'saveit');
     const renamedFolder = saveItFolder.children.find((c) => c.id === 'p1folder');
     expect(renamedFolder.title).toBe('NewName');
   });
 
-  it('drops projectFolders entries for projects that no longer exist', async () => {
+  it('drops projectFolders/domainFolders entries for buckets that no longer exist', async () => {
     const api = createFakeBookmarksApi([{
       id: 'root',
       children: [{
@@ -558,33 +648,23 @@ describe('ensureMirrorFolders', () => {
     const state = {
       ...getDefaultMirrorState(),
       rootFolderId: 'saveit',
-      projectFolders: { dead: { id: 'fdead', name: 'Gone' } }
+      projectFolders: { dead: { id: 'fdead', name: 'Gone' } },
+      domainFolders: { 'Dead Domain': { id: 'fdeaddomain', name: 'Dead Domain' } }
+    };
+    const bucketPlan = {
+      buckets: { 'project:p1': { count: 1, needsSubbuckets: false, kind: 'project', ref: 'p1', subBuckets: null } }
     };
     const { statePatch } = await ensureMirrorFolders({
       bookmarksApi: api,
       state,
       projects: [{ id: 'p1', name: 'Live' }],
+      bucketPlan,
+      domainLabelFor,
       existingTree: null
     });
     expect(statePatch.projectFolders.dead).toBeUndefined();
     expect(statePatch.projectFolders.p1).toBeDefined();
-  });
-
-  it('skips archived projects', async () => {
-    const api = createFakeBookmarksApi([{
-      id: 'root',
-      children: [{
-        id: 'toolbar',
-        children: [{ id: 'saveit', title: 'SaveIt', children: [] }]
-      }]
-    }]);
-    const { folders } = await ensureMirrorFolders({
-      bookmarksApi: api,
-      state: { ...getDefaultMirrorState(), rootFolderId: 'saveit' },
-      projects: [{ id: 'p1', name: 'Archived', archived: true }],
-      existingTree: null
-    });
-    expect(folders.byProject.p1).toBeUndefined();
+    expect(statePatch.domainFolders['Dead Domain']).toBeUndefined();
   });
 
   it('throws when bookmarks API is unavailable', async () => {
@@ -592,6 +672,8 @@ describe('ensureMirrorFolders', () => {
       bookmarksApi: { getTree: async () => [] }, // missing create/update
       state: getDefaultMirrorState(),
       projects: [],
+      bucketPlan: { buckets: {} },
+      domainLabelFor,
       existingTree: null
     })).rejects.toThrow('Bookmarks API not available');
   });
@@ -611,12 +693,12 @@ describe('mirrorSavedPage', () => {
     expect(result.created).toBe(false);
   });
 
-  it('creates in Unfiled when enabled but no projectId given', async () => {
+  it('creates in the Other domain folder when enabled but no projectId given', async () => {
     const tree = [{
       id: 'root',
       children: [{
         id: 'toolbar',
-        children: [{ id: 'saveit', title: 'SaveIt', children: [{ id: 'unfiled', title: 'Unfiled', children: [] }] }]
+        children: [{ id: 'saveit', title: 'SaveIt', children: [{ id: 'other', title: 'Other', children: [] }] }]
       }]
     }];
     const api = createFakeBookmarksApi(tree);
@@ -625,7 +707,7 @@ describe('mirrorSavedPage', () => {
         ...getDefaultMirrorState(),
         enabled: true,
         rootFolderId: 'saveit',
-        unfiledFolderId: 'unfiled'
+        domainFolders: { '__other__': { id: 'other', name: 'Other' } }
       }
     });
     const result = await mirrorSavedPage({
@@ -638,17 +720,17 @@ describe('mirrorSavedPage', () => {
     expect(result.created).toBe(true);
     expect(result.bookmarkId).toBeTruthy();
     const saveItFolder = api._tree[0].children[0].children.find((c) => c.id === 'saveit');
-    const unfiledFolder = saveItFolder.children.find((c) => c.id === 'unfiled');
-    expect(unfiledFolder.children).toHaveLength(1);
-    expect(unfiledFolder.children[0].url).toBe('https://a.com');
+    const otherFolder = saveItFolder.children.find((c) => c.id === 'other');
+    expect(otherFolder.children).toHaveLength(1);
+    expect(otherFolder.children[0].url).toBe('https://a.com');
   });
 
-  it('falls back to Unfiled when project folder cannot be resolved', async () => {
+  it('falls back to the SaveIt root when neither project nor Other folder is tracked', async () => {
     const tree = [{
       id: 'root',
       children: [{
         id: 'toolbar',
-        children: [{ id: 'saveit', title: 'SaveIt', children: [{ id: 'unfiled', title: 'Unfiled', children: [] }] }]
+        children: [{ id: 'saveit', title: 'SaveIt', children: [] }]
       }]
     }];
     const api = createFakeBookmarksApi(tree);
@@ -656,17 +738,15 @@ describe('mirrorSavedPage', () => {
       bookmarkMirror_state: {
         ...getDefaultMirrorState(),
         enabled: true,
-        rootFolderId: 'saveit',
-        unfiledFolderId: 'unfiled'
+        rootFolderId: 'saveit'
       }
     });
-    // api.getProjects returns nothing → project folder cannot be resolved →
-    // mirrorSavedPage should fall back to Unfiled rather than throw.
-    const fakeApi = createFakeApi({ projects: [] });
+    // No project, no Other folder tracked yet → land in SaveIt/ root; the next
+    // full reconcile will place it in the correct domain folder.
     const result = await mirrorSavedPage({
       bookmarksApi: api,
       storage,
-      api: fakeApi,
+      api: createFakeApi({ projects: [] }),
       url: 'https://a.com',
       title: 'A',
       projectId: 'unknown'
@@ -719,21 +799,24 @@ describe('reconcile (end-to-end against fakes)', () => {
     const api = createFakeApi({
       pages: [
         { id: 'p1', url: 'https://a.com', title: 'A', project_ids: ['proj1'] },
-        { id: 'p2', url: 'https://b.com', title: 'B' } // unfiled
+        { id: 'p2', url: 'https://b.com', title: 'B' } // no project, no classification → domain:__other__
       ],
       projects: [{ id: 'proj1', name: 'Cooking' }]
     });
 
     const result = await reconcile({ bookmarksApi, api, storage });
     expect(result.applied).toBe(true);
-    expect(result.summary.creates).toBe(2);
+    // p1 → project:proj1 + domain:__other__ (2 bookmarks); p2 → domain:__other__ (1).
+    expect(result.summary.creates).toBe(3);
     expect(result.summary.adopts).toBe(0);
 
-    // Ownership map should now track both pages.
     const state = await getMirrorState(storage);
     expect(Object.keys(state.ownership).sort()).toEqual(['p1', 'p2']);
-    expect(state.ownership.p1[0].projectId).toBe('proj1');
-    expect(state.ownership.p2[0].projectId).toBeNull();
+    // p1 lives in both its project bucket and the Other domain bucket.
+    expect(state.ownership.p1.map((e) => e.bucketKey).sort())
+      .toEqual(['domain:__other__', 'project:proj1']);
+    // p2 lives only in the Other domain bucket.
+    expect(state.ownership.p2[0].bucketKey).toBe('domain:__other__');
     expect(state.lastFullReconcileAt).toBeTypeOf('number');
   });
 
@@ -744,8 +827,8 @@ describe('reconcile (end-to-end against fakes)', () => {
         id: 'toolbar',
         children: [{
           id: 'saveit', title: 'SaveIt', children: [
-            { id: 'unfiled', title: 'Unfiled', children: [
-              { id: 'b-dead', url: 'https://gone.com', title: 'Gone', parentId: 'unfiled' }
+            { id: 'other', title: 'Other', children: [
+              { id: 'b-dead', url: 'https://gone.com', title: 'Gone', parentId: 'other' }
             ] }
           ]
         }]
@@ -757,9 +840,9 @@ describe('reconcile (end-to-end against fakes)', () => {
         ...getDefaultMirrorState(),
         enabled: true,
         rootFolderId: 'saveit',
-        unfiledFolderId: 'unfiled',
+        domainFolders: { '__other__': { id: 'other', name: 'Other' } },
         ownership: {
-          dead: [{ projectId: null, bookmarkId: 'b-dead', title: 'Gone', parentId: 'unfiled' }]
+          dead: [{ bucketKey: 'domain:__other__', bookmarkId: 'b-dead', title: 'Gone', parentId: 'other' }]
         }
       }
     });
@@ -822,15 +905,16 @@ describe('reconcile (end-to-end against fakes)', () => {
   });
 
   it('a single op failure is logged and does not abort the pass', async () => {
-    // Pre-create the SaveIt/ tree so the only create() calls are bookmark
-    // creates (folder creation is not wrapped in try/catch in ensureMirrorFolders).
+    // Pre-create the SaveIt/ tree with the Other folder so the only create()
+    // calls are bookmark creates (folder creation is not wrapped in try/catch
+    // in ensureMirrorFolders).
     const bookmarksApi = createFakeBookmarksApi([{
       id: 'root',
       children: [{
         id: 'toolbar',
         children: [{
           id: 'saveit', title: 'SaveIt',
-          children: [{ id: 'unfiled', title: 'Unfiled', children: [] }]
+          children: [{ id: 'other', title: 'Other', children: [] }]
         }]
       }]
     }]);
@@ -839,7 +923,7 @@ describe('reconcile (end-to-end against fakes)', () => {
         ...getDefaultMirrorState(),
         enabled: true,
         rootFolderId: 'saveit',
-        unfiledFolderId: 'unfiled'
+        domainFolders: { '__other__': { id: 'other', name: 'Other' } }
       }
     });
     // Sabotage one bookmark create to throw.

@@ -19,8 +19,9 @@ export function getDefaultMirrorState() {
   return {
     enabled: false,
     rootFolderId: null,
-    unfiledFolderId: null,
+    unfiledFolderId: null, // legacy, kept for migration; unused by the bucket model
     projectFolders: {},
+    domainFolders: {},
     ownership: {},
     lastFullReconcileAt: null
   };
@@ -42,6 +43,7 @@ export async function getMirrorState(storage) {
       ...getDefaultMirrorState(),
       ...stored,
       projectFolders: { ...(stored.projectFolders || {}) },
+      domainFolders: { ...(stored.domainFolders || {}) },
       ownership: { ...(stored.ownership || {}) }
     };
   } catch {

@@ -20,8 +20,12 @@ import {
 } from './bookmark-mirror-settings.js';
 
 const ROOT_FOLDER_TITLE = 'SaveIt';
-const UNFILED_PROJECT_KEY = null; // sentinel for the Unfiled pseudo-project
-const UNFILED_FOLDER_TITLE = 'Unfiled';
+const OTHER_FOLDER_TITLE = 'Other'; // pages with no AI general classification
+const GENERAL_SUBBUCKET_TITLE = 'General'; // sub-folder for pages with no AI domain classification within a >10 bucket
+// Sentinel general label for pages that have no AI 'general' classification.
+const OTHER_DOMAIN_KEY = '__other__';
+// Above this count a project/domain folder is split into per-subdomain child folders.
+const SUBBUCKET_THRESHOLD = 10;
 const RECONCILE_PAGE_SIZE = 100;
 // Re-fetch the whole collection if the last full reconcile is older than this.
 // Within the window the HEAD freshness check can short-circuit a reconcile.
@@ -29,23 +33,148 @@ const FULL_RECONCILE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6h
 
 const DEFAULT_BOOKMARKS_API = globalThis.browser?.bookmarks || globalThis.chrome?.bookmarks;
 
+// --- classification extraction --------------------------------------------
+
+// The AI classification hierarchy: 'general' (broad area, e.g. "Software
+// Development") -> 'domain' (specialised sub-area, e.g. "Frontend Development")
+// -> 'topic' (specific concept). Each page may carry several of each type.
+// For folder placement we only ever need one label per level; pick the
+// highest-confidence one of the requested type.
+
+function topClassificationLabel(classifications, type) {
+  if (!Array.isArray(classifications)) return null;
+  let best = null;
+  for (const c of classifications) {
+    if (!c || c.type !== type) continue;
+    if (!best || (c.confidence ?? 0) > (best.confidence ?? 0)) {
+      best = c;
+    }
+  }
+  return best?.label || null;
+}
+
+// The broad "domain" (folder-level) bucket label for a page: the AI 'general'
+// classification label, falling back to the sentinel "Other" key when the page
+// has no general classification (e.g. not yet enriched).
+function generalBucketLabel(page) {
+  const label = page?.primary_classification_label
+    || topClassificationLabel(page?.classifications, 'general');
+  return label || OTHER_DOMAIN_KEY;
+}
+
+// The sub-bucket label for a page within a >10 folder: the AI 'domain'
+// (specialised sub-area) classification label, falling back to a "General"
+// sentinel when absent. Returns null when no domain classification exists.
+function subBucketLabel(page) {
+  return topClassificationLabel(page?.classifications, 'domain') || GENERAL_SUBBUCKET_TITLE;
+}
+
+// --- bucket keys ----------------------------------------------------------
+// A bucket key names a single folder placement. Two families:
+//   project:<projectId>  -> SaveIt/<ProjectName>/[<SubLabel>/]
+//   domain:<generalKey>  -> SaveIt/<GeneralLabel-or-Other>/[<SubLabel>/]
+// The generalKey is the label string or the OTHER_DOMAIN_KEY sentinel.
+
+function projectBucketKey(projectId) {
+  return `project:${projectId}`;
+}
+
+function domainBucketKey(generalKey) {
+  return `domain:${generalKey}`;
+}
+
+function isProjectBucket(key) {
+  return key.startsWith('project:');
+}
+
+function projectIdFromBucket(key) {
+  return key.slice('project:'.length);
+}
+
+function generalKeyFromBucket(key) {
+  return key.slice('domain:'.length);
+}
+
 // --- pure planning helpers -------------------------------------------------
 
-// Build the desired-set map: { [saveItPageId]: { projects: Array<projectId|null>, url, title } }.
-// A page in zero projects expands to [null] (Unfiled). A page in N projects
-// expands to N entries so it gets N bookmark nodes.
+// Build the desired-set map:
+//   { [saveItPageId]: { buckets: Array<bucketKey>, url, title, subLabels: { [bucketKey]: subLabel|null } } }
+// A page in N projects expands to N project buckets. Every page also gets one
+// domain bucket (its general classification, or "Other") — so a project page
+// appears in both its project folder AND its domain folder, mirroring the
+// sidebar's project + domain split. Each bucket entry becomes its own bookmark.
 export function buildDesiredSet(pages) {
   const desired = {};
   for (const page of pages || []) {
     if (!page?.id || !page?.url) {
       continue;
     }
-    const projects = Array.isArray(page.project_ids) && page.project_ids.length > 0
-      ? page.project_ids.slice()
-      : [UNFILED_PROJECT_KEY];
-    desired[page.id] = { projects, url: page.url, title: page.title || '' };
+    const buckets = [];
+    const subLabels = {};
+
+    const projectIds = Array.isArray(page.project_ids) ? page.project_ids : [];
+    for (const projectId of projectIds) {
+      const key = projectBucketKey(projectId);
+      buckets.push(key);
+      subLabels[key] = subBucketLabel(page);
+    }
+
+    const gKey = generalBucketLabel(page);
+    const dKey = domainBucketKey(gKey);
+    buckets.push(dKey);
+    subLabels[dKey] = subBucketLabel(page);
+
+    desired[page.id] = {
+      buckets,
+      url: page.url,
+      title: page.title || '',
+      subLabels
+    };
   }
   return desired;
+}
+
+// Compute the folder plan from a desired set: which buckets exist, how many
+// pages each holds, and whether each needs sub-bucket folders (> threshold).
+// Pure; the folder builder consumes this to decide what to create.
+//
+// Returns { buckets: { [bucketKey]: { count, needsSubbuckets, kind, ref } } }
+// where kind is 'project'|'domain' and ref is the projectId or generalKey.
+export function computeBucketPlan(desired) {
+  const counts = new Map();
+  // subLabel distribution per bucket: { bucketKey: Map<subLabel, count> }
+  const subDistribution = new Map();
+
+  for (const entry of Object.values(desired || {})) {
+    for (const key of entry.buckets) {
+      counts.set(key, (counts.get(key) || 0) + 1);
+      const sub = entry.subLabels?.[key] || GENERAL_SUBBUCKET_TITLE;
+      if (!subDistribution.has(key)) subDistribution.set(key, new Map());
+      const dist = subDistribution.get(key);
+      dist.set(sub, (dist.get(sub) || 0) + 1);
+    }
+  }
+
+  const buckets = {};
+  for (const [key, count] of counts) {
+    const needsSubbuckets = count > SUBBUCKET_THRESHOLD;
+    let kind; let ref;
+    if (isProjectBucket(key)) {
+      kind = 'project';
+      ref = projectIdFromBucket(key);
+    } else {
+      kind = 'domain';
+      ref = generalKeyFromBucket(key);
+    }
+    buckets[key] = {
+      count,
+      needsSubbuckets,
+      kind,
+      ref,
+      subBuckets: needsSubbuckets ? Object.fromEntries(subDistribution.get(key)) : null
+    };
+  }
+  return { buckets };
 }
 
 // Group all bookmark nodes that live directly inside a folder by normalized URL.
@@ -64,20 +193,34 @@ export function indexFolderChildrenByNormalizedUrl(children) {
 // Pure diff between desired state and currently-owned state, given a set of
 // known folder contents (for adoption). Returns op lists; callers execute them.
 //
-// folders shape: { rootId, unfiledId, byProject: { [projectId]: folderId }, childrenByFolderId: { [folderId]: node[] } }
+// folders shape: {
+//   rootId,
+//   byBucket: { [bucketKey]: folderId },          // top-level project/domain folder
+//   bySubBucket: { [bucketKey]: { [subLabel]: folderId } }, // sub-buckets for >10 folders
+//   bucketPlan: { [bucketKey]: { needsSubbuckets } },       // from computeBucketPlan
+//   childrenByFolderId: { [folderId]: node[] }
+// }
 export function computeReconcileOps(desired, ownership, folders) {
   const ops = {
-    create: [],   // { saveItPageId, projectId, url, title, parentId }
+    create: [],   // { saveItPageId, bucketKey, url, title, parentId }
     move: [],     // { bookmarkId, parentId }
     update: [],   // { bookmarkId, title }
     remove: [],   // { bookmarkId }
-    adopt: []     // { bookmarkId, saveItPageId, projectId }
+    adopt: []     // { bookmarkId, saveItPageId, bucketKey }
   };
 
-  const folderIdFor = (projectId) =>
-    projectId === UNFILED_PROJECT_KEY ? folders.unfiledId : folders.byProject[projectId];
+  // Resolve the parent folder for a (bucketKey, page) pair. When the bucket is
+  // sub-bucketed, descend into the page's sub-label folder under it.
+  const folderIdFor = (bucketKey, want) => {
+    const topId = folders.byBucket?.[bucketKey];
+    if (!topId) return null;
+    const needsSub = folders.bucketPlan?.[bucketKey]?.needsSubbuckets;
+    if (!needsSub) return topId;
+    const subLabel = want?.subLabels?.[bucketKey] || GENERAL_SUBBUCKET_TITLE;
+    return folders.bySubBucket?.[bucketKey]?.[subLabel] || topId;
+  };
 
-  // --- 1. Walk ownership: drop pages/projects we no longer want, drift-fix the rest.
+  // --- 1. Walk ownership: drop pages/buckets we no longer want, drift-fix the rest.
   for (const [pageId, entries] of Object.entries(ownership || {})) {
     const want = desired[pageId];
     if (!want) {
@@ -89,9 +232,9 @@ export function computeReconcileOps(desired, ownership, folders) {
     }
 
     for (const entry of entries) {
-      const stillWanted = want.projects.includes(entry.projectId);
+      const stillWanted = want.buckets.includes(entry.bucketKey);
       if (!stillWanted) {
-        // Page still exists but left this particular project.
+        // Page still exists but left this particular bucket (project or domain).
         ops.remove.push({ bookmarkId: entry.bookmarkId });
         continue;
       }
@@ -100,18 +243,18 @@ export function computeReconcileOps(desired, ownership, folders) {
         ops.update.push({ bookmarkId: entry.bookmarkId, title: want.title });
       }
 
-      const expectedParent = folderIdFor(entry.projectId);
+      const expectedParent = folderIdFor(entry.bucketKey, want);
       if (expectedParent && entry.parentId && expectedParent !== entry.parentId) {
         ops.move.push({ bookmarkId: entry.bookmarkId, parentId: expectedParent });
       }
     }
   }
 
-  // --- 2. Walk desired: ensure a node exists for each (page, project) pair.
+  // --- 2. Walk desired: ensure a node exists for each (page, bucket) pair.
   const ownedPairs = new Set();
   for (const [pageId, entries] of Object.entries(ownership || {})) {
     for (const entry of entries) {
-      ownedPairs.add(`${pageId}::${entry.projectId}`);
+      ownedPairs.add(`${pageId}::${entry.bucketKey}`);
     }
   }
 
@@ -120,14 +263,14 @@ export function computeReconcileOps(desired, ownership, folders) {
   );
 
   for (const [pageId, want] of Object.entries(desired)) {
-    for (const projectId of want.projects) {
-      if (ownedPairs.has(`${pageId}::${projectId}`)) {
+    for (const bucketKey of want.buckets) {
+      if (ownedPairs.has(`${pageId}::${bucketKey}`)) {
         continue;
       }
 
-      const parentId = folderIdFor(projectId);
+      const parentId = folderIdFor(bucketKey, want);
       if (!parentId) {
-        // Folder for this project doesn't exist yet (ensureMirrorFolders
+        // Folder for this bucket doesn't exist yet (ensureMirrorFolders
         // should have created it; skip defensively rather than throw).
         continue;
       }
@@ -140,7 +283,7 @@ export function computeReconcileOps(desired, ownership, folders) {
       if (stray && !consumedStrayBookmarkIds.has(stray.id)) {
         // Claim the stray rather than duplicate. A subsequent update op will
         // fix its title if needed.
-        ops.adopt.push({ bookmarkId: stray.id, saveItPageId: pageId, projectId });
+        ops.adopt.push({ bookmarkId: stray.id, saveItPageId: pageId, bucketKey, parentId });
         consumedStrayBookmarkIds.add(stray.id);
         if (want.title !== (stray.title || '')) {
           ops.update.push({ bookmarkId: stray.id, title: want.title });
@@ -148,7 +291,7 @@ export function computeReconcileOps(desired, ownership, folders) {
       } else {
         ops.create.push({
           saveItPageId: pageId,
-          projectId,
+          bucketKey,
           url: want.url,
           title: want.title,
           parentId
@@ -189,17 +332,45 @@ function findFolderByTitleRecursive(nodes, title) {
   return null;
 }
 
-// Ensure SaveIt/, SaveIt/Unfiled/, and SaveIt/<project>/ all exist, and that
-// project folder titles match the current project names. Returns a folders
-// descriptor consumed by computeReconcileOps + reconcile.
+// Resolve a top-level folder under SaveIt/ for a given title, reusing an
+// existing one or creating it. `tracked` is the caller's { id, name } map to
+// keep in sync (projectFolders or domainFolders).
+async function ensureTopLevelFolder({
+  bookmarksApi, saveItChildren, rootFolderId, desiredTitle, tracked, trackedKey, existing
+}) {
+  const known = tracked[trackedKey];
+  if (known?.id) {
+    if (known.name !== desiredTitle) {
+      await bookmarksApi.update(known.id, { title: desiredTitle });
+      tracked[trackedKey] = { id: known.id, name: desiredTitle };
+    }
+    return known.id;
+  }
+  // Reuse an existing folder of the same title if present (covers first run
+  // and the "left over from a previous reconcile" case).
+  let folder = existing || findChildFolder(saveItChildren, desiredTitle);
+  if (!folder) {
+    folder = await bookmarksApi.create({ parentId: rootFolderId, title: desiredTitle });
+  }
+  tracked[trackedKey] = { id: folder.id, name: desiredTitle };
+  return folder.id;
+}
+
+// Ensure SaveIt/ exists, then one top-level folder per project and per domain
+// (general classification label), plus per-sub-domain child folders under any
+// bucket that exceeds the sub-bucket threshold. Returns a folders descriptor
+// consumed by computeReconcileOps + reconcile.
 //
-// `existingTree` is the browser bookmarks tree (array of root nodes from
-// getTree()); we walk it to find/create the SaveIt/ root under the first
-// writable root node (bookmarks toolbar on both Chrome and Firefox).
+// `bucketPlan` is the output of computeBucketPlan(desired); it tells us which
+// buckets exist, their kind (project/domain), their ref (projectId/generalKey),
+// and whether they need sub-buckets (> threshold). `domainLabelFor(ref)` maps a
+// general key (or OTHER_DOMAIN_KEY) to a display title.
 export async function ensureMirrorFolders({
   bookmarksApi,
   state,
   projects,
+  bucketPlan,
+  domainLabelFor,
   existingTree
 }) {
   if (!bookmarksApi?.getTree || !bookmarksApi?.create || !bookmarksApi?.update) {
@@ -246,68 +417,96 @@ export async function ensureMirrorFolders({
 
   // Always re-read SaveIt/'s children so we observe the current truth
   // (the user may have added folders since our last reconcile).
-  let saveItChildren = (await bookmarksApi.getChildren(rootFolderId)) || [];
+  const saveItChildren = (await bookmarksApi.getChildren(rootFolderId)) || [];
 
-  // --- Unfiled/ ---
-  let unfiledFolderId = state.unfiledFolderId;
-  if (!unfiledFolderId) {
-    let unfiledFolder = findChildFolder(saveItChildren, UNFILED_FOLDER_TITLE);
-    if (!unfiledFolder) {
-      const created = await bookmarksApi.create({
-        parentId: rootFolderId,
-        title: UNFILED_FOLDER_TITLE
-      });
-      unfiledFolder = created;
-    }
-    unfiledFolderId = unfiledFolder.id;
-  }
+  // Project name lookup for project bucket titles.
+  const projectNameFor = new Map(
+    (projects || []).filter((p) => p?.id && p.archived !== true)
+      .map((p) => [p.id, p.name || 'Untitled'])
+  );
 
-  // --- per-project folders, with rename handling ---
   const projectFolders = { ...state.projectFolders };
-  const byProject = {};
-  for (const project of projects || []) {
-    if (!project?.id || project.archived === true) {
-      continue; // archived projects are not mirrored
-    }
-    const desiredName = project.name || 'Untitled';
-    const known = projectFolders[project.id];
+  const domainFolders = { ...state.domainFolders };
+  const byBucket = {};
+  const bySubBucket = {};
 
-    if (known?.id) {
-      byProject[project.id] = known.id;
-      if (known.name !== desiredName) {
-        // Project renamed server-side → rename the folder to match.
-        await bookmarksApi.update(known.id, { title: desiredName });
-        projectFolders[project.id] = { id: known.id, name: desiredName };
+  // Index SaveIt children by title once for reuse lookups.
+  const saveItChildByTitle = new Map(
+    saveItChildren.filter((n) => n.url === undefined).map((n) => [n.title, n])
+  );
+
+  // --- one top-level folder per bucket in the plan ---
+  for (const [bucketKey, plan] of Object.entries(bucketPlan?.buckets || {})) {
+    let desiredTitle;
+    let tracked;
+    let trackedKey;
+    if (plan.kind === 'project') {
+      desiredTitle = projectNameFor.get(plan.ref) || 'Untitled';
+      tracked = projectFolders;
+      trackedKey = plan.ref;
+    } else {
+      desiredTitle = domainLabelFor ? domainLabelFor(plan.ref) : plan.ref;
+      tracked = domainFolders;
+      trackedKey = plan.ref;
+    }
+
+    const existing = saveItChildByTitle.get(desiredTitle);
+    const folderId = await ensureTopLevelFolder({
+      bookmarksApi,
+      saveItChildren,
+      rootFolderId,
+      desiredTitle,
+      tracked,
+      trackedKey,
+      existing
+    });
+    byBucket[bucketKey] = folderId;
+
+    // --- sub-bucket folders when the bucket exceeds the threshold ---
+    if (plan.needsSubbuckets && plan.subBuckets) {
+      const subChildren = (await bookmarksApi.getChildren(folderId)) || [];
+      const subChildByTitle = new Map(
+        subChildren.filter((n) => n.url === undefined).map((n) => [n.title, n])
+      );
+      const subMap = {};
+      for (const subLabel of Object.keys(plan.subBuckets)) {
+        const existingSub = subChildByTitle.get(subLabel);
+        if (existingSub) {
+          subMap[subLabel] = existingSub.id;
+        } else {
+          const created = await bookmarksApi.create({ parentId: folderId, title: subLabel });
+          subMap[subLabel] = created.id;
+        }
       }
-      continue;
+      bySubBucket[bucketKey] = subMap;
     }
-
-    // Not tracked yet. Look for an existing folder with the right name, else create.
-    let folder = findChildFolder(saveItChildren, desiredName);
-    if (!folder) {
-      folder = await bookmarksApi.create({
-        parentId: rootFolderId,
-        title: desiredName
-      });
-    }
-    byProject[project.id] = folder.id;
-    projectFolders[project.id] = { id: folder.id, name: desiredName };
   }
 
-  // Drop tracking entries for projects that no longer exist. Their bookmark
-  // folders stay (the user might be using them); we just forget the link so a
-  // future project with the same id re-binds cleanly. Bookmark contents under
-  // them become strays and are left alone per policy.
-  const liveProjectIds = new Set((projects || []).map((p) => p?.id).filter(Boolean));
+  // Drop tracking entries for projects/domains that no longer have a bucket.
+  const liveProjectRefs = new Set(
+    Object.values(bucketPlan?.buckets || {})
+      .filter((b) => b.kind === 'project')
+      .map((b) => b.ref)
+  );
   for (const id of Object.keys(projectFolders)) {
-    if (!liveProjectIds.has(id)) {
+    if (!liveProjectRefs.has(id)) {
       delete projectFolders[id];
+    }
+  }
+  const liveDomainRefs = new Set(
+    Object.values(bucketPlan?.buckets || {})
+      .filter((b) => b.kind === 'domain')
+      .map((b) => b.ref)
+  );
+  for (const key of Object.keys(domainFolders)) {
+    if (!liveDomainRefs.has(key)) {
+      delete domainFolders[key];
     }
   }
 
   return {
-    statePatch: { rootFolderId, unfiledFolderId, projectFolders },
-    folders: { rootId: rootFolderId, unfiledId: unfiledFolderId, byProject }
+    statePatch: { rootFolderId, projectFolders, domainFolders },
+    folders: { rootId: rootFolderId, byBucket, bySubBucket }
   };
 }
 
@@ -372,13 +571,13 @@ async function shouldShortCircuitReconcile(api, state, now) {
 // Apply an op plan against the bookmarks API and produce the next ownership map.
 // Executed op-by-op; a single op failure is logged and skipped (the next
 // reconcile will retry) rather than aborting the whole pass.
-async function applyOps({ bookmarksApi, ops, ownership, folders, onWarn }) {
+async function applyOps({ bookmarksApi, ops, ownership, onWarn }) {
   const nextOwnership = {};
   for (const [pageId, entries] of Object.entries(ownership || {})) {
     nextOwnership[pageId] = entries.map((e) => ({ ...e }));
   }
-  const ensureOwnership = (pageId, projectId, bookmarkId, title, parentId) => {
-    (nextOwnership[pageId] ||= []).push({ projectId, bookmarkId, title, parentId });
+  const ensureOwnership = (pageId, bucketKey, bookmarkId, title, parentId) => {
+    (nextOwnership[pageId] ||= []).push({ bucketKey, bookmarkId, title, parentId });
   };
 
   // 1. removes
@@ -422,10 +621,8 @@ async function applyOps({ bookmarksApi, ops, ownership, folders, onWarn }) {
     // Use the title we just updated to (or will update to) for drift tracking.
     const updateOp = ops.update.find((u) => u.bookmarkId === op.bookmarkId);
     const title = updateOp?.title ?? desired?.title ?? '';
-    const parentId = op.projectId === UNFILED_PROJECT_KEY
-      ? folders.unfiledId
-      : folders.byProject[op.projectId];
-    ensureOwnership(op.saveItPageId, op.projectId, op.bookmarkId, title, parentId);
+    // The adopt op carries the resolved parentId from computeReconcileOps.
+    ensureOwnership(op.saveItPageId, op.bucketKey, op.bookmarkId, title, op.parentId);
   }
 
   // 5. creates
@@ -436,7 +633,7 @@ async function applyOps({ bookmarksApi, ops, ownership, folders, onWarn }) {
         title: op.title,
         url: op.url
       });
-      ensureOwnership(op.saveItPageId, op.projectId, created.id, op.title, op.parentId);
+      ensureOwnership(op.saveItPageId, op.bucketKey, created.id, op.title, op.parentId);
     } catch (error) {
       onWarn?.(`create failed for ${op.saveItPageId}: ${error?.message || error}`);
     }
@@ -499,27 +696,36 @@ export async function reconcile({
   ]);
   const projects = Array.isArray(projectsResult) ? projectsResult : [];
 
+  const desired = buildDesiredSet(pages);
+  const bucketPlan = computeBucketPlan(desired);
+
+  // Map a general-key (or the OTHER_DOMAIN_KEY sentinel) to a folder title.
+  const domainLabelFor = (generalKey) =>
+    generalKey === OTHER_DOMAIN_KEY ? OTHER_FOLDER_TITLE : generalKey;
+
   const { statePatch, folders } = await ensureMirrorFolders({
     bookmarksApi,
     state,
     projects,
+    bucketPlan,
+    domainLabelFor,
     existingTree: null
   });
   const mergedState = { ...state, ...statePatch };
   await setMirrorState(storage, statePatch);
 
   // Read live children of every folder so computeReconcileOps can find strays.
+  // Include both top-level buckets and their sub-bucket folders.
   const allFolderIds = [
-    folders.unfiledId,
-    ...Object.values(folders.byProject)
+    ...Object.values(folders.byBucket),
+    ...Object.values(folders.bySubBucket).flatMap((m) => Object.values(m))
   ].filter(Boolean);
   const childrenByFolderId = await readFolderChildrenByFolderId(bookmarksApi, allFolderIds);
 
-  const desired = buildDesiredSet(pages);
   const ops = computeReconcileOps(desired, mergedState.ownership, {
-    rootId: folders.rootId,
-    unfiledId: folders.unfiledId,
-    byProject: folders.byProject,
+    byBucket: folders.byBucket,
+    bySubBucket: folders.bySubBucket,
+    bucketPlan: bucketPlan.buckets,
     childrenByFolderId
   });
 
@@ -527,7 +733,6 @@ export async function reconcile({
     bookmarksApi,
     ops,
     ownership: mergedState.ownership,
-    folders,
     onWarn
   });
 
@@ -560,7 +765,7 @@ export async function reconcile({
 export async function mirrorSavedPage({
   bookmarksApi = DEFAULT_BOOKMARKS_API,
   storage,
-  api,
+  api: _api, // accepted for call-site compatibility; classification arrives via reconcile
   url,
   title,
   projectId = null
@@ -573,32 +778,18 @@ export async function mirrorSavedPage({
     return { created: false, bookmarkId: null };
   }
 
-  // Ensure the target project folder exists. Cheap path: if we already track
-  // it, reuse; otherwise do a focused ensure for just this project.
-  let targetFolderId = projectId === UNFILED_PROJECT_KEY || !projectId
-    ? state.unfiledFolderId
-    : state.projectFolders[projectId]?.id;
+  // At save time we only know the project (if any); classification arrives
+  // later via enrichment. So save into the project folder when given, else into
+  // the "Other" domain folder. The next full reconcile moves it to the correct
+  // domain/sub-bucket folder once the AI classification lands.
+  let targetFolderId = projectId
+    ? state.projectFolders[projectId]?.id
+    : state.domainFolders?.[OTHER_DOMAIN_KEY]?.id;
 
   if (!targetFolderId) {
-    const projects = Array.isArray(api?.getProjects)
-      ? await api.getProjects().catch(() => [])
-      : [];
-    const { statePatch, folders } = await ensureMirrorFolders({
-      bookmarksApi,
-      state,
-      projects,
-      existingTree: null
-    });
-    await setMirrorState(storage, statePatch);
-    targetFolderId = projectId === UNFILED_PROJECT_KEY || !projectId
-      ? folders.unfiledId
-      : folders.byProject[projectId];
-
-    if (!targetFolderId) {
-      // No project folder could be resolved → fall back to Unfiled so the
-      // bookmark still lands somewhere under SaveIt/.
-      targetFolderId = folders.unfiledId;
-    }
+    // Fall back to the SaveIt/ root if neither a project nor Other folder is
+    // tracked yet — the next reconcile will place it correctly.
+    targetFolderId = state.rootFolderId;
   }
 
   const created = await bookmarksApi.create({
@@ -611,7 +802,9 @@ export async function mirrorSavedPage({
 
 export const _internal = {
   ROOT_FOLDER_TITLE,
-  UNFILED_FOLDER_TITLE,
-  UNFILED_PROJECT_KEY,
+  OTHER_FOLDER_TITLE,
+  OTHER_DOMAIN_KEY,
+  GENERAL_SUBBUCKET_TITLE,
+  SUBBUCKET_THRESHOLD,
   FULL_RECONCILE_INTERVAL_MS
 };
