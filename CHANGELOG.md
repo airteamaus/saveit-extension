@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
+
+## [1.18.0] - 2026-07-07
+
 ### ✨ Features
 
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
@@ -14,6 +20,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 📝 Other Improvements
 
 - Cancel duplicate release runs per tag via concurrency group (73e0407)
+
+### 👷 CI/CD
+
+- **release:** publish to Chrome Web Store on every tag release (c3735cd)
 
 ## [1.17.0] - 2026-07-04
 
@@ -104,13 +114,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
 
 ## [1.13.0] - 2026-06-27
-
-### 📝 Other Improvements
-
-- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (a72e713)
-- Load the drawer after auth resolves, not before (5b81a74)
-
-## [1.12.3] - 2026-06-26
 
 ### ✨ Features
 
@@ -303,7 +306,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Load the drawer after auth resolves, not before (c3f7666)
+- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (a72e713)
+- Load the drawer after auth resolves, not before (5b81a74)
 - Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
 - Move Import bookmarks into the avatar dropdown menu (aeb1713)
 - Add bookmark import from the browser (ea1630b)
