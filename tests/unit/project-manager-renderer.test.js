@@ -61,11 +61,24 @@ describe('project manager renderer helpers', () => {
     expect(container.textContent).toContain('Alpha');
     expect(container.textContent).toContain('Bravo');
     expect(container.textContent).toContain('Charlie');
-    // Owned projects (regardless of visibility) sit under "My projects";
-    // only other people's projects sit under "Shared with me".
+
+    // Three-way split: Alpha (owned+private) under "My projects", Bravo
+    // (owned+company) under "Shared by you", Charlie (not owned) under
+    // "Shared with me". The earlier ownership-only split conflated Alpha and
+    // Bravo under "My projects"; this keeps shared/private distinct.
     expect(container.textContent).toContain('My projects');
+    expect(container.textContent).toContain('Shared by you');
     expect(container.textContent).toContain('Shared with me');
     expect(container.innerHTML).toContain('<span class="project-nav-count">2</span>');
+
+    // Ordering: section header must precede its project name in the DOM.
+    const text = container.textContent;
+    expect(text.indexOf('My projects')).toBeLessThan(text.indexOf('Alpha'));
+    expect(text.indexOf('Shared by you')).toBeLessThan(text.indexOf('Bravo'));
+    expect(text.indexOf('Shared with me')).toBeLessThan(text.indexOf('Charlie'));
+    // And the sections themselves appear in order.
+    expect(text.indexOf('My projects')).toBeLessThan(text.indexOf('Shared by you'));
+    expect(text.indexOf('Shared by you')).toBeLessThan(text.indexOf('Shared with me'));
 
     // The non-owned row carries owner attribution; owned rows do not.
     const subtitles = [...container.querySelectorAll('.project-nav-subtitle')].map(el => el.textContent);
@@ -88,7 +101,7 @@ describe('project manager renderer helpers', () => {
     expect(hashes.length).toBe(names.length);
     expect(hashes.every(h => h === '#')).toBe(true);
 
-    // Section dots: primary for "My projects", shared-green for "Shared with me".
+    // Section dots: primary for "My projects", shared-green for both shared sections.
     const dotColors = [...container.querySelectorAll('.project-nav-section-dot')].map(el => el.style.background);
     expect(dotColors).toContain('var(--color-primary)');
     expect(dotColors).toContain('var(--color-shared)');

@@ -272,11 +272,17 @@ export function renderProjectSidebar(container, {
         ]
       });
     };
-  // Split by ownership, not visibility. A project you own and have shared is
-  // still yours and belongs under "My projects"; only things others shared to
-  // you go under "Shared with me". This is the correction that makes the
-  // sidebar match the user's mental model.
-  const myProjects = visibleProjects.filter(project => isOwnedProject(dashboard, project));
+  // Three-way split that keeps both distinctions the user cares about:
+  //   - "My projects"      : owned by me, private (only I can see them)
+  //   - "Shared by you"    : owned by me, shared with the company
+  //   - "Shared with me"   : owned by someone else, shared into my domain
+  // The earlier visibility-only split put my *own* shared projects under
+  // "Shared projects" next to others'; a pure ownership split then conflated
+  // my private and shared projects. This keeps them separate.
+  const myPrivateProjects = visibleProjects.filter(project =>
+    isOwnedProject(dashboard, project) && project.visibility !== 'company');
+  const mySharedProjects = visibleProjects.filter(project =>
+    isOwnedProject(dashboard, project) && project.visibility === 'company');
   const sharedWithMe = visibleProjects.filter(project => !isOwnedProject(dashboard, project));
 
   const nav = createElement(documentObj, 'div', { className: 'project-nav' });
@@ -295,21 +301,31 @@ export function renderProjectSidebar(container, {
     })
   );
 
-  // The create-project button sits on the right of the first section label
-  // (My projects, or Shared with me when the viewer owns nothing yet).
+  // The create-project button sits on the right of the first section label that
+  // belongs to the viewer. If they own nothing, it rides on "Shared with me".
   const createButton = createCreateButton(documentObj);
+  const hasOwnProjects = myPrivateProjects.length || mySharedProjects.length;
 
-  if (myProjects.length) {
+  if (myPrivateProjects.length) {
     nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
-    myProjects.forEach(project => nav.append(createProjectRow(project)));
-    if (sharedWithMe.length) {
-      nav.append(createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)'));
-      sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
-    }
-  } else if (sharedWithMe.length) {
-    nav.append(createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)', createButton));
+    myPrivateProjects.forEach(project => nav.append(createProjectRow(project)));
+  }
+  if (mySharedProjects.length) {
+    // Ride the create button here if there are no private projects.
+    const label = !myPrivateProjects.length
+      ? createSectionLabel(documentObj, 'Shared by you', 'var(--color-shared)', createButton)
+      : createSectionLabel(documentObj, 'Shared by you', 'var(--color-shared)');
+    nav.append(label);
+    mySharedProjects.forEach(project => nav.append(createProjectRow(project)));
+  }
+  if (sharedWithMe.length) {
+    const label = !hasOwnProjects
+      ? createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)', createButton)
+      : createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)');
+    nav.append(label);
     sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
-  } else {
+  }
+  if (!hasOwnProjects && !sharedWithMe.length) {
     // No projects at all: still show the "My projects" label so the create
     // button is reachable, plus the empty hint.
     nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
