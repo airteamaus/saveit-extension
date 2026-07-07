@@ -3,11 +3,13 @@ import { describe, expect, it } from 'vitest';
 import {
   adjustProjectCount,
   getCompanyDomain,
+  getCurrentUserUid,
   getProjectPills,
   getProjectsUnavailableMessage,
   getScopedPages,
   getSelectedProject,
   getStatsTotal,
+  isOwnedProject,
   isProjectsUnavailable,
   refreshProjectCounts
 } from '../../src/project-manager-state.js';
@@ -109,5 +111,37 @@ describe('project manager state helpers', () => {
         return null;
       }
     })).toBe('airteam.com.au');
+  });
+
+  it('reads the current user uid from the raw Firebase user shape', () => {
+    expect(getCurrentUserUid({
+      getCurrentUser() {
+        return { uid: 'uid-123', email: 'user@example.com' };
+      }
+    })).toBe('uid-123');
+
+    expect(getCurrentUserUid({
+      getCurrentUser() {
+        return null;
+      }
+    })).toBeNull();
+  });
+
+  it('treats a project as owned when owner_user_id matches the current uid', () => {
+    const dashboard = {
+      getCurrentUser() {
+        return { uid: 'uid-rich' };
+      }
+    };
+
+    // Owned: owner_user_id matches the signed-in uid, regardless of visibility.
+    expect(isOwnedProject(dashboard, { owner_user_id: 'uid-rich', visibility: 'company' })).toBe(true);
+    expect(isOwnedProject(dashboard, { owner_user_id: 'uid-rich', visibility: 'private' })).toBe(true);
+
+    // Not owned: a project someone else created and shared into this domain.
+    expect(isOwnedProject(dashboard, { owner_user_id: 'uid-nick', visibility: 'company' })).toBe(false);
+
+    // Defensive: no signed-in user means nothing is "owned".
+    expect(isOwnedProject({ getCurrentUser: () => null }, { owner_user_id: 'uid-rich' })).toBe(false);
   });
 });

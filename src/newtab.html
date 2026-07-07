@@ -66,13 +66,23 @@
                 </svg>
                 Import bookmarks
               </button>
-              <button id="hero-refresh-btn" class="dropdown-item" type="button">
+              <button id="hero-refresh-btn" class="dropdown-item" type="button" title="Clear the local cache and reload everything from the server">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <polyline points="23 4 23 10 17 10"></polyline>
                   <polyline points="1 20 1 14 7 14"></polyline>
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                 </svg>
-                Refresh saved pages
+                Reload from server
+              </button>
+              <button id="hero-sharing-btn" class="dropdown-item" type="button" title="Review who can see each of your projects">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="18" cy="5" r="3"></circle>
+                  <circle cx="6" cy="12" r="3"></circle>
+                  <circle cx="18" cy="19" r="3"></circle>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                </svg>
+                Sharing
               </button>
               <button id="hero-mirror-toggle" class="dropdown-item" type="button" aria-pressed="false" title="Keep a SaveIt/ folder in your browser bookmarks in sync with your saved pages">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -128,6 +138,15 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="import-panel-title"
+  ></div>
+
+  <div id="sharing-centre-backdrop" class="project-editor-backdrop hidden" aria-hidden="true"></div>
+  <div
+    id="sharing-centre-dialog"
+    class="project-editor-dialog sharing-centre-dialog hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sharing-centre-title"
   ></div>
 
   <!-- Minimal script dependencies -->

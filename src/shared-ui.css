@@ -234,6 +234,11 @@ select {
   max-width: 480px;
 }
 
+/* Sharing centre (also rendered inside the reused editor dialog shell). */
+.sharing-centre-dialog {
+  max-width: 560px;
+}
+
 .import-panel-header {
   display: flex;
   align-items: center;

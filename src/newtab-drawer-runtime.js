@@ -206,6 +206,9 @@ export function createSavedPagesDrawerController({
     loadSummary: syncCoordinator.loadSummary,
     open: shellController.openSavedPagesDrawer,
     preloadProjects: dataController.ensureDrawerProjectsLoaded,
+    // Exposed so sibling surfaces (Sharing centre, Refresh) can read the live
+    // view state — projects list and current user — without duplicating it.
+    getSavedPagesView: () => savedPagesView,
     showLoadingState: renderDrawerLoadingState
   };
 }

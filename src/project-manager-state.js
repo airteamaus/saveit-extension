@@ -87,3 +87,22 @@ export function getCompanyDomain(dashboard) {
 
   return 'airteam.com.au';
 }
+
+// The signed-in user's Firebase uid. dashboard.getCurrentUser() returns the
+// raw Firebase user (whose id field is .uid); project.owner_user_id stores the
+// same Firebase uid, so these are directly comparable. Tolerates a dashboard
+// without getCurrentUser (e.g. minimal test fixtures) by returning null, which
+// means "nothing is owned" — the safe default.
+export function getCurrentUserUid(dashboard) {
+  return typeof dashboard?.getCurrentUser === 'function'
+    ? (dashboard.getCurrentUser()?.uid || null)
+    : null;
+}
+
+// True when the signed-in user owns this project. Use this instead of the
+// visibility flag as the ownership signal — a project you own and have shared
+// is still "yours", not "shared with you".
+export function isOwnedProject(dashboard, project) {
+  const uid = getCurrentUserUid(dashboard);
+  return Boolean(uid) && project.owner_user_id === uid;
+}

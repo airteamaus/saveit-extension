@@ -1,5 +1,6 @@
 import { createNewtabAuthController } from './newtab-auth.js';
 import { createImportPanel } from './import-panel.js';
+import { createSharingCentre } from './sharing-centre.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -116,6 +117,31 @@ export function createNewtabApp({
     }
   });
 
+  const sharingCentre = createSharingCentre({
+    api: API,
+    documentObj,
+    // Read the live dashboard (savedPagesView) and project manager off the
+    // drawer controller lazily, so the centre works whether it's opened before
+    // or after the drawer has initialised.
+    getDashboard: () => {
+      try {
+        return drawerController.getSavedPagesView?.() || null;
+      } catch {
+        return null;
+      }
+    },
+    getProjectManager: () => projectManager,
+    onProjectsChanged: () => {
+      // After a toggle, the sidebar needs to repaint so a freshly-un-shared
+      // project moves out of the "Shared" group immediately.
+      try {
+        drawerController.load();
+      } catch {
+        /* drawer not initialised yet */
+      }
+    }
+  });
+
   return {
     authController,
     drawerController,
@@ -124,6 +150,7 @@ export function createNewtabApp({
     projectManager,
     projectsStore,
     savedPagesStore,
+    sharingCentre,
     bind() {
       bindNewtabEventHandlersFn({
         elements,
@@ -136,14 +163,25 @@ export function createNewtabApp({
         elements.userDropdown?.classList.add('hidden');
         importPanel.open();
       });
-      // Refresh forces the drawer to reload from the server, bypassing the
-      // local snapshot — useful after a bulk import or when pages look stale.
-      elements.refreshBtn?.addEventListener('click', () => {
+      // Sharing centre lives in the avatar dropdown; close the dropdown first.
+      elements.sharingBtn?.addEventListener('click', () => {
+        elements.userDropdown?.classList.add('hidden');
+        sharingCentre.open();
+      });
+      // Reload from server: bust all caches for the current user and re-run the
+      // post-login warm-up path so saved pages AND projects come back fresh.
+      // Previously this only re-painted in-memory state, which let stale
+      // project lists linger (the root cause of "my colleague can't see a
+      // project I shared"). See AGENTS.md caching redux: server is authoritative.
+      elements.refreshBtn?.addEventListener('click', async () => {
         elements.userDropdown?.classList.add('hidden');
         try {
-          drawerController.load();
+          await API.invalidateCache();
+          savedPagesStore.setLazy(false);
+          void projectsStore.hydrate();
+          void drawerController.handleSignedIn();
         } catch {
-          /* drawer not initialised yet */
+          /* not signed in / not initialised */
         }
       });
       // Mirror toggle lives in the avatar dropdown. Reading/writing state via

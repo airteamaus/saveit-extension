@@ -654,6 +654,12 @@ body {
   color: var(--color-text);
 }
 
+.project-nav-name-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
 .project-nav-name {
   display: block;
   font-weight: 400;
@@ -663,6 +669,17 @@ body {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: var(--font-size-lg);
+}
+
+/* Muted owner attribution beneath a shared project's name — only rendered on
+   projects the viewer doesn't own, so it never clutters owned rows. */
+.project-nav-subtitle {
+  font-size: var(--font-size-2xs);
+  color: var(--color-text-lighter);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
 }
 
 .project-nav-meta,
@@ -1198,4 +1215,159 @@ body {
     margin: 0 12px 16px;
     padding: 0 12px;
   }
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+   Sharing centre — rendered inside the reused .project-editor-dialog shell.
+   Groups projects by who owns them so the viewer can audit, at a glance,
+   what they've shared, what's shared with them, and what they could share.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.sharing-centre-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--spacing-sm);
+}
+
+.sharing-centre-intro {
+  margin: 0 0 var(--spacing-md);
+  color: var(--color-text-light);
+  font-size: var(--font-size-md);
+  line-height: 1.5;
+}
+
+.sharing-centre-status,
+.sharing-centre-warn,
+.sharing-centre-error {
+  margin: 0 0 var(--spacing-md);
+  font-size: var(--font-size-md);
+}
+
+.sharing-centre-warn {
+  color: var(--color-text-light);
+}
+
+.sharing-centre-error {
+  color: var(--color-danger);
+}
+
+.sharing-centre-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.sharing-centre-section-header {
+  margin-bottom: var(--spacing-sm);
+}
+
+.sharing-centre-section-title {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.sharing-centre-section-hint {
+  margin: var(--spacing-xs) 0 0;
+  color: var(--color-text-lighter);
+  font-size: var(--font-size-sm);
+}
+
+.sharing-centre-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: light-dark(rgba(255, 255, 255, 0.5), rgba(31, 34, 32, 0.5));
+}
+
+.sharing-centre-row + .sharing-centre-row {
+  margin-top: var(--spacing-xs);
+}
+
+.sharing-centre-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sharing-centre-row-name {
+  font-weight: 600;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sharing-centre-row-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  color: var(--color-text-light);
+  font-size: var(--font-size-sm);
+}
+
+/* The audience phrase is the key clarity signal: "Visible to everyone at …". */
+.sharing-centre-audience {
+  color: var(--color-shared);
+  font-weight: 500;
+}
+
+.sharing-centre-dot {
+  color: var(--color-text-lighter);
+}
+
+.sharing-centre-row-owner {
+  color: var(--color-text-lighter);
+  font-size: var(--font-size-2xs);
+}
+
+.sharing-centre-toggle {
+  flex-shrink: 0;
+  align-self: center;
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sharing-centre-toggle:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.sharing-centre-toggle:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.sharing-centre-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-md);
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border);
+}
+
+.sharing-centre-refresh {
+  padding: 6px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-light);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+}
+
+.sharing-centre-refresh:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }

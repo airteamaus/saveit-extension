@@ -1,4 +1,4 @@
-import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
+import { PINNED_PAGES_SCOPE_ID, isOwnedProject } from './project-manager-state.js';
 
 // Collection row action icons. We use Streamline "Ultimate Light" icons
 // (stored as black-on-transparent PNGs in src/img) and render them with a CSS
@@ -91,6 +91,7 @@ function createSectionLabel(documentObj, text, dotColor = null, trailing = null)
 function createSidebarRow(documentObj, {
   projectId = '',
   name,
+  subtitle = null,
   count,
   isActive = false,
   actions = []
@@ -112,10 +113,20 @@ function createSidebarRow(documentObj, {
     text: '#',
     attributes: { 'aria-hidden': 'true' }
   }));
-  button.append(createElement(documentObj, 'span', {
+  // Name and (optional) subtitle wrap together so the row reads as a title
+  // with muted owner attribution beneath it — e.g. "Monarc / by nick@…".
+  const nameGroup = createElement(documentObj, 'span', { className: 'project-nav-name-group' });
+  nameGroup.append(createElement(documentObj, 'span', {
     className: 'project-nav-name',
     text: name
   }));
+  if (subtitle) {
+    nameGroup.append(createElement(documentObj, 'span', {
+      className: 'project-nav-subtitle',
+      text: subtitle
+    }));
+  }
+  button.append(nameGroup);
   row.append(button);
 
   if (typeof count === 'number' || actions.length) {
@@ -229,10 +240,17 @@ export function renderProjectSidebar(container, {
     .sort((a, b) => a.name.localeCompare(b.name));
   const createProjectRow = project => {
       const activeClass = project.id === dashboard.selectedProjectId ? 'is-active' : '';
+      // Show owner attribution only on projects the viewer doesn't own — that's
+      // the only place it adds information ("who shared this to me?"). On owned
+      // rows the section header already says "My projects".
+      const owned = isOwnedProject(dashboard, project);
+      const subtitle = owned ? null
+        : (project.owner_user_email ? `by ${project.owner_user_email}` : 'shared with your team');
 
       return createSidebarRow(documentObj, {
         projectId: project.id,
         name: project.name,
+        subtitle,
         count: project.page_count || 0,
         isActive: Boolean(activeClass),
         actions: [
@@ -254,8 +272,12 @@ export function renderProjectSidebar(container, {
         ]
       });
     };
-  const privateProjects = visibleProjects.filter(project => project.visibility !== 'company');
-  const sharedProjects = visibleProjects.filter(project => project.visibility === 'company');
+  // Split by ownership, not visibility. A project you own and have shared is
+  // still yours and belongs under "My projects"; only things others shared to
+  // you go under "Shared with me". This is the correction that makes the
+  // sidebar match the user's mental model.
+  const myProjects = visibleProjects.filter(project => isOwnedProject(dashboard, project));
+  const sharedWithMe = visibleProjects.filter(project => !isOwnedProject(dashboard, project));
 
   const nav = createElement(documentObj, 'div', { className: 'project-nav' });
   nav.append(
@@ -274,19 +296,19 @@ export function renderProjectSidebar(container, {
   );
 
   // The create-project button sits on the right of the first section label
-  // (My projects, or Shared projects when there are no personal ones).
+  // (My projects, or Shared with me when the viewer owns nothing yet).
   const createButton = createCreateButton(documentObj);
 
-  if (privateProjects.length) {
+  if (myProjects.length) {
     nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
-    privateProjects.forEach(project => nav.append(createProjectRow(project)));
-    if (sharedProjects.length) {
-      nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-primary)'));
-      sharedProjects.forEach(project => nav.append(createProjectRow(project)));
+    myProjects.forEach(project => nav.append(createProjectRow(project)));
+    if (sharedWithMe.length) {
+      nav.append(createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)'));
+      sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
     }
-  } else if (sharedProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'Shared projects', 'var(--color-primary)', createButton));
-    sharedProjects.forEach(project => nav.append(createProjectRow(project)));
+  } else if (sharedWithMe.length) {
+    nav.append(createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)', createButton));
+    sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
   } else {
     // No projects at all: still show the "My projects" label so the create
     // button is reachable, plus the empty hint.
@@ -413,6 +435,17 @@ export function renderProjectEditor(backdrop, dialog, {
       });
       checkbox.checked = page.project_ids?.includes(project.id) === true;
       const optionMain = createElement(documentObj, 'span', { className: 'project-editor-option-main' });
+      // Meta line names the actual audience ("Visible to everyone at <domain>")
+      // rather than the vague "Shared with company", and prefixes ownership
+      // when the viewer didn't create the project.
+      const owned = isOwnedProject(dashboard, project);
+      let metaText;
+      if (project.visibility === 'company' && project.company_domain) {
+        const audience = `Visible to everyone at ${project.company_domain}`;
+        metaText = owned ? audience : `${audience} · shared by ${project.owner_user_email || 'your team'}`;
+      } else {
+        metaText = 'Private project';
+      }
       optionMain.append(
         createElement(documentObj, 'span', {
           className: 'project-editor-option-name',
@@ -420,7 +453,7 @@ export function renderProjectEditor(backdrop, dialog, {
         }),
         createElement(documentObj, 'span', {
           className: 'project-editor-option-meta',
-          text: project.visibility === 'company' ? 'Shared with company' : 'Private project'
+          text: metaText
         })
       );
       option.append(checkbox, optionMain);

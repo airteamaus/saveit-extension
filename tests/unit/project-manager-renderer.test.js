@@ -26,7 +26,7 @@ describe('project manager renderer helpers', () => {
     expect(container.textContent).toContain('Projects unavailable right now.');
   });
 
-  it('renders the sidebar project rows split into personal and shared sections', () => {
+  it('renders the sidebar split by ownership with owner attribution on shared rows', () => {
     document.body.innerHTML = '<div id="project-sidebar"></div>';
     const container = document.getElementById('project-sidebar');
 
@@ -40,9 +40,13 @@ describe('project manager renderer helpers', () => {
         ],
         projectsLoading: false,
         selectedProjectId: 'project-1',
+        // The signed-in user owns Alpha (private) and Bravo (shared company).
+        // Charlie is a company project owned by someone else — shared with me.
+        getCurrentUser: () => ({ uid: 'uid-rich', email: 'rich@airteam.com.au' }),
         projects: [
-          { id: 'project-1', name: 'Alpha', page_count: 2, visibility: 'private' },
-          { id: 'project-2', name: 'Bravo', page_count: 1, visibility: 'company' }
+          { id: 'project-1', name: 'Alpha', page_count: 2, visibility: 'private', owner_user_id: 'uid-rich' },
+          { id: 'project-2', name: 'Bravo', page_count: 1, visibility: 'company', owner_user_id: 'uid-rich', company_domain: 'airteam.com.au' },
+          { id: 'project-3', name: 'Charlie', page_count: 4, visibility: 'company', owner_user_id: 'uid-nick', owner_user_email: 'nick@airteam.com.au', company_domain: 'airteam.com.au' }
         ]
       },
       htmlUtils: {
@@ -56,9 +60,17 @@ describe('project manager renderer helpers', () => {
     expect(container.innerHTML).toContain('project-action-archive');
     expect(container.textContent).toContain('Alpha');
     expect(container.textContent).toContain('Bravo');
+    expect(container.textContent).toContain('Charlie');
+    // Owned projects (regardless of visibility) sit under "My projects";
+    // only other people's projects sit under "Shared with me".
     expect(container.textContent).toContain('My projects');
-    expect(container.textContent).toContain('Shared projects');
+    expect(container.textContent).toContain('Shared with me');
     expect(container.innerHTML).toContain('<span class="project-nav-count">2</span>');
+
+    // The non-owned row carries owner attribution; owned rows do not.
+    const subtitles = [...container.querySelectorAll('.project-nav-subtitle')].map(el => el.textContent);
+    expect(subtitles).toContain('by nick@airteam.com.au');
+    expect(subtitles.length).toBe(1);
 
     // All pages is the default first row, ahead of Pinned.
     const names = [...container.querySelectorAll('.project-nav-name')].map(el => el.textContent.trim());
@@ -76,11 +88,10 @@ describe('project manager renderer helpers', () => {
     expect(hashes.length).toBe(names.length);
     expect(hashes.every(h => h === '#')).toBe(true);
 
-    // Section labels carry dots in the primary sage colour (both sections
-    // share the same accent now).
+    // Section dots: primary for "My projects", shared-green for "Shared with me".
     const dotColors = [...container.querySelectorAll('.project-nav-section-dot')].map(el => el.style.background);
-    expect(dotColors.every(c => c === 'var(--color-primary)')).toBe(true);
-    expect(dotColors.length).toBe(2);
+    expect(dotColors).toContain('var(--color-primary)');
+    expect(dotColors).toContain('var(--color-shared)');
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {

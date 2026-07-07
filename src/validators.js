@@ -18,6 +18,9 @@ export const ProjectSchema = z.strictObject({
   id: z.string().min(1),
   name: z.string().min(1),
   owner_user_id: z.string().min(1),
+  // Owner email so clients can label "Shared by <owner>" on company projects the
+  // viewer doesn't own. Null on docs created before the field was written.
+  owner_user_email: z.string().nullable().optional().default(null),
   visibility: z.enum(['private', 'company']).default('private'),
   company_domain: z.string().nullable().optional().default(null),
   archived: z.boolean().optional().default(false),

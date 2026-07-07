@@ -327,4 +327,37 @@ describe('ProjectSchema', () => {
 
     expect(result.success).toBe(false);
   });
+
+  it('should expose owner_user_email when provided', () => {
+    const result = ProjectSchema.safeParse({
+      id: 'project-shared',
+      name: 'Shared project',
+      owner_user_id: 'user-123',
+      owner_user_email: 'rich@airteam.com.au',
+      visibility: 'company',
+      company_domain: 'airteam.com.au',
+      archived: false,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data.owner_user_email).toBe('rich@airteam.com.au');
+  });
+
+  it('should default owner_user_email to null for legacy docs', () => {
+    const result = ProjectSchema.safeParse({
+      id: 'project-legacy',
+      name: 'Legacy project',
+      owner_user_id: 'user-123',
+      visibility: 'private',
+      company_domain: null,
+      archived: false,
+      created_at: '2024-01-01T00:00:00Z',
+      updated_at: '2024-01-01T00:00:00Z'
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.data.owner_user_email).toBeNull();
+  });
 });

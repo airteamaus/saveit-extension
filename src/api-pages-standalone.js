@@ -70,6 +70,7 @@ export function createStandaloneProject(project) {
     id: project.id || `project-${Date.now()}`,
     name: project.name,
     owner_user_id: project.owner_user_id || 'standalone-user',
+    owner_user_email: project.owner_user_email || null,
     visibility: project.visibility || 'private',
     company_domain: project.company_domain || null,
     archived: false,
