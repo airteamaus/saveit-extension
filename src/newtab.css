@@ -1371,3 +1371,52 @@ body {
   border-color: var(--color-primary);
   color: var(--color-primary);
 }
+
+/* ───────────────────────────────────────────────────────────────────────
+   Toasts — transient confirmation messages (e.g. mirror-toggle feedback).
+   One region hosts a single active toast; auto-dismissed by toast.js.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.toast-region {
+  position: fixed;
+  bottom: var(--spacing-lg);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60; /* above dialogs (z-index 45/46) so toasts surface over them */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-xs);
+  pointer-events: none;
+}
+
+.toast {
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--font-size-sm);
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
+}
+
+.toast--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Accent border keyed to the toast type. Success uses the shared-green token
+   that the rest of the UI associates with confirmed/active state. */
+.toast--success {
+  border-color: color-mix(in srgb, var(--color-shared) 60%, var(--color-border));
+}
+
+.toast--error {
+  border-color: color-mix(in srgb, var(--color-danger) 60%, var(--color-border));
+}
