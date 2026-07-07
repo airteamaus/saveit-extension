@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
+
+### 🐛 Bug Fixes
+
+- **mirror:** create SaveIt/ under a writable container, not the immovable root (0f78e60)
+
+## [1.18.6] - 2026-07-07
+
 ### 🐛 Bug Fixes
 
 - **mirror:** create SaveIt/ under a writable container, not the immovable root (ffeb6a7)
@@ -94,16 +104,6 @@ No notable changes.
 - Add spec: post-login cache warming with progress (fec94ca)
 
 ## [1.15.0] - 2026-07-02
-
-### 📝 Other Improvements
-
-- Lazy-render the All-pages view and fetch the rest on scroll (#15) (1133653)
-- Fix card summary edit reverting to unchanged content (#14) (1ec6d08)
-- Lower semantic search limit 50 → 20 to cut Firestore hydration cost (e13727b)
-- Send search_type 'vector' instead of 'hybrid' (ad796d3)
-- Add Sentry span around semantic search + surface backend timings (d263165)
-
-## [1.14.1] - 2026-07-01
 
 ### ✨ Features
 
@@ -296,6 +296,11 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- Lazy-render the All-pages view and fetch the rest on scroll (#15) (1133653)
+- Fix card summary edit reverting to unchanged content (#14) (1ec6d08)
+- Lower semantic search limit 50 → 20 to cut Firestore hydration cost (e13727b)
+- Send search_type 'vector' instead of 'hybrid' (ad796d3)
+- Add Sentry span around semantic search + surface backend timings (d263165)
 - Fix release/upload workflows to use pnpm; relax vite spec (41c98b1)
 - Fix home view persisting after clicking "All pages"; stabilize hover E2E test (1759b91)
 - Update dependencies to clear all 17 Dependabot vulnerabilities (6e2d7c4)
