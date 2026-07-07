@@ -621,6 +621,28 @@ describe('reconcile (end-to-end against fakes)', () => {
     expect(result.summary.reason).toBe('disabled');
   });
 
+  it('rejects when the saved-pages response lacks the { pages } shape', async () => {
+    // Regression guard for the v1.17 bug where a miswired getSavedPages
+    // (params sent as a GET body instead of a query string) returned a shape
+    // the mirror didn't expect, and reconcile silently produced zero bookmarks.
+    // It must throw now, not return an empty success.
+    const storage = createFakeStorage();
+    await setMirrorEnabled(storage, true);
+    const bookmarksApi = createFakeBookmarksApi([
+      { id: 'root', children: [{ id: 'toolbar', title: 'toolbar', children: [] }] }
+    ]);
+    const api = {
+      async getSavedPages() {
+        // Server returns something, but not { pages: [...] }.
+        return { results: [], total: 0 };
+      },
+      async getProjects() { return []; }
+    };
+
+    await expect(reconcile({ bookmarksApi, api, storage, forceFull: true }))
+      .rejects.toThrow(/missing the expected/);
+  });
+
   it('creates the folder tree and bookmarks for a fresh enabled mirror', async () => {
     const tree = [{
       id: 'root',

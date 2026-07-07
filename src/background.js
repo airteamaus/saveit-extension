@@ -178,7 +178,7 @@ async function parseApiError(response) {
   return errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
 }
 
-async function fetchBackgroundApi(path = '', { method = 'GET', body } = {}) {
+async function fetchBackgroundApi(path = '', { method = 'GET', body, params } = {}) {
   const { idToken } = await getAuthenticatedSession();
   const headers = {
     'Authorization': `Bearer ${idToken}`
@@ -188,7 +188,25 @@ async function fetchBackgroundApi(path = '', { method = 'GET', body } = {}) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const response = await fetch(`${CONFIG.cloudFunctionUrl}${path}`, {
+  // Query params are the only way to pass options on a GET — a request body
+  // is ignored by the server and silently dropped. Build a query string like
+  // the newtab path does (api-core _requestWithAuth) so GET requests actually
+  // carry their parameters.
+  let url = `${CONFIG.cloudFunctionUrl}${path}`;
+  if (params) {
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null) {
+        searchParams.set(key, String(value));
+      }
+    }
+    const qs = searchParams.toString();
+    if (qs) {
+      url = `${url}?${qs}`;
+    }
+  }
+
+  const response = await fetch(url, {
     method,
     headers,
     ...(body !== undefined ? { body: JSON.stringify(body) } : {})
@@ -215,7 +233,7 @@ const mirrorApi = {
     if (cursor) {
       params.cursor = cursor;
     }
-    return fetchBackgroundApi('', params);
+    return fetchBackgroundApi('', { params });
   },
   async getProjects() {
     const projects = await fetchBackgroundApi('/projects');

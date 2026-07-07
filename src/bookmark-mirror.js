@@ -325,8 +325,16 @@ async function fetchAllPages(api) {
       cursor,
       skipCache: true
     });
-    const pages = Array.isArray(res?.pages) ? res.pages : [];
-    all.push(...pages);
+    // Require the expected { pages, pagination } shape. Previously a non-
+    // conforming response (e.g. a request that returned the wrong shape) was
+    // silently coerced to [], which made reconcile create zero bookmarks with
+    // no error — the bug that hid the GET-body-vs-query-string mismatch in
+    // background.js for the whole v1.17 cycle. Throw so miswired calls fail
+    // loudly instead.
+    if (!res || !Array.isArray(res.pages)) {
+      throw new Error('Saved pages response was missing the expected { pages } shape');
+    }
+    all.push(...res.pages);
     cursor = res?.pagination?.hasNextPage ? res.pagination.nextCursor : null;
   } while (cursor);
   return all;
