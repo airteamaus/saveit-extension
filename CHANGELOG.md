@@ -5,7 +5,7 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [1.18.1] - 2026-07-07
 
 ### 🐛 Bug Fixes
 
@@ -107,13 +107,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix standalone domains mock to use classification categories (1ce3d3e)
 
 ## [1.13.1] - 2026-06-27
-
-### 📝 Other Improvements
-
-- Fix standalone domains mock to use classification categories (7f8bcd4)
-- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
-
-## [1.13.0] - 2026-06-27
 
 ### ✨ Features
 
@@ -306,7 +299,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
-- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (a72e713)
+- Fix standalone domains mock to use classification categories (7f8bcd4)
+- Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
 - Load the drawer after auth resolves, not before (5b81a74)
 - Add Refresh saved pages to the avatar menu; reload drawer after import (1ac25fc)
 - Move Import bookmarks into the avatar dropdown menu (aeb1713)
