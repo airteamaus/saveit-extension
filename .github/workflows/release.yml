@@ -8,6 +8,14 @@ on:
     tags:
       - 'v*'
 
+# A single tag push can fire duplicate runs (the tag move + the push event
+# arrive together). Cancel any in-flight run for the same tag so only one
+# release pipeline executes per version — the loser is auto-cancelled
+# instead of racing to a "version already exists" failure on AMO.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   release:
     runs-on: ubuntu-latest
