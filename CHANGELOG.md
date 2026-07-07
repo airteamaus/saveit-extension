@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
+
+### 🐛 Bug Fixes
+
+- **mirror:** send saved-pages params as query string, not GET body (8f4ded9)
+
+## [1.18.4] - 2026-07-07
+
+### ✨ Features
+
 - **ui:** Enter-to-save in page editor; route action failures through toast (d87ae01)
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
 
@@ -100,16 +110,6 @@ No notable changes.
 - Rework visual foundation: quiet materiality, warm palette, token sweep (fa18deb)
 
 ## [1.14.0] - 2026-07-01
-
-### 📝 Other Improvements
-
-- Add sparse home view; warm the empty/loading/sign-in copy (95633e2)
-- Remove dormant favorites carousel UI; warm the loading/error state copy (fc2b89c)
-- Bring toolbar popup into brand parity with shared token system (e6631e3)
-- Rework visual foundation: quiet materiality, warm palette, token sweep (c5ed31e)
-- Fix domain click loading all pages: scope source in applyDrawerFilters (4117539)
-
-## [1.13.3] - 2026-06-27
 
 ### ✨ Features
 
@@ -302,7 +302,11 @@ No notable changes.
 
 ### 📝 Other Improvements
 
-- Fix domain click loading all pages: scope source in applyDrawerFilters (95cfbd4)
+- Add sparse home view; warm the empty/loading/sign-in copy (95633e2)
+- Remove dormant favorites carousel UI; warm the loading/error state copy (fc2b89c)
+- Bring toolbar popup into brand parity with shared token system (e6631e3)
+- Rework visual foundation: quiet materiality, warm palette, token sweep (c5ed31e)
+- Fix domain click loading all pages: scope source in applyDrawerFilters (4117539)
 - Use warm cache for domain pages; sort domains alphabetically (4d62903)
 - Fix standalone domains mock to use classification categories (1ce3d3e)
 - Add Domains section to the sidebar with server-side domain scoping (v1.13.0) (95516bd)
