@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **mirror:** create SaveIt/ under a writable container, not the immovable root (ffeb6a7)
+- **mirror:** send saved-pages params as query string, not GET body (e57f8c8)
+
+## [1.18.5] - 2026-07-07
+
 ### ✨ Features
 
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
@@ -97,19 +104,6 @@ No notable changes.
 - Add Sentry span around semantic search + surface backend timings (d263165)
 
 ## [1.14.1] - 2026-07-01
-
-### 📝 Other Improvements
-
-- Fix release/upload workflows to use pnpm; relax vite spec (41c98b1)
-- Fix home view persisting after clicking "All pages"; stabilize hover E2E test (1759b91)
-- Update dependencies to clear all 17 Dependabot vulnerabilities (6e2d7c4)
-- Fix three release tooling bugs found during v1.14.0 (fe4e69f)
-- Add sparse home view; warm the empty/loading/sign-in copy (1923102)
-- Remove dormant favorites carousel UI; warm the loading/error state copy (4f69c6f)
-- Bring toolbar popup into brand parity with shared token system (0bd2b94)
-- Rework visual foundation: quiet materiality, warm palette, token sweep (fa18deb)
-
-## [1.14.0] - 2026-07-01
 
 ### ✨ Features
 
@@ -302,10 +296,14 @@ No notable changes.
 
 ### 📝 Other Improvements
 
-- Add sparse home view; warm the empty/loading/sign-in copy (95633e2)
-- Remove dormant favorites carousel UI; warm the loading/error state copy (fc2b89c)
-- Bring toolbar popup into brand parity with shared token system (e6631e3)
-- Rework visual foundation: quiet materiality, warm palette, token sweep (c5ed31e)
+- Fix release/upload workflows to use pnpm; relax vite spec (41c98b1)
+- Fix home view persisting after clicking "All pages"; stabilize hover E2E test (1759b91)
+- Update dependencies to clear all 17 Dependabot vulnerabilities (6e2d7c4)
+- Fix three release tooling bugs found during v1.14.0 (fe4e69f)
+- Add sparse home view; warm the empty/loading/sign-in copy (1923102)
+- Remove dormant favorites carousel UI; warm the loading/error state copy (4f69c6f)
+- Bring toolbar popup into brand parity with shared token system (0bd2b94)
+- Rework visual foundation: quiet materiality, warm palette, token sweep (fa18deb)
 - Fix domain click loading all pages: scope source in applyDrawerFilters (4117539)
 - Use warm cache for domain pages; sort domains alphabetically (4d62903)
 - Fix standalone domains mock to use classification categories (1ce3d3e)
