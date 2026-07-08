@@ -5,16 +5,16 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [1.19.1] - 2026-07-08
 
 ### 🐛 Bug Fixes
 
-- **newtab:** hide the project sidebar while signed out (47ba681)
-- **newtab:** harden bootstrap against cold-start session loss (360d640)
+- **newtab:** hide the project sidebar while signed out (9c51831)
+- **newtab:** harden bootstrap against cold-start session loss (ed9b624)
 
 ### ♻️ Refactoring
 
-- **auth:** centralise the first-auth-state race (a783e57)
+- **auth:** centralise the first-auth-state race (f0b5092)
 
 ## [1.19.0] - 2026-07-07
 
@@ -81,13 +81,6 @@ No notable changes.
 - **release:** publish to Chrome Web Store on every tag release (c3735cd)
 
 ## [1.17.0] - 2026-07-04
-
-### 📝 Other Improvements
-
-- Add bookmark mirror: sync saved pages to browser bookmarks (782aaa1)
-- Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
-
-## [1.16.0] - 2026-07-03
 
 ### ✨ Features
 
@@ -280,6 +273,8 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- Add bookmark mirror: sync saved pages to browser bookmarks (782aaa1)
+- Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
 - Single render authority: eliminate the warming/cards flicker via warmUpInProgress (8f672e8)
 - Fix logout->login leaving empty drawer: reload when no renderable pages (33082ac)
 - Fix session-restore warming flash: SavedPagesStore must forward lazy (5a238bd)
