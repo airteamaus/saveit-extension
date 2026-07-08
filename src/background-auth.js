@@ -1,3 +1,4 @@
+import { resolveInitialAuthState } from './firebase-auth-state.js';
 import { attachTelemetryContext, getSafeRedirectContext, getSafeResponseContext } from './telemetry.js';
 
 export function createBackgroundAuth({
@@ -16,22 +17,24 @@ export function createBackgroundAuth({
       persistence: firebase.indexedDBLocalPersistence
     });
 
-    let authReady = false;
-    const authReadyPromise = new Promise((resolve) => {
-      firebase.onAuthStateChanged(auth, (user) => {
-        if (!authReady) {
-          authReady = true;
+    // Background is long-lived and MUST wait for the indexedDB-persisted
+    // session, so no timeout. The first callback logs "loaded from
+    // IndexedDB"; every callback (including the first) logs the state change.
+    let hasReportedInitialLoad = false;
+    const authReadyPromise = resolveInitialAuthState({
+      subscribe: cb => firebase.onAuthStateChanged(auth, cb),
+      onChange: user => {
+        if (!hasReportedInitialLoad) {
+          hasReportedInitialLoad = true;
           logger.log('Firebase auth state loaded from IndexedDB', {
             hasCachedUser: Boolean(user)
           });
-          resolve();
         }
-
         logger.log('Firebase user state changed', {
           isSignedIn: Boolean(user)
         });
-      });
-    });
+      }
+    }).then(() => undefined);
 
     return {
       firebase,

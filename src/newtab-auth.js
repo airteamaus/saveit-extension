@@ -1,3 +1,5 @@
+import { resolveInitialAuthState } from './firebase-auth-state.js';
+
 function getBrowserRuntime() {
   if (typeof browser !== 'undefined' && browser.runtime) {
     return browser.runtime;
@@ -114,36 +116,30 @@ export function createNewtabAuthController({
     try {
       await windowObj.firebaseReady;
 
-      if (windowObj.firebaseAuth && windowObj.firebaseOnAuthStateChanged) {
-        let hasResolvedInitialState = false;
-
-        const initialAuthState = await Promise.race([
-          new Promise(resolve => {
-            windowObj.firebaseOnAuthStateChanged(windowObj.firebaseAuth, (user) => {
-              if (!hasResolvedInitialState) {
-                hasResolvedInitialState = true;
-                void handleResolvedAuthState(user).finally(() => {
-                  resolve(user || null);
-                });
-                return;
-              }
-
-              void handleResolvedAuthState(user);
-            });
-          }),
-          new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Firebase auth timeout')), 10000);
-          })
-        ]);
-
-        return {
-          handledInitialState: true,
-          user: initialAuthState
-        };
-      } else {
+      if (!windowObj.firebaseAuth || !windowObj.firebaseOnAuthStateChanged) {
         updateAuthUi(null);
         return { handledInitialState: false, user: null };
       }
+
+      // The first auth-state callback resolves the race; subsequent ones
+      // (later sign-in/sign-out transitions) keep driving handleResolvedAuthState.
+      // handleResolvedAuthState is awaited for the first callback so init()
+      // does not resolve until onSignedIn/onSignedOut has run — startNewtabPage
+      // relies on that to avoid loading the drawer ahead of session restoration.
+      const { user, timedOut } = await resolveInitialAuthState({
+        subscribe: cb => windowObj.firebaseOnAuthStateChanged(windowObj.firebaseAuth, cb),
+        onChange: handleResolvedAuthState,
+        timeoutMs: 10000
+      });
+
+      if (timedOut) {
+        // Matches the prior behaviour: a timeout is treated as "no initial
+        // state" rather than a hard failure, so the UI falls through to the
+        // signed-out state without throwing.
+        throw new Error('Firebase auth timeout');
+      }
+
+      return { handledInitialState: true, user };
     } catch (error) {
       console.error('[newtab] Firebase init failed:', error);
       updateAuthUi(null);
