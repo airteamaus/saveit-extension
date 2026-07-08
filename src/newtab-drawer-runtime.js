@@ -87,8 +87,19 @@ export function createSavedPagesDrawerController({
 
   const renderDrawerLoadingState = (...args) => uiController.renderLoadingState(...args);
   const renderDrawerErrorState = (...args) => uiController.renderErrorState(...args);
-  const renderDrawerSignInState = (...args) => uiController.renderSignInState(...args);
-  const renderDrawerResults = (...args) => uiController.renderResults(...args);
+  // The project sidebar is a signed-in surface — it lists the user's projects.
+  // Hide it whenever the sign-in state is shown (cold start with no session,
+  // and explicit sign-out) and restore it once real results render. Tied to
+  // these two render entry points because they are the authoritative signals
+  // of the auth-state transition for the drawer.
+  const renderDrawerSignInState = (...args) => {
+    projectSidebar?.classList?.add('hidden');
+    return uiController.renderSignInState(...args);
+  };
+  const renderDrawerResults = (...args) => {
+    projectSidebar?.classList?.remove('hidden');
+    return uiController.renderResults(...args);
+  };
   const { syncDrawerStateFromStore, syncProjectsStateFromStore } = createDrawerStateSyncHelpersFn({
     state,
     projectManager,

@@ -104,4 +104,125 @@ describe('newtab drawer runtime', () => {
     controller.showLoadingState();
     expect(uiController.renderLoadingState).toHaveBeenCalled();
   });
+
+  it('hides the project sidebar when the sign-in state renders and restores it on results', async () => {
+    // The sidebar is a signed-in surface. It must not render at all while
+    // signed out (cold start with no session, or after explicit sign-out).
+    // Uses the REAL sync coordinator so handleSignedOut flows through to the
+    // runtime's renderDrawerSignInState forwarder, which toggles the element.
+    const projectSidebar = document.createElement('aside');
+    const savedPagesDrawer = document.createElement('main');
+    // The store subscription drives renderDrawerResults (the restore path),
+    // so capture the saved-pages subscriber to emit a signed-in change.
+    let savedPagesSubscriber = null;
+    const savedPagesStore = {
+      subscribe: vi.fn(cb => { savedPagesSubscriber = cb; }),
+      reset: vi.fn(),
+      getSnapshot: () => ({ allPages: [{ id: 'p1' }], refreshState: 'idle' })
+    };
+    const state = {
+      hasInitialized: true,
+      warmUpInProgress: false,
+      query: '',
+      currentFilter: { search: '', projectId: null, cursor: null },
+      selectedProjectId: null,
+      allPages: [{ id: 'p1' }],
+      pages: [],
+      total: 1,
+      allItemsTotal: 1
+    };
+    const uiController = {
+      renderDrawerChrome: vi.fn(),
+      renderErrorState: vi.fn(),
+      renderLoadingState: vi.fn(),
+      renderProjectSidebar: vi.fn(),
+      refreshDrawerCard: vi.fn(),
+      renderResults: vi.fn(),
+      renderSignInState: vi.fn()
+    };
+
+    const controller = createSavedPagesDrawerController({
+      api: { isExtension: true },
+      savedPagesStore,
+      projectsStore: { subscribe: vi.fn(), reset: vi.fn(), getSnapshot: () => ({}) },
+      projectManager: {
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn(),
+        getScopedPages: vi.fn(() => []),
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        refreshProjectCounts: vi.fn()
+      },
+      elements: {
+        savedPagesToggleBtn: document.createElement('button'),
+        savedPagesDrawer,
+        savedPagesDrawerBackdrop: document.createElement('div'),
+        savedPagesDrawerCloseBtn: document.createElement('button'),
+        savedPagesDrawerSearchForm: document.createElement('form'),
+        savedPagesDrawerSearchInput: document.createElement('input'),
+        savedPagesDrawerClearBtn: document.createElement('button'),
+        savedPagesDrawerResults: document.createElement('div'),
+        projectSidebar,
+        projectEditorBackdrop: document.createElement('div'),
+        projectEditorDialog: document.createElement('div')
+      },
+      onSavedPagesTotalChange: vi.fn(),
+      refreshFavorites: vi.fn(),
+      notify: vi.fn(),
+      windowObj: { setTimeout, clearTimeout },
+      documentObj: document,
+      dependencies: {
+        createDrawerDataControllerFn: vi.fn(() => ({
+          ensureDrawerProjectsLoaded: vi.fn(),
+          handleDrawerDelete: vi.fn(),
+          handleDrawerPin: vi.fn(),
+          handleDrawerUpdate: vi.fn(),
+          loadDrawerBasePages: vi.fn(),
+          loadDrawerDomainPages: vi.fn(),
+          loadDrawerProjectPages: vi.fn(),
+          loadDrawerResults: vi.fn(),
+          handleDrawerEditStart: vi.fn(),
+          handleDrawerEditCancel: vi.fn(),
+          handleDrawerScrollNearEnd: vi.fn()
+        })),
+        createDrawerShellControllerFn: vi.fn(() => ({
+          closeSavedPagesDrawer: vi.fn(),
+          getSearchQuery: vi.fn(() => ''),
+          isDrawerOpen: vi.fn(() => true),
+          navigateDrawerCard: vi.fn(),
+          openSavedPagesDrawer: vi.fn(),
+          setDrawerSearchValue: vi.fn(),
+          setDrawerToggleState: vi.fn(),
+          updateDrawerUrl: vi.fn()
+        })),
+        createDrawerStateSyncHelpersFn: vi.fn(() => ({
+          syncDrawerStateFromStore: vi.fn(),
+          syncProjectsStateFromStore: vi.fn()
+        })),
+        createDrawerUiControllerFn: vi.fn(() => uiController),
+        createInitialDrawerStateFn: vi.fn(() => state),
+        createSavedPagesTotalNotifierFn: vi.fn(() => vi.fn()),
+        createSavedPagesViewFn: vi.fn(() => ({})),
+        // Signed in for the restore path so shouldSyncDrawerStoreUpdate passes.
+        getDrawerCurrentUserFn: vi.fn(() => ({ uid: 'user-1' })),
+        initSavedPagesDrawerEventsFn: vi.fn()
+      }
+    });
+
+    controller.init();
+
+    // Sign-out renders the sign-in state and must hide the sidebar.
+    await controller.handleSignedOut();
+    expect(projectSidebar.classList.contains('hidden')).toBe(true);
+    expect(uiController.renderSignInState).toHaveBeenCalled();
+
+    // A signed-in store emit routes through renderDrawerResults (the warming
+    // branch calls it directly while warmUpInProgress is set), which restores
+    // the sidebar.
+    uiController.renderResults.mockClear();
+    state.warmUpInProgress = true;
+    savedPagesSubscriber();
+    expect(uiController.renderResults).toHaveBeenCalled();
+    expect(projectSidebar.classList.contains('hidden')).toBe(false);
+  });
 });
