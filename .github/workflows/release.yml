@@ -10,21 +10,34 @@ on:
 
 # A single tag push can fire duplicate runs (the tag move + the push event
 # arrive together). Cancel any in-flight run for the same tag so only one
-# release pipeline executes per version — the loser is auto-cancelled
-# instead of racing to a "version already exists" failure on AMO.
+# pipeline executes per version. This is the FIRST line of defence against
+# double-publishing; the jobs themselves are also idempotent so a re-run
+# (manual retry, or a second run that escaped the concurrency guard) converges
+# to the same state instead of failing. See the amo job for the load-bearing
+# case: re-submitting a version to AMO is irreversible.
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  release:
+  # ──────────────────────────────────────────────────────────────────────
+  # AMO (Firefox signing) — idempotent.
+  #
+  # AMO version submissions are irreversible: once a version is uploaded it is
+  # "used up" forever, and re-submitting fails with "Version X already exists".
+  # So before signing we check whether the version already exists on AMO. If it
+  # does (e.g. a previous run uploaded it before being cancelled), we reuse the
+  # already-signed XPI instead of re-signing. Only a genuine first-time sign
+  # invokes web-ext. Either way the signed XPI is published as the `xpi`
+  # artifact so downstream jobs don't care which path ran.
+  # ──────────────────────────────────────────────────────────────────────
+  amo:
     runs-on: ubuntu-latest
-
+    outputs:
+      version: ${{ steps.get_version.outputs.VERSION }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Fetch all history for release notes generation
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
@@ -40,82 +53,173 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Add build date to manifest
-        run: |
-          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
-          # Add build_date field to manifest.json using jq
-          jq --arg date "$BUILD_DATE" '. + {build_date: $date}' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
-          echo "Added build_date: $BUILD_DATE"
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Build bundles
         run: node scripts/bundle-firebase.js
 
-      - name: Build Chrome extension (unsigned zip)
-        run: node scripts/build-chrome-package.js
+      - name: Add build date to manifest
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          jq --arg date "$BUILD_DATE" '. + {build_date: $date}' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
 
-      - name: Build and sign Firefox extension
+      - name: Sign or reuse signed XPI
+        id: amo_sign
         env:
           AMO_JWT_ISSUER: ${{ secrets.AMO_JWT_ISSUER }}
           AMO_JWT_SECRET: ${{ secrets.AMO_JWT_SECRET }}
         run: |
-          npx web-ext sign \
-            --source-dir=. \
-            --channel=unlisted \
-            --api-key="$AMO_JWT_ISSUER" \
-            --api-secret="$AMO_JWT_SECRET"
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          # Fetch the existing signed XPI if the version is already on AMO.
+          # Exit 10 means "not on AMO" → fall back to web-ext sign. Any other
+          # non-zero exit is a real failure and fails the job.
+          if node scripts/amo-fetch-signed-xpi.js "$VERSION"; then
+            echo "signed_source=reused" >> $GITHUB_OUTPUT
+          else
+            FETCH_EXIT=$?
+            if [ "$FETCH_EXIT" != "10" ]; then
+              exit $FETCH_EXIT
+            fi
+            npx web-ext sign \
+              --source-dir=. \
+              --channel=unlisted \
+              --api-key="$AMO_JWT_ISSUER" \
+              --api-secret="$AMO_JWT_SECRET"
+            echo "signed_source=fresh" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Normalise XPI filename
+        id: normalise_xpi
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          XPI_PATH=$(find web-ext-artifacts -name "*.xpi" -type f | head -n 1)
+          if [ -z "$XPI_PATH" ]; then
+            echo "❌ No signed XPI found in web-ext-artifacts/"
+            exit 1
+          fi
+          TARGET="web-ext-artifacts/saveit-${VERSION}.xpi"
+          if [ "$XPI_PATH" != "$TARGET" ]; then
+            mv "$XPI_PATH" "$TARGET"
+          fi
+          echo "xpi_path=$TARGET" >> $GITHUB_OUTPUT
+
+      - name: Upload XPI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: xpi
+          path: ${{ steps.normalise_xpi.outputs.xpi_path }}
+          if-no-files-found: error
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────
+  # Build the Chrome package (unsigned zip for the Web Store). Separate job
+  # so it runs in parallel with AMO and produces its own artifact.
+  # ──────────────────────────────────────────────────────────────────────
+  build-chrome:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build bundles
+        run: node scripts/bundle-firebase.js
+
+      - name: Add build date to manifest
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          jq --arg date "$BUILD_DATE" '. + {build_date: $date}' manifest.json > manifest.tmp && mv manifest.tmp manifest.json
+
+      - name: Build Chrome extension
+        run: node scripts/build-chrome-package.js
 
       - name: Get version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Find and rename signed XPI
-        id: find_xpi
+      - name: Verify Chrome ZIP exists
         run: |
-          XPI_PATH=$(find web-ext-artifacts -name "*.xpi" -type f | head -n 1)
-          XPI_NAME="saveit-${{ steps.get_version.outputs.VERSION }}.xpi"
-          mv "$XPI_PATH" "$XPI_NAME"
-          echo "XPI_NAME=$XPI_NAME" >> $GITHUB_OUTPUT
-
-      - name: Find and rename Chrome ZIP
-        id: find_zip
-        run: |
-          ZIP_PATH="web-ext-artifacts/saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
-          if [ ! -f "$ZIP_PATH" ]; then
-            echo "❌ Chrome ZIP not found: $ZIP_PATH"
+          ZIP_FILE="web-ext-artifacts/saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
+          if [ ! -f "$ZIP_FILE" ]; then
+            echo "❌ Chrome ZIP not found: $ZIP_FILE"
             exit 1
           fi
-          ZIP_NAME="saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
-          mv "$ZIP_PATH" "$ZIP_NAME"
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_OUTPUT
+
+      - name: Upload Chrome ZIP artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: chrome-zip
+          path: web-ext-artifacts/saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip
+          if-no-files-found: error
+          retention-days: 7
+
+  # ──────────────────────────────────────────────────────────────────────
+  # GitHub Release — idempotent (already was: create-or-update with --clobber).
+  # Needs both artifacts so a release never has a missing XPI or zip.
+  # ──────────────────────────────────────────────────────────────────────
+  github-release:
+    needs: [amo, build-chrome]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Download XPI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: xpi
+          path: release-assets
+
+      - name: Download Chrome ZIP artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+          path: release-assets
 
       - name: Generate release notes
         id: release_notes
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
-
-          # Generate release notes from conventional commits
           NOTES=$(node scripts/generate-changelog.js release-notes "$VERSION" || echo "")
-
           if [ -z "$NOTES" ]; then
             NOTES="No notable changes in this release."
           fi
-
-          # Save to file for multiline handling
           echo "$NOTES" > release-notes.tmp
-
-          # Set output (handle multiline)
           {
             echo 'NOTES<<EOF'
             cat release-notes.tmp
             echo EOF
           } >> $GITHUB_OUTPUT
 
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           TAG="v$VERSION"
+          XPI="release-assets/saveit-${VERSION}.xpi"
+          ZIP="release-assets/saveit-chrome-${VERSION}.zip"
 
           cat > release-notes.md <<'EOF'
           ${{ steps.release_notes.outputs.NOTES }}
@@ -147,64 +251,77 @@ jobs:
           ---
           EOF
 
+          # Idempotent: if the release exists, replace its assets and notes;
+          # otherwise create it. Re-running this job is a no-op convergence.
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" \
-              "${{ steps.find_xpi.outputs.XPI_NAME }}" \
-              "${{ steps.find_zip.outputs.ZIP_NAME }}" \
-              --clobber
+            gh release upload "$TAG" "$XPI" "$ZIP" --clobber
             gh release edit "$TAG" --notes-file release-notes.md
           else
-            gh release create "$TAG" \
-              "${{ steps.find_xpi.outputs.XPI_NAME }}" \
-              "${{ steps.find_zip.outputs.ZIP_NAME }}" \
-              --title "$TAG" \
-              --notes-file release-notes.md
+            gh release create "$TAG" "$XPI" "$ZIP" --title "$TAG" --notes-file release-notes.md
           fi
 
-      - name: Update updates.json
+  # ──────────────────────────────────────────────────────────────────────
+  # updates.json — the Firefox auto-update manifest. Idempotent: appends the
+  # version only if absent (a re-run produces an identical file). Previously
+  # this overwrote the whole file with a single-entry array, clobbering the
+  # version history on every release.
+  # ──────────────────────────────────────────────────────────────────────
+  updates-json:
+    needs: github-release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Need write access to push the updates.json commit back to main.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Append version to updates.json (idempotent)
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           REPO="${{ github.repository }}"
+          LINK="https://github.com/$REPO/releases/download/v$VERSION/saveit-$VERSION.xpi"
 
-          # Fetch and checkout main to avoid detached HEAD issues
-          git fetch origin main
-          git reset --hard
-          git clean -fd
-          git checkout main
-          git pull origin main
+          # Append-if-absent. jq any()/.+[] means a re-run leaves the file
+          # byte-identical, so git diff is empty and no commit is produced.
+          jq --arg v "$VERSION" --arg link "$LINK" '
+            .addons["saveit@airteam.com.au"].updates |=
+              (if any(.version == $v) then . else . + [{version:$v, update_link:$link}] end)
+          ' updates.json > updates.json.tmp && mv updates.json.tmp updates.json
 
-          cat > updates.json << EOF
-          {
-            "addons": {
-              "saveit@airteam.com.au": {
-                "updates": [
-                  {
-                    "version": "$VERSION",
-                    "update_link": "https://github.com/$REPO/releases/download/v$VERSION/saveit-$VERSION.xpi"
-                  }
-                ]
-              }
-            }
-          }
-          EOF
+          echo "Updated updates.json:"
+          cat updates.json
+
+      - name: Commit updates.json if changed
+        run: |
+          VERSION="${{ steps.get_version.outputs.VERSION }}"
+          # Only commit when the append actually changed the file (idempotent
+          # re-runs produce no diff). git diff --quiet exits non-zero if there
+          # are changes, so commit only then.
+          if git diff --quiet -- updates.json; then
+            echo "updates.json unchanged — nothing to commit."
+            exit 0
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add updates.json
-          HUSKY=0 git commit --no-verify -m "Update updates.json for v$VERSION [skip ci]"
-          git push origin main
+          git commit -m "Update updates.json for v$VERSION [skip ci]"
+          git push
 
-  # Publish to the Chrome Web Store on every tag. Runs after the Firefox/GitHub
-  # release job so a signing failure there doesn't burn a Chrome review slot.
-  # Uploads AND auto-publishes (submits for review). If the listing is missing
-  # required Developer Dashboard info (e.g. Privacy practices), publish fails —
-  # fix that once in the dashboard at:
-  #   https://chrome.google.com/webstore/devconsole
-  upload-chrome:
-    needs: release
+  # ──────────────────────────────────────────────────────────────────────
+  # Chrome Web Store — gated on github-release so a broken release doesn't
+  # burn a Chrome review slot. Re-uploading the same version to Chrome is safe
+  # (it re-processes), so this is idempotent under re-runs.
+  # ──────────────────────────────────────────────────────────────────────
+  chrome-store:
+    needs: github-release
     runs-on: ubuntu-latest
     name: Publish to Chrome Web Store
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -223,24 +340,15 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build bundles
-        run: node scripts/bundle-firebase.js
-
-      - name: Build Chrome extension
-        run: npm run build:chrome
-
       - name: Get version from tag
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Verify Chrome ZIP exists
-        run: |
-          ZIP_FILE="web-ext-artifacts/saveit-chrome-${{ steps.get_version.outputs.VERSION }}.zip"
-          if [ ! -f "$ZIP_FILE" ]; then
-            echo "❌ Chrome ZIP not found: $ZIP_FILE"
-            exit 1
-          fi
-          echo "✅ Found: $ZIP_FILE"
+      - name: Download Chrome ZIP artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: chrome-zip
+          path: web-ext-artifacts
 
       - name: Upload and publish to Chrome Web Store
         env:
