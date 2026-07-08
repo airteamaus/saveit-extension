@@ -40,7 +40,10 @@ async function launchWithExtension() {
   const extDir = buildUnpackedChromeExtension();
   const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'saveit-warming-profile-'));
   const context = await chromium.launchPersistentContext(profileDir, {
-    headless: false, // Chromium extension loading requires headed mode (or new headless)
+    // Headed mode: these tests rely on chrome://newtab loading the extension's
+    // new-tab override, which only works in a real browser session. See the
+    // HEADLESS LIMITATION note above the describe block for why CI skips them.
+    headless: false,
     args: [
       `--disable-extensions-except=${extDir}`,
       `--load-extension=${extDir}`,
@@ -48,12 +51,24 @@ async function launchWithExtension() {
       '--no-default-browser-check'
     ]
   });
-  // Chromium "new headless" supports extensions; if headless:true fails to load,
-  // the caller will see no extension. We keep headless:false for reliability.
   return { context, extDir };
 }
 
+// These tests boot a real Chromium + the unpacked extension (the full module
+// system, auth gate, and warming code), which is heavier than the standalone
+// Firefox tests. 90s per test gives headroom under CI without masking a hang.
+//
+// HEADLESS LIMITATION: these rely on opening the extension's new-tab page.
+// Headed Chromium loads it via chrome://newtab → extension override, but
+// chrome://newtab is unreachable in headless (net::ERR_INVALID_URL) and a
+// direct chrome-extension:// navigation aborts (net::ERR_ABORTED). So they run
+// locally (headed) but are skipped in CI, which has no display server. The
+// warming store/subscriber logic they exercise is already covered by unit tests.
 test.describe('post-login cache warming (real extension, Chromium)', () => {
+  test.beforeEach(() => {
+    test.setTimeout(90000);
+    test.skip(!!process.env.CI, 'requires headed Chromium (no headless extension-newtab support)');
+  });
   test('warming bar advances per batch, then hands off to cards', async () => {
     const { context } = await launchWithExtension();
     try {
