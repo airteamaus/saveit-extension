@@ -296,7 +296,7 @@ jobs:
           echo "Updated updates.json:"
           cat updates.json
 
-      - name: Commit updates.json if changed
+      - name: Commit updates.json to main if changed
         run: |
           VERSION="${{ steps.get_version.outputs.VERSION }}"
           # Only commit when the append actually changed the file (idempotent
@@ -304,6 +304,26 @@ jobs:
           # are changes, so commit only then.
           if git diff --quiet -- updates.json; then
             echo "updates.json unchanged — nothing to commit."
+            exit 0
+          fi
+
+          # The checkout is at the tag (detached HEAD). Switch to main and pull
+          # so the commit lands on the branch tip and pushes cleanly — a plain
+          # git push from detached HEAD fails with "not currently on a branch".
+          git fetch origin main
+          git checkout main
+          git pull origin main --ff-only
+
+          # Re-apply the append on the freshly-pulled main (in case a parallel
+          # job or bot commit advanced it since the checkout).
+          LINK="https://github.com/${{ github.repository }}/releases/download/v$VERSION/saveit-$VERSION.xpi"
+          jq --arg v "$VERSION" --arg link "$LINK" '
+            .addons["saveit@airteam.com.au"].updates |=
+              (if any(.version == $v) then . else . + [{version:$v, update_link:$link}] end)
+          ' updates.json > updates.json.tmp && mv updates.json.tmp updates.json
+
+          if git diff --quiet -- updates.json; then
+            echo "updates.json unchanged after re-pull — nothing to commit."
             exit 0
           fi
 
