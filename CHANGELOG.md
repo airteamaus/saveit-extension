@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **newtab:** hide the project sidebar while signed out (47ba681)
+- **newtab:** harden bootstrap against cold-start session loss (360d640)
+
+### ♻️ Refactoring
+
+- **auth:** centralise the first-auth-state race (a783e57)
+
+## [1.19.0] - 2026-07-07
+
 ### ✨ Features
 
 - **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
@@ -77,33 +88,6 @@ No notable changes.
 - Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
 
 ## [1.16.0] - 2026-07-03
-
-### 📝 Other Improvements
-
-- Single render authority: eliminate the warming/cards flicker via warmUpInProgress (8f672e8)
-- Fix logout->login leaving empty drawer: reload when no renderable pages (33082ac)
-- Fix session-restore warming flash: SavedPagesStore must forward lazy (5a238bd)
-- Fix warming handoff: bind completion timer to window, not module scope (3bae894)
-- Fix warming UI stuck at 100%: handoff must not gate on hasInitialized (555adb7)
-- Fix warming UI regression on session restore + stack layout vertically (94e598c)
-- Align standalone E2E comment with the post-fix activation model (3bc7424)
-- Fix critical bug: warming bar now renders per-batch, not just at completion (11019d5)
-- Correct Blocker 1 mechanism in standalone E2E comment (dfb129d)
-- Document why post-login warming flow is not E2E-covered (272e699)
-- Cover the cold-load warming branch at unit level (6469d10)
-- Show warming bar (not bare dog) on the cold post-login load (b98fe01)
-- Fix renderWarmingState wiring + harden warming state machine (ac6ca77)
-- Drive post-login warming UI from the saved-pages subscriber (9f14bf7)
-- Flip saved-pages store to non-lazy on sign-in (1555eb1)
-- Add warming pane + progress bar styles (1c13a0a)
-- Lock in renderWarmingState guarantees: ARIA + clamping (0d5e1de)
-- Add renderWarmingState: dog + determinate progress bar (f2e7fe5)
-- Cover loadMore-throw reset path; tighten prefetch comments (8ffead1)
-- Add setLazy + self-resetting prefetch for post-login warm-up (b470e05)
-- Add implementation plan: post-login cache warming with progress (cf0c6c6)
-- Add spec: post-login cache warming with progress (fec94ca)
-
-## [1.15.0] - 2026-07-02
 
 ### ✨ Features
 
@@ -296,6 +280,28 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- Single render authority: eliminate the warming/cards flicker via warmUpInProgress (8f672e8)
+- Fix logout->login leaving empty drawer: reload when no renderable pages (33082ac)
+- Fix session-restore warming flash: SavedPagesStore must forward lazy (5a238bd)
+- Fix warming handoff: bind completion timer to window, not module scope (3bae894)
+- Fix warming UI stuck at 100%: handoff must not gate on hasInitialized (555adb7)
+- Fix warming UI regression on session restore + stack layout vertically (94e598c)
+- Align standalone E2E comment with the post-fix activation model (3bc7424)
+- Fix critical bug: warming bar now renders per-batch, not just at completion (11019d5)
+- Correct Blocker 1 mechanism in standalone E2E comment (dfb129d)
+- Document why post-login warming flow is not E2E-covered (272e699)
+- Cover the cold-load warming branch at unit level (6469d10)
+- Show warming bar (not bare dog) on the cold post-login load (b98fe01)
+- Fix renderWarmingState wiring + harden warming state machine (ac6ca77)
+- Drive post-login warming UI from the saved-pages subscriber (9f14bf7)
+- Flip saved-pages store to non-lazy on sign-in (1555eb1)
+- Add warming pane + progress bar styles (1c13a0a)
+- Lock in renderWarmingState guarantees: ARIA + clamping (0d5e1de)
+- Add renderWarmingState: dog + determinate progress bar (f2e7fe5)
+- Cover loadMore-throw reset path; tighten prefetch comments (8ffead1)
+- Add setLazy + self-resetting prefetch for post-login warm-up (b470e05)
+- Add implementation plan: post-login cache warming with progress (cf0c6c6)
+- Add spec: post-login cache warming with progress (fec94ca)
 - Lazy-render the All-pages view and fetch the rest on scroll (#15) (1133653)
 - Fix card summary edit reverting to unchanged content (#14) (1ec6d08)
 - Lower semantic search limit 50 → 20 to cut Firestore hydration cost (e13727b)
