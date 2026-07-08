@@ -146,7 +146,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps firefox
+        # The suite runs standalone tests under the firefox project AND real
+        # extension tests that launch chromium directly (extension loading needs
+        # a Chromium-based browser), so both browser binaries are required.
+        run: pnpm exec playwright install --with-deps firefox chromium
 
       - name: Run E2E tests
         run: pnpm run test:e2e
