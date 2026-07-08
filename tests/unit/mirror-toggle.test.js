@@ -11,7 +11,7 @@ function setup({ initialResponse } = {}) {
   document.body.innerHTML = `
     <button id="hero-mirror-toggle" aria-pressed="false">
       <svg class="dropdown-item-icon"></svg>
-      <span class="dropdown-item-label">Sync browser</span>
+      <span class="dropdown-item-label">Sync to browser</span>
     </button>
     <div id="user-dropdown" class="hidden"></div>
   `;
