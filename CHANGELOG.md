@@ -5,6 +5,17 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - TBD
+
+### 👷 CI/CD
+
+- **e2e:** install chromium and skip headed-only warming tests in CI (#18) (508dabe)
+- **release:** make every store-publish job idempotent (#17) (5b63f9d)
+
+## [1.19.2] - 2026-07-08
+
+No notable changes.
+
 ## [1.19.1] - 2026-07-08
 
 ### 🐛 Bug Fixes
@@ -71,19 +82,6 @@ No notable changes.
 ### ✨ Features
 
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
-
-### 📝 Other Improvements
-
-- Cancel duplicate release runs per tag via concurrency group (73e0407)
-
-### 👷 CI/CD
-
-- **release:** publish to Chrome Web Store on every tag release (c3735cd)
-
-## [1.17.0] - 2026-07-04
-
-### ✨ Features
-
 - **cache:** add head-based list freshness sync (7cd548c)
 - add pinnedFirst parameter to control pinned item sorting (1683350)
 - add background refresh option to profile menu (4321d7b)
@@ -273,6 +271,7 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- Cancel duplicate release runs per tag via concurrency group (73e0407)
 - Add bookmark mirror: sync saved pages to browser bookmarks (782aaa1)
 - Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
 - Single render authority: eliminate the warming/cards flicker via warmUpInProgress (8f672e8)
@@ -488,6 +487,7 @@ No notable changes.
 
 ### 👷 CI/CD
 
+- **release:** publish to Chrome Web Store on every tag release (c3735cd)
 - add deploy key for saveit-backend graph-viz build (dfda0e2)
 
 
