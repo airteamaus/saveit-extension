@@ -129,7 +129,12 @@ export async function startNewtabPage({
   // runs a freshness check (headSavedPages) that needs a signed-in user to
   // mint an auth token; loading before auth resolves throws "No user signed
   // in" and the pages never appear.
+  //
+  // `load()` is the single trigger for the first fetch. It routes through
+  // loadDrawerBasePages, which gates on canHydrateDrawerWithWarmCache (so a
+  // null user renders the sign-in state instead of erroring) and starts the
+  // projects load in the same pass. Calling preloadProjects() separately here
+  // used to bypass that gate and race auth on cold starts.
   await authController.init();
-  void drawerController.preloadProjects?.();
   void drawerController.load?.();
 }

@@ -248,9 +248,12 @@ describe('newtab modules', () => {
         resolveAuthInit({ handledInitialState: true, user: { uid: 'user-1' } });
         await startPromise;
 
-        // After auth resolves, the drawer loads.
+        // After auth resolves, load() is the single trigger for the first
+        // fetch. It routes through loadDrawerBasePages, which gates on auth
+        // and starts the projects load in the same pass — so preloadProjects
+        // must not be called separately (that used to race auth on cold starts).
         expect(drawerController.load).toHaveBeenCalled();
-        expect(drawerController.preloadProjects).toHaveBeenCalled();
+        expect(drawerController.preloadProjects).not.toHaveBeenCalled();
       });
 
       it('still waits for auth init to settle before resolving startup', async () => {
@@ -277,7 +280,7 @@ describe('newtab modules', () => {
 
         expect(drawerController.init).toHaveBeenCalled();
         expect(drawerController.showLoadingState).not.toHaveBeenCalled();
-        expect(drawerController.preloadProjects).toHaveBeenCalled();
+        expect(drawerController.preloadProjects).not.toHaveBeenCalled();
         expect(drawerController.load).toHaveBeenCalled();
       });
   });

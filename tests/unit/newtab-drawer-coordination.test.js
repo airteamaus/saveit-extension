@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import {
+  canHydrateDrawerWithWarmCache,
   createDrawerFiltersApplier,
   createDrawerStateSyncHelpers,
   createSavedPagesTotalNotifier,
@@ -15,6 +16,48 @@ describe('newtab drawer coordination', () => {
       }
     })).toEqual({ uid: 'user-1' });
     expect(getDrawerCurrentUser({})).toBeNull();
+  });
+
+  describe('canHydrateDrawerWithWarmCache', () => {
+    // The gate every data-fetch entry routes through before minting an auth
+    // token. A cold start with no user and no bootstrap hint must fall through
+    // to the sign-in state rather than erroring in getIdToken.
+    it('allows hydration in standalone (non-extension) mode without a user', async () => {
+      const api = { isExtension: false };
+      await expect(canHydrateDrawerWithWarmCache(api, () => null)).resolves.toBe(true);
+    });
+
+    it('allows hydration in extension mode when a current user is present', async () => {
+      const api = { isExtension: true, getLastKnownUserId: vi.fn() };
+      await expect(canHydrateDrawerWithWarmCache(api, () => ({ uid: 'user-1' }))).resolves.toBe(true);
+      // Short-circuits before touching storage when a live user exists.
+      expect(api.getLastKnownUserId).not.toHaveBeenCalled();
+    });
+
+    it('allows hydration in extension mode via the last-known-user bootstrap', async () => {
+      const api = {
+        isExtension: true,
+        getLastKnownUserId: vi.fn().mockResolvedValue('cached-user-1')
+      };
+      await expect(canHydrateDrawerWithWarmCache(api, () => null)).resolves.toBe(true);
+      expect(api.getLastKnownUserId).toHaveBeenCalled();
+    });
+
+    it('blocks hydration in extension mode when there is no user and no bootstrap hint', async () => {
+      const api = {
+        isExtension: true,
+        getLastKnownUserId: vi.fn().mockResolvedValue(null)
+      };
+      await expect(canHydrateDrawerWithWarmCache(api, () => null)).resolves.toBe(false);
+    });
+
+    it('blocks hydration when reading the bootstrap hint throws', async () => {
+      const api = {
+        isExtension: true,
+        getLastKnownUserId: vi.fn().mockRejectedValue(new Error('storage read failed'))
+      };
+      await expect(canHydrateDrawerWithWarmCache(api, () => null)).resolves.toBe(false);
+    });
   });
 
   it('notifies footer updates using the saved-pages store total', () => {
