@@ -123,18 +123,21 @@ function createFakeStorage(initial = {}) {
 }
 
 // A fake API facade returning a fixed page/project set, paginating by limit.
-function createFakeApi({ pages = [], projects = [], freshness = null }) {
+function createFakeApi({ pages = [], projects = [], freshness = null, projectPages = {}, currentUserId = null }) {
   return {
-    async getSavedPages({ limit = 100, cursor } = {}) {
-      const startIndex = cursor ? pages.findIndex((p) => p.id === cursor) + 1 : 0;
-      const slice = pages.slice(startIndex, startIndex + limit);
-      const nextCursor = startIndex + slice.length < pages.length
+    async getSavedPages({ limit = 100, cursor, projectId } = {}) {
+      // When scoped to a project, serve from the projectPages map (simulates
+      // the backend's cross-user getThingsForProject for shared projects).
+      const source = projectId ? (projectPages[projectId] || []) : pages;
+      const startIndex = cursor ? source.findIndex((p) => p.id === cursor) + 1 : 0;
+      const slice = source.slice(startIndex, startIndex + limit);
+      const nextCursor = startIndex + slice.length < source.length
         ? slice[slice.length - 1]?.id || null
         : null;
       return {
         pages: slice,
         pagination: {
-          total: pages.length,
+          total: source.length,
           hasNextPage: nextCursor !== null,
           nextCursor
         },
@@ -142,6 +145,9 @@ function createFakeApi({ pages = [], projects = [], freshness = null }) {
       };
     },
     async getProjects() { return projects; },
+    ...(currentUserId !== null
+      ? { async getCurrentUserId() { return currentUserId; } }
+      : {}),
     ...(freshness !== null
       ? { async checkSavedPagesUpdates() { return freshness; } }
       : {})
@@ -264,6 +270,26 @@ describe('buildDesiredSet', () => {
       { id: 'ok', url: 'https://ok.com', title: 'OK' }
     ]);
     expect(Object.keys(desired)).toEqual(['ok']);
+  });
+
+  it('places a page under ALL its general classifications, matching the UI aggregate', () => {
+    // Regression: the UI sidebar builds its category list from the user
+    // aggregate, which counts EVERY general classification on a page. A page
+    // with general labels "Health and Medicine" AND "Science" appears under
+    // both categories in the UI. The mirror previously placed the page under
+    // only primary_classification_label (or the single highest-confidence
+    // general label), so the other folder was created but left empty.
+    const desired = buildDesiredSet([{
+      id: 'a', url: 'https://a.com', title: 'A',
+      classifications: [
+        { type: 'general', label: 'Health and Medicine', confidence: 0.9 },
+        { type: 'general', label: 'Science', confidence: 0.8 }
+      ]
+    }]);
+    expect(desired.a.buckets).toEqual(
+      expect.arrayContaining(['domain:Health and Medicine', 'domain:Science'])
+    );
+    expect(desired.a.buckets).toHaveLength(2);
   });
 });
 
@@ -1063,5 +1089,45 @@ describe('reconcile (end-to-end against fakes)', () => {
     expect(warns[0]).toContain('boom');
     // Second create still happened.
     expect(result.summary.creates).toBe(2);
+  });
+
+  it('fetches cross-user pages for shared company projects', async () => {
+    // The user owns one page (p-mine) in a shared project. A colleague owns
+    // another page (p-colleague) in the same project. Without the cross-user
+    // fetch, the colleague's page would never reach the mirror and the shared
+    // project folder would be empty.
+    const bookmarksApi = createFakeBookmarksApi([{
+      id: 'root', children: [{ id: 'toolbar', children: [] }]
+    }]);
+    const storage = createFakeStorage();
+    await setMirrorEnabled(storage, true);
+
+    const api = createFakeApi({
+      currentUserId: 'me',
+      pages: [
+        { id: 'p-mine', url: 'https://mine.com', title: 'Mine', project_ids: ['shared-proj'] }
+      ],
+      projects: [{
+        id: 'shared-proj',
+        name: 'Team Links',
+        visibility: 'company',
+        owner_user_id: 'coworker'
+      }],
+      projectPages: {
+        'shared-proj': [
+          { id: 'p-mine', url: 'https://mine.com', title: 'Mine', project_ids: ['shared-proj'] },
+          { id: 'p-colleague', url: 'https://theirs.com', title: 'Theirs', project_ids: ['shared-proj'] }
+        ]
+      }
+    });
+
+    const result = await reconcile({ bookmarksApi, api, storage });
+    expect(result.applied).toBe(true);
+
+    const state = await getMirrorState(storage);
+    // Both the user's own page AND the colleague's page landed in the project.
+    expect(Object.keys(state.ownership).sort()).toEqual(['p-colleague', 'p-mine']);
+    expect(state.ownership['p-colleague'][0].bucketKey).toBe('project:shared-proj');
+    expect(state.ownership['p-mine'].map((e) => e.bucketKey)).toContain('project:shared-proj');
   });
 });

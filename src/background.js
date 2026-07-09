@@ -255,20 +255,30 @@ async function applySessionRotation(response) {
 }
 
 // Minimal API surface for the bookmark mirror. The full newtab facade isn't
-// loaded in the background; we expose just the three methods reconcile() needs,
+// loaded in the background; we expose just the methods reconcile() needs,
 // backed by the same authenticated fetch. Cursor pagination mirrors the
 // newtab path (limit + cursor until hasNextPage is false).
 const mirrorApi = {
-  async getSavedPages({ limit = 100, sort = 'newest', cursor } = {}) {
+  async getSavedPages({ limit = 100, sort = 'newest', cursor, projectId } = {}) {
     const params = { limit, sort };
     if (cursor) {
       params.cursor = cursor;
+    }
+    // projectId scopes the query to a single project. On the backend this
+    // routes to getThingsForProject, which for company-shared projects returns
+    // pages saved by other users in the same company domain — letting the
+    // mirror render colleagues' saves into shared project folders.
+    if (projectId) {
+      params.projectId = projectId;
     }
     return fetchBackgroundApi('', { params });
   },
   async getProjects() {
     const projects = await fetchBackgroundApi('/projects');
     return Array.isArray(projects) ? projects : [];
+  },
+  async getCurrentUserId() {
+    return await getSessionUserId();
   }
 };
 
