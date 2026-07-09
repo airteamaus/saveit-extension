@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **mirror:** populate empty category and shared project folders (#25) (bc2370d)
+
+## [1.20.1] - 2026-07-09
+
+### 🐛 Bug Fixes
+
 - **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
 
 ## [1.20.0] - 2026-07-09
@@ -82,11 +88,6 @@ No notable changes.
 ### ✨ Features
 
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (74eb6ba)
-
-## [1.18.2] - 2026-07-07
-
-### ✨ Features
-
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
 - **cache:** add head-based list freshness sync (7cd548c)
 - add pinnedFirst parameter to control pinned item sorting (1683350)
