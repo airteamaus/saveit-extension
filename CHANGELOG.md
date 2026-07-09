@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **layout:** keep sidebar to 700px, hamburger below, more summary lines (75cb3fc)
+- **ui:** lengthen card summary to fill two lines (47611eb)
+- **cache:** optimistic tile + smart poll for post-save visibility (02ce890)
+- **save:** capture page content at save time, send source=client (06299d2)
+- **capture:** add scripting injector + scripting permission (b8a63d8)
+- **capture:** add Readability-based page-capture pure module (0fe8d42)
+
+### 🐛 Bug Fixes
+
+- **ui:** give sidebar overlay an opaque background (96dfb1f)
+- **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
+
+### ♻️ Refactoring
+
+- **capture:** switch injector to files-based bundle with real Readability (112f41c)
+
+### 📚 Documentation
+
+- client-side page capture implementation plan (b701619)
+- correct content-storage mechanism in capture design (a60e32e)
+- drop hard-coded page count from capture design (2273ae3)
+- client-side page capture design spec (7a8a6ce)
+
+## [1.20.2] - 2026-07-09
+
 ### 🐛 Bug Fixes
 
 - **mirror:** populate empty category and shared project folders (#25) (bc2370d)
@@ -82,12 +109,6 @@ No notable changes.
 
 - **ui:** Enter-to-save in page editor; route action failures through toast (d87ae01)
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
-
-## [1.18.3] - 2026-07-07
-
-### ✨ Features
-
-- **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (74eb6ba)
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
 - **cache:** add head-based list freshness sync (7cd548c)
 - add pinnedFirst parameter to control pinned item sorting (1683350)
