@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
+
+### 🐛 Bug Fixes
+
+- **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
+
+## [1.19.3] - 2026-07-08
+
 ### 👷 CI/CD
 
 - **e2e:** install chromium and skip headed-only warming tests in CI (#18) (508dabe)
@@ -72,12 +82,6 @@ No notable changes.
 No notable changes.
 
 ## [1.18.1] - 2026-07-07
-
-### 🐛 Bug Fixes
-
-- **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
-
-## [1.18.0] - 2026-07-07
 
 ### ✨ Features
 
@@ -148,6 +152,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
 - **sync:** align freshness anchor with list ordering (dc6e681)
 - **cache:** keep warm cache active after idle (daf801c)
 - **ui:** make collection cards fully clickable (31a4652)
