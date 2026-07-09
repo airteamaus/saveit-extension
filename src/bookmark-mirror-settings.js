@@ -6,8 +6,8 @@
 // Shape:
 //   {
 //     enabled: bool,                       // mirror toggle (off by default)
-//     rootFolderId: string | null,         // SaveIt/ folder id once created
-//     unfiledFolderId: string | null,      // SaveIt/Unfiled/ folder id
+//     rootFolderId: string | null,         // Buckley's/ folder id once created
+//     unfiledFolderId: string | null,      // Buckley's/Unfiled/ folder id
 //     projectFolders: { [projectId]: { id, name } },
 //     ownership: { [saveItPageId]: [{ projectId: string|null, bookmarkId: string }] },
 //     lastFullReconcileAt: number | null   // epoch ms; gates the HEAD short-circuit

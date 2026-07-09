@@ -236,7 +236,7 @@ describe('API - CRUD Operations', () => {
 
   describe('project operations', () => {
     it('should return mock projects in standalone mode', async () => {
-      const projects = [{ id: 'project-1', name: 'SaveIt product' }];
+      const projects = [{ id: 'project-1', name: "Buckley's product" }];
       global.getMockProjectsData = vi.fn(() => projects);
 
       const result = await API.getProjects();
