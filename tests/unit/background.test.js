@@ -278,6 +278,15 @@ describe('background startup', () => {
         })
       };
     });
+    vi.doMock('../../src/session-store.js', () => ({
+      getSessionToken: vi.fn(async () => 'token-123'),
+      getCurrentUserId: vi.fn(async () => 'user-123'),
+      getCurrentUser: vi.fn(async () => ({ uid: 'user-123', email: 'test@example.com' })),
+      setSession: vi.fn(async () => {}),
+      clearSession: vi.fn(async () => {}),
+      isSignedOut: vi.fn(async () => false),
+      isSessionExpiringSoon: vi.fn(async () => false)
+    }));
     vi.doMock('../../src/sentry.js', () => ({
       initSentry: vi.fn(),
       setUser: vi.fn(),

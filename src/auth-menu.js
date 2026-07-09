@@ -113,12 +113,20 @@ const AuthMenu = {
     return response;
   },
 
-  async signOut() {
-    if (!window.firebaseAuth || !window.firebaseSignOut) {
-      throw new Error('Firebase sign-out not available');
+  // Sign-out routes through the background so the backend session is revoked
+  // and the Sentry user cleared — both live in the background context.
+  async signOut(getBrowserRuntime) {
+    const runtime = getBrowserRuntime?.();
+    if (!runtime) {
+      throw new Error('Browser runtime not available');
     }
 
-    await window.firebaseSignOut(window.firebaseAuth);
+    const response = await runtime.sendMessage({ action: 'signOut' });
+    if (response?.success === false) {
+      throw new Error(response.error || 'Sign-out failed');
+    }
+
+    return response;
   }
 };
 

@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createApiTestHarness } from './test-api-harness.js';
+import { getSessionToken } from '../../../src/session-store.js';
 
 describe('API - Utility Functions', () => {
   let API;
@@ -117,8 +118,7 @@ describe('API - Utility Functions', () => {
     beforeEach(() => {
       harness.setExtensionMode({ local: {} }, { id: 'test' });
       harness.setCloudFunctionUrl('https://test.run.app');
-      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
-      global.window.firebaseGetIdToken = vi.fn(async () => 'test-token');
+      getSessionToken.mockResolvedValue('test-token');
     });
 
     it('should build URL with params object', async () => {
@@ -215,8 +215,7 @@ describe('API - Utility Functions', () => {
     beforeEach(() => {
       harness.setExtensionMode({ local: {} }, { id: 'test' });
       harness.setCloudFunctionUrl('https://test.run.app');
-      global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
-      global.window.firebaseGetIdToken = vi.fn(async () => 'test-token');
+      getSessionToken.mockResolvedValue('test-token');
     });
 
     it('returns no updates when the HEAD probe responds 204', async () => {

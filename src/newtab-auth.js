@@ -1,4 +1,4 @@
-import { resolveInitialAuthState } from './firebase-auth-state.js';
+import { getCurrentUser } from './session-store.js';
 
 function getBrowserRuntime() {
   if (typeof browser !== 'undefined' && browser.runtime) {
@@ -72,7 +72,7 @@ export function createNewtabAuthController({
 
   async function handleSignOut() {
     try {
-      await AuthMenu.signOut();
+      await AuthMenu.signOut(() => getBrowserRuntime());
     } catch (error) {
       console.error('[newtab] Sign out failed:', error);
     }
@@ -81,10 +81,11 @@ export function createNewtabAuthController({
   async function handleSignIn() {
     try {
       // Signal the interactive sign-in *before* the OAuth flow resolves, so any
-      // one-time warm-up is armed before the resulting onAuthStateChanged ->
-      // onSignedIn -> handleSignedIn runs (which triggers hydrate/prefetch).
+      // one-time warm-up is armed before onSignedIn runs.
       onInteractiveSignIn?.();
       await AuthMenu.signIn(() => getBrowserRuntime());
+      // The background stores the session; re-read so the page reflects it.
+      await refreshFromSession();
     } catch (error) {
       console.error('Sign-in failed:', error);
       windowObj.alert(getUserFacingSignInErrorMessage(error));
@@ -107,41 +108,50 @@ export function createNewtabAuthController({
     }
   }
 
+  // Re-read the session from storage and drive the signed-in/out callbacks.
+  // Called on init and whenever storage changes (sign-in/sign-out elsewhere).
+  async function refreshFromSession() {
+    const user = await getCurrentUser();
+    await handleResolvedAuthState(user);
+    return user;
+  }
+
   async function init() {
-    if (!windowObj.firebaseReady) {
+    const runtime = getBrowserRuntime();
+    if (!runtime) {
+      // Standalone mode (file://): no session possible.
       updateAuthUi(null);
       return { handledInitialState: false, user: null };
     }
 
     try {
-      await windowObj.firebaseReady;
+      const user = await refreshFromSession();
 
-      if (!windowObj.firebaseAuth || !windowObj.firebaseOnAuthStateChanged) {
-        updateAuthUi(null);
-        return { handledInitialState: false, user: null };
-      }
-
-      // The first auth-state callback resolves the race; subsequent ones
-      // (later sign-in/sign-out transitions) keep driving handleResolvedAuthState.
-      // handleResolvedAuthState is awaited for the first callback so init()
-      // does not resolve until onSignedIn/onSignedOut has run — startNewtabPage
-      // relies on that to avoid loading the drawer ahead of session restoration.
-      const { user, timedOut } = await resolveInitialAuthState({
-        subscribe: cb => windowObj.firebaseOnAuthStateChanged(windowObj.firebaseAuth, cb),
-        onChange: handleResolvedAuthState,
-        timeoutMs: 10000
-      });
-
-      if (timedOut) {
-        // Matches the prior behaviour: a timeout is treated as "no initial
-        // state" rather than a hard failure, so the UI falls through to the
-        // signed-out state without throwing.
-        throw new Error('Firebase auth timeout');
+      // Subscribe to storage changes so sign-in/sign-out from the background
+      // (or another tab) updates this page live. Replaces the Firebase
+      // onAuthStateChanged subscription.
+      const storageArea = windowObj.browser?.storage?.local || windowObj.chrome?.storage?.local;
+      if (storageArea && typeof windowObj.browser?.storage?.onChanged?.addListener === 'function') {
+        windowObj.browser.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName !== 'local') return;
+          if (!('saveit_session' in changes)) return;
+          refreshFromSession().catch(error => {
+            console.error('[newtab] Session change handler failed:', error);
+          });
+        });
+      } else if (windowObj.chrome?.storage?.onChanged) {
+        windowObj.chrome.storage.onChanged.addListener((changes, areaName) => {
+          if (areaName !== 'local') return;
+          if (!('saveit_session' in changes)) return;
+          refreshFromSession().catch(error => {
+            console.error('[newtab] Session change handler failed:', error);
+          });
+        });
       }
 
       return { handledInitialState: true, user };
     } catch (error) {
-      console.error('[newtab] Firebase init failed:', error);
+      console.error('[newtab] Session init failed:', error);
       updateAuthUi(null);
       return { handledInitialState: false, user: null };
     }
