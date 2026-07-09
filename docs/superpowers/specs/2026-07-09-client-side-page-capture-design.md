@@ -253,7 +253,8 @@ ingress only; everything else (BigQuery, Firestore, enrichment event, `enrichEve
 - **BigQuery `save_events`**: ADD COLUMN `source`, then `UPDATE ... SET source = 'jina'
   WHERE source IS NULL` on all existing rows (every prior save went through Jina — a
   recorded fact, not an inference).
-- **Firestore `things`**: add `source` field, backfill the existing 19 docs to `'jina'`.
+- **Firestore `things`**: add `source` field, backfill all existing docs to `'jina'`
+  (every prior thing was enriched via Jina — a recorded fact).
 
 After backfill there are zero ambiguous records. Going forward the schema rejects saves
 that omit `source`.
@@ -318,7 +319,7 @@ Two surfaces, order-independent, backward-compatible at every step. Recommended 
 
 ## Follow-ups (explicitly out of scope)
 
-- **Migration of the 19 existing pages.** Client capture is save-time-only, so existing
+- **Migration of existing pages.** Client capture is save-time-only, so existing
   pages cannot auto-benefit. Realistic options, to be specced later: (a) re-open-and-re-save
   each; (b) run a one-off re-enrichment that explicitly hits Jina for them, using the new
   honest-failure handling so any stored with login garbage get re-detected; (c) leave them
