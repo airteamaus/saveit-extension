@@ -59,13 +59,32 @@ function topClassificationLabel(classifications, type) {
   return best?.label || null;
 }
 
-// The broad "domain" (folder-level) bucket label for a page: the AI 'general'
-// classification label, falling back to the sentinel "Other" key when the page
-// has no general classification (e.g. not yet enriched).
-function generalBucketLabel(page) {
-  const label = page?.primary_classification_label
-    || topClassificationLabel(page?.classifications, 'general');
-  return label || OTHER_DOMAIN_KEY;
+// The broad "domain" / folder-level bucket labels for a page. Mirrors the
+// user-aggregate semantics (shared/user-aggregates.js buildUserAggregate): a
+// page appears under EVERY one of its 'general' classifications, not just the
+// primary one. When the page has no general classification at all it falls
+// back to the sentinel "Other" key. Returns an array of general keys (labels
+// or OTHER_DOMAIN_KEY), de-duplicated, order-stable.
+//
+// primary_classification_label is included when present so a page whose
+// primary label was set by the enricher but whose classifications array also
+// carries it doesn't double-count; it just guarantees the primary label is
+// represented even if the array omitted it.
+function generalBucketLabels(page) {
+  const labels = new Set();
+  const classifications = Array.isArray(page?.classifications) ? page.classifications : [];
+  for (const c of classifications) {
+    if (c?.type === 'general' && c.label) {
+      labels.add(c.label);
+    }
+  }
+  if (page?.primary_classification_label) {
+    labels.add(page.primary_classification_label);
+  }
+  if (labels.size === 0) {
+    return [OTHER_DOMAIN_KEY];
+  }
+  return Array.from(labels);
 }
 
 // The sub-bucket label for a page within a >10 folder: the AI 'domain'
@@ -105,10 +124,11 @@ function generalKeyFromBucket(key) {
 
 // Build the desired-set map:
 //   { [saveItPageId]: { buckets: Array<bucketKey>, url, title, subLabels: { [bucketKey]: subLabel|null } } }
-// A page in N projects expands to N project buckets. Every page also gets one
-// domain bucket (its general classification, or "Other") — so a project page
-// appears in both its project folder AND its domain folder, mirroring the
-// sidebar's project + domain split. Each bucket entry becomes its own bookmark.
+// A page in N projects expands to N project buckets. A page also gets one
+// domain bucket per general classification label (or "Other" when it has
+// none) — so a project page appears in its project folder AND each of its
+// domain folders, mirroring the sidebar's project + category split. Each
+// bucket entry becomes its own bookmark.
 export function buildDesiredSet(pages) {
   const desired = {};
   for (const page of pages || []) {
@@ -125,10 +145,13 @@ export function buildDesiredSet(pages) {
       subLabels[key] = subBucketLabel(page);
     }
 
-    const gKey = generalBucketLabel(page);
-    const dKey = domainBucketKey(gKey);
-    buckets.push(dKey);
-    subLabels[dKey] = subBucketLabel(page);
+    // One domain bucket per general classification label (matching the user
+    // aggregate's per-category thing list), or a single Other bucket.
+    for (const gKey of generalBucketLabels(page)) {
+      const dKey = domainBucketKey(gKey);
+      buckets.push(dKey);
+      subLabels[dKey] = subBucketLabel(page);
+    }
 
     desired[page.id] = {
       buckets,
@@ -569,7 +592,9 @@ async function readFolderChildrenByFolderId(bookmarksApi, folderIds) {
 
 // Fetch the entire saved-page set, paging through cursors. Bypasses the
 // WarmCacheListStore (which is UI-windowed) — the mirror wants the whole set.
-async function fetchAllPages(api) {
+// When projectId is given, scopes to that project (used to pull cross-user
+// pages for shared company projects).
+async function fetchAllPages(api, { projectId } = {}) {
   const all = [];
   let cursor = null;
   do {
@@ -577,7 +602,8 @@ async function fetchAllPages(api) {
       limit: RECONCILE_PAGE_SIZE,
       sort: 'newest',
       cursor,
-      skipCache: true
+      skipCache: true,
+      ...(projectId ? { projectId } : {})
     });
     // Require the expected { pages, pagination } shape. Previously a non-
     // conforming response (e.g. a request that returned the wrong shape) was
@@ -742,6 +768,39 @@ export async function reconcile({
     typeof api.getProjects === 'function' ? api.getProjects() : []
   ]);
   const projects = Array.isArray(projectsResult) ? projectsResult : [];
+
+  // Shared (company) projects can contain pages saved by other users. Those
+  // pages don't appear in the user's own saved-page set above, so the shared
+  // project folder would be created but left empty. Fetch the project-scoped
+  // page set for each shared project the user doesn't own and merge them in.
+  // (Project-scoped queries route to getThingsForProject on the backend, which
+  // crosses user boundaries for company projects.)
+  const currentUserId = typeof api.getCurrentUserId === 'function'
+    ? await api.getCurrentUserId()
+    : null;
+  const sharedProjects = projects.filter(
+    (p) => p.visibility === 'company' && p.owner_user_id && p.owner_user_id !== currentUserId
+  );
+  if (sharedProjects.length > 0) {
+    const sharedPages = await Promise.all(
+      sharedProjects.map((p) => fetchAllPages(api, { projectId: p.id }).catch((error) => {
+        onWarn?.(`shared project fetch failed for ${p.id}: ${error?.message || error}`);
+        return [];
+      }))
+    );
+    // De-duplicate by page id: a page may appear both in the user's own set
+    // and in a shared project. buildDesiredSet keys by id, so later entries
+    // would overwrite earlier ones — keep the first (own) occurrence.
+    const seenIds = new Set(pages.map((p) => p.id));
+    for (const batch of sharedPages) {
+      for (const page of batch) {
+        if (page?.id && !seenIds.has(page.id)) {
+          seenIds.add(page.id);
+          pages.push(page);
+        }
+      }
+    }
+  }
 
   const desired = buildDesiredSet(pages);
   const bucketPlan = computeBucketPlan(desired);
