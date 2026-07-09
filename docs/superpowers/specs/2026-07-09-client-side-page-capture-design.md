@@ -200,12 +200,16 @@ else if event.source === 'jina':
 1. **`handleSavePage`** (`cloud-function/index.js`) — read `source` and `client` from
    `req.body`. Ingress shim: a POST lacking `source` is accepted only for legacy clients,
    recorded explicitly as `source: 'jina'`, with a deprecation warning logged. Once the
-   extension has shipped and auto-updated, the shim is removed. Persist `source` into the
-   BigQuery `save_events` row; thread `source` + `client` into the enrichment trigger
-   payload. No change to the response shape.
-2. **Enrichment event plumbing** — the controller (`enrichPages`) and worker (`enrichWorker`)
-   pass `source` + `client` through to `enrichEvent`. They become fields on the event object.
-   Mechanical threading, no logic.
+   extension has shipped and auto-updated, the shim is removed. Persist `source` and the
+   JSON-encoded `client` object into the BigQuery `save_events` row (see "Content storage"
+   below). No change to the response shape. The fire-and-forget enrichment trigger is
+   unchanged — it carries no per-event data.
+2. **Event data reaches the worker via BigQuery** — the enrichment controller
+   (`enrichPages`) creates Cloud Tasks carrying only `event_id`; the worker (`enrichWorker`)
+   re-fetches the event fresh from BigQuery by id via `fetchEventById`. So `source` and
+   `client` ride in the `save_events` row and are SELECTed back by the worker. The change
+   is to add `source` and `client_payload` to that SELECT (and to the table). No changes to
+   the Cloud Task payload or the controller→worker handoff.
 3. **`enrichEvent`** (`enrichment-core.js`) — the branch above. For `source: 'client'` with
    content: skip `fetchOrRetrieveContent` entirely (Jina is never called), build metadata
    from the `client` object, feed `client.content` to `enrichWithAI`. For `source: 'client'`
@@ -218,6 +222,20 @@ else if event.source === 'jina':
    `published_time`, `lang`) into the Firestore `things` doc if present. Additive.
 6. **`isBlockedContent` / Jina honest failure handling** — extend detection so login-wall
    and auth/Cloudflare failures are treated as a failed fetch, not real content.
+
+### Content storage (correction)
+
+Earlier drafts assumed the client content would "ride on the enrichment trigger payload."
+That is wrong — the trigger only carries `event_id`, and the worker re-fetches the event
+from BigQuery. So the client content must live in a column the worker can SELECT by
+`event_id`.
+
+Decision: add a **`client_payload` STRING column** to the `save_events` table holding the
+JSON-encoded `client` object (~up to 12k chars). The worker SELECTs it back alongside
+`source`, JSON-parses it, and passes it into `enrichEvent` as `event.client`. This reuses
+the only existing channel from save-handler to worker, adds no infrastructure, and
+introduces no new write path or failure mode. The audit-log rows grow from ~200 bytes to
+~12k, which at personal scale is negligible.
 
 ### Jina honest failure handling (new)
 
@@ -250,9 +268,10 @@ ingress only; everything else (BigQuery, Firestore, enrichment event, `enrichEve
 `buildThingObject`) treats `source` as authoritative and never infers from absence.
 
 **Backfill** (one-time, makes existing records explicit):
-- **BigQuery `save_events`**: ADD COLUMN `source`, then `UPDATE ... SET source = 'jina'
-  WHERE source IS NULL` on all existing rows (every prior save went through Jina — a
-  recorded fact, not an inference).
+- **BigQuery `save_events`**: ADD COLUMN `source STRING` and `client_payload STRING`, then
+  `UPDATE ... SET source = 'jina' WHERE source IS NULL` on all existing rows (every prior
+  save went through Jina — a recorded fact, not an inference). Existing rows get
+  `client_payload = NULL`.
 - **Firestore `things`**: add `source` field, backfill all existing docs to `'jina'`
   (every prior thing was enriched via Jina — a recorded fact).
 
@@ -261,10 +280,10 @@ that omit `source`.
 
 ### Contract artifacts to update
 
-- `contracts/save_events.schema.json` — `source` required (enum: `'client'` | `'jina'`),
-  `client` object optional. Add optional `fetch_status` (enum: `'ok'` | `'auth_wall'` |
-  `'blocked'` | `'capture_failed'`) recording how content acquisition ended for either
-  source.
+- `contracts/save_events.schema.json` — add `source` (required, enum: `'client'` |
+  `'jina'`), `client_payload` (optional STRING, JSON-encoded client object), and optional
+  `fetch_status` (enum: `'ok'` | `'auth_wall'` | `'blocked'` | `'capture_failed'`)
+  recording how content acquisition ended for either source.
 - `contracts/firestore-things-schema.js` — add `source` (required), optional
   `author`/`image`/`published_time`/`lang`, and `fetch_status` (mirrors the save_events
   value) so the outcome is visible on the stored thing.
