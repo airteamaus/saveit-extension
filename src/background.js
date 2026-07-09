@@ -8,6 +8,7 @@ import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { reconcile, mirrorSavedPage } from './bookmark-mirror.js';
 import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
+import { capturePageContent } from './page-capture-injector.js';
 
 const logger = createLogger('background');
 const authLogger = createLogger('background-auth');
@@ -424,13 +425,30 @@ async function getToolbarProjects() {
     : [];
 }
 
-async function savePageFromTab(tab, { projectId = null } = {}) {
-  const pageData = {
+// Build the POST payload. Extracted so the payload shape is unit-testable
+// without mocking the full save flow. source is always 'client' for single
+// saves — the browser captured the page the user was viewing. The client
+// object is the capturePageContent result (success or failure-shape); the
+// backend uses capture_method to decide basic vs enriched mode.
+export function buildPageData(tab, { projectId = null, client }) {
+  return {
     url: tab.url,
     title: tab.title,
     saved_at: new Date().toISOString(),
-    ...(projectId ? { projectId } : {})
+    ...(projectId ? { projectId } : {}),
+    source: 'client',
+    client
   };
+}
+
+async function savePageFromTab(tab, { projectId = null } = {}) {
+  // Capture page content from the active tab before building the payload.
+  // The user is logged in here, so this is the authoritative source for
+  // title/description/content. On failure, capturePageContent returns a
+  // failure-shape object — the save proceeds, enrichment is skipped.
+  const client = await capturePageContent(tab.id);
+
+  const pageData = buildPageData(tab, { projectId, client });
 
   logger.log('Sending page save request', {
     ...getSafePageContext(tab.url, tab.title),
