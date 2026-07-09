@@ -167,6 +167,7 @@ export class CacheManager {
       });
     } catch (error) {
       console.error('[getCachedPages] Failed to read cache:', error);
+      window.SentryHelpers?.captureError(error, { context: 'cache-get-cached-pages' });
       return createCacheReadResult('error', {
         error,
         reason: 'read-failed'
@@ -217,6 +218,7 @@ export class CacheManager {
       });
     } catch (error) {
       console.error('[setCachedPages] Failed to write cache:', error);
+      window.SentryHelpers?.captureError(error, { context: 'cache-set-cached-pages' });
     }
   }
 
@@ -247,6 +249,7 @@ export class CacheManager {
       debugLog('[invalidateCache] Cache invalidated for user:', userId, { scope });
     } catch (error) {
       console.error('[invalidateCache] Failed to invalidate cache:', error);
+      window.SentryHelpers?.captureError(error, { context: 'cache-invalidate' });
     }
   }
 
@@ -262,6 +265,7 @@ export class CacheManager {
       debugLog('[clearAllCache] All cache cleared');
     } catch (error) {
       console.error('[clearAllCache] Failed to clear cache:', error);
+      window.SentryHelpers?.captureError(error, { context: 'cache-clear-all' });
     }
   }
 
@@ -287,6 +291,7 @@ export class CacheManager {
       debugLog('[cleanupLegacyCache] Removed legacy global cache');
     } catch (error) {
       console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
+      window.SentryHelpers?.captureError(error, { context: 'cache-cleanup-legacy' });
     }
   }
 }

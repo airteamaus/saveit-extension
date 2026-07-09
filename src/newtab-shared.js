@@ -103,6 +103,7 @@ export function updateVersionIndicator(versionNumberEl) {
     }
   } catch (error) {
     console.error('[newtab] Failed to get version:', error);
+    window.SentryHelpers?.captureError(error, { context: 'newtab-get-version' });
     versionNumberEl.textContent = 'unknown';
   }
 }
