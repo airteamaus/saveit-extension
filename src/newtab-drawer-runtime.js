@@ -59,7 +59,16 @@ export function createSavedPagesDrawerController({
     savedPagesStore,
     onSavedPagesTotalChange
   });
-  const getCurrentUser = () => getDrawerCurrentUserFn(windowObj);
+  // Asynchronous user lookup backed by browser.storage.local. Used by the data
+  // and cache paths, which can await it.
+  const getCurrentUserAsync = () => getDrawerCurrentUserFn(windowObj);
+  // Synchronous cache of the signed-in user. Rendering is synchronous
+  // (isOwnedProject / getCompanyDomain read .uid / .email off
+  // dashboard.getCurrentUser() without awaiting), so the view must be bound to
+  // a function that returns a user object — not a Promise. Seeded eagerly on
+  // init, refreshed on sign-in, and cleared on sign-out.
+  let cachedUser = null;
+  const getCurrentUser = () => cachedUser;
   const applyDrawerFilters = createDrawerFiltersApplierFn({
     state,
     projectManager,
@@ -133,7 +142,7 @@ export function createSavedPagesDrawerController({
     projectsStore,
     projectManager,
     savedPagesView,
-    getCurrentUser,
+    getCurrentUser: getCurrentUserAsync,
     isDrawerOpen: shellController.isDrawerOpen,
     setDrawerSearchValue: shellController.setDrawerSearchValue,
     updateDrawerUrl: shellController.updateDrawerUrl,
@@ -184,7 +193,7 @@ export function createSavedPagesDrawerController({
     state,
     savedPagesStore,
     projectsStore,
-    getCurrentUser,
+    getCurrentUser: getCurrentUserAsync,
     isDrawerOpen: shellController.isDrawerOpen,
     getSearchQuery: shellController.getSearchQuery,
     notifySavedPagesTotalChange,
@@ -206,15 +215,40 @@ export function createSavedPagesDrawerController({
     windowObj
   });
 
-  function init() {
+  // Seed the sync user cache from the session store. Awaited where the caller
+  // can afford it (init, sign-in) so the synchronous view binding has the user
+  // before the first sidebar render.
+  async function refreshCachedUser() {
+    try {
+      cachedUser = await getCurrentUserAsync();
+    } catch (error) {
+      console.debug('[newtab] Failed to read current user for sidebar cache:', error);
+      cachedUser = null;
+    }
+  }
+
+  async function handleSignedIn() {
+    await refreshCachedUser();
+    await syncCoordinator.handleSignedIn();
+  }
+
+  function handleSignedOut() {
+    cachedUser = null;
+    syncCoordinator.handleSignedOut();
+  }
+
+  async function init() {
+    // Seed before the first render so ownership (isOwnedProject) resolves on the
+    // warm-cache paint that init triggers via the sync coordinator.
+    await refreshCachedUser();
     syncCoordinator.init();
     initDrawerEventHandlers();
   }
 
   return {
     close: shellController.closeSavedPagesDrawer,
-    handleSignedIn: syncCoordinator.handleSignedIn,
-    handleSignedOut: syncCoordinator.handleSignedOut,
+    handleSignedIn,
+    handleSignedOut,
     init,
     load: shellController.openSavedPagesDrawer,
     loadSummary: syncCoordinator.loadSummary,

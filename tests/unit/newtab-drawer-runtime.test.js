@@ -81,7 +81,7 @@ describe('newtab drawer runtime', () => {
       }
     });
 
-    controller.init();
+    await controller.init();
 
     expect(syncCoordinator.init).toHaveBeenCalled();
     expect(initSavedPagesDrawerEventsFn).toHaveBeenCalledTimes(1);
@@ -96,8 +96,13 @@ describe('newtab drawer runtime', () => {
     expect(controller.open).toBe(shellController.openSavedPagesDrawer);
     expect(controller.close).toBe(shellController.closeSavedPagesDrawer);
     expect(controller.loadSummary).toBe(syncCoordinator.loadSummary);
-    expect(controller.handleSignedIn).toBe(syncCoordinator.handleSignedIn);
-    expect(controller.handleSignedOut).toBe(syncCoordinator.handleSignedOut);
+    // handleSignedIn / handleSignedOut are thin wrappers that (a) keep the sync
+    // current-user cache in step with auth transitions and (b) delegate to the
+    // coordinator. Assert delegation rather than identity.
+    await controller.handleSignedIn();
+    expect(syncCoordinator.handleSignedIn).toHaveBeenCalledTimes(1);
+    controller.handleSignedOut();
+    expect(syncCoordinator.handleSignedOut).toHaveBeenCalledTimes(1);
     expect(controller.preloadProjects).toBe(dataController.ensureDrawerProjectsLoaded);
     // showLoadingState forwards to the UI controller's loading renderer.
     // The argument is opaque passthrough; the renderer decides what to paint.
@@ -209,7 +214,7 @@ describe('newtab drawer runtime', () => {
       }
     });
 
-    controller.init();
+    await controller.init();
 
     // Sign-out renders the sign-in state and must hide the sidebar.
     await controller.handleSignedOut();
@@ -224,5 +229,88 @@ describe('newtab drawer runtime', () => {
     savedPagesSubscriber();
     expect(uiController.renderResults).toHaveBeenCalled();
     expect(projectSidebar.classList.contains('hidden')).toBe(false);
+  });
+
+  it('binds a synchronous current user to the view so isOwnedProject resolves', async () => {
+    // Regression: getDrawerCurrentUser is async (it awaits browser.storage.local),
+    // but the sidebar renderer reads dashboard.getCurrentUser()?.uid synchronously.
+    // Before the fix the view was bound to the async fn, so .uid was read off a
+    // Promise (undefined) and every project rendered as "Shared with me".
+    // Here getDrawerCurrentUserFn mimics the real async shape.
+    let viewGetCurrentUser = null;
+    const sessionUser = { uid: 'uid-rich', email: 'rich@airteam.com.au' };
+    const controller = createSavedPagesDrawerController({
+      api: { isExtension: true },
+      savedPagesStore: { subscribe: vi.fn(), reset: vi.fn(), getSnapshot: () => ({}) },
+      projectsStore: { subscribe: vi.fn(), reset: vi.fn(), getSnapshot: () => ({}) },
+      projectManager: {
+        renderSidebar: vi.fn(), renderEditor: vi.fn(),
+        getScopedPages: vi.fn(() => []), getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []), refreshProjectCounts: vi.fn()
+      },
+      elements: {
+        savedPagesToggleBtn: document.createElement('button'),
+        savedPagesDrawer: document.createElement('main'),
+        savedPagesDrawerBackdrop: document.createElement('div'),
+        savedPagesDrawerCloseBtn: document.createElement('button'),
+        savedPagesDrawerSearchForm: document.createElement('form'),
+        savedPagesDrawerSearchInput: document.createElement('input'),
+        savedPagesDrawerClearBtn: document.createElement('button'),
+        savedPagesDrawerResults: document.createElement('div'),
+        projectSidebar: document.createElement('aside'),
+        projectEditorBackdrop: document.createElement('div'),
+        projectEditorDialog: document.createElement('div')
+      },
+      onSavedPagesTotalChange: vi.fn(),
+      refreshFavorites: vi.fn(),
+      notify: vi.fn(),
+      windowObj: { setTimeout, clearTimeout },
+      documentObj: document,
+      dependencies: {
+        createDrawerDataControllerFn: vi.fn(() => ({
+          ensureDrawerProjectsLoaded: vi.fn(), loadDrawerBasePages: vi.fn(),
+          loadDrawerProjectPages: vi.fn(), loadDrawerResults: vi.fn(),
+          handleDrawerDelete: vi.fn(), handleDrawerPin: vi.fn(),
+          handleDrawerUpdate: vi.fn(), handleDrawerEditStart: vi.fn(),
+          handleDrawerEditCancel: vi.fn(), handleDrawerScrollNearEnd: vi.fn(),
+          loadDrawerDomainPages: vi.fn()
+        })),
+        createDrawerShellControllerFn: vi.fn(() => ({
+          closeSavedPagesDrawer: vi.fn(), getSearchQuery: vi.fn(() => ''),
+          isDrawerOpen: vi.fn(() => false), navigateDrawerCard: vi.fn(),
+          openSavedPagesDrawer: vi.fn(), setDrawerSearchValue: vi.fn(),
+          setDrawerToggleState: vi.fn(), updateDrawerUrl: vi.fn()
+        })),
+        createDrawerStateSyncHelpersFn: vi.fn(() => ({
+          syncDrawerStateFromStore: vi.fn(), syncProjectsStateFromStore: vi.fn()
+        })),
+        createDrawerUiControllerFn: vi.fn(() => ({
+          renderDrawerChrome: vi.fn(), renderErrorState: vi.fn(),
+          renderLoadingState: vi.fn(), renderProjectSidebar: vi.fn(),
+          refreshDrawerCard: vi.fn(), renderResults: vi.fn(), renderSignInState: vi.fn()
+        })),
+        createInitialDrawerStateFn: vi.fn(() => ({ hasInitialized: false })),
+        createSavedPagesTotalNotifierFn: vi.fn(() => vi.fn()),
+        createSavedPagesViewFn: vi.fn(({ getCurrentUser }) => {
+          viewGetCurrentUser = getCurrentUser;
+          return { getCurrentUser };
+        }),
+        // Async — the real production shape (returns a Promise).
+        getDrawerCurrentUserFn: vi.fn(() => Promise.resolve(sessionUser)),
+        initSavedPagesDrawerEventsFn: vi.fn()
+      }
+    });
+
+    await controller.init();
+
+    // The view's getCurrentUser must return the user synchronously, not a
+    // Promise. This is what isOwnedProject / getCompanyDomain depend on.
+    const result = viewGetCurrentUser();
+    expect(result).toEqual(sessionUser);
+    expect(result).not.toBeInstanceOf(Promise);
+
+    // And clearing on sign-out returns null synchronously.
+    controller.handleSignedOut();
+    expect(viewGetCurrentUser()).toBeNull();
   });
 });
