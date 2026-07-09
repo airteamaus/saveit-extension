@@ -131,6 +131,34 @@ body {
   justify-content: center;
 }
 
+/* Hamburger toggle for the project sidebar. Hidden above 700px; the 700px
+   breakpoint sets it to display: inline-flex. Mirrors the avatar button's
+   sizing so it lines up with the other header actions. */
+.saved-pages-sidebar-toggle {
+  display: none;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  color: inherit;
+  cursor: pointer;
+}
+
+.saved-pages-sidebar-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* Backdrop for the sidebar overlay. Hidden by default via the .hidden class
+   (added in the HTML); the 700px breakpoint styles it when shown. */
+.saved-pages-sidebar-backdrop.hidden {
+  display: none;
+}
+
 .saved-pages-page-body {
   flex: 1;
   min-height: 0;
@@ -1166,54 +1194,57 @@ body {
 }
 
 @media (max-width: 900px) {
-  body {
-    overflow: auto;
+  /* The sidebar stays in place down to 700px — the old restack (column layout,
+     sidebar above content) was an unnecessary breakpoint. Below 900px we only
+     give each card one more line of summary so the narrowing cards still read
+     well. The full-width / hamburger behaviour kicks in at 700px (below). */
+  .saved-pages-drawer-card-summary {
+    -webkit-line-clamp: 3;
+  }
+}
+
+@media (max-width: 700px) {
+  /* Narrow viewport: the sidebar moves behind a hamburger overlay so the cards
+     can take the full page width. The sidebar toggle button (hidden above
+     700px) becomes visible here. */
+  .saved-pages-drawer-card-summary {
+    -webkit-line-clamp: 4;
   }
 
-  .saved-pages-page {
-    padding: 12px;
-    overflow: visible;
+  /* Show the hamburger button (hidden by default in the base rule). */
+  .saved-pages-sidebar-toggle {
+    display: inline-flex;
   }
 
-  .saved-pages-page-shell {
-    min-height: 100%;
-    height: auto;
-  }
-
-  .saved-pages-page-header {
-    flex-wrap: wrap;
-  }
-
-  .saved-pages-page-search {
-    order: 3;
-    width: 100%;
-    margin-inline: 0;
-  }
-
-  .saved-pages-page-actions {
-    width: 100%;
-    justify-content: flex-end;
-  }
-
-  .saved-pages-page-body {
-    flex-direction: column;
-    gap: 16px;
-    padding-top: 16px;
-    overflow: visible;
-  }
-
+  /* The sidebar is no longer a left flex child: hide it until the user opens
+     the overlay. display:none keeps it out of the flow so .saved-pages-page-content
+     expands to full width. */
   .saved-pages-page-sidebar {
-    width: auto;
-    max-height: 240px;
+    display: none;
   }
 
-  .saved-pages-page-results {
-    padding-bottom: 12px;
+  /* Overlay state (toggled via the .is-overlay-open class from JS). Sits above
+     the cards as a left-anchored drawer; the backdrop covers the rest. z-index
+     mirrors the dialog convention (backdrop 45, dialog 46) and stays below
+     toasts (60). */
+  .saved-pages-page-sidebar.is-overlay-open {
+    display: flex;
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 256px;
+    max-height: none;
+    z-index: 46;
+    box-shadow: var(--shadow-lg);
   }
 
-  .minimal-footer {
-    margin: 0 12px 16px;
-    padding: 0 12px;
+  .saved-pages-sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    background: rgba(9, 9, 11, 0.32);
+    backdrop-filter: blur(2px);
   }
 }
 

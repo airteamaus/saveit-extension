@@ -158,6 +158,9 @@ describe('newtab modules', () => {
       document.body.innerHTML = `
         <section id="saved-pages-page-shell"></section>
         <div id="saved-pages-page-header"></div>
+        <aside id="project-sidebar"></aside>
+        <button id="saved-pages-sidebar-toggle-btn"></button>
+        <div id="saved-pages-sidebar-backdrop"></div>
         <form id="search-form"></form>
         <input id="search-input">
         <button id="hero-sign-in-btn"></button>
@@ -172,6 +175,9 @@ describe('newtab modules', () => {
       expect(elements.savedPagesPageShell?.id).toBe('saved-pages-page-shell');
       expect(elements.savedPagesPageHeader?.id).toBe('saved-pages-page-header');
       expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
+      expect(elements.projectSidebar?.id).toBe('project-sidebar');
+      expect(elements.sidebarToggleBtn?.id).toBe('saved-pages-sidebar-toggle-btn');
+      expect(elements.sidebarBackdrop?.id).toBe('saved-pages-sidebar-backdrop');
     });
 
       it('binds auth event handlers', () => {

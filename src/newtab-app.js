@@ -47,6 +47,67 @@ export function getAuthControllerElements(elements) {
   };
 }
 
+// Wire the responsive sidebar overlay (the hamburger, shown ≤700px). Extracted
+// from bind() so the toggle contract is unit-testable against real DOM without
+// constructing the whole app. Toggling adds .is-overlay-open to the sidebar
+// (NOT .hidden, which is owned by the auth flow) and reveals the backdrop.
+// Closes on Escape, on backdrop click, and after a sidebar nav selection so
+// tapping a project dismisses the overlay. No-ops when the sidebar is
+// auth-hidden (signed out) so it never fights the auth class.
+export function initSidebarOverlay({ sidebar, toggleBtn, backdrop, documentObj = document } = {}) {
+  if (!sidebar || !toggleBtn) {
+    return;
+  }
+
+  const isOpen = () => sidebar.classList.contains('is-overlay-open') === true;
+
+  const close = () => {
+    if (!isOpen()) {
+      return;
+    }
+    sidebar.classList.remove('is-overlay-open');
+    backdrop?.classList.add('hidden');
+    toggleBtn.setAttribute('aria-expanded', 'false');
+  };
+
+  const open = () => {
+    // Don't open if the auth flow has hidden the sidebar (signed out).
+    if (sidebar.classList.contains('hidden')) {
+      return;
+    }
+    sidebar.classList.add('is-overlay-open');
+    backdrop?.classList.remove('hidden');
+    toggleBtn.setAttribute('aria-expanded', 'true');
+  };
+
+  toggleBtn.addEventListener('click', () => {
+    if (isOpen()) {
+      close();
+    } else {
+      open();
+    }
+  });
+
+  backdrop?.addEventListener('click', close);
+
+  // A sidebar nav click (project / "All pages") dismisses the overlay so the
+  // chosen list is visible full-width.
+  sidebar.addEventListener('click', (event) => {
+    if (!isOpen()) {
+      return;
+    }
+    if (event.target.closest('button, a')) {
+      close();
+    }
+  });
+
+  documentObj?.addEventListener?.('keydown', (event) => {
+    if (event.key === 'Escape') {
+      close();
+    }
+  });
+}
+
 export function createNewtabApp({
   API,
   AuthMenu,
@@ -199,6 +260,15 @@ export function createNewtabApp({
         elements,
         runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime,
         notify: toast.show
+      });
+
+      // Sidebar overlay (hamburger, ≤700px). See initSidebarOverlay for the
+      // toggle/close contract; extracted so it is unit-testable.
+      initSidebarOverlay({
+        sidebar: elements.projectSidebar,
+        toggleBtn: elements.sidebarToggleBtn,
+        backdrop: elements.sidebarBackdrop,
+        documentObj
       });
     },
     async start() {

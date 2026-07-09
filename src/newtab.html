@@ -12,6 +12,21 @@
   <main id="saved-pages-page" class="saved-pages-page" aria-label="Saved pages">
     <section id="saved-pages-page-shell" class="saved-pages-page-shell" aria-label="Saved pages">
       <div id="saved-pages-page-header" class="saved-pages-page-header">
+        <button
+          id="saved-pages-sidebar-toggle-btn"
+          class="saved-pages-sidebar-toggle"
+          type="button"
+          aria-label="Toggle projects menu"
+          aria-expanded="false"
+          aria-controls="project-sidebar"
+          title="Toggle projects menu"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
         <a href="newtab.html" class="logo logo-hero saved-pages-page-logo">
           <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path>
@@ -106,6 +121,7 @@
         </div>
       </div>
       <div id="saved-pages-page-body" class="saved-pages-page-body">
+        <div id="saved-pages-sidebar-backdrop" class="saved-pages-sidebar-backdrop hidden"></div>
         <aside id="project-sidebar" class="project-sidebar saved-pages-page-sidebar" aria-label="Projects"></aside>
         <div class="saved-pages-page-content">
           <div id="saved-pages-results" class="saved-pages-page-results" aria-live="polite"></div>

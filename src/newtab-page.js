@@ -18,6 +18,8 @@ export function getNewtabElements(documentObj = document) {
     savedPagesPageHeader: documentObj.getElementById('saved-pages-page-header'),
     savedPagesPageShell: documentObj.getElementById('saved-pages-page-shell'),
     projectSidebar: documentObj.getElementById('project-sidebar'),
+    sidebarToggleBtn: documentObj.getElementById('saved-pages-sidebar-toggle-btn'),
+    sidebarBackdrop: documentObj.getElementById('saved-pages-sidebar-backdrop'),
     savedPagesDrawer: documentObj.getElementById('saved-pages-page'),
     savedPagesDrawerBackdrop: documentObj.getElementById('saved-pages-drawer-backdrop'),
     savedPagesDrawerClearBtn: documentObj.getElementById('saved-pages-search-clear-btn'),
