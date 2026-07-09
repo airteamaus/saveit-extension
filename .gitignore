@@ -48,6 +48,9 @@ screenshots/
 # Brainstorming companion mockups
 .superpowers/
 
+# Local agent/tooling state
+.zcode/
+
 # Playwright test artifacts (reports, results, temp profiles)
 playwright-report/
 test-results/
