@@ -7,7 +7,7 @@ echo ""
 
 # Build Firebase bundles first (they're gitignored)
 echo "🔥 Building Firebase bundles..."
-node scripts/bundle-firebase.js
+node scripts/bundle.js
 
 # Build the extension (create .zip)
 echo "📦 Creating extension package..."

@@ -33,8 +33,8 @@ export function initSentry() {
 
 /**
  * Set user context for error tracking
- * Call after Firebase auth succeeds
- * @param {Object} user - Firebase user object with uid and email
+ * Call after a session is established
+ * @param {Object} user - User object with uid and email
  */
 export function setUser(user) {
   if (!isSentryEnabled()) {

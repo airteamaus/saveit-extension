@@ -1,5 +1,18 @@
 // Global test setup
 import { vi } from 'vitest';
+
+// Mock session-store centrally so api/background tests can control auth state.
+// Individual tests override these via the imported mock functions.
+vi.mock('../src/session-store.js', () => ({
+  getSessionToken: vi.fn(async () => 'token'),
+  getCurrentUserId: vi.fn(async () => 'user123'),
+  getCurrentUser: vi.fn(async () => ({ uid: 'user123', email: 'test@example.com' })),
+  setSession: vi.fn(async () => {}),
+  clearSession: vi.fn(async () => {}),
+  isSignedOut: vi.fn(async () => false),
+  isSessionExpiringSoon: vi.fn(async () => false)
+}));
+
 import '../src/cache-manager.js';
 import '../src/api-core.js';
 import '../src/api-pages.js';
@@ -39,23 +52,10 @@ global.browser = {
   }
 };
 
-// Mock Firebase
-global.window = global.window || {};
-global.window.firebaseReady = Promise.resolve();
-global.window.firebaseAuth = null;
-global.window.firebaseOnAuthStateChanged = vi.fn();
-global.window.firebaseGetIdToken = vi.fn();
-global.window.firebaseSignOut = vi.fn();
-
 // Mock CONFIG
 global.CONFIG = {
   cloudFunctionUrl: 'https://test-function.run.app',
-  oauthClientId: 'test-client-id',
-  firebase: {
-    apiKey: 'test-api-key',
-    authDomain: 'test.firebaseapp.com',
-    projectId: 'test-project'
-  }
+  oauthClientId: 'test-client-id'
 };
 
 // Mock fetch

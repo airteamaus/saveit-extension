@@ -45,6 +45,7 @@ import {
   createProjectsStore,
   createSavedPagesStore
 } from '../../src/newtab-drawer.js';
+import { getCurrentUser } from '../../src/session-store.js';
 
 describe('newtab modules', () => {
   describe('getFaviconUrl', () => {
@@ -1915,8 +1916,9 @@ describe('newtab modules', () => {
   });
 
   describe('createNewtabAuthController', () => {
-    it('waits for the initial auth state before resolving init', async () => {
-      let authStateListener = null;
+    it('resolves init with the restored session from the session store', async () => {
+      const user = { uid: 'user-1', email: 'test@example.com' };
+      getCurrentUser.mockResolvedValue(user);
       const onSignedIn = vi.fn().mockResolvedValue(undefined);
       const onSignedOut = vi.fn().mockResolvedValue(undefined);
       const signInBtn = {
@@ -1947,23 +1949,11 @@ describe('newtab modules', () => {
         onSignedIn,
         onSignedOut,
         windowObj: {
-          firebaseReady: Promise.resolve(true),
-          firebaseAuth: { currentUser: null },
-          firebaseOnAuthStateChanged: vi.fn((auth, callback) => {
-            authStateListener = callback;
-          })
+          browser: { runtime: { id: 'x' } }
         }
       });
 
-      const initPromise = controller.init();
-      await Promise.resolve();
-      expect(onSignedIn).not.toHaveBeenCalled();
-      expect(onSignedOut).not.toHaveBeenCalled();
-
-      const user = { uid: 'user-1', email: 'test@example.com' };
-      authStateListener(user);
-
-      await expect(initPromise).resolves.toEqual({
+      await expect(controller.init()).resolves.toEqual({
         handledInitialState: true,
         user
       });

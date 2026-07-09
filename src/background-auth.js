@@ -1,71 +1,89 @@
-import { resolveInitialAuthState } from './firebase-auth-state.js';
 import { attachTelemetryContext, getSafeRedirectContext, getSafeResponseContext } from './telemetry.js';
+import {
+  getSessionToken,
+  getCurrentUser,
+  setSession,
+  clearSession
+} from './session-store.js';
 
 export function createBackgroundAuth({
   config,
   browserApi,
-  loadFirebase,
   logger = console,
   telemetry = {}
 }) {
-  let authContextPromise = null;
+  /**
+   * Returns { user, idToken } if a valid session exists, otherwise null.
+   * idToken here is the opaque session token — the backend accepts it via
+   * the dual-mode auth middleware.
+   */
+  async function getExistingSession() {
+    const sessionToken = await getSessionToken();
+    if (!sessionToken) {
+      return null;
+    }
+    const user = await getCurrentUser();
+    if (!user) {
+      return null;
+    }
+    return { user, idToken: sessionToken };
+  }
 
-  async function createAuthContext() {
-    const firebase = await loadFirebase();
-    const app = firebase.initializeApp(config.firebase);
-    const auth = firebase.initializeAuth(app, {
-      persistence: firebase.indexedDBLocalPersistence
+  /**
+   * Exchange a one-time Google ID token for an opaque session token via
+   * POST /auth/session, then persist it.
+   */
+  async function exchangeGoogleTokenForSession(googleIdToken, authContext) {
+    let response;
+    try {
+      response = await fetch(`${config.cloudFunctionUrl}/auth/session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ google_id_token: googleIdToken })
+      });
+    } catch (error) {
+      const sessionError = attachTelemetryContext(error, authContext);
+      logger.error('Session exchange request failed', sessionError, sessionError.telemetryContext);
+      throw sessionError;
+    }
+
+    if (!response.ok) {
+      let message;
+      try {
+        const data = await response.json();
+        message = data.message || data.error || `HTTP ${response.status}`;
+      } catch {
+        message = `HTTP ${response.status}`;
+      }
+      const sessionError = attachTelemetryContext(
+        new Error(message),
+        { ...authContext, httpStatus: response.status }
+      );
+      logger.error('Session exchange rejected', sessionError.telemetryContext);
+      throw sessionError;
+    }
+
+    const data = await response.json();
+    await setSession({
+      sessionToken: data.session_token,
+      uid: data.user.uid,
+      email: data.user.email,
+      expiresAt: data.expires_at
     });
 
-    // Background is long-lived and MUST wait for the indexedDB-persisted
-    // session, so no timeout. The first callback logs "loaded from
-    // IndexedDB"; every callback (including the first) logs the state change.
-    let hasReportedInitialLoad = false;
-    const authReadyPromise = resolveInitialAuthState({
-      subscribe: cb => firebase.onAuthStateChanged(auth, cb),
-      onChange: user => {
-        if (!hasReportedInitialLoad) {
-          hasReportedInitialLoad = true;
-          logger.log('Firebase auth state loaded from IndexedDB', {
-            hasCachedUser: Boolean(user)
-          });
-        }
-        logger.log('Firebase user state changed', {
-          isSignedIn: Boolean(user)
-        });
-      }
-    }).then(() => undefined);
-
+    logger.log('Session established', { hasUser: Boolean(data.user?.uid) });
     return {
-      firebase,
-      auth,
-      authReadyPromise
+      user: data.user,
+      idToken: data.session_token
     };
   }
 
-  async function getAuthContext() {
-    if (!authContextPromise) {
-      authContextPromise = createAuthContext().catch((error) => {
-        authContextPromise = null;
-        throw error;
-      });
-    }
-
-    return authContextPromise;
-  }
-
   async function signIn() {
-    const { firebase, auth, authReadyPromise } = await getAuthContext();
-
-    await authReadyPromise;
-
-    if (auth.currentUser) {
-      logger.log('User already signed in, reusing auth');
-      const idToken = await firebase.getIdToken(auth.currentUser);
-      return {
-        user: auth.currentUser,
-        idToken
-      };
+    // Reuse a still-valid session if we have one.
+    const existing = await getExistingSession();
+    if (existing) {
+      logger.log('Reusing existing session');
+      return existing;
     }
 
     const redirectURL = browserApi.identity.getRedirectURL();
@@ -120,43 +138,42 @@ export function createBackgroundAuth({
       throw authError;
     }
 
-    const accessToken = params.get('access_token');
-    const idToken = params.get('id_token');
+    const googleIdToken = params.get('id_token');
 
-    if (!accessToken) {
+    if (!googleIdToken) {
       const authError = attachTelemetryContext(
-        new Error('No access token received from OAuth'),
+        new Error('No ID token received from OAuth'),
         {
           ...responseContext,
-          hasAccessToken: false,
-          hasIdToken: Boolean(idToken)
+          hasIdToken: false
         }
       );
-      logger.warn('OAuth response missing access token', authError.telemetryContext);
+      logger.warn('OAuth response missing ID token', authError.telemetryContext);
       throw authError;
     }
 
-    const credential = firebase.GoogleAuthProvider.credential(idToken, accessToken);
-    const userCredential = await firebase.signInWithCredential(auth, credential);
-    const firebaseIdToken = await firebase.getIdToken(userCredential.user);
-
-    logger.log('Firebase sign-in successful', {
-      hasUser: Boolean(userCredential.user?.uid)
-    });
-
-    return {
-      user: userCredential.user,
-      idToken: firebaseIdToken
-    };
+    return await exchangeGoogleTokenForSession(googleIdToken, responseContext);
   }
 
   async function signOut() {
-    const { firebase, auth } = await getAuthContext();
-    await firebase.signOut(auth);
+    const sessionToken = await getSessionToken();
+    if (sessionToken) {
+      // Best-effort server-side revocation; clearing the local session is the
+      // source of truth, so a failed revoke (offline, etc.) is non-fatal.
+      try {
+        await fetch(`${config.cloudFunctionUrl}/auth/session`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${sessionToken}` }
+        });
+      } catch (error) {
+        logger.warn('Session revoke request failed', { error: error.message });
+      }
+    }
+    await clearSession();
+    logger.log('Session cleared');
   }
 
   return {
-    getAuthContext,
     signIn,
     signOut
   };

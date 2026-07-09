@@ -3,9 +3,17 @@ import {
   syncDrawerStateFromStore as syncSavedPagesDrawerStateFromStore,
   syncProjectsStateFromStore as syncSavedPagesDrawerProjectsStateFromStore
 } from './newtab-drawer-state.js';
+import { getCurrentUser as getSessionUser } from './session-store.js';
 
-export function getDrawerCurrentUser(windowObj = window) {
-  return windowObj.firebaseAuth?.currentUser || null;
+// Returns the current user from the shared session store, or null. Kept as a
+// thin wrapper so call sites pass windowObj for consistency with the prior
+// Firebase-based implementation.
+export async function getDrawerCurrentUser(windowObj = window) {
+  const runtime = windowObj.browser?.runtime || windowObj.chrome?.runtime;
+  if (!runtime) {
+    return null;
+  }
+  return await getSessionUser();
 }
 
 export async function canHydrateDrawerWithWarmCache(api, getCurrentUser) {
@@ -13,7 +21,8 @@ export async function canHydrateDrawerWithWarmCache(api, getCurrentUser) {
     return true;
   }
 
-  if (getCurrentUser?.()) {
+  const user = await getCurrentUser?.();
+  if (user) {
     return true;
   }
 

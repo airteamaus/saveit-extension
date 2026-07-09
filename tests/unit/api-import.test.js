@@ -9,9 +9,6 @@ describe('API - bulkImportBookmarks', () => {
   beforeEach(() => {
     originalWindow = { ...global.window };
     global.window = {
-      firebaseAuth: null,
-      firebaseReady: null,
-      firebaseGetIdToken: null,
       SentryHelpers: null
     };
 
@@ -29,9 +26,6 @@ describe('API - bulkImportBookmarks', () => {
   it('sends a bulk POST with the right shape in extension mode', async () => {
     harness.setExtensionMode({ local: {} }, { id: 'test' });
     harness.setCloudFunctionUrl('https://test.run.app');
-
-    global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
-    global.window.firebaseGetIdToken = vi.fn(async () => 'token');
 
     const mockResponse = {
       ok: true,
@@ -75,8 +69,6 @@ describe('API - bulkImportBookmarks', () => {
     harness.setExtensionMode({ local: {} }, { id: 'test' });
     harness.setCloudFunctionUrl('https://test.run.app');
 
-    global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
-    global.window.firebaseGetIdToken = vi.fn(async () => 'token');
     global.fetch = vi.fn(async () => ({
       ok: true,
       json: async () => ({ success: true, imported: 1, skipped: 0 })

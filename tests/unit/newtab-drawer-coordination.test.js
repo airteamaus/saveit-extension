@@ -7,15 +7,14 @@ import {
   createSavedPagesTotalNotifier,
   getDrawerCurrentUser
 } from '../../src/newtab-drawer-coordination.js';
+import { getCurrentUser } from '../../src/session-store.js';
 
 describe('newtab drawer coordination', () => {
-  it('reads the current user from the drawer window context', () => {
-    expect(getDrawerCurrentUser({
-      firebaseAuth: {
-        currentUser: { uid: 'user-1' }
-      }
-    })).toEqual({ uid: 'user-1' });
-    expect(getDrawerCurrentUser({})).toBeNull();
+  it('reads the current user from the session store when a runtime is present', async () => {
+    getCurrentUser.mockResolvedValue({ uid: 'user-1', email: 'a@b.com' });
+    await expect(getDrawerCurrentUser({ browser: { runtime: { id: 'x' } } })).resolves.toEqual({ uid: 'user-1', email: 'a@b.com' });
+    // No runtime (standalone) -> null without touching storage
+    await expect(getDrawerCurrentUser({})).resolves.toBeNull();
   });
 
   describe('canHydrateDrawerWithWarmCache', () => {

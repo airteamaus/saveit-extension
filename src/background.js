@@ -1,6 +1,7 @@
 // background.js - Service worker for the Buckley's extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
+import { getCurrentUserId as getSessionUserId, setSession } from './session-store.js';
 import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
@@ -84,7 +85,6 @@ async function captureBackgroundMessage(message, context, level = 'info', flushT
 const backgroundAuth = createBackgroundAuth({
   config: CONFIG,
   browserApi,
-  loadFirebase: () => import('./bundles/firebase-background.js'),
   logger: authLogger,
   telemetry: {
     captureMessage: captureBackgroundMessage
@@ -94,7 +94,7 @@ const backgroundAuth = createBackgroundAuth({
 // Export logout function for debugging
 globalThis.logout = async function() {
   await backgroundAuth.signOut();
-  logger.log('Logged out from Firebase');
+  logger.log('Session cleared');
 };
 
 /**
@@ -120,7 +120,7 @@ async function showBadgeFeedback(type, duration = 2000) {
 async function getAuthenticatedSession() {
   const session = await backgroundAuth.signIn();
   await setSentryUser(session.user);
-  logger.log('Got Firebase user', {
+  logger.log('Got authenticated session', {
     hasUser: Boolean(session.user?.uid)
   });
   return session;
@@ -131,9 +131,7 @@ function getBackgroundStorage() {
 }
 
 async function getBackgroundCurrentUserId() {
-  const { auth, authReadyPromise } = await backgroundAuth.getAuthContext();
-  await authReadyPromise;
-  return auth.currentUser?.uid || null;
+  return await getSessionUserId();
 }
 
 async function getBackgroundLastKnownUserId() {
@@ -216,11 +214,44 @@ async function fetchBackgroundApi(path = '', { method = 'GET', body, params } = 
     throw new Error(await parseApiError(response));
   }
 
+  // Sliding session refresh: the backend rotates the token inline once it
+  // crosses the refresh threshold and returns the replacement here. Store it
+  // so subsequent calls use the new token.
+  await applySessionRotation(response);
+
   if (response.status === 204) {
     return null;
   }
 
   return await response.json().catch(() => null);
+}
+
+// Update the stored session when the backend hands back a rotated token.
+// Best-effort: a failure here doesn't invalidate the current request.
+async function applySessionRotation(response) {
+  const headers = response.headers;
+  if (!headers || typeof headers.get !== 'function') {
+    return;
+  }
+  const newToken = headers.get('X-Session-Token');
+  const newExpiry = headers.get('X-Session-Expires-At');
+  if (!newToken || !newExpiry) {
+    return;
+  }
+  try {
+    const user = await getSessionUserId().then(async (uid) => {
+      if (uid) {
+        return { uid };
+      }
+      return null;
+    });
+    if (user?.uid) {
+      await setSession({ sessionToken: newToken, uid: user.uid, expiresAt: newExpiry });
+      logger.log('Session token rotated by backend');
+    }
+  } catch (error) {
+    logger.warn('Failed to apply session rotation', { error: error.message });
+  }
 }
 
 // Minimal API surface for the bookmark mirror. The full newtab facade isn't
@@ -465,6 +496,28 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: error.message });
       });
     return true; // Keep channel open for async response
+  }
+
+  if (message.action === 'signOut') {
+    backgroundAuth.signOut()
+      .then(async () => {
+        try {
+          const sentry = await getSentry();
+          await sentry.clearUser?.();
+        } catch (error) {
+          logger.warn('Failed to clear Sentry user', error);
+        }
+        sendResponse({ success: true });
+      })
+      .catch(async (error) => {
+        logger.error('Sign-out failed', error);
+        await captureBackgroundError(error, {
+          context: 'sign-out',
+          surface: 'dashboard'
+        });
+        sendResponse({ success: false, error: error.message });
+      });
+    return true;
   }
 
   if (message.action === 'getToolbarProjects') {

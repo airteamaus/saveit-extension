@@ -6,6 +6,11 @@ import {
   getBrowserRuntime as defaultGetBrowserRuntime,
   getStorageAPI as defaultGetStorageAPI
 } from './config.js';
+import {
+  getSessionToken,
+  getCurrentUserId as getSessionUserId,
+  setSession
+} from './session-store.js';
 
 export function applyApiCore(API, dependencies = {}) {
   const {
@@ -45,12 +50,11 @@ export function applyApiCore(API, dependencies = {}) {
   });
 
   Object.assign(API, {
-    getCurrentUserId() {
-      if (!this.isExtension || !window.firebaseAuth) {
+    async getCurrentUserId() {
+      if (!this.isExtension) {
         return null;
       }
-      const user = window.firebaseAuth.currentUser;
-      return user ? user.uid : null;
+      return await getSessionUserId();
     },
 
     getStorage() {
@@ -176,24 +180,11 @@ export function applyApiCore(API, dependencies = {}) {
 
     async getIdToken() {
       if (this.isExtension) {
-        if (window.firebaseReady) {
-          await window.firebaseReady;
+        const token = await getSessionToken();
+        if (!token) {
+          throw new Error('No session token. Please sign in.');
         }
-
-        if (!window.firebaseAuth) {
-          throw new Error('Firebase not initialized');
-        }
-
-        const user = window.firebaseAuth.currentUser;
-        if (!user) {
-          throw new Error('No user signed in');
-        }
-
-        if (!window.firebaseGetIdToken) {
-          throw new Error('getIdToken not available');
-        }
-
-        return await window.firebaseGetIdToken(user);
+        return token;
       }
 
       return null;
@@ -280,7 +271,31 @@ export function applyApiCore(API, dependencies = {}) {
         throw error;
       }
 
+      // Sliding session refresh: store a rotated token if the backend
+      // returned one. Best-effort — does not affect the current response.
+      await this._applySessionRotation(response);
+
       return response;
+    },
+
+    async _applySessionRotation(response) {
+      const headers = response.headers;
+      if (!headers || typeof headers.get !== 'function') {
+        return;
+      }
+      const newToken = headers.get('X-Session-Token');
+      const newExpiry = headers.get('X-Session-Expires-At');
+      if (!newToken || !newExpiry) {
+        return;
+      }
+      try {
+        const uid = await getSessionUserId();
+        if (uid) {
+          await setSession({ sessionToken: newToken, uid, expiresAt: newExpiry });
+        }
+      } catch {
+        // Non-fatal: the current request already succeeded.
+      }
     },
 
     async _fetchWithAuth(endpoint, params = null, options = {}) {
