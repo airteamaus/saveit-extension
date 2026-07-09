@@ -39,7 +39,11 @@ export function escapeHtml(text = '') {
   return div.innerHTML;
 }
 
-export function truncateText(text = '', maxLength = 180) {
+// Cap the card summary so it fills (but does not spill past) the 2-line CSS
+// clamp on .saved-pages-drawer-card-summary. Tuned against the rendered card
+// width so a full description reads as two complete lines rather than being
+// cut at ~1.5 lines.
+export function truncateText(text = '', maxLength = 240) {
   if (!text || text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
