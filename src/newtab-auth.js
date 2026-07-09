@@ -75,6 +75,7 @@ export function createNewtabAuthController({
       await AuthMenu.signOut(() => getBrowserRuntime());
     } catch (error) {
       console.error('[newtab] Sign out failed:', error);
+      windowObj.SentryHelpers?.captureError(error, { context: 'newtab-sign-out' });
     }
   }
 
@@ -88,6 +89,7 @@ export function createNewtabAuthController({
       await refreshFromSession();
     } catch (error) {
       console.error('Sign-in failed:', error);
+      windowObj.SentryHelpers?.captureError(error, { context: 'newtab-sign-in' });
       windowObj.alert(getUserFacingSignInErrorMessage(error));
     }
   }
@@ -105,6 +107,7 @@ export function createNewtabAuthController({
       }
     } catch (error) {
       console.error('[newtab] Failed to handle auth state change:', error);
+      windowObj.SentryHelpers?.captureError(error, { context: 'newtab-auth-state-change' });
     }
   }
 

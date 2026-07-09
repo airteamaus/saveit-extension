@@ -83,6 +83,7 @@ export function applyApiCore(API, dependencies = {}) {
         return userId;
       } catch (error) {
         console.error('[getLastKnownUserId] Failed to read cached auth bootstrap:', error);
+        window.SentryHelpers?.captureError(error, { context: 'get-last-known-user-id' });
         this._lastKnownUserId = null;
         return null;
       }
@@ -115,6 +116,7 @@ export function applyApiCore(API, dependencies = {}) {
         });
       } catch (error) {
         console.error('[setLastKnownUser] Failed to persist cached auth bootstrap:', error);
+        window.SentryHelpers?.captureError(error, { context: 'set-last-known-user' });
       }
     },
 
@@ -133,6 +135,7 @@ export function applyApiCore(API, dependencies = {}) {
         await storage.remove(this.LAST_KNOWN_USER_KEY);
       } catch (error) {
         console.error('[clearLastKnownUser] Failed to clear cached auth bootstrap:', error);
+        window.SentryHelpers?.captureError(error, { context: 'clear-last-known-user' });
       }
     },
 
