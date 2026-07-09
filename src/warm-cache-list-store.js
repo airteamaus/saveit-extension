@@ -701,11 +701,31 @@ export class WarmCacheListStore {
       ? incomingPages.slice(0, this.options.maxItems)
       : [];
 
+    // Reconcile optimistic tiles: when the real (enriched) doc for a pending
+    // save arrives in the incoming list, drop the matching optimistic tile —
+    // it has a synthetic id that won't collide with the real page's id, so
+    // mergeListPages would otherwise leave it orphaned. Match by url.
+    const incomingUrls = new Set(
+      normalizedIncomingPages.map(p => p?.url).filter(Boolean)
+    );
+    const survivingOptimistic = this.state.allPages.filter(
+      p => p.optimistic === true && !incomingUrls.has(p.url)
+    );
+
     if (!preserveExistingCoverage || this.state.allPages.length <= normalizedIncomingPages.length) {
-      return normalizedIncomingPages;
+      // Full replace, but keep optimistic tiles whose real doc hasn't arrived
+      // yet (the incoming list may be a refresh that predates enrichment).
+      // Tiles are prepended: they carry the newest saved_at, so they belong
+      // above the incoming newest-first list.
+      return [...survivingOptimistic, ...normalizedIncomingPages];
     }
 
-    return mergeListPages(normalizedIncomingPages, this.state.allPages, this.options.maxItems);
+    const merged = mergeListPages(normalizedIncomingPages, this.state.allPages, this.options.maxItems);
+    // mergeListPages dedupes by id and preserves existing coverage; re-apply
+    // the optimistic reconciliation so superseded tiles are stripped here too.
+    return merged.filter(
+      p => !(p.optimistic === true && incomingUrls.has(p.url))
+    );
   }
 
   reconcilePagination(pagination, pages, { preserveExistingCoverage = false } = {}) {
@@ -773,6 +793,53 @@ export class WarmCacheListStore {
     return this.getSnapshot();
   }
 
+  // Prepend an optimistic tile (a page captured at save time, before the
+  // backend's async enrichment has written the real doc). The tile must carry
+  // an `optimistic: true` flag so getUpdateAnchorItemId excludes it from
+  // anchor selection — a synthetic optimistic id must never become the
+  // incremental-sync anchor the backend won't recognize. Dedupes by id so a
+  // re-save of the same URL replaces rather than stacks.
+  async prependOptimisticPage(page, { requestId = this.state.requestId } = {}) {
+    if (!page?.id) {
+      return this.getSnapshot();
+    }
+
+    const withoutExisting = this.state.allPages.filter(p => p.id !== page.id);
+    const nextPages = [{ ...page, optimistic: true }, ...withoutExisting];
+    await this.setPages(nextPages, {
+      total: this.state.total,
+      hasNextPage: this.state.hasNextPage,
+      nextCursor: this.state.nextCursor
+    }, { requestId });
+    return this.getSnapshot();
+  }
+
+  // Remove an optimistic tile by url. Used during reconciliation when the real
+  // (enriched) doc has arrived — the real doc has a different (server) id, so
+  // the synthetic-id tile won't be auto-removed by a list replace. Matching is
+  // by normalized url via the optimistic id prefix, which encodes the url.
+  async removeOptimisticPageByUrl(url, { requestId = this.state.requestId } = {}) {
+    if (!url) {
+      return this.getSnapshot();
+    }
+
+    const nextPages = this.state.allPages.filter(p => !(
+      p.optimistic === true && p.url === url
+    ));
+    if (nextPages.length === this.state.allPages.length) {
+      return this.getSnapshot(); // nothing to remove
+    }
+    const nextTotal = typeof this.state.total === 'number'
+      ? Math.max(0, this.state.total - 1)
+      : this.state.total;
+    await this.setPages(nextPages, {
+      total: nextTotal,
+      hasNextPage: this.state.hasNextPage,
+      nextCursor: this.state.nextCursor
+    }, { requestId });
+    return this.getSnapshot();
+  }
+
   buildInitialFetchOptions(overrides = {}) {
     return this.options.buildInitialFetchOptions(overrides);
   }
@@ -795,7 +862,9 @@ export class WarmCacheListStore {
     const pinnedFirst = updateOptions?.pinnedFirst === true;
 
     const anchorPage = this.state.allPages.reduce((currentAnchor, page) => {
-      if (!page?.id) {
+      // Optimistic tiles carry a synthetic id the backend won't recognize, so
+      // they must never become the incremental-sync anchor — skip them.
+      if (!page?.id || page.optimistic === true) {
         return currentAnchor;
       }
 

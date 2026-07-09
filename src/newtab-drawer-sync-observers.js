@@ -1,6 +1,11 @@
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { computeWarmingProgress, isWarmUpComplete } from './newtab-drawer-state.js';
+import {
+  PENDING_SAVES_KEY,
+  getPendingSaves,
+  buildOptimisticPage
+} from './pending-saves.js';
 
 export function shouldSyncDrawerStoreUpdate({
   suppressSavedPagesStoreSync = false,
@@ -91,9 +96,46 @@ export function createDrawerCacheInvalidationObserver({
     });
   }
 
+  // Read pending-save records and render each as an optimistic tile. Called on
+  // newtab load (so tiles appear even when newtab wasn't open at save time) and
+  // whenever the pending-saves key changes. Tiles are reconciled to real docs
+  // by the background poll (which clears the record + invalidates the cache).
+  async function syncPendingSaves() {
+    if (!getCurrentUser()) {
+      return;
+    }
+    const browserApi = globalThis.browser ?? globalThis.chrome;
+    if (!browserApi?.storage?.local) {
+      return;
+    }
+    const records = await getPendingSaves(browserApi.storage.local);
+    for (const record of Object.values(records)) {
+      await savedPagesStore.prependOptimisticPage(buildOptimisticPage(record));
+    }
+  }
+
+  function initPendingSavesSync() {
+    const browserApi = globalThis.browser ?? globalThis.chrome;
+    if (!browserApi?.storage?.onChanged?.addListener) {
+      return;
+    }
+
+    // Seed any records that already exist (e.g. newtab opened after a save).
+    void syncPendingSaves();
+
+    browserApi.storage.onChanged.addListener((changes, areaName) => {
+      if (areaName !== 'local' || !changes || !(PENDING_SAVES_KEY in changes)) {
+        return;
+      }
+      void syncPendingSaves();
+    });
+  }
+
   return {
     initSavedPagesCacheSync,
-    syncSavedPagesAfterCacheInvalidation
+    syncSavedPagesAfterCacheInvalidation,
+    initPendingSavesSync,
+    syncPendingSaves
   };
 }
 

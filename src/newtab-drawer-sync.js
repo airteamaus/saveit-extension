@@ -72,6 +72,7 @@ export function createDrawerSyncCoordinator({
   function init() {
     storeSubscriptions.initStoreSubscriptions();
     cacheObserver.initSavedPagesCacheSync();
+    cacheObserver.initPendingSavesSync();
   }
 
   return {
