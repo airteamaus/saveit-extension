@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
+
+## [1.20.3] - 2026-07-09
+
+### ✨ Features
+
 - **layout:** keep sidebar to 700px, hamburger below, more summary lines (75cb3fc)
 - **ui:** lengthen card summary to fill two lines (47611eb)
 - **cache:** optimistic tile + smart poll for post-save visibility (02ce890)
@@ -98,16 +104,6 @@ No notable changes.
 ### ✨ Features
 
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
-
-### 🐛 Bug Fixes
-
-- **mirror:** send saved-pages params as query string, not GET body (8f4ded9)
-
-## [1.18.4] - 2026-07-07
-
-### ✨ Features
-
-- **ui:** Enter-to-save in page editor; route action failures through toast (d87ae01)
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
 - **cache:** add head-based list freshness sync (7cd548c)
@@ -176,6 +172,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **mirror:** send saved-pages params as query string, not GET body (8f4ded9)
 - **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
 - **sync:** align freshness anchor with list ordering (dc6e681)
 - **cache:** keep warm cache active after idle (daf801c)
