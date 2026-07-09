@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
+
+## [1.20.0] - 2026-07-09
+
 ### ✨ Features
 
 - **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
@@ -78,10 +84,6 @@ No notable changes.
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (74eb6ba)
 
 ## [1.18.2] - 2026-07-07
-
-No notable changes.
-
-## [1.18.1] - 2026-07-07
 
 ### ✨ Features
 
