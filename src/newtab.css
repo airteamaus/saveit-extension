@@ -1237,6 +1237,10 @@ body {
     max-height: none;
     z-index: 46;
     box-shadow: var(--shadow-lg);
+    /* The resting sidebar is semi-transparent (fine next to the page), but as
+       an overlay it sits on top of the cards — make it opaque so the menu text
+       stays fully readable. The backdrop behind it provides the separation. */
+    background: var(--color-surface);
   }
 
   .saved-pages-sidebar-backdrop {
