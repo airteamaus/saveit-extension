@@ -119,7 +119,9 @@ export async function startNewtabPage({
 }) {
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
-  drawerController.init();
+  // init() seeds the synchronous current-user cache the sidebar needs to
+  // resolve ownership (isOwnedProject) on the first warm-cache paint.
+  await drawerController.init();
 
   // Do NOT paint an eager loading state here. The results pane starts empty
   // and the warm-cache path renders real content directly on first paint;
