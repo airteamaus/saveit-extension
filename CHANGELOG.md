@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **sidebar:** bind synchronous current user so ownership resolves (1a65934)
+
+## [1.20.4] - 2026-07-09
+
 ### ✨ Features
 
 - **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
@@ -94,13 +100,6 @@ No notable changes.
 
 ## [1.18.6] - 2026-07-07
 
-### 🐛 Bug Fixes
-
-- **mirror:** create SaveIt/ under a writable container, not the immovable root (ffeb6a7)
-- **mirror:** send saved-pages params as query string, not GET body (e57f8c8)
-
-## [1.18.5] - 2026-07-07
-
 ### ✨ Features
 
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
@@ -172,7 +171,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **mirror:** send saved-pages params as query string, not GET body (8f4ded9)
+- **mirror:** create SaveIt/ under a writable container, not the immovable root (ffeb6a7)
+- **mirror:** send saved-pages params as query string, not GET body (e57f8c8)
 - **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
 - **sync:** align freshness anchor with list ordering (dc6e681)
 - **cache:** keep warm cache active after idle (daf801c)
