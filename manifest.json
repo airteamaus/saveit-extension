@@ -19,6 +19,7 @@
     "alarms",
     "bookmarks",
     "notifications",
+    "scripting",
     "storage",
     "identity"
   ],
