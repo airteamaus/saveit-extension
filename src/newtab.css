@@ -333,10 +333,6 @@ body {
   font-size: var(--font-size-md);
   line-height: 1.35;
   color: var(--color-text-light);
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  overflow: hidden;
 }
 
 .saved-pages-drawer-edit-form {
@@ -1193,24 +1189,10 @@ body {
   }
 }
 
-@media (max-width: 900px) {
-  /* The sidebar stays in place down to 700px — the old restack (column layout,
-     sidebar above content) was an unnecessary breakpoint. Below 900px we only
-     give each card one more line of summary so the narrowing cards still read
-     well. The full-width / hamburger behaviour kicks in at 700px (below). */
-  .saved-pages-drawer-card-summary {
-    -webkit-line-clamp: 3;
-  }
-}
-
 @media (max-width: 700px) {
   /* Narrow viewport: the sidebar moves behind a hamburger overlay so the cards
      can take the full page width. The sidebar toggle button (hidden above
      700px) becomes visible here. */
-  .saved-pages-drawer-card-summary {
-    -webkit-line-clamp: 4;
-  }
-
   /* Show the hamburger button (hidden by default in the base rule). */
   .saved-pages-sidebar-toggle {
     display: inline-flex;
