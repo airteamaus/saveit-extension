@@ -38,7 +38,7 @@ pnpm run test:coverage || {
 
 # Verify build works
 echo "  → Verifying build..."
-node scripts/bundle-firebase.js && pnpm exec web-ext build --overwrite-dest > /dev/null 2>&1 || {
+node scripts/bundle.js && pnpm exec web-ext build --overwrite-dest > /dev/null 2>&1 || {
   echo "❌ Build failed. Fix before pushing."
   exit 1
 }

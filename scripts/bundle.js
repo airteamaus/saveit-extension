@@ -1,6 +1,7 @@
 #!/usr/bin/env node
-// Bundle Firebase SDK for use in browser extension
-// Creates two bundles: one for background.js (service worker), one for page surfaces
+// Bundle the background service worker, Sentry init, and polyfill for the
+// extension build. (Previously also bundled the Firebase SDK; that was removed
+// when auth moved to backend-issued session tokens.)
 
 import esbuild from 'esbuild';
 import fs from 'fs';
@@ -27,80 +28,6 @@ const sharedConfig = {
   minify: true,
   treeShaking: true,
 };
-
-async function buildBackgroundBundle() {
-  const entryContent = `
-// Firebase bundle for background.js (service worker)
-import { initializeApp } from 'firebase/app';
-import {
-  initializeAuth,
-  indexedDBLocalPersistence,
-  signInWithCredential,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  getIdToken,
-  signOut
-} from 'firebase/auth/web-extension';
-
-export {
-  initializeApp,
-  initializeAuth,
-  indexedDBLocalPersistence,
-  signInWithCredential,
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  getIdToken,
-  signOut
-};
-`;
-
-  const entryFile = path.join(BUNDLE_DIR, '_background-entry.js');
-  fs.writeFileSync(entryFile, entryContent);
-
-  await esbuild.build({
-    ...sharedConfig,
-    entryPoints: [entryFile],
-    outfile: path.join(BUNDLE_DIR, 'firebase-background.js'),
-  });
-
-  fs.unlinkSync(entryFile);
-  console.log('✅ Built firebase-background.js');
-}
-
-async function buildPagesBundle() {
-  const entryContent = `
-// Firebase bundle for page surfaces (newtab.html)
-import { initializeApp } from 'firebase/app';
-import {
-  initializeAuth,
-  indexedDBLocalPersistence,
-  onAuthStateChanged,
-  getIdToken,
-  signOut
-} from 'firebase/auth/web-extension';
-
-export {
-  initializeApp,
-  initializeAuth,
-  indexedDBLocalPersistence,
-  onAuthStateChanged,
-  getIdToken,
-  signOut
-};
-`;
-
-  const entryFile = path.join(BUNDLE_DIR, '_pages-entry.js');
-  fs.writeFileSync(entryFile, entryContent);
-
-  await esbuild.build({
-    ...sharedConfig,
-    entryPoints: [entryFile],
-    outfile: path.join(BUNDLE_DIR, 'firebase-pages.js'),
-  });
-
-  fs.unlinkSync(entryFile);
-  console.log('✅ Built firebase-pages.js');
-}
 
 async function bundleBackgroundScript() {
   // Read polyfill to prepend to bundle
@@ -155,14 +82,7 @@ async function copyPolyfill() {
 
 async function build() {
   try {
-    console.log('🔨 Building Firebase and Sentry bundles...');
-    // Build Firebase bundles first (background.js depends on these)
-    await Promise.all([
-      buildBackgroundBundle(),
-      buildPagesBundle(),
-    ]);
-    // Then bundle background.js (which imports from firebase-background.js and sentry.js)
-    // and sentry-init.js for page surfaces
+    console.log('🔨 Building bundles...');
     await Promise.all([
       bundleBackgroundScript(),
       buildSentryBundle(),

@@ -5,13 +5,9 @@
 default:
     @just --list
 
-# Build Firebase bundles
-build-firebase:
-    @node scripts/bundle-firebase.js
-
-# Watch and rebuild Firebase bundles on changes
-watch-firebase:
-    @node scripts/watch-firebase.js
+# Build extension bundles (background service worker, Sentry, polyfill)
+build-bundles:
+    @node scripts/bundle.js
 
 # Lint the extension with web-ext
 lint:
@@ -79,9 +75,9 @@ ci-check:
 pre-deploy:
     ./scripts/pre-deploy-check.sh
 
-# Run the extension in Firefox Developer Edition (auto-builds Firebase first)
+# Run the extension in Firefox Developer Edition (auto-builds bundles first)
 run:
-    @just build-firebase
+    @just build-bundles
     ./scripts/run-extension.sh
 
 # Install in Firefox Developer Edition for persistent testing
@@ -103,7 +99,7 @@ build-all:
 
 # Run extension in Chrome for testing
 run-chrome:
-    @just build-firebase
+    @just build-bundles
     npx web-ext run --target chromium
 
 # Bump version (patch/minor/major) and create git tag
@@ -126,11 +122,11 @@ preview:
 validate:
     npm run validate
 
-# Test that Firebase bundles build successfully
+# Test that bundles build successfully
 test-build:
-    @echo "Testing Firebase bundle build..."
-    @just build-firebase
-    @echo "✓ Firebase bundles build successfully"
+    @echo "Testing bundle build..."
+    @just build-bundles
+    @echo "✓ Bundles build successfully"
 
 # Test for CSP violations in HTML files
 test-csp:

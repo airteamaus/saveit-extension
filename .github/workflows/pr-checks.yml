@@ -33,7 +33,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build bundles
-        run: node scripts/bundle-firebase.js
+        run: node scripts/bundle.js
 
       - name: Run ESLint
         run: pnpm run lint

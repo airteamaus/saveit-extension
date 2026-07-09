@@ -23,7 +23,8 @@
     "identity"
   ],
   "host_permissions": [
-    "https://*.run.app/*"
+    "https://saveit-5pu7ljvnuq-uc.a.run.app/*",
+    "https://saveit-staging-5pu7ljvnuq-uc.a.run.app/*"
   ],
   "background": {
     "scripts": [

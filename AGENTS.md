@@ -129,8 +129,7 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 | Build Firefox package | `just build` |
 | Build Chrome package | `just build-chrome` |
 | Build both | `just build-all` |
-| Build Firebase bundles | `just build-firebase` |
-| Watch Firebase bundles | `just watch-firebase` |
+| Build bundles | `just build-bundles` |
 | Clean artifacts | `just clean` |
 | Run tests | `just test` |
 | Watch tests | `just test-watch` |
@@ -165,7 +164,7 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 
 ## Build and release notes
 
-- Bundles are built with `scripts/bundle-firebase.js`.
+- Bundles are built with `scripts/bundle.js`.
 - Generated bundles in `src/bundles/` are build artifacts and are not committed.
 - For extension testing, `just run` is the most reliable path because Firefox caching can hide local changes.
 - Use `just bump` for releases so version files and tags stay aligned.
