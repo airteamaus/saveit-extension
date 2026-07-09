@@ -65,6 +65,20 @@ async function buildSentryBundle() {
   console.log('✅ Built sentry-init.js');
 }
 
+async function buildCaptureBundle() {
+  // Bundle capture-bundle-entry.js (which imports buildClientObject from
+  // page-capture.js — this inlines Readability) into an injectable file. The
+  // injector loads this via executeScript files:[...] in the page's ISOLATED
+  // world, where ESM imports do not work, so it must be pre-bundled.
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: [path.join(SRC_DIR, 'capture-bundle-entry.js')],
+    outfile: path.join(BUNDLE_DIR, 'capture-bundle.js'),
+  });
+
+  console.log('✅ Built capture-bundle.js');
+}
+
 async function copyPolyfill() {
   const polyfillSource = path.join(
     __dirname,
@@ -86,6 +100,7 @@ async function build() {
     await Promise.all([
       bundleBackgroundScript(),
       buildSentryBundle(),
+      buildCaptureBundle(),
     ]);
     copyPolyfill();
     console.log('✅ All bundles built successfully!');

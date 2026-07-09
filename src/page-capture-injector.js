@@ -1,25 +1,29 @@
 // page-capture-injector.js — the only module that touches chrome.scripting.
-// Injects a capture function into the active tab via executeScript (world:
-// 'ISOLATED') and returns the client object. On any failure (chrome:// pages,
-// crashed tabs, CSP), returns a failure-shape object — never throws, so the
-// save still proceeds in basic mode.
+// Injects real Readability (via buildClientObject from page-capture.js) into
+// the active tab and returns the client object. On any failure (chrome://
+// pages, crashed tabs, CSP), returns a failure-shape object — never throws, so
+// the save still proceeds in basic mode.
 //
-// SERIALIZATION DESIGN (see task-12-report.md for full analysis):
-// chrome.scripting.executeScript with `func` stringifies the function source
-// and sends it to the page. The `args` array, however, is serialized via the
-// structured-clone algorithm — which CANNOT carry functions. So we must NOT
-// pass buildClientObject (which closes over @mozilla/readability) as an arg.
-// The injected function must be fully self-contained: no imports, no closures,
-// no function args. It runs in the page's ISOLATED world where ESM imports
-// and Readability are not available.
+// INJECTION DESIGN — Option C (files-based bundle):
+// Readability is an ESM module and cannot be carried into the page via
+// executeScript's `func` (the function source is stringified; ESM imports do
+// not run in the page's ISOLATED world) nor via `args` (structured-clone
+// cannot serialize functions/closures). So we ship a pre-built bundle,
+// `src/bundles/capture-bundle.js` (produced by scripts/bundle.js from
+// src/capture-bundle-entry.js), which inlines Readability and exposes
+// `globalThis.__saveitCapture = (doc) => buildClientObject(doc)` in the page's
+// ISOLATED world.
 //
-// The injected function below performs meta extraction + a DOM-based content
-// fallback (no Readability). It surfaces capture_method 'readability' when an
-// <article> or substantial <main> exists, otherwise 'none' — matching
-// page-capture.js's "no heuristic masking" contract. Task 13's manual
-// verification can swap this to a files-based injection that bundles
-// Readability (buildClientObject is still exported from page-capture.js for
-// that future path).
+// Two executeScript calls (both world:'ISOLATED') are used:
+//   1. files:['src/bundles/capture-bundle.js'] — evaluates the bundle, which
+//      defines globalThis.__saveitCapture. Resolves AFTER the file's
+//      top-level code runs, so the global exists by the time call 2 runs.
+//   2. func: () => globalThis.__saveitCapture(document) — invokes it on the
+//      live document and returns the client object. This second func is
+//      serialization-safe: it closes only over a global and the `document`
+//      global — no imports, no function args, no module-scope variables.
+// The ISOLATED world persists across these two calls for a given tab +
+// extension + frame, so the global set in call 1 is readable in call 2.
 
 // Resolve the browser API lazily on each call (rather than capturing it at
 // module load) so unit tests can swap globalThis.browser between cases. This
@@ -27,85 +31,6 @@
 // module is exercised directly by unit tests with a fresh mock per test.
 function getBrowserApi() {
   return globalThis.browser ?? globalThis.chrome;
-}
-
-// Self-contained capture function. Runs in the page's ISOLATED world. Has NO
-// access to module scope, NO imports, NO external closures — everything it
-// needs is in its own body. chrome.scripting stringifies this source and
-// evaluates it in the page, so it must remain pure-JS.
-function injectedCapture() {
-  const MAX_CONTENT_CHARS = 12000;
-
-  const doc = globalThis.document;
-
-  function readMeta(selector) {
-    const el = doc.querySelector(selector);
-    return (el && el.getAttribute('content') && el.getAttribute('content').trim()) || null;
-  }
-
-  function truncate(text) {
-    if (!text) return null;
-    const t = String(text).trim();
-    if (!t) return null;
-    return t.length <= MAX_CONTENT_CHARS ? t : t.slice(0, MAX_CONTENT_CHARS);
-  }
-
-  const metaTitle = readMeta('meta[property="og:title"]') || readMeta('meta[name="twitter:title"]');
-  const metaDescription = readMeta('meta[property="og:description"]')
-    || readMeta('meta[name="twitter:description"]')
-    || readMeta('meta[name="description"]');
-  const image = readMeta('meta[property="og:image"]')
-    || readMeta('meta[name="twitter:image"]')
-    || readMeta('meta[name="twitter:image:src"]');
-  const byline = readMeta('meta[name="author"]') || readMeta('meta[property="article:author"]');
-  const siteName = readMeta('meta[property="og:site_name"]');
-  const publishedTime = readMeta('meta[property="article:published_time"]') || readMeta('meta[name="date"]');
-  const lang = readMeta('meta[http-equiv="content-language"]')
-    || (doc.documentElement && doc.documentElement.getAttribute('lang'));
-
-  // DOM-based article detection: prefer <article>, then <main>, then the body.
-  // This is intentionally simpler than Readability — it surfaces article-like
-  // pages honestly without trying to extract clean article text from app
-  // shells. Task 13 can upgrade to Readability via files-based injection.
-  let articleEl = doc.querySelector('article');
-  if (!articleEl) {
-    articleEl = doc.querySelector('main');
-  }
-  const text = articleEl ? (articleEl.innerText || articleEl.textContent || '') : '';
-  const trimmed = text ? text.trim() : '';
-  // Modest signal threshold: <article>/<main> with real prose. Dashboards and
-  // app shells have <main> but almost no direct text → fall through to 'none'.
-  const hasArticle = trimmed.length >= 200;
-
-  if (!hasArticle) {
-    return {
-      title: metaTitle || (doc.title || ''),
-      description: metaDescription || '',
-      content: null,
-      excerpt: null,
-      byline: byline,
-      site_name: siteName,
-      image: image,
-      published_time: publishedTime,
-      lang: lang,
-      captured_at: new Date().toISOString(),
-      capture_method: 'none'
-    };
-  }
-
-  return {
-    title: metaTitle || (doc.title || ''),
-    description: metaDescription || '',
-    content: truncate(trimmed),
-    excerpt: truncate(trimmed),
-    byline: byline,
-    site_name: siteName,
-    image: image,
-    published_time: publishedTime,
-    lang: lang,
-    captured_at: new Date().toISOString(),
-    capture_method: 'readability'
-  };
 }
 
 // Build the failure-shape object. Same field set as page-capture.js's client
@@ -128,7 +53,8 @@ function failureShape(reason) {
   };
 }
 
-// Capture page content for the given tab. Returns the client object on success,
+// Capture page content for the given tab via the capture bundle. Returns the
+// client object (built by real Readability via buildClientObject) on success,
 // or a failure-shape object on any error. Never throws.
 export async function capturePageContent(tabId) {
   const browserApi = getBrowserApi();
@@ -136,11 +62,31 @@ export async function capturePageContent(tabId) {
     return failureShape('scripting API unavailable');
   }
 
+  const scripting = browserApi.scripting;
+
+  // 1. Inject the bundle file. This evaluates the bundle in the page's
+  // ISOLATED world, defining globalThis.__saveitCapture. If this fails
+  // (chrome://, about:, crashed tab, CSP), bail with the failure shape.
   try {
-    const results = await browserApi.scripting.executeScript({
+    await scripting.executeScript({
       target: { tabId },
       world: 'ISOLATED',
-      func: injectedCapture
+      files: ['src/bundles/capture-bundle.js']
+    });
+  } catch (error) {
+    return failureShape((error && error.message) || 'bundle injection failed');
+  }
+
+  // 2. Invoke the global to build the client object on the live document.
+  // This func is serialization-safe: it references only globalThis (a global)
+  // and document (a global) — no imports, no function args, no closures over
+  // module-scope variables, so chrome.scripting's source stringification is
+  // fine.
+  try {
+    const results = await scripting.executeScript({
+      target: { tabId },
+      world: 'ISOLATED',
+      func: () => globalThis.__saveitCapture(document)
     });
 
     // executeScript returns [{ result, frameId }, ...]
@@ -150,8 +96,8 @@ export async function capturePageContent(tabId) {
     }
     return failureShape('no result from injection');
   } catch (error) {
-    // chrome://, about:, PDF viewer, crashed tab, or CSP blocking injection.
-    // These are expected — return the failure shape so the save proceeds.
-    return failureShape((error && error.message) || 'injection failed');
+    // CSP, missing global (bundle failed silently), or tab vanished between
+    // calls. Surface as failure shape so the save still proceeds.
+    return failureShape((error && error.message) || 'capture invocation failed');
   }
 }
