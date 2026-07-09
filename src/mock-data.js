@@ -253,7 +253,7 @@ globalThis.MOCK_DATA = MOCK_DATA;
 const MOCK_PROJECTS = [
   {
     id: 'project-saveit-product',
-    name: 'SaveIt product',
+    name: "Buckley's product",
     owner_user_id: 'rich@airteam.com.au',
     owner_user_email: 'rich@airteam.com.au',
     visibility: 'company',

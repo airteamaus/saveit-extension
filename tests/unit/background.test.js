@@ -42,7 +42,7 @@ describe('background startup', () => {
         id: 'test-extension',
         getManifest: vi.fn(() => ({
           version: '1.9.3',
-          name: 'SaveIt'
+          name: "Buckley's Bookmarks"
         })),
         onMessage: {
           addListener: onMessageAddListener
@@ -110,7 +110,7 @@ describe('background startup', () => {
         id: 'test-extension',
         getManifest: vi.fn(() => ({
           version: '1.9.3',
-          name: 'SaveIt'
+          name: "Buckley's Bookmarks"
         })),
         onMessage: {
           addListener: onMessageAddListener
@@ -201,7 +201,7 @@ describe('background startup', () => {
         id: 'test-extension',
         getManifest: vi.fn(() => ({
           version: '1.10.1',
-          name: 'SaveIt'
+          name: "Buckley's Bookmarks"
         })),
         onMessage: {
           addListener: onMessageAddListener
@@ -294,7 +294,7 @@ describe('background startup', () => {
         id: 'test-extension',
         getManifest: vi.fn(() => ({
           version: '1.10.12',
-          name: 'SaveIt'
+          name: "Buckley's Bookmarks"
         })),
         onMessage: {
           addListener: onMessageAddListener
@@ -401,7 +401,7 @@ describe('background startup', () => {
         id: 'test-extension',
         getManifest: vi.fn(() => ({
           version: '1.10.12',
-          name: 'SaveIt'
+          name: "Buckley's Bookmarks"
         })),
         onMessage: {
           addListener: onMessageAddListener
@@ -456,7 +456,7 @@ describe('background startup', () => {
       );
       expect(notificationsCreate).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'SaveIt',
+          title: "Buckley's",
           message: 'Page saved!'
         })
       );

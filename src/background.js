@@ -1,4 +1,4 @@
-// background.js - Service worker for SaveIt extension (manifest v3)
+// background.js - Service worker for the Buckley's extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
 import { CacheManager } from './cache-manager.js';
@@ -350,7 +350,7 @@ async function handleSaveError(error, tab) {
   browserApi.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: 'SaveIt - Error',
+    title: "Buckley's - Error",
     message: userMessage
   });
 
@@ -441,7 +441,7 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
   browserApi.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: 'SaveIt',
+    title: "Buckley's",
     message: 'Page saved!'
   });
 
@@ -522,7 +522,7 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
       await setMirrorEnabled(browserApi.storage.local, Boolean(message.enabled));
       // On enable, seed immediately so the folder tree appears without waiting
       // up to 4h for the alarm. On disable, do nothing — existing bookmarks
-      // are left in place (the user can delete the SaveIt/ folder manually).
+      // are left in place (the user can delete the Buckley's/ folder manually).
       if (message.enabled) {
         await runMirrorReconcile({ forceFull: true });
       }

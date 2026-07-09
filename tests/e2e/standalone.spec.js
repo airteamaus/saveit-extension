@@ -184,7 +184,7 @@ test.describe('Standalone Mode', () => {
     await projectButton.click();
 
     await expect(projectButton).toHaveClass(/is-active/);
-    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText('SaveIt product');
+    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText("Buckley's product");
   });
 
   test('should edit a page title and summary inline', async ({ page }) => {

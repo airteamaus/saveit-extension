@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "SaveIt",
+  "name": "Buckley's Bookmarks",
   "version": "1.19.3",
   "description": "Save web pages and rediscover them with AI-powered metadata and search",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAmYLwaOh9tEiHMqOCDnNwwi8xwwL3rxVBQQzcdMnAbNgKUlQcY7Bf76UPOgMTM2Uwp3+BwG+bFK121WSVn9UODiK87NaDC9o1ugTSWsgtBpTr6PhVbA8PLp/RzIaqaQ0ZBpvLxFpMgT3KI0VHBqTebusUU83OgPSUV3Nrz147OEnbqbGd1+6CVZx9P2m5k4y7iKjXC2R5SikndM3jVgCnxyqmp1THUMOJcXcq8cbMhMeZlaFFok71vaR8lNiwo8HAl7Q8Wda0pPt8oz4xhU9ZPYjaEvVUCPWNve5THSioaWZyHnfxa35XtR5W5uz9kr9oGJRW5PbMkbOe80XqPaPRPQIDAQAB",
@@ -36,7 +36,10 @@
   },
   "action": {
     "default_icon": {
-      "48": "src/icon.png"
+      "16": "src/icon-16.png",
+      "32": "src/icon-32.png",
+      "48": "src/icon-48.png",
+      "128": "src/icon-128.png"
     },
     "default_popup": "src/toolbar-popup.html"
   },
@@ -44,6 +47,9 @@
     "newtab": "src/newtab.html"
   },
   "icons": {
-    "48": "src/icon.png"
+    "16": "src/icon-16.png",
+    "32": "src/icon-32.png",
+    "48": "src/icon-48.png",
+    "128": "src/icon-128.png"
   }
 }

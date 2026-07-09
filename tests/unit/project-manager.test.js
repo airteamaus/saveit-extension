@@ -53,7 +53,7 @@ describe('ProjectManager', () => {
         { id: '3', title: 'Page three', project_ids: ['project-1', 'project-2'] }
       ],
       projects: [
-        { id: 'project-1', name: 'SaveIt product', visibility: 'private', page_count: 2 },
+        { id: 'project-1', name: "Buckley's product", visibility: 'private', page_count: 2 },
         { id: 'project-2', name: 'AI radar', visibility: 'company', page_count: 2 }
       ],
       projectsLoading: false,
@@ -105,11 +105,11 @@ describe('ProjectManager', () => {
     const sidebar = document.getElementById('project-sidebar');
     expect(sidebar.textContent).toContain('Pinned');
     expect(sidebar.textContent).toContain('All pages');
-    expect(sidebar.textContent).toContain('SaveIt product');
+    expect(sidebar.textContent).toContain("Buckley's product");
     expect(sidebar.textContent).toContain('AI radar');
     expect(sidebar.querySelector('.project-nav-row[data-project-id="project-1"]')).not.toBeNull();
     expect(sidebar.querySelector('.project-nav-row[data-project-id=""]')).not.toBeNull();
-    expect(sidebar.querySelector('.project-action-rename[aria-label="Rename SaveIt product"]')).not.toBeNull();
+    expect(sidebar.querySelector('.project-action-rename[aria-label="Rename Buckley\'s product"]')).not.toBeNull();
     expect(sidebar.querySelector('.project-action-visibility[aria-label="Share with company"]')).not.toBeNull();
   });
 
@@ -143,7 +143,7 @@ describe('ProjectManager', () => {
 
     const dialog = document.getElementById('project-editor-dialog');
     expect(dialog.textContent).toContain('Page three');
-    expect(dialog.textContent).toContain('SaveIt product');
+    expect(dialog.textContent).toContain("Buckley's product");
     expect(dialog.textContent).toContain('Create "save"');
   });
 
