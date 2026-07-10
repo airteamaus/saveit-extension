@@ -4,6 +4,7 @@ import { computeWarmingProgress, isWarmUpComplete } from './newtab-drawer-state.
 import {
   PENDING_SAVES_KEY,
   getPendingSaves,
+  clearPendingSave,
   buildOptimisticPage
 } from './pending-saves.js';
 
@@ -100,6 +101,10 @@ export function createDrawerCacheInvalidationObserver({
   // newtab load (so tiles appear even when newtab wasn't open at save time) and
   // whenever the pending-saves key changes. Tiles are reconciled to real docs
   // by the background poll (which clears the record + invalidates the cache).
+  //
+  // If the real doc has already arrived in the store (e.g. the poll gave up but
+  // enrichment completed later via a different path), the pending record is
+  // stale — clear it instead of re-adding a ghost tile that would never resolve.
   async function syncPendingSaves() {
     if (!getCurrentUser()) {
       return;
@@ -109,8 +114,18 @@ export function createDrawerCacheInvalidationObserver({
       return;
     }
     const records = await getPendingSaves(browserApi.storage.local);
+    const existingUrls = new Set(
+      savedPagesStore.getSnapshot().allPages
+        .filter(p => p.optimistic !== true)
+        .map(p => p.url)
+        .filter(Boolean)
+    );
     for (const record of Object.values(records)) {
-      await savedPagesStore.prependOptimisticPage(buildOptimisticPage(record));
+      if (existingUrls.has(record.url)) {
+        await clearPendingSave(browserApi.storage.local, record.url);
+      } else {
+        await savedPagesStore.prependOptimisticPage(buildOptimisticPage(record));
+      }
     }
   }
 

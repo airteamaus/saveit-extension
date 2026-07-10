@@ -5,6 +5,7 @@ import {
   createDrawerStoreSubscriptions,
   shouldSyncDrawerStoreUpdate
 } from '../../src/newtab-drawer-sync-observers.js';
+import { PENDING_SAVES_KEY } from '../../src/pending-saves.js';
 import { createDrawerSyncCoordinator } from '../../src/newtab-drawer-sync.js';
 import { WarmCacheListStore } from '../../src/warm-cache-list-store.js';
 
@@ -642,6 +643,126 @@ describe('drawer sync observers', () => {
       // The completion timer cleared the warm-up phase, so the dispatcher
       // would now render cards (the handoff sync paints them).
       expect(state.warmUpInProgress).toBe(false);
+    });
+  });
+
+  describe('syncPendingSaves stale-record cleanup', () => {
+    // Regression: when the enrichment poll gives up, the pending-save record
+    // stays in storage.local (by design — "a later refresh reconciles"). But if
+    // the real doc arrives through another path (force-reenrich, background
+    // unload + later enrichment), nothing clears the record, and
+    // syncPendingSaves re-prepends the optimistic tile on every newtab load.
+    // The fix: syncPendingSaves checks if the real page already exists in the
+    // store before adding the tile, and clears stale records instead.
+
+    function createMemoryStorage() {
+      let store = {};
+      return {
+        store,
+        get: vi.fn(async (keys) => {
+          if (typeof keys === 'string') {
+            return keys in store ? { [keys]: store[keys] } : {};
+          }
+          return { ...store };
+        }),
+        set: vi.fn(async (entries) => {
+          store = { ...store, ...entries };
+        }),
+        remove: vi.fn(async (keys) => {
+          const arr = Array.isArray(keys) ? keys : [keys];
+          const next = { ...store };
+          for (const k of arr) delete next[k];
+          store = next;
+        })
+      };
+    }
+
+    function createHarness({ existingPages = [], pendingRecords = {} }) {
+      const storage = createMemoryStorage();
+      storage.store[PENDING_SAVES_KEY] = pendingRecords;
+
+      globalThis.browser = { storage: { local: storage } };
+
+      const prependOptimisticPage = vi.fn(async () => ({}));
+      const savedPagesStore = {
+        prependOptimisticPage,
+        getSnapshot: () => ({ allPages: existingPages })
+      };
+
+      const observer = createDrawerCacheInvalidationObserver({
+        state: {},
+        savedPagesStore,
+        projectsStore: {},
+        getCurrentUser: () => ({ uid: 'u1' }),
+        getSearchQuery: () => '',
+        isDrawerOpen: () => false,
+        refreshFavorites: vi.fn(),
+        loadDrawerBasePages: vi.fn(),
+        loadDrawerProjectPages: vi.fn()
+      });
+
+      return { observer, storage, prependOptimisticPage, savedPagesStore };
+    }
+
+    it('clears a pending record when the real page already exists in the store', async () => {
+      const realPageUrl = 'https://docs.google.com/document/d/abc/edit?tab=t.0';
+      const { observer, storage, prependOptimisticPage } = createHarness({
+        existingPages: [
+          { id: 'real-1', url: realPageUrl, title: 'Real Doc' }
+        ],
+        pendingRecords: {
+          'https://docs.google.com/document/d/abc/edit?tab=t.0': {
+            url: realPageUrl,
+            title: 'Real Doc'
+          }
+        }
+      });
+
+      await observer.syncPendingSaves();
+
+      // The tile was NOT prepended (the real doc is already in the list)
+      expect(prependOptimisticPage).not.toHaveBeenCalled();
+      // The stale pending record was removed from storage
+      expect(storage.remove).toHaveBeenCalledWith(PENDING_SAVES_KEY);
+    });
+
+    it('prepends the tile when the real page is not yet in the store', async () => {
+      const pendingUrl = 'https://example.com/pending';
+      const { observer, storage, prependOptimisticPage } = createHarness({
+        existingPages: [],
+        pendingRecords: {
+          'https://example.com/pending': {
+            url: pendingUrl,
+            title: 'Pending Page'
+          }
+        }
+      });
+
+      await observer.syncPendingSaves();
+
+      expect(prependOptimisticPage).toHaveBeenCalledTimes(1);
+      expect(storage.remove).not.toHaveBeenCalled();
+    });
+
+    it('does not match optimistic tiles as "real pages" (avoids clearing too early)', async () => {
+      // An optimistic tile in the store doesn't count as "the real doc arrived"
+      const pendingUrl = 'https://example.com/still-pending';
+      const { observer, prependOptimisticPage } = createHarness({
+        existingPages: [
+          { id: 'optimistic:xyz', url: pendingUrl, optimistic: true }
+        ],
+        pendingRecords: {
+          'https://example.com/still-pending': {
+            url: pendingUrl,
+            title: 'Still Pending'
+          }
+        }
+      });
+
+      await observer.syncPendingSaves();
+
+      // Tile IS prepended — the existing entry was optimistic, not a real doc
+      expect(prependOptimisticPage).toHaveBeenCalledTimes(1);
     });
   });
 });
