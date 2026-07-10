@@ -10,6 +10,7 @@
 
 import { readAllBookmarks } from './bookmark-reader.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
+import { createDialogLifecycle } from './dialog-lifecycle.js';
 
 const STEP = { PREVIEW: 'preview', PROGRESS: 'progress', RESULT: 'result' };
 
@@ -32,24 +33,14 @@ export function createImportPanel({
   const getDialog = () => queryId('import-panel-dialog');
   let state = { step: STEP.PREVIEW, bookmarks: null, total: 0, skipped: 0, result: null, error: null };
 
-  function close() {
-    const bd = getBackdrop();
-    const dl = getDialog();
-    bd?.classList.add('hidden');
-    bd?.setAttribute('aria-hidden', 'true');
-    dl?.classList.add('hidden');
-    dl?.replaceChildren();
-    state = { step: STEP.PREVIEW, bookmarks: null, total: 0, skipped: 0, result: null, error: null };
-  }
-
-  function show() {
-    const bd = getBackdrop();
-    const dl = getDialog();
-    bd?.classList.remove('hidden');
-    bd?.setAttribute('aria-hidden', 'false');
-    dl?.classList.remove('hidden');
-    if (bd) bd.onclick = close;
-  }
+  const { show, close } = createDialogLifecycle({
+    getBackdrop,
+    getDialog,
+    documentObj,
+    onClose: () => {
+      state = { step: STEP.PREVIEW, bookmarks: null, total: 0, skipped: 0, result: null, error: null };
+    }
+  });
 
   function el(tag, { className, text, html, attrs, onClick, children } = {}) {
     const node = documentObj.createElement(tag);

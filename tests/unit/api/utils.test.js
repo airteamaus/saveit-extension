@@ -66,21 +66,23 @@ describe('API - Utility Functions', () => {
       });
     });
 
-    it('should normalize legacy top-level pagination fields', () => {
+    it('should ignore unsupported top-level pagination fields', () => {
+      // The backend emits pagination inside a `pagination` block. Legacy
+      // top-level total/hasMore are no longer normalized — verify they are
+      // ignored rather than partially honored.
       const data = {
         pages: [{ id: '1' }, { id: '2' }],
         total: 410,
-        hasMore: true,
-        nextCursor: 'page-2'
+        hasMore: true
       };
 
       const result = API._normalizeResponse(data);
 
       expect(result.pages).toEqual(data.pages);
       expect(result.pagination).toEqual({
-        total: 410,
-        hasNextPage: true,
-        nextCursor: 'page-2'
+        total: 2,
+        hasNextPage: false,
+        nextCursor: null
       });
     });
 

@@ -73,15 +73,11 @@ function normalizePagination(data) {
     : null;
   const normalizedTotal = typeof rawPagination?.total === 'number'
     ? rawPagination.total
-    : (typeof data?.total === 'number' ? data.total : null);
+    : null;
   const normalizedHasNextPage = rawPagination?.hasNextPage === true
-    || rawPagination?.has_more === true
-    || data?.hasMore === true
-    || data?.has_more === true;
+    || rawPagination?.has_more === true;
   const normalizedNextCursor = rawPagination?.nextCursor
     ?? rawPagination?.next_cursor
-    ?? data?.nextCursor
-    ?? data?.next_cursor
     ?? null;
 
   return {

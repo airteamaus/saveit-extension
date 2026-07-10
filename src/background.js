@@ -11,6 +11,7 @@ import { createLogger, getSafePageContext } from './telemetry.js';
 import { capturePageContent } from './page-capture-injector.js';
 import { addPendingSave, clearPendingSave } from './pending-saves.js';
 import { createSavePoll } from './save-poll.js';
+import { parseErrorResponse } from './api-core.js';
 
 const logger = createLogger('background');
 const authLogger = createLogger('background-auth');
@@ -174,11 +175,6 @@ const toolbarProjectsStore = new ProjectsStore({
   }
 });
 
-async function parseApiError(response) {
-  const errorData = await response.json().catch(() => null);
-  return errorData?.error || errorData?.message || response.statusText || `HTTP ${response.status}`;
-}
-
 async function fetchBackgroundApi(path = '', { method = 'GET', body, params } = {}) {
   const { idToken } = await getAuthenticatedSession();
   const headers = {
@@ -214,7 +210,7 @@ async function fetchBackgroundApi(path = '', { method = 'GET', body, params } = 
   });
 
   if (!response.ok) {
-    throw new Error(await parseApiError(response));
+    throw new Error(await parseErrorResponse(response));
   }
 
   // Sliding session refresh: the backend rotates the token inline once it

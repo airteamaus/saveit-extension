@@ -7,11 +7,13 @@
 // cache — this directly addresses the class of bug where a project "looks
 // shared" to the owner but never reaches a colleague.
 //
-// Built as a sibling surface to import-panel.js: reuses the same dialog chrome
-// (.project-editor-backdrop / .project-editor-dialog, .hidden toggle) and the
-// same open/close lifecycle (backdrop click + Escape + close button).
+// Built as a sibling surface to import-panel.js: shares the same dialog chrome
+// (.project-editor-backdrop / .project-editor-dialog, .hidden toggle) and
+// open/close lifecycle (backdrop click + Escape + close button) via
+// dialog-lifecycle.js.
 
 import { isOwnedProject } from './project-manager-state.js';
+import { createDialogLifecycle } from './dialog-lifecycle.js';
 
 export function createSharingCentre({
   api,
@@ -32,6 +34,15 @@ export function createSharingCentre({
 
   let state = { loading: false, error: null, projects: [], usedFallback: false };
 
+  const { show, close } = createDialogLifecycle({
+    getBackdrop,
+    getDialog,
+    documentObj,
+    onClose: () => {
+      state = { loading: false, error: null, projects: [], usedFallback: false };
+    }
+  });
+
   function el(tag, { className, text, attrs, onClick, children } = {}) {
     const node = documentObj.createElement(tag);
     if (className) node.className = className;
@@ -42,31 +53,6 @@ export function createSharingCentre({
     if (onClick) node.onclick = onClick;
     if (children) node.append(...children);
     return node;
-  }
-
-  function close() {
-    const backdrop = getBackdrop();
-    const dialog = getDialog();
-    backdrop?.classList.add('hidden');
-    backdrop?.setAttribute('aria-hidden', 'true');
-    dialog?.classList.add('hidden');
-    dialog?.replaceChildren();
-    state = { loading: false, error: null, projects: [], usedFallback: false };
-  }
-
-  function show() {
-    const backdrop = getBackdrop();
-    const dialog = getDialog();
-    backdrop?.classList.remove('hidden');
-    backdrop?.setAttribute('aria-hidden', 'false');
-    dialog?.classList.remove('hidden');
-    if (backdrop) backdrop.onclick = close;
-  }
-
-  function escapeKeyListener(event) {
-    if (event.key === 'Escape' && !getDialog()?.classList.contains('hidden')) {
-      close();
-    }
   }
 
   function audienceLabel(project) {
@@ -257,13 +243,6 @@ export function createSharingCentre({
       state.loading = false;
       render();
     }
-  }
-
-  // Escape closes the centre. Bound once on the document; the handler no-ops
-  // when the dialog isn't visible. Guarded so test fixtures with a stub
-  // document don't blow up at construction time.
-  if (typeof documentObj?.addEventListener === 'function') {
-    documentObj.addEventListener('keydown', escapeKeyListener);
   }
 
   return { open, close };
