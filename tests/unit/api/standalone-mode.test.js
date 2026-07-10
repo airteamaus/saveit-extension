@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createApiTestHarness } from './test-api-harness.js';
 
-// Mock debug function
-globalThis.debug = vi.fn();
-
 // Mock global MOCK_DATA
 globalThis.MOCK_DATA = [
   {
@@ -185,10 +182,13 @@ describe('API - Standalone Mode Methods', () => {
       expect(results.related_matches).toHaveLength(0);
     });
 
-    it('should call debug with search query', () => {
+    it('should log the search query via debug', () => {
+      // debug() delegates to console.log when enableDebugLogging is true.
+      const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
       API._mockSemanticTagSearch('test');
 
-      expect(debug).toHaveBeenCalledWith('Mock semantic search for:', 'test');
+      expect(logSpy).toHaveBeenCalledWith('Mock semantic search for:', 'test');
+      logSpy.mockRestore();
     });
   });
 

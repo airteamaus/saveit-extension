@@ -1,5 +1,7 @@
 // api-core.js - Core API runtime, auth, transport, and cache helpers
 
+// api-core.js - Core API runtime, auth, transport, and cache helpers
+
 import { CacheManager } from './cache-manager.js';
 import {
   CONFIG as defaultConfig,
@@ -11,6 +13,28 @@ import {
   getCurrentUserId as getSessionUserId,
   setSession
 } from './session-store.js';
+
+// Parse a non-ok fetch Response into a human-readable error string. Extracted
+// as a standalone so background.js's lean fetch path can reuse it without
+// constructing the full API facade. The instance method below delegates here.
+export async function parseErrorResponse(response) {
+  try {
+    const data = await response.json();
+    return data.message || data.error || `HTTP ${response.status}`;
+  } catch {
+    if (typeof response.text === 'function') {
+      try {
+        const text = (await response.text()).trim();
+        if (text) {
+          return text;
+        }
+      } catch {
+        // Fall through to status text fallback.
+      }
+    }
+    return response.statusText || `HTTP ${response.status}`;
+  }
+}
 
 export function applyApiCore(API, dependencies = {}) {
   const {
@@ -163,22 +187,7 @@ export function applyApiCore(API, dependencies = {}) {
     },
 
     async parseErrorResponse(response) {
-      try {
-        const data = await response.json();
-        return data.message || data.error || `HTTP ${response.status}`;
-      } catch {
-        if (typeof response.text === 'function') {
-          try {
-            const text = (await response.text()).trim();
-            if (text) {
-              return text;
-            }
-          } catch {
-            // Fall through to status text fallback.
-          }
-        }
-        return response.statusText || `HTTP ${response.status}`;
-      }
+      return parseErrorResponse(response);
     },
 
     async getIdToken() {

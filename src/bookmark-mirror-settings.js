@@ -7,7 +7,6 @@
 //   {
 //     enabled: bool,                       // mirror toggle (off by default)
 //     rootFolderId: string | null,         // Buckley's/ folder id once created
-//     unfiledFolderId: string | null,      // Buckley's/Unfiled/ folder id
 //     projectFolders: { [projectId]: { id, name } },
 //     ownership: { [saveItPageId]: [{ projectId: string|null, bookmarkId: string }] },
 //     lastFullReconcileAt: number | null   // epoch ms; gates the HEAD short-circuit
@@ -19,7 +18,6 @@ export function getDefaultMirrorState() {
   return {
     enabled: false,
     rootFolderId: null,
-    unfiledFolderId: null, // legacy, kept for migration; unused by the bucket model
     projectFolders: {},
     domainFolders: {},
     ownership: {},

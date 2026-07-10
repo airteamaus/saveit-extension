@@ -1,6 +1,8 @@
 // cache-manager.js - Browser storage cache management
 // Handles user-isolated caching with expiration and validation
 
+import { SAVED_PAGES_CACHE_PREFIX } from './cache-keys.js';
+
 function debugLog(...args) {
   if (typeof globalThis.debug === 'function') {
     globalThis.debug(...args);
@@ -37,7 +39,9 @@ export class CacheManager {
     this.getCurrentUserId = getCurrentUserId;
     this.getStorage = getStorage;
     this.getBootstrapUserId = options.getBootstrapUserId || (async () => null);
-    this.CACHE_KEY_PREFIX = 'savedPages_cache';
+    // Each surface (saved pages, projects) gets its own prefix so cache keys
+    // match their query shape and invalidation can be narrow.
+    this.CACHE_KEY_PREFIX = options.keyPrefix || SAVED_PAGES_CACHE_PREFIX;
     this.CACHE_MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
   }
 
@@ -281,7 +285,7 @@ export class CacheManager {
       if (!storage) return;
 
       // Remove old global cache key
-      const legacyKey = 'savedPages_cache';
+      const legacyKey = SAVED_PAGES_CACHE_PREFIX;
       const keysToRemove = [legacyKey];
       if (userId) {
         keysToRemove.push(`${this.CACHE_KEY_PREFIX}_${userId}`);

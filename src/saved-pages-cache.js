@@ -1,4 +1,4 @@
-const SAVED_PAGES_CACHE_PREFIX = 'savedPages_cache';
+import { SAVED_PAGES_CACHE_PREFIX } from './cache-keys.js';
 
 export function getSavedPagesCacheKeys(storageEntries = {}) {
   return Object.keys(storageEntries).filter(key => (

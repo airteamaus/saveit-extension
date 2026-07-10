@@ -5,6 +5,7 @@ import {
 import { reconcileKeyedChildren } from './keyed-dom-list.js';
 import {
   escapeHtml,
+  getFaviconUrlForDomain,
   getPageDomain,
   renderPageTags,
   truncateText
@@ -143,7 +144,7 @@ export function renderDrawerCardMarkup(page, {
     <article class="saved-pages-drawer-card" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
       <div class="saved-pages-drawer-card-header">
         <div class="saved-pages-drawer-card-heading">
-          ${domain ? `<img class="saved-pages-drawer-card-favicon" src="https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico" alt="" width="18" height="18">` : ''}
+          ${domain ? `<img class="saved-pages-drawer-card-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="18" height="18">` : ''}
           <h3 class="saved-pages-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
         </div>
         <div class="saved-pages-drawer-card-actions">

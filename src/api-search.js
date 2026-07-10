@@ -1,5 +1,7 @@
 // api-search.js - Semantic tag, similar-items, and content search helpers
 
+import { debug } from './config.js';
+
 function getPageTags(page, lowercase = false) {
   const tags = [];
   if (page.classifications) {
@@ -40,7 +42,7 @@ function mockSemanticTagSearch(label) {
     related_matches: []
   };
 
-  MOCK_DATA.forEach(page => {
+  globalThis.MOCK_DATA.forEach(page => {
     const pageTags = getPageTags(page);
     const similarity = calculateTagSimilarity(pageTags, label);
 
@@ -64,7 +66,7 @@ function mockSemanticTagSearch(label) {
 
 function mockSimilarByThingId(thingId, limit, offset) {
   debug('Mock similar search for thing:', thingId);
-  const sourceThing = MOCK_DATA.find(page => page.id === thingId);
+  const sourceThing = globalThis.MOCK_DATA.find(page => page.id === thingId);
   if (!sourceThing) {
     return {
       results: [],
@@ -74,7 +76,7 @@ function mockSimilarByThingId(thingId, limit, offset) {
   }
 
   const sourceTags = getPageTags(sourceThing, true);
-  const similar = MOCK_DATA
+  const similar = globalThis.MOCK_DATA
     .filter(page => page.id !== thingId)
     .map(page => {
       const pageTags = getPageTags(page, true);
@@ -111,7 +113,7 @@ function mockSearchContent(query, limit, offset, threshold) {
   debug('Mock content search for:', query);
   const queryLower = query.toLowerCase();
 
-  const scored = MOCK_DATA
+  const scored = globalThis.MOCK_DATA
     .filter(page => !page.deleted)
     .map(page => {
       let score = 0;
