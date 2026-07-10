@@ -154,7 +154,7 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 | Task | Command |
 |---|---|
 | Pre-deploy checks | `just pre-deploy` |
-| Deploy staging | `just deploy-staging VERSION` |
+| Deploy staging | `just deploy-staging` |
 | Deploy production | `just deploy-prod` |
 | Bump version and tag | `just bump [patch\|minor\|major]` |
 | Setup git hooks | `just setup-hooks` |

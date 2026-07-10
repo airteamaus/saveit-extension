@@ -152,13 +152,18 @@ setup-hooks:
 clear-cache:
     ./scripts/clear-firefox-cache.sh
 
-# Deploy to staging (beta version)
-deploy-staging version:
-    @echo "Deploying v{{version}}-beta.1 to staging..."
-    npm version {{version}}-beta.1
-    git push origin main --tags
+# Deploy to staging (bumps patch version, tags, and pushes to trigger release)
+#
+# Firefox manifest versions must be dot-separated numbers (e.g. 1.21.2) —
+# semver pre-release suffixes like -beta.1 are rejected (VERSION_FORMAT_INVALID).
+# So a staging deploy is just a patch bump, which bump-version.js applies to
+# both manifest.json and package.json, commits, updates the changelog, and tags.
+deploy-staging:
+    @echo "Bumping patch version for staging deploy..."
+    @node scripts/bump-version.js patch
+    @git push origin main --tags
     @echo "✅ Staging deployment triggered!"
-    @echo "Monitor: https://github.com/your-repo/actions"
+    @echo "Monitor: https://github.com/airteamaus/saveit-extension/actions"
 
 # Promote staging to production
 deploy-prod:
