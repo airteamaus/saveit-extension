@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **capture:** fall back to innerText when Readability finds no article (41ce98d)
+
+### 🐛 Bug Fixes
+
+- **sidebar:** bind synchronous current user so ownership resolves (abeb051)
+
+## [1.20.5] - 2026-07-09
+
 ### 🐛 Bug Fixes
 
 - **sidebar:** bind synchronous current user so ownership resolves (1a65934)
@@ -93,15 +103,6 @@ No notable changes.
 ### ✨ Features
 
 - **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
-
-### 🐛 Bug Fixes
-
-- **mirror:** create SaveIt/ under a writable container, not the immovable root (0f78e60)
-
-## [1.18.6] - 2026-07-07
-
-### ✨ Features
-
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
 - **sharing:** add Sharing centre, ownership-based sidebar, real cache refresh (df82bd9)
@@ -171,7 +172,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **mirror:** create SaveIt/ under a writable container, not the immovable root (ffeb6a7)
+- **mirror:** create SaveIt/ under a writable container, not the immovable root (0f78e60)
 - **mirror:** send saved-pages params as query string, not GET body (e57f8c8)
 - **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
 - **sync:** align freshness anchor with list ordering (dc6e681)
