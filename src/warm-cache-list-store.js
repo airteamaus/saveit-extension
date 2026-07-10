@@ -168,7 +168,12 @@ export class WarmCacheListStore {
         limit: this.options.prefetchBatchLimit,
         cursor,
         skipCache: true
-      }))
+      })),
+      // Called with [url, ...] when optimistic tiles are reconciled (the real
+      // doc arrived and replaced the synthetic tile). The caller uses this to
+      // clear stale pending-save records from storage.local. Optional — if not
+      // provided, reconciliation still drops the tile from the in-memory list.
+      onOptimisticReconciled: options.onOptimisticReconciled || null
     };
     this.state = createInitialState();
     this.events = new EventTarget();
@@ -619,12 +624,20 @@ export class WarmCacheListStore {
       return false;
     }
 
-    const nextPages = this.reconcilePages(response.pages, { preserveExistingCoverage });
+    const { pages: nextPages, reconciledOptimisticUrls } =
+      this.reconcilePages(response.pages, { preserveExistingCoverage });
     const nextPagination = this.reconcilePagination(response.pagination, nextPages, {
       preserveExistingCoverage
     });
 
     this.replaceData(nextPages, nextPagination, { requestId, dataState });
+
+    // If optimistic tiles were resolved (real docs arrived), notify the caller
+    // so it can clear the corresponding pending-save records from storage.
+    if (reconciledOptimisticUrls.length > 0 && this.options.onOptimisticReconciled) {
+      this.options.onOptimisticReconciled(reconciledOptimisticUrls);
+    }
+
     return true;
   }
 
@@ -708,24 +721,34 @@ export class WarmCacheListStore {
     const incomingUrls = new Set(
       normalizedIncomingPages.map(p => p?.url).filter(Boolean)
     );
+
+    // Track which optimistic tiles are being resolved (real doc arrived) so
+    // the caller can clear the corresponding pending-save records.
+    const reconciledOptimisticUrls = this.state.allPages
+      .filter(p => p.optimistic === true && incomingUrls.has(p.url))
+      .map(p => p.url);
+
     const survivingOptimistic = this.state.allPages.filter(
       p => p.optimistic === true && !incomingUrls.has(p.url)
     );
 
+    let pages;
     if (!preserveExistingCoverage || this.state.allPages.length <= normalizedIncomingPages.length) {
       // Full replace, but keep optimistic tiles whose real doc hasn't arrived
       // yet (the incoming list may be a refresh that predates enrichment).
       // Tiles are prepended: they carry the newest saved_at, so they belong
       // above the incoming newest-first list.
-      return [...survivingOptimistic, ...normalizedIncomingPages];
+      pages = [...survivingOptimistic, ...normalizedIncomingPages];
+    } else {
+      const merged = mergeListPages(normalizedIncomingPages, this.state.allPages, this.options.maxItems);
+      // mergeListPages dedupes by id and preserves existing coverage; re-apply
+      // the optimistic reconciliation so superseded tiles are stripped here too.
+      pages = merged.filter(
+        p => !(p.optimistic === true && incomingUrls.has(p.url))
+      );
     }
 
-    const merged = mergeListPages(normalizedIncomingPages, this.state.allPages, this.options.maxItems);
-    // mergeListPages dedupes by id and preserves existing coverage; re-apply
-    // the optimistic reconciliation so superseded tiles are stripped here too.
-    return merged.filter(
-      p => !(p.optimistic === true && incomingUrls.has(p.url))
-    );
+    return { pages, reconciledOptimisticUrls };
   }
 
   reconcilePagination(pagination, pages, { preserveExistingCoverage = false } = {}) {
@@ -808,32 +831,6 @@ export class WarmCacheListStore {
     const nextPages = [{ ...page, optimistic: true }, ...withoutExisting];
     await this.setPages(nextPages, {
       total: this.state.total,
-      hasNextPage: this.state.hasNextPage,
-      nextCursor: this.state.nextCursor
-    }, { requestId });
-    return this.getSnapshot();
-  }
-
-  // Remove an optimistic tile by url. Used during reconciliation when the real
-  // (enriched) doc has arrived — the real doc has a different (server) id, so
-  // the synthetic-id tile won't be auto-removed by a list replace. Matching is
-  // by normalized url via the optimistic id prefix, which encodes the url.
-  async removeOptimisticPageByUrl(url, { requestId = this.state.requestId } = {}) {
-    if (!url) {
-      return this.getSnapshot();
-    }
-
-    const nextPages = this.state.allPages.filter(p => !(
-      p.optimistic === true && p.url === url
-    ));
-    if (nextPages.length === this.state.allPages.length) {
-      return this.getSnapshot(); // nothing to remove
-    }
-    const nextTotal = typeof this.state.total === 'number'
-      ? Math.max(0, this.state.total - 1)
-      : this.state.total;
-    await this.setPages(nextPages, {
-      total: nextTotal,
       hasNextPage: this.state.hasNextPage,
       nextCursor: this.state.nextCursor
     }, { requestId });
@@ -1083,9 +1080,14 @@ export class WarmCacheListStore {
       return;
     }
 
+    // Optimistic tiles are ephemeral — they exist only to bridge the gap
+    // between save and enrichment. Persisting them to the warm cache would
+    // serve unenriched placeholders on cold starts, so strip them here.
+    const realPages = this.state.allPages.filter(p => p.optimistic !== true);
+
     await this.api.setCachedPages(
       buildListCachePayload(
-        this.state.allPages,
+        realPages,
         {
           total: this.state.total,
           hasNextPage: this.state.hasNextPage,

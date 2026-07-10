@@ -101,14 +101,6 @@ export async function clearPendingSave(storage, url) {
   }
 }
 
-// Remove all pending saves.
-export async function clearPendingSaves(storage) {
-  if (!storage?.remove) {
-    return;
-  }
-  await storage.remove(PENDING_SAVES_KEY);
-}
-
 // Build a renderer-safe optimistic page object from a pending record. The
 // resulting object has every field the drawer card reads, with null/empty
 // defaults for the enrichment-only fields (AI summary, classifications,

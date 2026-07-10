@@ -99,12 +99,14 @@ export function createDrawerCacheInvalidationObserver({
 
   // Read pending-save records and render each as an optimistic tile. Called on
   // newtab load (so tiles appear even when newtab wasn't open at save time) and
-  // whenever the pending-saves key changes. Tiles are reconciled to real docs
-  // by the background poll (which clears the record + invalidates the cache).
+  // whenever the pending-saves key changes.
   //
-  // If the real doc has already arrived in the store (e.g. the poll gave up but
-  // enrichment completed later via a different path), the pending record is
-  // stale — clear it instead of re-adding a ghost tile that would never resolve.
+  // Primary cleanup: when the real doc arrives, the store's reconcilePages
+  // reports the resolved URL via onOptimisticReconciled, which clears the
+  // pending record from storage. This backstop handles records that survive
+  // across newtab loads (e.g. the poll gave up, the doc arrived via a
+  // different path) — if the real doc is already in the store, clear the
+  // stale record instead of re-adding a ghost tile.
   async function syncPendingSaves() {
     if (!getCurrentUser()) {
       return;

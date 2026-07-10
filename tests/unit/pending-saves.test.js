@@ -5,7 +5,6 @@ import {
   addPendingSave,
   getPendingSaves,
   clearPendingSave,
-  clearPendingSaves,
   buildOptimisticPage
 } from '../../src/pending-saves.js';
 
@@ -114,15 +113,6 @@ describe('pending-saves storage', () => {
     const records = await getPendingSaves(storage);
     expect(Object.keys(records)).toHaveLength(1);
     expect(Object.values(records)[0].url).toBe('https://b.com/2');
-  });
-
-  it('clears all pending saves', async () => {
-    await addPendingSave(storage, { url: 'https://a.com/1', title: 'A', saved_at: '2026-07-09T10:00:00.000Z' });
-
-    await clearPendingSaves(storage);
-
-    const records = await getPendingSaves(storage);
-    expect(records).toEqual({});
   });
 });
 

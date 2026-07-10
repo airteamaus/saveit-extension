@@ -2,6 +2,7 @@ import { createNewtabAuthController } from './newtab-auth.js';
 import { createImportPanel } from './import-panel.js';
 import { createSharingCentre } from './sharing-centre.js';
 import { createToastRegion } from './toast.js';
+import { clearPendingSave } from './pending-saves.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -138,7 +139,22 @@ export function createNewtabApp({
   const toast = createToastRegion({ container: elements.toastRegion, documentObj });
 
   const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn }, { notify: toast.show });
-  const savedPagesStore = createSavedPagesStoreFn(API);
+
+  // When the store reconciles an optimistic tile (the real doc arrived),
+  // clear the corresponding pending-save record so the stale tile doesn't
+  // reappear on the next newtab load. This is the single reliable cleanup
+  // point because it fires inside the store's data-replacement path.
+  const onOptimisticReconciled = (urls) => {
+    const browserApi = globalThis.browser ?? globalThis.chrome;
+    if (!browserApi?.storage?.local) {
+      return;
+    }
+    for (const url of urls) {
+      void clearPendingSave(browserApi.storage.local, url);
+    }
+  };
+
+  const savedPagesStore = createSavedPagesStoreFn(API, { onOptimisticReconciled });
   const projectsStore = createProjectsStoreFn(API);
 
   const updateSavedPagesFooter = createSavedPagesFooterUpdaterFn({

@@ -96,48 +96,25 @@ describe('WarmCacheListStore optimistic tiles', () => {
     expect(anchorId).not.toMatch(/^optimistic:/);
   });
 
-  it('removeOptimisticPageByUrl strips the matching optimistic tile by url', async () => {
-    const { store } = createStore();
+  it('persistWarmCache does not write optimistic tiles to the warm cache', async () => {
+    const { api, store } = createStore();
     await seed(store, [realPage(1)]);
     await store.prependOptimisticPage(optimisticPage('https://example.com/pending'));
 
-    await store.removeOptimisticPageByUrl('https://example.com/pending');
+    // Trigger a warm-cache persist. seed/prependOptimisticPage also persist,
+    // so check the last call's payload.
+    await store.persistWarmCache();
 
-    const snap = store.getSnapshot();
-    expect(snap.allPages.filter(p => p.optimistic)).toHaveLength(0);
-    // real page untouched
-    expect(snap.allPages.find(p => p.id === 'real-1')).toBeDefined();
-  });
-
-  it('removeOptimisticPageByUrl leaves real pages with the same url intact', async () => {
-    const { store } = createStore();
-    // a real page that happens to share the url with an optimistic tile
-    const real = { ...realPage(1), url: 'https://example.com/same' };
-    await seed(store, [real]);
-    await store.prependOptimisticPage(optimisticPage('https://example.com/same'));
-
-    await store.removeOptimisticPageByUrl('https://example.com/same');
-
-    const snap = store.getSnapshot();
-    expect(snap.allPages.filter(p => p.optimistic)).toHaveLength(0);
-    // the real page survives (only optimistic:true tiles are removed)
-    expect(snap.allPages.find(p => p.id === 'real-1')).toBeDefined();
-  });
-
-  it('removeOptimisticPageByUrl is a no-op when nothing matches', async () => {
-    const { store } = createStore();
-    await seed(store, [realPage(1)]);
-
-    const before = store.getSnapshot().allPages;
-    await store.removeOptimisticPageByUrl('https://example.com/nope');
-    const after = store.getSnapshot().allPages;
-
-    expect(after).toEqual(before);
+    expect(api.setCachedPages).toHaveBeenCalled();
+    const payload = api.setCachedPages.mock.calls.at(-1)[0];
+    const cachedUrls = payload.pages.map(p => p.url);
+    expect(cachedUrls).toContain('https://example.com/1');
+    expect(cachedUrls).not.toContain('https://example.com/pending');
   });
 });
 
 describe('WarmCacheListStore optimistic reconciliation on fetch', () => {
-  function createStore() {
+  function createStore({ onOptimisticReconciled } = {}) {
     const api = {
       isExtension: true,
       getCachedPages: vi.fn(async () => null),
@@ -148,6 +125,7 @@ describe('WarmCacheListStore optimistic reconciliation on fetch', () => {
       prefetchBatchLimit: 100,
       warmCacheScope: { surface: 'test' },
       getList: vi.fn(),
+      onOptimisticReconciled,
       buildInitialFetchOptions: () => ({ limit: 50, sort: 'newest' }),
       buildUpdateCheckOptions: (latestKnownId) => ({ sort: 'newest', latestKnownId })
     });
@@ -199,5 +177,40 @@ describe('WarmCacheListStore optimistic reconciliation on fetch', () => {
     expect(snap.allPages.filter(p => p.optimistic)).toHaveLength(0);
     expect(snap.allPages.find(p => p.id === 'real-enriched')).toBeDefined();
     expect(snap.allPages.find(p => p.id === 'real-enriched').ai_summary_brief).toBe('summary');
+  });
+
+  it('calls onOptimisticReconciled with the resolved URL when the real doc arrives', async () => {
+    const onOptimisticReconciled = vi.fn();
+    const { store } = createStore({ onOptimisticReconciled });
+    await store.setPages(
+      [{ id: 'real-1', url: 'https://example.com/1', saved_at: '2026-07-09T10:00:00.000Z', pinned: false }],
+      { total: 1, hasNextPage: false, nextCursor: null }
+    );
+    await store.prependOptimisticPage(optimisticPage('https://example.com/reconciled'));
+
+    // real doc arrives — should trigger the callback
+    await applyList(store, [
+      { id: 'real-r', url: 'https://example.com/reconciled', saved_at: '2026-07-09T11:00:00.000Z', pinned: false },
+      { id: 'real-1', url: 'https://example.com/1', saved_at: '2026-07-09T10:00:00.000Z', pinned: false }
+    ]);
+
+    expect(onOptimisticReconciled).toHaveBeenCalledTimes(1);
+    expect(onOptimisticReconciled).toHaveBeenCalledWith(['https://example.com/reconciled']);
+  });
+
+  it('does NOT call onOptimisticReconciled when no optimistic tiles are resolved', async () => {
+    const onOptimisticReconciled = vi.fn();
+    const { store } = createStore({ onOptimisticReconciled });
+    await store.setPages(
+      [{ id: 'real-1', url: 'https://example.com/1', saved_at: '2026-07-09T10:00:00.000Z', pinned: false }],
+      { total: 1, hasNextPage: false, nextCursor: null }
+    );
+
+    // no optimistic tiles at all
+    await applyList(store, [
+      { id: 'real-1', url: 'https://example.com/1', saved_at: '2026-07-09T10:00:00.000Z', pinned: false }
+    ]);
+
+    expect(onOptimisticReconciled).not.toHaveBeenCalled();
   });
 });

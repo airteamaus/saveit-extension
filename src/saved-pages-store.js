@@ -17,6 +17,7 @@ export class SavedPagesStore extends WarmCacheListStore {
       // store eagerly prefetch — which surfaces the warming UI on every load.
       lazy: options.lazy === true,
       warmCacheScope: options.warmCacheScope || null,
+      onOptimisticReconciled: options.onOptimisticReconciled || null,
       getList: fetchOptions => api?.getSavedPages?.(fetchOptions),
       getIncrementalList: fetchOptions => api?.getSavedPages?.(fetchOptions),
       checkForUpdates: fetchOptions => api?.checkSavedPagesUpdates?.(fetchOptions),

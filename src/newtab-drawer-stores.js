@@ -29,7 +29,7 @@ function buildDomainWarmCacheScope(domain) {
   };
 }
 
-export function createSavedPagesStore(api) {
+export function createSavedPagesStore(api, { onOptimisticReconciled } = {}) {
   return new SavedPagesStore(api, {
     initialFetchLimit: DRAWER_INITIAL_FETCH_LIMIT,
     prefetchBatchLimit: 100,
@@ -37,7 +37,8 @@ export function createSavedPagesStore(api) {
     // The All-pages view renders a windowed slice and fetches further pages on
     // scroll, so the store must not eagerly drain the whole collection.
     lazy: true,
-    warmCacheScope: DRAWER_WARM_CACHE_SCOPE
+    warmCacheScope: DRAWER_WARM_CACHE_SCOPE,
+    onOptimisticReconciled
   });
 }
 
