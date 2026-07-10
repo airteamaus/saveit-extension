@@ -27,9 +27,23 @@ export function truncateContent(content) {
   return trimmed.slice(0, MAX_CONTENT_CHARS);
 }
 
+// Readability found no article (app shells, dashboards, Drive). Fall back to
+// the rendered text the user actually sees, after stripping nav/footer chrome
+// so UI strings don't dominate the signal. Returns null if the page has no
+// meaningful body text. Operates on a clone so the live document is untouched.
+export function extractFallbackText(document) {
+  const clone = document.cloneNode(true);
+  clone.querySelectorAll(
+    'script, style, nav, footer, header, aside, [role="navigation"], [role="banner"], [role="contentinfo"]'
+  ).forEach((el) => el.remove());
+  const text = clone.body?.innerText?.trim();
+  return text || null;
+}
+
 // Build the client object from a document. Returns capture_method 'readability'
-// when Readability finds an article, or 'none' when it returns null (dashboards,
-// app shells). No heuristic fallback — 'none' is the honest signal.
+// when Readability finds an article, 'fallback' when no article is found but
+// the page has meaningful rendered text (app shells, dashboards), or 'none'
+// when there is no usable text at all.
 export function buildClientObject(document) {
   // Meta extraction (independent of Readability — works even on non-articles)
   const metaTitle = readMeta(document, 'meta[property="og:title"]')
@@ -58,8 +72,27 @@ export function buildClientObject(document) {
   }
 
   if (!article || !article.textContent || !article.textContent.trim()) {
-    // No article found. capture_method 'none' is the visible signal — no
-    // heuristic masking. Meta fields are still returned where available.
+    // Readability found no article. Try the innerText fallback before giving
+    // up — app-like pages (Drive, Plex, dashboards) often have rich rendered
+    // text that is worth summarizing even though it isn't an article.
+    const fallbackText = extractFallbackText(document);
+    if (fallbackText) {
+      return {
+        title: metaTitle || document.title || '',
+        description: metaDescription || '',
+        content: truncateContent(fallbackText),
+        excerpt: null,
+        byline,
+        site_name: siteName,
+        image,
+        published_time: publishedTime,
+        lang,
+        captured_at: new Date().toISOString(),
+        capture_method: 'fallback'
+      };
+    }
+
+    // No article and no meaningful body text — honest 'none' signal.
     return {
       title: metaTitle || document.title || '',
       description: metaDescription || '',
