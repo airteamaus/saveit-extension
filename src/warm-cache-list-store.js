@@ -822,6 +822,12 @@ export class WarmCacheListStore {
   // anchor selection — a synthetic optimistic id must never become the
   // incremental-sync anchor the backend won't recognize. Dedupes by id so a
   // re-save of the same URL replaces rather than stacks.
+  //
+  // Does NOT persist to the warm cache. Optimistic tiles are ephemeral —
+  // persisting them would overwrite the real-pages cache with a single-tile
+  // state (especially when the store hasn't hydrated yet, which would nuke
+  // the entire cache). The warm cache is only written when real server data
+  // arrives via applyResponse/replaceData.
   async prependOptimisticPage(page, { requestId = this.state.requestId } = {}) {
     if (!page?.id) {
       return this.getSnapshot();
@@ -829,7 +835,7 @@ export class WarmCacheListStore {
 
     const withoutExisting = this.state.allPages.filter(p => p.id !== page.id);
     const nextPages = [{ ...page, optimistic: true }, ...withoutExisting];
-    await this.setPages(nextPages, {
+    this.replaceData(nextPages, {
       total: this.state.total,
       hasNextPage: this.state.hasNextPage,
       nextCursor: this.state.nextCursor

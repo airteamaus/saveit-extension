@@ -101,8 +101,7 @@ describe('WarmCacheListStore optimistic tiles', () => {
     await seed(store, [realPage(1)]);
     await store.prependOptimisticPage(optimisticPage('https://example.com/pending'));
 
-    // Trigger a warm-cache persist. seed/prependOptimisticPage also persist,
-    // so check the last call's payload.
+    // Explicit persist — filter should strip the optimistic tile.
     await store.persistWarmCache();
 
     expect(api.setCachedPages).toHaveBeenCalled();
@@ -110,6 +109,20 @@ describe('WarmCacheListStore optimistic tiles', () => {
     const cachedUrls = payload.pages.map(p => p.url);
     expect(cachedUrls).toContain('https://example.com/1');
     expect(cachedUrls).not.toContain('https://example.com/pending');
+  });
+
+  it('prependOptimisticPage does NOT persist to the warm cache (regression)', async () => {
+    const { api, store } = createStore();
+    await seed(store, [realPage(1), realPage(2)]);
+
+    // Clear the mock calls from seed
+    api.setCachedPages.mockClear();
+
+    await store.prependOptimisticPage(optimisticPage('https://example.com/new'));
+
+    // prependOptimisticPage must not trigger a warm-cache write — otherwise
+    // adding a tile to an un-hydrated store would nuke the real-pages cache.
+    expect(api.setCachedPages).not.toHaveBeenCalled();
   });
 });
 
