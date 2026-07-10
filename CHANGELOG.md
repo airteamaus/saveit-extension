@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **cache:** prependOptimisticPage must not persist to warm cache (a022f74)
+- **cache:** clear stale pending-save records when real doc exists (9a57c82)
+
+### ♻️ Refactoring
+
+- **cache:** clean up optimistic tile lifecycle (a5f4708)
+
+## [1.20.6] - 2026-07-10
+
 ### ✨ Features
 
 - **capture:** fall back to innerText when Readability finds no article (41ce98d)
@@ -89,17 +100,6 @@ No notable changes.
 
 ## [1.19.1] - 2026-07-08
 
-### 🐛 Bug Fixes
-
-- **newtab:** hide the project sidebar while signed out (9c51831)
-- **newtab:** harden bootstrap against cold-start session loss (ed9b624)
-
-### ♻️ Refactoring
-
-- **auth:** centralise the first-auth-state race (f0b5092)
-
-## [1.19.0] - 2026-07-07
-
 ### ✨ Features
 
 - **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
@@ -172,6 +172,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **newtab:** hide the project sidebar while signed out (9c51831)
+- **newtab:** harden bootstrap against cold-start session loss (ed9b624)
 - **mirror:** create SaveIt/ under a writable container, not the immovable root (0f78e60)
 - **mirror:** send saved-pages params as query string, not GET body (e57f8c8)
 - **sidebar:** separate shared and private projects into a three-way split (fecbeb9)
@@ -257,6 +259,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- **auth:** centralise the first-auth-state race (f0b5092)
 - improve footer layout with grid-based alignment (c7f594f)
 - switch favicon provider from Google to DuckDuckGo (d2453c3)
 - consolidate card metadata into single row with inline tags (aa720f2)
