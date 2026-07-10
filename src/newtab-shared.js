@@ -7,6 +7,15 @@ export function getFaviconUrl(url) {
   }
 }
 
+// Build a favicon URL from a pre-resolved domain (e.g. from getPageDomain, which
+// prefers page.domain over a URL-parsed hostname). Escapes the domain because
+// page.domain is stored data that may not be URL-safe; getFaviconUrl doesn't
+// need to because new URL().hostname is already constrained.
+export function getFaviconUrlForDomain(domain) {
+  if (!domain) return null;
+  return `https://icons.duckduckgo.com/ip3/${escapeHtml(domain)}.ico`;
+}
+
 export function getPageDomain(page = {}) {
   if (page.domain) {
     return page.domain;

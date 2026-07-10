@@ -1,7 +1,6 @@
 import {
   WarmCacheListStore,
-  buildListCachePayload,
-  mergeListPages
+  buildListCachePayload
 } from './warm-cache-list-store.js';
 
 export function paginateFavorites(pages, pageSize, maxItems) {
@@ -15,8 +14,6 @@ export function paginateFavorites(pages, pageSize, maxItems) {
 
   return pagedFavorites;
 }
-
-export const mergeFavoritePages = mergeListPages;
 
 export function buildFavoritesCachePayload(pages, pagination, fromCache = false) {
   return buildListCachePayload(pages, pagination, fromCache);

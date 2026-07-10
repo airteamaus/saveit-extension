@@ -72,11 +72,7 @@ export const PageSchema = z.strictObject({
   ai_summary_extended: z.string().optional(),
   classifications: z.array(ClassificationSchema).optional(),
   primary_classification_label: z.string().optional(),
-  ai_enriched_at: z.iso.datetime().optional(),
-
-  // Legacy fields (from mock data, not in BigQuery)
-  author: z.string().optional(),
-  published_date: z.iso.datetime().optional()
+  ai_enriched_at: z.iso.datetime().optional()
 }); // z.strictObject fails on unknown fields
 
 /**
