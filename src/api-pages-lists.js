@@ -1,3 +1,4 @@
+import { debug } from './config.js';
 import {
   getMockFavorites,
   getMockPages

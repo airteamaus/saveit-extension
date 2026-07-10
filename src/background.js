@@ -12,6 +12,7 @@ import { capturePageContent } from './page-capture-injector.js';
 import { addPendingSave, clearPendingSave } from './pending-saves.js';
 import { createSavePoll } from './save-poll.js';
 import { parseErrorResponse } from './api-core.js';
+import { PROJECTS_CACHE_PREFIX, migrateProjectsCacheKeys } from './cache-keys.js';
 
 const logger = createLogger('background');
 const authLogger = createLogger('background-auth');
@@ -157,7 +158,8 @@ const toolbarProjectsCacheManager = new CacheManager(
   getBackgroundCurrentUserId,
   getBackgroundStorage,
   {
-    getBootstrapUserId: getBackgroundLastKnownUserId
+    getBootstrapUserId: getBackgroundLastKnownUserId,
+    keyPrefix: PROJECTS_CACHE_PREFIX
   }
 );
 
@@ -351,6 +353,9 @@ browserApi.runtime.onInstalled?.addListener(() => {
     if (state.enabled) {
       await runMirrorReconcile({ forceFull: true });
     }
+    // Evict projects keys written under the old savedPages_cache prefix before
+    // projects got their own namespace. No-op after the first run.
+    await migrateProjectsCacheKeys(browserApi.storage.local);
   })();
 });
 

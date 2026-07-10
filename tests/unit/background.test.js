@@ -326,7 +326,7 @@ describe('background startup', () => {
       storage: {
         local: {
           get: vi.fn(async (key) => {
-            if (key === 'savedPages_cache_user-123_surface=projects') {
+            if (key === 'projects_cache_user-123_surface=projects') {
               return {
                 [key]: {
                   userId: 'user-123',

@@ -1,7 +1,9 @@
+import { debug } from './config.js';
+
 export function getMockPages(options) {
   debug('[getSavedPages] Using mock data (standalone mode)');
-  const totalPages = globalThis.filterMockData(MOCK_DATA, { ...options, cursor: null });
-  const filteredPages = globalThis.filterMockData(MOCK_DATA, options);
+  const totalPages = globalThis.filterMockData(globalThis.MOCK_DATA, { ...options, cursor: null });
+  const filteredPages = globalThis.filterMockData(globalThis.MOCK_DATA, options);
 
   return {
     pages: filteredPages,
@@ -15,7 +17,7 @@ export function getMockPages(options) {
 }
 
 export function getMockFavorites(options = {}) {
-  const allPages = globalThis.filterMockData(MOCK_DATA, { ...options, cursor: null });
+  const allPages = globalThis.filterMockData(globalThis.MOCK_DATA, { ...options, cursor: null });
   const limit = options.limit || 300;
   const cursor = options.cursor || null;
   const startIndex = cursor
@@ -134,16 +136,17 @@ export function removeStandalonePageFromProject(projectId, pageId) {
 
 export function deleteStandalonePage(id) {
   debug('Mock delete:', id);
-  const index = MOCK_DATA.findIndex(page => page.id === id);
+  const data = globalThis.MOCK_DATA;
+  const index = data.findIndex(page => page.id === id);
   if (index !== -1) {
-    MOCK_DATA.splice(index, 1);
+    data.splice(index, 1);
   }
   return { success: true };
 }
 
 export function updateStandalonePage(id, updates) {
   debug('Mock update:', id, updates);
-  const page = MOCK_DATA.find(item => item.id === id);
+  const page = globalThis.MOCK_DATA.find(item => item.id === id);
   if (page) {
     Object.assign(page, updates);
     return page;
@@ -153,7 +156,7 @@ export function updateStandalonePage(id, updates) {
 
 export function pinStandalonePage(id, pinned) {
   debug('Mock pin:', id, pinned);
-  const page = MOCK_DATA.find(item => item.id === id);
+  const page = globalThis.MOCK_DATA.find(item => item.id === id);
   if (page) {
     page.pinned = pinned;
     return { success: true };

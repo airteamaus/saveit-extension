@@ -59,6 +59,20 @@ describe('CacheManager', () => {
       expect(cacheManager.getStorage).toBe(getStorage);
       expect(cacheManager.getBootstrapUserId).toBe(getBootstrapUserId);
     });
+
+    it('should default to the saved-pages prefix when no keyPrefix is given', () => {
+      expect(cacheManager.CACHE_KEY_PREFIX).toBe('savedPages_cache');
+    });
+
+    it('should use a custom keyPrefix when provided', () => {
+      const projectsManager = new CacheManager(getCurrentUserId, getStorage, {
+        getBootstrapUserId,
+        keyPrefix: 'projects_cache'
+      });
+      expect(projectsManager.CACHE_KEY_PREFIX).toBe('projects_cache');
+      // Keys must namespace under the custom prefix, not the default.
+      expect(projectsManager.getCacheKey('user-abc')).toBe('projects_cache_user-abc_default');
+    });
   });
 
   describe('getCacheKey', () => {
