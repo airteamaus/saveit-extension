@@ -190,14 +190,15 @@ git push origin main --tags
 ### Staging Release (Beta Testing)
 
 ```bash
-# Deploy beta version to staging environment
-just deploy-staging 0.14.0
+# Bump patch version, tag, and push to trigger a staging release.
+# Firefox manifest versions must be dot-separated numbers, so staging
+# deploys use a patch bump rather than a -beta pre-release suffix.
+just deploy-staging
 
-# Test with real backend for 24-48 hours
-# If stable, promote to production
+# Test with real backend for 24-48 hours.
+# If stable, promote to production:
 
-just bump minor
-git push origin main --tags
+just deploy-prod
 ```
 
 ## 📈 Quality Metrics
