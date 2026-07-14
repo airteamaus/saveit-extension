@@ -9,6 +9,7 @@ import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
 import { createInitialDrawerState } from './newtab-drawer-state.js';
+import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
 
@@ -232,6 +233,33 @@ export function createSavedPagesDrawerController({
     await syncCoordinator.handleSignedIn();
   }
 
+  // Force a full reload of the current drawer view from the server, bypassing
+  // the handleSignedIn early-return that only re-filters in-memory pages. Used
+  // by the "Refresh cache" button so that pages saved by other project members
+  // (which were never in the local in-memory store) actually appear.
+  async function forceReload() {
+    await refreshCachedUser();
+    state.hasInitialized = false;
+    savedPagesStore.reset({ emit: false });
+
+    if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
+      // Reset the project store so hydrate() does a full network fetch, not a
+      // warm-cache paint of the stale in-memory list.
+      const projectId = state.selectedProjectId;
+      const projectStore = dataController.getProjectSavedPagesStore?.(projectId);
+      projectStore?.reset({ emit: false });
+      await dataController.loadDrawerProjectPages(projectId, {
+        query: shellController.getSearchQuery(),
+        syncUrl: false
+      });
+    } else {
+      await dataController.loadDrawerBasePages({
+        query: shellController.getSearchQuery(),
+        syncUrl: false
+      });
+    }
+  }
+
   function handleSignedOut() {
     cachedUser = null;
     syncCoordinator.handleSignedOut();
@@ -267,6 +295,7 @@ export function createSavedPagesDrawerController({
 
   return {
     close: shellController.closeSavedPagesDrawer,
+    forceReload,
     handleRealtimeProjectEvent,
     handleSignedIn,
     handleSignedOut,

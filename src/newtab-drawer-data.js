@@ -706,6 +706,7 @@ export function createDrawerDataController({
   return {
     ensureDrawerDomainsLoaded,
     ensureDrawerProjectsLoaded,
+    getProjectSavedPagesStore,
     handleDrawerDelete,
     handleDrawerEditCancel,
     handleDrawerEditStart,

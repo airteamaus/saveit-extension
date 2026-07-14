@@ -331,7 +331,10 @@ export function createNewtabApp({
           await API.invalidateCache();
           savedPagesStore.setLazy(false);
           void projectsStore.hydrate();
-          void drawerController.handleSignedIn();
+          // forceReload resets hasInitialized + the relevant store and fetches
+          // from the server, bypassing the handleSignedIn early-return that
+          // only re-filters in-memory pages (leaving cross-user saves hidden).
+          void drawerController.forceReload();
         } catch {
           /* not signed in / not initialised */
         }
