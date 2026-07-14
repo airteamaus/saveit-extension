@@ -9,8 +9,7 @@ import { reconcile, mirrorSavedPage } from './bookmark-mirror.js';
 import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 import { capturePageContent } from './page-capture-injector.js';
-import { addPendingSave, clearPendingSave } from './pending-saves.js';
-import { createSavePoll } from './save-poll.js';
+import { addPendingSave } from './pending-saves.js';
 import { parseErrorResponse } from './api-core.js';
 import { PROJECTS_CACHE_PREFIX, migrateProjectsCacheKeys } from './cache-keys.js';
 
@@ -364,57 +363,6 @@ browserApi.runtime.onInstalled?.addListener(() => {
 browserApi.runtime.onStartup?.addListener(registerMirrorAlarms);
 registerMirrorAlarms();
 
-// Check whether a freshly-saved page's enrichment has completed by fetching a
-// small newest-first slice of the saved-pages list and matching by URL. The
-// enriched doc sorts to the top, so a small limit is reliable. Returns true
-// when the URL is present (enrichment done), false otherwise.
-async function checkPageEnriched(url) {
-  const data = await fetchBackgroundApi('', {
-    params: { limit: 10, sort: 'newest', search: '' }
-  });
-  const pages = Array.isArray(data?.pages) ? data.pages : [];
-  return pages.some(page => page?.url === url);
-}
-
-// Start (or re-arm) the enrichment-completion poll for a saved URL. When the
-// enriched doc appears, clear the pending-save record (so newtab drops the
-// optimistic tile) and invalidate the saved-pages cache (so newtab refetches
-// and the real doc takes the tile's place). One poll per URL; a re-save of
-// the same URL replaces any in-flight poll.
-const enrichmentPolls = new Map();
-function startEnrichmentPoll(url) {
-  if (!url) {
-    return;
-  }
-  const existing = enrichmentPolls.get(url);
-  if (existing) {
-    existing.stop();
-  }
-
-  const poll = createSavePoll({
-    checkFn: () => checkPageEnriched(url),
-    onFound: async () => {
-      enrichmentPolls.delete(url);
-      try {
-        await clearPendingSave(browserApi.storage.local, url);
-        await invalidateSavedPagesCacheStorage(browserApi.storage.local);
-        logger.log('Enrichment detected; cleared optimistic tile + cache', { url });
-      } catch (error) {
-        logger.error('Failed to clear pending save after enrichment', error);
-      }
-    },
-    onGiveUp: () => {
-      enrichmentPolls.delete(url);
-      // The optimistic tile remains (it is a real saved page, just unenriched).
-      // The pending record stays too, so newtab keeps showing the tile until a
-      // later manual/TTL refresh reconciles it.
-      logger.log('Enrichment poll gave up; keeping optimistic tile', { url });
-    }
-  });
-  enrichmentPolls.set(url, poll);
-  poll.start();
-}
-
 function getUserSaveErrorMessage(error) {
   let userMessage = error.message;
 
@@ -531,9 +479,9 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
 
   // Write a pending-save record so newtab can render an optimistic tile
   // immediately (the backend's async enrichment hasn't written the real doc
-  // yet). Then start a poll that clears the record once the enriched doc is
-  // available, which lets newtab reconcile the tile with the real page. Both
-  // are best-effort — a failure here must never break a successful save.
+  // yet). The realtime SSE stream signals when enrichment completes; the
+  // newtab page clears the tile via the 'realtimePageEnriched' relay. This
+  // is best-effort — a failure here must never break a successful save.
   try {
     await addPendingSave(browserApi.storage.local, {
       url: tab.url,
@@ -543,9 +491,8 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
       saved_at: pageData.saved_at,
       project_ids: projectId ? [projectId] : []
     });
-    startEnrichmentPoll(tab.url);
   } catch (pendingError) {
-    logger.error('Failed to write pending-save record / start poll', pendingError);
+    logger.error('Failed to write pending-save record', pendingError);
   }
 
   // Best-effort bookmark mirror. On-save creates the bookmark immediately so
@@ -687,6 +634,26 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
         sendResponse({ success: false, error: error.message });
       });
     return true;
+  }
+
+  if (message.action === 'realtimePageEnriched') {
+    // The realtime SSE stream signaled enrichment completion (or a new page).
+    // The event carries a pageId, not a URL, so we cannot key clearPendingSave
+    // by URL. Instead, invalidate the saved-pages cache so newtab refetches;
+    // WarmCacheListStore.reconcilePages drops the optimistic tile when the real
+    // doc arrives. The pending-save record lingers but is harmless — the next
+    // reconciliation or newtab reload clears it via onOptimisticReconciled.
+    (async () => {
+      try {
+        await invalidateSavedPagesCacheStorage(browserApi.storage.local);
+        logger.log('Realtime enrichment relay; invalidated saved-pages cache', {
+          pageId: message.pageId || null
+        });
+      } catch (error) {
+        logger.error('Failed to invalidate cache on realtime relay', error);
+      }
+    })();
+    return false; // no async response needed
   }
 });
 

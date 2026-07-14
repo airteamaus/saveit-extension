@@ -137,7 +137,8 @@ describe('newtab app factory', () => {
       versionNumberEl: elements.versionNumberEl,
       updateVersionIndicator: updateVersionIndicatorFn,
       drawerController,
-      authController
+      authController,
+      realtimeClient: expect.objectContaining({ bus: expect.any(Object) })
     });
   });
 });

@@ -3,6 +3,10 @@ import { createImportPanel } from './import-panel.js';
 import { createSharingCentre } from './sharing-centre.js';
 import { createToastRegion } from './toast.js';
 import { clearPendingSave } from './pending-saves.js';
+import { CONFIG } from './config.js';
+import { getSessionToken } from './session-store.js';
+import { RealtimeClient } from './realtime-client.js';
+import { RealtimeEventBus } from './realtime-event-bus.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -171,6 +175,46 @@ export function createNewtabApp({
     refreshFavorites: undefined,
     notify: toast.show
   });
+
+  // --- realtime push -------------------------------------------------------
+  // One event bus per open newtab page. Subscribers refresh the relevant store
+  // when the SSE stream signals a change; the RealtimeClient owns the transport
+  // (connect() is called from newtab-page.js after auth resolves).
+  const realtimeBus = new RealtimeEventBus();
+
+  // The dashboard saved-pages store refreshes on user-scoped page events. The
+  // server already filtered by scope; if we received it, it's relevant.
+  realtimeBus.subscribe('page_updated', (event) => {
+    savedPagesStore.refreshInitial();
+    if (event.change === 'enriched' || event.change === 'added') {
+      // Clear the optimistic pending-save tile — replaces the enrichment poll.
+      // The background SW owns pending-saves; relay via a runtime message.
+      const browserApi = globalThis.browser ?? globalThis.chrome;
+      browserApi?.runtime?.sendMessage?.({
+        action: 'realtimePageEnriched',
+        url: null,
+        pageId: event.pageId
+      });
+    }
+  });
+
+  // Project page changes refresh the open project store (if it matches).
+  realtimeBus.subscribe('project_page_changed', (event) => {
+    drawerController.handleRealtimeProjectEvent?.(event);
+  });
+
+  // Project metadata changes refresh the projects list.
+  realtimeBus.subscribe('project_metadata_changed', () => {
+    projectsStore.refreshInitial();
+  });
+
+  const realtimeClient = new RealtimeClient({
+    bus: realtimeBus,
+    notify: toast.show,
+    getToken: getSessionToken,
+    url: `${CONFIG.realtimeFunctionUrl}/events/stream`
+  });
+
   const authLifecycle = createNewtabAuthLifecycleFn({
     drawerController
   });
@@ -233,6 +277,7 @@ export function createNewtabApp({
     importPanel,
     projectManager,
     projectsStore,
+    realtimeClient,
     savedPagesStore,
     sharingCentre,
     toast,
@@ -293,7 +338,8 @@ export function createNewtabApp({
         versionNumberEl: elements.versionNumberEl,
         updateVersionIndicator: updateVersionIndicatorFn,
         drawerController,
-        authController
+        authController,
+        realtimeClient
       });
     }
   };

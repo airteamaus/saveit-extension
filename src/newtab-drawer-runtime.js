@@ -245,8 +245,20 @@ export function createSavedPagesDrawerController({
     initDrawerEventHandlers();
   }
 
+  // Realtime push handler: a project's page set changed on the server. If that
+  // project is currently open in the drawer, refresh its pages; always refresh
+  // the projects list since a project's page count may have changed. Driven by
+  // the 'project_page_changed' SSE event via the realtime bus.
+  function handleRealtimeProjectEvent(event) {
+    if (event?.projectId && event.projectId === state.selectedProjectId) {
+      savedPagesStore.refreshInitial();
+    }
+    projectsStore.refreshInitial();
+  }
+
   return {
     close: shellController.closeSavedPagesDrawer,
+    handleRealtimeProjectEvent,
     handleSignedIn,
     handleSignedOut,
     init,

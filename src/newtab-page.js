@@ -115,7 +115,8 @@ export async function startNewtabPage({
   versionNumberEl,
   updateVersionIndicator,
   drawerController,
-  authController
+  authController,
+  realtimeClient
 }) {
   ThemeManager.init('hero-theme-toggle-container');
   updateVersionIndicator(versionNumberEl);
@@ -141,4 +142,15 @@ export async function startNewtabPage({
   // used to bypass that gate and race auth on cold starts.
   await authController.init();
   void drawerController.load?.();
+
+  // Open the realtime SSE stream now that auth has resolved (the stream needs
+  // a session token). Fire-and-forget — the client toasts on disconnect and
+  // does not auto-reconnect; a page refresh re-establishes it.
+  void realtimeClient?.connect();
+
+  // Disconnect when the page is torn down so a bfcache restore doesn't leave
+  // a zombie stream and the server can free the connection promptly.
+  globalThis.addEventListener('pagehide', () => {
+    realtimeClient?.disconnect();
+  }, { once: true });
 }
