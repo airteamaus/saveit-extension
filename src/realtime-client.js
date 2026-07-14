@@ -16,15 +16,17 @@ export class RealtimeClient {
   }
 
   async connect() {
-    const token = await this.getToken();
-    if (!token) {
-      // Not signed in — no realtime stream. Silently skip.
-      return;
-    }
-
     this.controller = new AbortController();
 
     try {
+      const token = await this.getToken();
+      if (!token) {
+        // Not signed in — no realtime stream. Observable so an expired token
+        // is distinguishable from a genuinely anonymous session.
+        console.warn('[realtime-client] no session token; realtime stream skipped');
+        return;
+      }
+
       const response = await fetch(this.url, {
         method: 'GET',
         headers: {
@@ -35,6 +37,7 @@ export class RealtimeClient {
       });
 
       if (!response.ok || !response.body) {
+        console.warn('[realtime-client] stream rejected:', response.status, response.ok ? 'no body' : '');
         this.handleDisconnect();
         return;
       }
@@ -42,9 +45,9 @@ export class RealtimeClient {
       await this.readStream(response.body);
     } catch (err) {
       if (err?.name === 'AbortError') {
-        // Manual disconnect via disconnect() — don't toast.
         return;
       }
+      console.warn('[realtime-client] stream error:', err?.message || err);
       this.handleDisconnect();
     }
   }
@@ -106,10 +109,16 @@ export class RealtimeClient {
       return;
     }
 
-    // The `event:` line is the authority for type; fall back to it if the
-    // JSON body doesn't include type (it normally does, but don't rely on
-    // the redundancy — the bus keys on event.type and would silently no-op).
-    data.type = data.type || type;
+    // The `event:` line and the JSON body's `type` should agree. If the body
+    // omits `type`, use the event-line value but warn (the backend normally
+    // includes it). If both are present but disagree, warn about the contract
+    // mismatch — the bus keys on event.type and would silently no-op on drift.
+    if (!data.type) {
+      console.warn('[realtime-client] SSE data missing type field; using event-line type:', type);
+      data.type = type;
+    } else if (type && data.type !== type) {
+      console.warn('[realtime-client] SSE event-line type differs from data.type:', type, 'vs', data.type);
+    }
 
     this.bus.dispatch(data);
   }

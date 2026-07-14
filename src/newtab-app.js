@@ -185,27 +185,47 @@ export function createNewtabApp({
   // The dashboard saved-pages store refreshes on user-scoped page events. The
   // server already filtered by scope; if we received it, it's relevant.
   realtimeBus.subscribe('page_updated', (event) => {
-    savedPagesStore.refreshInitial();
-    if (event.change === 'enriched' || event.change === 'added') {
-      // Clear the optimistic pending-save tile — replaces the enrichment poll.
-      // The background SW owns pending-saves; relay via a runtime message.
-      const browserApi = globalThis.browser ?? globalThis.chrome;
-      browserApi?.runtime?.sendMessage?.({
-        action: 'realtimePageEnriched',
-        url: null,
-        pageId: event.pageId
-      });
-    }
+    void (async () => {
+      try {
+        await savedPagesStore.refreshInitial();
+        if (event.change === 'enriched' || event.change === 'added') {
+          // Clear the optimistic pending-save tile — replaces the enrichment poll.
+          // The background SW owns pending-saves; relay via a runtime message.
+          const browserApi = globalThis.browser ?? globalThis.chrome;
+          if (!browserApi?.runtime?.sendMessage) {
+            console.warn('[realtime] runtime.sendMessage unavailable; cannot relay enrichment event');
+            return;
+          }
+          try {
+            await browserApi.runtime.sendMessage({
+              action: 'realtimePageEnriched',
+              url: null,
+              pageId: event.pageId
+            });
+          } catch (err) {
+            console.warn('[realtime] failed to relay enrichment event:', err?.message || err);
+          }
+        }
+      } catch (err) {
+        console.error('[realtime] page_updated subscriber failed:', err);
+      }
+    })();
   });
 
   // Project page changes refresh the open project store (if it matches).
   realtimeBus.subscribe('project_page_changed', (event) => {
-    drawerController.handleRealtimeProjectEvent?.(event);
+    drawerController.handleRealtimeProjectEvent(event);
   });
 
   // Project metadata changes refresh the projects list.
   realtimeBus.subscribe('project_metadata_changed', () => {
-    projectsStore.refreshInitial();
+    void (async () => {
+      try {
+        await projectsStore.refreshInitial();
+      } catch (err) {
+        console.error('[realtime] project_metadata_changed subscriber failed:', err);
+      }
+    })();
   });
 
   const realtimeClient = new RealtimeClient({

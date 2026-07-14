@@ -248,12 +248,21 @@ export function createSavedPagesDrawerController({
   // Realtime push handler: a project's page set changed on the server. If that
   // project is currently open in the drawer, refresh its pages; always refresh
   // the projects list since a project's page count may have changed. Driven by
-  // the 'project_page_changed' SSE event via the realtime bus.
-  function handleRealtimeProjectEvent(event) {
-    if (event?.projectId && event.projectId === state.selectedProjectId) {
-      savedPagesStore.refreshInitial();
+  // the 'project_page_changed' SSE event via the realtime bus. Fire-and-forget
+  // at the call site (the bus subscriber does not await) — all errors are
+  // caught here so a rejected refresh never surfaces as an unhandled rejection.
+  async function handleRealtimeProjectEvent(event) {
+    try {
+      if (!event?.projectId) {
+        console.warn('[realtime] project_page_changed event missing projectId', event);
+      }
+      if (event?.projectId && event.projectId === state.selectedProjectId) {
+        await savedPagesStore.refreshInitial();
+      }
+      await projectsStore.refreshInitial();
+    } catch (err) {
+      console.error('[realtime] handleRealtimeProjectEvent failed:', err);
     }
-    projectsStore.refreshInitial();
   }
 
   return {
