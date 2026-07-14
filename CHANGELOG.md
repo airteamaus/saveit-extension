@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
+- **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
+- **realtime:** RealtimeEventBus typed pub/sub (8efa830)
+
+### 🐛 Bug Fixes
+
+- refresh-cache button now force-reloads the open project from server (b18af09)
+- **realtime:** surface errors with context instead of masking (34a42c9)
+- **realtime:** inject event-line type into dispatched object + test malformed-JSON skip (a4772e7)
+- **deploy:** deploy-staging must use numeric versions for Firefox (#27) (6f45e75)
+
+### 📝 Other Improvements
+
+- fix tests, wire bus.clear(), fix heartbeat parsing, reduce noise (bf6e0d7)
+- point realtimeFunctionUrl at dedicated saveit-realtime function (a83d342)
+
+### 📚 Documentation
+
+- implementation plan for realtime push feature (e74a3f8)
+- realtime push design spec for shared projects (28ce3ec)
+
+### ✅ Tests
+
+- **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
+- **realtime:** assert failing subscriber does not break others (d4c4167)
+
+## [1.21.1] - 2026-07-10
+
+### 📝 Other Improvements
+
+- 1.21.0-beta.1 (a40862e)
+- Validated technical-debt cleanup (3 phases) (#26) (710791d)
+
+## [1.21.0] - 2026-07-10
+
 ### 🐛 Bug Fixes
 
 - **cache:** prependOptimisticPage must not persist to warm cache (a022f74)
@@ -88,17 +125,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
 
 ## [1.19.3] - 2026-07-08
-
-### 👷 CI/CD
-
-- **e2e:** install chromium and skip headed-only warming tests in CI (#18) (508dabe)
-- **release:** make every store-publish job idempotent (#17) (5b63f9d)
-
-## [1.19.2] - 2026-07-08
-
-No notable changes.
-
-## [1.19.1] - 2026-07-08
 
 ### ✨ Features
 
@@ -517,6 +543,8 @@ No notable changes.
 
 ### 👷 CI/CD
 
+- **e2e:** install chromium and skip headed-only warming tests in CI (#18) (508dabe)
+- **release:** make every store-publish job idempotent (#17) (5b63f9d)
 - **release:** publish to Chrome Web Store on every tag release (c3735cd)
 - add deploy key for saveit-backend graph-viz build (dfda0e2)
 
