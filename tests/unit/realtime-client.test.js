@@ -120,7 +120,10 @@ describe('RealtimeClient', () => {
       status: 200,
       body: makeReadableStream([
         // First frame: malformed JSON — must be skipped, not crash the stream.
-        'data: {not-json}\n\n',
+        // The `event:` line is required so parseFrame advances past the
+        // `if (!type) return` guard and actually reaches JSON.parse (and its
+        // catch). Without it the frame is dropped before the catch runs.
+        'event: page_updated\ndata: {not-json}\n\n',
         // Second frame: valid — must still be dispatched after the skip.
         'event: page_updated\ndata: {"type":"page_updated","change":"enriched"}\n\n'
       ]),
@@ -136,6 +139,23 @@ describe('RealtimeClient', () => {
       type: 'page_updated',
       change: 'enriched'
     });
+  });
+
+  test('injects event-line type when data omits type', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([
+        'event: project_page_changed\ndata: {"change":"added","projectId":"p1"}\n\n'
+      ]),
+      headers: new Map()
+    });
+    const client = makeClient();
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+    expect(bus.dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'project_page_changed', change: 'added', projectId: 'p1' })
+    );
   });
 
   test('disconnect aborts the fetch', async () => {

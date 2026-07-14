@@ -65,13 +65,23 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
     const savedPagesStore = makeMockStore();
     const projectsStore = makeMockStore();
 
-    // This subscriber is a faithful copy of handleRealtimeProjectEvent in
-    // newtab-drawer-runtime.js (the only production consumer of this event).
-    bus.subscribe('project_page_changed', (event) => {
-      if (event?.projectId && event.projectId === selectedProjectId) {
-        savedPagesStore.refreshInitial();
+    // This subscriber mirrors the production handler in
+    // newtab-drawer-runtime.js (handleRealtimeProjectEvent, the only production
+    // consumer of this event). It is async with its own try/catch because the
+    // bus dispatches synchronously and never awaits — so a thrown refresh must
+    // be caught here, and an async refresh needs an async-IIFE wrapper.
+    bus.subscribe('project_page_changed', async (event) => {
+      try {
+        if (!event?.projectId) {
+          console.warn('[realtime] project_page_changed event missing projectId', event);
+        }
+        if (event?.projectId && event.projectId === selectedProjectId) {
+          await savedPagesStore.refreshInitial();
+        }
+        await projectsStore.refreshInitial();
+      } catch (err) {
+        console.error('[realtime] handleRealtimeProjectEvent failed:', err);
       }
-      projectsStore.refreshInitial();
     });
 
     const client = new RealtimeClient({
@@ -97,8 +107,10 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
     });
 
     await client.connect();
-    // Allow the stream reader microtask to flush before asserting.
-    await new Promise((r) => setTimeout(r, 10));
+    // Allow the stream reader microtask to flush before asserting. 20ms (rather
+    // than 10) because the subscriber is async: refreshInitial() is awaited
+    // inside it, so the store call resolves one microtask tick after dispatch.
+    await new Promise((r) => setTimeout(r, 20));
 
     // The event's projectId matches the open project: its page list must refresh.
     expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
@@ -119,7 +131,7 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
     });
 
     await client.connect();
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 20));
 
     // The open project is a different one: its page list must NOT refresh.
     expect(savedPagesStore.refreshInitial).not.toHaveBeenCalled();
@@ -149,7 +161,7 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
     });
 
     await client.connect();
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(received).toHaveBeenCalledTimes(1);
     expect(received).toHaveBeenCalledWith(
@@ -178,7 +190,7 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
     });
 
     await client.connect();
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
     expect(projectsStore.refreshInitial).toHaveBeenCalledTimes(1);
@@ -194,7 +206,7 @@ describe('realtime push: project_page_changed -> refreshInitial', () => {
 
     const { client } = wireRealtime({ selectedProjectId: 'proj-42' });
     await client.connect();
-    await new Promise((r) => setTimeout(r, 10));
+    await new Promise((r) => setTimeout(r, 20));
 
     expect(mockFetch).toHaveBeenCalledWith(
       'https://example.test/events/stream',

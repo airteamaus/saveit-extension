@@ -185,6 +185,8 @@ export function createNewtabApp({
   // The dashboard saved-pages store refreshes on user-scoped page events. The
   // server already filtered by scope; if we received it, it's relevant.
   realtimeBus.subscribe('page_updated', (event) => {
+    // The bus dispatches synchronously and can't await async subscribers, so each
+    // subscriber wraps its body in an async IIFE with its own try/catch.
     void (async () => {
       try {
         await savedPagesStore.refreshInitial();

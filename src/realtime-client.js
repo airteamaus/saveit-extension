@@ -4,6 +4,8 @@
 // (15-min server timeout, network error, or page hide) shows a toast once and
 // does NOT auto-reconnect — the user refreshes to re-establish.
 
+import { debugWarn } from './config.js';
+
 export class RealtimeClient {
   constructor({ bus, notify, getToken, url }) {
     this.bus = bus;
@@ -21,9 +23,10 @@ export class RealtimeClient {
     try {
       const token = await this.getToken();
       if (!token) {
-        // Not signed in — no realtime stream. Observable so an expired token
-        // is distinguishable from a genuinely anonymous session.
-        console.warn('[realtime-client] no session token; realtime stream skipped');
+        // Not signed in — no realtime stream. This is the expected path for
+        // anonymous users (no token means no stream); gated behind debugWarn so
+        // it doesn't spam the console on every newtab open in production.
+        debugWarn('[realtime-client] no session token; realtime stream skipped');
         return;
       }
 
@@ -88,8 +91,11 @@ export class RealtimeClient {
 
     for (const line of lines) {
       if (line.startsWith(':')) {
-        // Comment / heartbeat — ignore.
-        return;
+        // Comment / heartbeat — skip just this line, not the whole frame.
+        // The backend sends heartbeats as standalone frames today, but using
+        // `continue` (not `return`) means a comment coexisting with data lines
+        // in the same frame wouldn't discard the data.
+        continue;
       }
       if (line.startsWith('event: ')) {
         type = line.slice(7).trim();
@@ -135,5 +141,9 @@ export class RealtimeClient {
       this.controller.abort();
       this.controller = null;
     }
+    // The bus is created per-newtab-page-instance, so clearing subscribers on
+    // disconnect is safe (no other code holds a reference). Guards the call so
+    // a bus without clear() (e.g. a plain stub) doesn't throw.
+    this.bus.clear?.();
   }
 }
