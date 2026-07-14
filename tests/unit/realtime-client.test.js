@@ -114,6 +114,30 @@ describe('RealtimeClient', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
+  test('skips a malformed JSON frame and continues the stream', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([
+        // First frame: malformed JSON — must be skipped, not crash the stream.
+        'data: {not-json}\n\n',
+        // Second frame: valid — must still be dispatched after the skip.
+        'event: page_updated\ndata: {"type":"page_updated","change":"enriched"}\n\n'
+      ]),
+      headers: new Map()
+    });
+    const client = makeClient();
+    await client.connect();
+    // Allow the stream reader microtask to flush both frames.
+    await new Promise(r => setTimeout(r, 10));
+    // Only the valid frame is dispatched (the malformed one is skipped).
+    expect(bus.dispatch).toHaveBeenCalledTimes(1);
+    expect(bus.dispatch).toHaveBeenCalledWith({
+      type: 'page_updated',
+      change: 'enriched'
+    });
+  });
+
   test('disconnect aborts the fetch', async () => {
     let capturedSignal;
     mockFetch.mockImplementation((url, opts) => {

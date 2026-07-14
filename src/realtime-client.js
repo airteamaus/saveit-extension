@@ -106,6 +106,11 @@ export class RealtimeClient {
       return;
     }
 
+    // The `event:` line is the authority for type; fall back to it if the
+    // JSON body doesn't include type (it normally does, but don't rely on
+    // the redundancy — the bus keys on event.type and would silently no-op).
+    data.type = data.type || type;
+
     this.bus.dispatch(data);
   }
 
