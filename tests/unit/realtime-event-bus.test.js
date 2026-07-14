@@ -51,4 +51,18 @@ describe('RealtimeEventBus', () => {
     const bus = new RealtimeEventBus();
     expect(() => bus.dispatch({ type: 'page_updated', change: 'enriched' })).not.toThrow();
   });
+
+  test('a failing subscriber does not break other subscribers', () => {
+    const bus = new RealtimeEventBus();
+    const failingHandler = vi.fn(() => { throw new Error('boom'); });
+    const healthyHandler = vi.fn();
+    bus.subscribe('project_page_changed', failingHandler);
+    bus.subscribe('project_page_changed', healthyHandler);
+    // Suppress console.error from the catch block during this test
+    const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    bus.dispatch({ type: 'project_page_changed', change: 'added' });
+    expect(failingHandler).toHaveBeenCalled();
+    expect(healthyHandler).toHaveBeenCalled();
+    spy.mockRestore();
+  });
 });
