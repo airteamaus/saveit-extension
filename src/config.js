@@ -45,7 +45,7 @@ const CONFIGS = {
 
   staging: {
     cloudFunctionUrl: 'https://saveit-staging-5pu7ljvnuq-uc.a.run.app',
-    realtimeFunctionUrl: 'https://saveit-staging-5pu7ljvnuq-uc.a.run.app',
+    realtimeFunctionUrl: 'https://saveit-realtime-5pu7ljvnuq-uc.a.run.app',
     oauthClientId: '903859773555-389kkh3aum4b6hmk1ofbn0a9h56lv751.apps.googleusercontent.com',
     enableErrorReporting: true,
     enableDebugLogging: true
@@ -53,7 +53,7 @@ const CONFIGS = {
 
   production: {
     cloudFunctionUrl: 'https://saveit-5pu7ljvnuq-uc.a.run.app',
-    realtimeFunctionUrl: 'https://saveit-5pu7ljvnuq-uc.a.run.app',
+    realtimeFunctionUrl: 'https://saveit-realtime-5pu7ljvnuq-uc.a.run.app',
     oauthClientId: '903859773555-389kkh3aum4b6hmk1ofbn0a9h56lv751.apps.googleusercontent.com',
     enableErrorReporting: true,
     enableDebugLogging: false
