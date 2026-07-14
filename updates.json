@@ -41,6 +41,10 @@
         {
           "version": "1.21.1",
           "update_link": "https://github.com/airteamaus/saveit-extension/releases/download/v1.21.1/saveit-1.21.1.xpi"
+        },
+        {
+          "version": "1.22.0",
+          "update_link": "https://github.com/airteamaus/saveit-extension/releases/download/v1.22.0/saveit-1.22.0.xpi"
         }
       ]
     }
