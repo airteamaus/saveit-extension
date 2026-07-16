@@ -5,7 +5,7 @@ import { getCurrentUserId as getSessionUserId, setSession } from './session-stor
 import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
-import { reconcile, mirrorSavedPage } from './bookmark-mirror.js';
+import { reconcile, mirrorSavedPage, removeMirror } from './bookmark-mirror.js';
 import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 import { capturePageContent } from './page-capture-injector.js';
@@ -28,7 +28,20 @@ if (!browserApi?.runtime) {
   throw new Error('Browser runtime API not available in background context');
 }
 
-let sentryPromise = null;
+// Eagerly initialize Sentry during the initial script evaluation so its global
+// error/unhandledrejection handlers are registered at the right time. MV3
+// service workers warn (and the handlers silently no-op) if they're added
+// after initial evaluation — which happened when Sentry was lazily imported on
+// first use. The capture methods below reuse this same resolved module.
+let sentryPromise = import('./sentry.js')
+  .then((sentry) => {
+    sentry.initSentry();
+    return sentry;
+  })
+  .catch((error) => {
+    sentryPromise = null;
+    throw error;
+  });
 
 async function getSentry() {
   if (!sentryPromise) {
@@ -620,12 +633,24 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === 'setBookmarkMirrorEnabled') {
     (async () => {
-      await setMirrorEnabled(browserApi.storage.local, Boolean(message.enabled));
       // On enable, seed immediately so the folder tree appears without waiting
-      // up to 4h for the alarm. On disable, do nothing — existing bookmarks
-      // are left in place (the user can delete the Buckley's/ folder manually).
+      // up to 4h for the alarm. On disable, remove the Buckley's/ folder and
+      // clear all mirror state so the user's bookmarks return to how they were
+      // before sync — rather than orphaning a folder they'd have to delete by hand.
       if (message.enabled) {
+        await setMirrorEnabled(browserApi.storage.local, true);
         await runMirrorReconcile({ forceFull: true });
+      } else {
+        await removeMirror({
+          bookmarksApi: browserApi.bookmarks,
+          storage: browserApi.storage.local
+        });
+        // Cancel any pending post-save reconcile so it doesn't re-seed the
+        // folder the user just turned off.
+        if (browserApi.alarms?.clear) {
+          await browserApi.alarms.clear(POST_SAVE_RECONCILE_ALARM).catch(() => {});
+        }
+        postSaveReconcileArmed = false;
       }
     })()
       .then(() => sendResponse({ success: true }))

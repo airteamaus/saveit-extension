@@ -1,6 +1,7 @@
 import { createNewtabAuthController } from './newtab-auth.js';
 import { createImportPanel } from './import-panel.js';
 import { createSharingCentre } from './sharing-centre.js';
+import { createDataSyncCentre } from './data-sync-centre.js';
 import { createToastRegion } from './toast.js';
 import { clearPendingSave } from './pending-saves.js';
 import { CONFIG } from './config.js';
@@ -15,7 +16,6 @@ import {
 import {
   bindNewtabEventHandlers,
   getNewtabElements,
-  initMirrorToggle,
   startNewtabPage
 } from './newtab-page.js';
 import {
@@ -292,6 +292,21 @@ export function createNewtabApp({
     }
   });
 
+  const dataSyncCentre = createDataSyncCentre({
+    api: API,
+    documentObj,
+    runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime,
+    notify: toast.show,
+    onImportComplete: () => {
+      // After an import, refresh the drawer so the new pages appear.
+      try {
+        drawerController.load();
+      } catch {
+        /* drawer not initialised yet */
+      }
+    }
+  });
+
   return {
     authController,
     drawerController,
@@ -302,6 +317,7 @@ export function createNewtabApp({
     realtimeClient,
     savedPagesStore,
     sharingCentre,
+    dataSyncCentre,
     toast,
     bind() {
       bindNewtabEventHandlersFn({
@@ -309,11 +325,11 @@ export function createNewtabApp({
         authController,
         documentObj
       });
-      // Import lives in the avatar dropdown; close the dropdown before opening
-      // the modal so it doesn't linger behind the panel.
-      elements.importBtn?.addEventListener('click', () => {
+      // Data & sync lives in the avatar dropdown; close the dropdown before
+      // opening the modal so it doesn't linger behind the panel.
+      elements.dataSyncBtn?.addEventListener('click', () => {
         elements.userDropdown?.classList.add('hidden');
-        importPanel.open();
+        dataSyncCentre.open();
       });
       // Sharing centre lives in the avatar dropdown; close the dropdown first.
       elements.sharingBtn?.addEventListener('click', () => {
@@ -338,14 +354,6 @@ export function createNewtabApp({
         } catch {
           /* not signed in / not initialised */
         }
-      });
-      // Mirror toggle lives in the avatar dropdown. Reading/writing state via
-      // runtime messages so the background context owns the persisted state
-      // and triggers the seed reconcile on enable. Toast confirms each change.
-      initMirrorToggle({
-        elements,
-        runtime: documentObj.defaultView?.browser?.runtime || documentObj.defaultView?.chrome?.runtime,
-        notify: toast.show
       });
 
       // Sidebar overlay (hamburger, ≤700px). See initSidebarOverlay for the

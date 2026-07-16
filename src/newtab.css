@@ -1390,19 +1390,106 @@ body {
 }
 
 /* ───────────────────────────────────────────────────────────────────────
+   Data & sync centre — Import / Export / Browser sync rows.
+   Shares the sharing-centre section language; adds an action-button row
+   and a file-picker label that doubles as a primary button.
+   ─────────────────────────────────────────────────────────────────────── */
+
+.data-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  align-items: center;
+}
+
+/* The file input is visually hidden but stays in the layout so .click() opens
+   the dialog. Not display:none — some browsers refuse to open a dialog for a
+   display:none input. */
+.data-sync-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Button styles for the data-sync dialog. These mirror the .import-panel-actions
+   button rules but are scoped here because .btn-primary/.btn-secondary have no
+   base (unscoped) definition in shared-ui.css. */
+.data-sync-dialog .btn-primary,
+.data-sync-dialog .btn-secondary {
+  font: inherit;
+  font-size: var(--font-size-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.data-sync-dialog .btn-primary {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+.data-sync-dialog .btn-primary:hover {
+  background: var(--color-primary-hover);
+}
+
+.data-sync-dialog .btn-primary:disabled,
+.data-sync-dialog .btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.data-sync-dialog .btn-secondary {
+  background: transparent;
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.data-sync-dialog .btn-secondary:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+}
+
+.data-sync-hint {
+  margin: var(--spacing-sm) 0 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-light);
+}
+
+.data-sync-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--spacing-md);
+  padding: var(--spacing-md) 0;
+}
+
+.data-sync-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.data-sync-row-name {
+  font-weight: 600;
+  font-size: var(--font-size-lg);
+}
+
+/* ───────────────────────────────────────────────────────────────────────
    Toasts — transient confirmation messages (e.g. mirror-toggle feedback).
    One region hosts a single active toast; auto-dismissed by toast.js.
    ─────────────────────────────────────────────────────────────────────── */
 
 .toast-region {
   position: fixed;
-  bottom: var(--spacing-lg);
-  left: 50%;
-  transform: translateX(-50%);
+  top: var(--spacing-lg);
+  right: var(--spacing-lg);
   z-index: 60; /* above dialogs (z-index 45/46) so toasts surface over them */
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-end;
   gap: var(--spacing-xs);
   pointer-events: none;
 }
@@ -1417,7 +1504,7 @@ body {
   font-size: var(--font-size-sm);
   box-shadow: var(--shadow-lg);
   opacity: 0;
-  transform: translateY(8px);
+  transform: translateX(12px);
   transition:
     opacity 0.18s ease,
     transform 0.18s ease;
@@ -1425,13 +1512,33 @@ body {
 
 .toast--visible {
   opacity: 1;
-  transform: translateY(0);
+  transform: translateX(0);
 }
 
 /* Accent border keyed to the toast type. Success uses the shared-green token
    that the rest of the UI associates with confirmed/active state. */
 .toast--success {
   border-color: color-mix(in srgb, var(--color-shared) 60%, var(--color-border));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.toast--success .toast-icon {
+  color: var(--color-shared);
+  flex-shrink: 0;
+}
+
+.toast--warning {
+  border-color: color-mix(in srgb, var(--color-notes-border, #e0a800) 60%, var(--color-border));
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.toast--warning .toast-icon {
+  color: var(--color-notes-border, #e0a800);
+  flex-shrink: 0;
 }
 
 .toast--error {

@@ -25,6 +25,7 @@
   ],
   "host_permissions": [
     "https://saveit-5pu7ljvnuq-uc.a.run.app/*",
+    "https://saveit-realtime-5pu7ljvnuq-uc.a.run.app/*",
     "https://saveit-staging-5pu7ljvnuq-uc.a.run.app/*"
   ],
   "background": {

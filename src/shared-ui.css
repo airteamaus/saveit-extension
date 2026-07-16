@@ -239,6 +239,11 @@ select {
   max-width: 560px;
 }
 
+/* Data & sync centre: same shell, slightly wider to fit the action rows. */
+.data-sync-dialog {
+  max-width: 560px;
+}
+
 .import-panel-header {
   display: flex;
   align-items: center;

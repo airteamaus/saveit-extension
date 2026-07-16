@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   PENDING_SAVES_KEY,
   addPendingSave,
+  addPendingSaves,
   getPendingSaves,
   clearPendingSave,
   buildOptimisticPage
@@ -113,6 +114,63 @@ describe('pending-saves storage', () => {
     const records = await getPendingSaves(storage);
     expect(Object.keys(records)).toHaveLength(1);
     expect(Object.values(records)[0].url).toBe('https://b.com/2');
+  });
+});
+
+describe('addPendingSaves (batch)', () => {
+  let storage;
+  beforeEach(() => { storage = createMemoryStorage(); });
+
+  it('writes many records in a single storage write', async () => {
+    const records = [
+      { url: 'https://a.com/1', title: 'A', saved_at: '2026-07-09T10:00:00.000Z' },
+      { url: 'https://b.com/2', title: 'B', saved_at: '2026-07-09T10:00:01.000Z' },
+      { url: 'https://c.com/3', title: 'C', saved_at: '2026-07-09T10:00:02.000Z' }
+    ];
+    await addPendingSaves(storage, records);
+
+    // One read + one write for the whole batch (not one per record). Assert
+    // before the read-back below, which adds its own get() call.
+    expect(storage.get).toHaveBeenCalledTimes(1);
+    expect(storage.set).toHaveBeenCalledTimes(1);
+
+    const pending = await getPendingSaves(storage);
+    expect(Object.keys(pending)).toHaveLength(3);
+  });
+
+  it('merges into existing pending saves without overwriting them', async () => {
+    await addPendingSave(storage, { url: 'https://old.com', title: 'Old' });
+    await addPendingSaves(storage, [{ url: 'https://new.com', title: 'New' }]);
+
+    const pending = await getPendingSaves(storage);
+    expect(Object.keys(pending).sort()).toEqual(
+      ['https://new.com', 'https://old.com']
+    );
+  });
+
+  it('collapses duplicate urls within the batch into one record', async () => {
+    await addPendingSaves(storage, [
+      { url: 'https://a.com/1', title: 'First' },
+      { url: 'https://a.com/1', title: 'Second' }
+    ]);
+    const pending = await getPendingSaves(storage);
+    expect(Object.keys(pending)).toHaveLength(1);
+    // Last write wins.
+    expect(Object.values(pending)[0].title).toBe('Second');
+  });
+
+  it('skips records without a url', async () => {
+    await addPendingSaves(storage, [
+      { url: 'https://a.com/1', title: 'A' },
+      { title: 'No URL' }
+    ]);
+    const pending = await getPendingSaves(storage);
+    expect(Object.keys(pending)).toHaveLength(1);
+  });
+
+  it('no-ops on an empty array', async () => {
+    await addPendingSaves(storage, []);
+    expect(storage.set).not.toHaveBeenCalled();
   });
 });
 
