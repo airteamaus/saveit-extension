@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (de28a02)
+
+## [1.23.1] - 2026-07-16
+
 ### ✨ Features
 
 - Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
@@ -139,12 +145,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.20.2] - 2026-07-09
 
-### 🐛 Bug Fixes
-
-- **mirror:** populate empty category and shared project folders (#25) (bc2370d)
-
-## [1.20.1] - 2026-07-09
-
 ### ✨ Features
 
 - **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
@@ -218,6 +218,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **mirror:** populate empty category and shared project folders (#25) (bc2370d)
 - **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
 - **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
 - **newtab:** hide the project sidebar while signed out (9c51831)
