@@ -48,7 +48,11 @@ export function createSharingCentre({
     if (className) node.className = className;
     if (text != null) node.textContent = text;
     if (attrs) {
-      for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
+      // Skip null/undefined values: setAttribute stringifies null to "null",
+      // which for boolean attributes like 'disabled' would wrongly enable them.
+      for (const [key, value] of Object.entries(attrs)) {
+        if (value != null) node.setAttribute(key, value);
+      }
     }
     if (onClick) node.onclick = onClick;
     if (children) node.append(...children);
