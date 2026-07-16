@@ -48,7 +48,11 @@ export function createImportPanel({
     if (text != null) node.textContent = text;
     if (html != null) node.innerHTML = html;
     if (attrs) {
-      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+      // Skip null/undefined values: setAttribute stringifies null to "null",
+      // which for boolean attributes like 'disabled' would wrongly enable them.
+      for (const [k, v] of Object.entries(attrs)) {
+        if (v != null) node.setAttribute(k, v);
+      }
     }
     if (onClick) node.onclick = onClick;
     if (children) {
