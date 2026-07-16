@@ -2,8 +2,25 @@ import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
 import { createDomainSavedPagesStore, createProjectSavedPagesStore } from './newtab-drawer-stores.js';
 import {
-  INITIAL_RENDER_LIMIT,
-  RENDER_LIMIT_INCREMENT
+  beginDrawerWarming,
+  growDrawerRenderLimit,
+  nextDrawerRequestId,
+  nextDrawerSemanticRequestId,
+  resetDrawerRenderLimit,
+  setDrawerAllPages,
+  setDrawerDomains,
+  setDrawerEditingPage,
+  setDrawerInitialized,
+  setDrawerLoadedScopePages,
+  setDrawerLoading,
+  setDrawerProjects,
+  setDrawerProjectsAvailability,
+  setDrawerProjectsLoading,
+  setDrawerRenderedPages,
+  setDrawerSavingEdit,
+  setDrawerSemantic,
+  setDrawerView,
+  updateDrawerPageCollections
 } from './newtab-drawer-state.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
 
@@ -51,22 +68,14 @@ export function createDrawerDataController({
     return state.allPages.find(page => page.id === id) || null;
   }
 
-  function updateDrawerPageCollections(id, updater) {
-    state.allPages = state.allPages.map(page => (page.id === id ? updater(page) : page));
-    if (Array.isArray(state.loadedProjectPages)) {
-      state.loadedProjectPages = state.loadedProjectPages.map(page => (page.id === id ? updater(page) : page));
-    }
-    state.pages = state.pages.map(page => (page.id === id ? updater(page) : page));
-  }
-
   function syncProjectDrawerStateFromStore(projectId, snapshot, { query = state.query, render = state.hasInitialized } = {}) {
     if (!projectId || state.selectedProjectId !== projectId) {
       return;
     }
 
     const projectPages = snapshot?.allPages || [];
-    state.allPages = upsertListPages(state.allPages, projectPages, Number.POSITIVE_INFINITY);
-    state.loadedProjectPages = projectPages;
+    setDrawerAllPages(state, upsertListPages(state.allPages, projectPages, Number.POSITIVE_INFINITY));
+    setDrawerLoadedScopePages(state, projectPages);
     projectManager.refreshProjectCounts(savedPagesView);
     applyDrawerFilters(query);
 
@@ -105,8 +114,8 @@ export function createDrawerDataController({
     }
 
     const domainPages = snapshot?.allPages || [];
-    state.allPages = upsertListPages(state.allPages, domainPages, Number.POSITIVE_INFINITY);
-    state.loadedProjectPages = domainPages;
+    setDrawerAllPages(state, upsertListPages(state.allPages, domainPages, Number.POSITIVE_INFINITY));
+    setDrawerLoadedScopePages(state, domainPages);
     applyDrawerFilters(query);
 
     if (render) {
@@ -166,7 +175,7 @@ export function createDrawerDataController({
     }
 
     if (!drawerProjectsPromise) {
-      state.projectsLoading = true;
+      setDrawerProjectsLoading(state, true);
       drawerProjectsPromise = projectsStore
         .hydrate()
         .then(snapshot => {
@@ -176,17 +185,15 @@ export function createDrawerDataController({
         })
         .catch(error => {
           console.error('Failed to load projects:', error);
-          state.projects = [];
+          setDrawerProjects(state, []);
           if (error?.code === 'PROJECTS_UNSUPPORTED') {
-            state.projectsAvailable = false;
-            state.projectsUnavailableMessage = error.message;
+            setDrawerProjectsAvailability(state, { available: false, message: error.message });
           } else {
-            state.projectsAvailable = true;
-            state.projectsUnavailableMessage = '';
+            setDrawerProjectsAvailability(state, { available: true, message: '' });
           }
         })
         .finally(() => {
-          state.projectsLoading = false;
+          setDrawerProjectsLoading(state, false);
           drawerProjectsPromise = null;
         });
     }
@@ -194,11 +201,94 @@ export function createDrawerDataController({
     return drawerProjectsPromise;
   }
 
-  async function loadDrawerBasePages({ query = state.query, syncUrl = true } = {}) {
-    const requestId = ++state.requestId;
+  // --- Scope loading --------------------------------------------------------
+  // loadDrawerBasePages / loadDrawerProjectPages / loadDrawerDomainPages were
+  // three ~75-line copies of the same algorithm (requestId guard, sign-in gate,
+  // pre-hydrate UI arming, hydrate, sync, side-loads). They had drifted in
+  // message strings, the warming branch (all-only), and which side-loads ran.
+  // loadDrawerScope below is the single implementation; the three public names
+  // are thin wrappers that build a scope config and delegate.
+
+  function allPagesScope() {
+    return {
+      type: 'all',
+      // The all-pages store is the shared savedPagesStore; getStore returns it
+      // directly (not a memoized lookup), and reset() of the same store twice
+      // in the sign-in gate is harmless.
+      getStore: () => savedPagesStore,
+      syncFromStore: (snapshot, opts) => syncDrawerStateFromStore(snapshot, opts),
+      messages: {
+        searching: 'Searching your saved pages…',
+        gathering: 'Gathering your saved pages…',
+        failed: 'Could not reach your saved pages.',
+        logTag: '[newtab] Drawer load failed:'
+      },
+      // Only the all-pages store has the lazy flag and the warming subscriber
+      // path, so only this scope arms the warming pane.
+      armWarming: true,
+      loadProjectsAlongside: true,
+      loadDomainsAlongside: true,
+      // The all-pages caller (loadDrawerResults) owns the render window reset;
+      // scoped loaders reset their own.
+      resetRenderLimitFirst: false
+    };
+  }
+
+  function projectScope(projectId) {
+    return {
+      type: 'project',
+      id: projectId,
+      getStore: () => getProjectSavedPagesStore(projectId),
+      syncFromStore: (snapshot, opts) => syncProjectDrawerStateFromStore(projectId, snapshot, opts),
+      messages: {
+        searching: 'Searching project pages…',
+        gathering: 'Gathering project pages…',
+        failed: 'Could not reach your project pages.',
+        logTag: '[newtab] Project drawer load failed:'
+      },
+      armWarming: false,
+      loadProjectsAlongside: true,
+      loadDomainsAlongside: false,
+      resetRenderLimitFirst: true
+    };
+  }
+
+  function domainScope(domain) {
+    return {
+      type: 'domain',
+      id: domain,
+      getStore: () => getDomainSavedPagesStore(domain),
+      syncFromStore: (snapshot, opts) => syncDomainDrawerStateFromStore(domain, snapshot, opts),
+      messages: {
+        searching: 'Searching pages from this domain…',
+        gathering: 'Gathering pages from this domain…',
+        failed: 'Could not reach pages from this domain.',
+        logTag: '[newtab] Domain drawer load failed:'
+      },
+      armWarming: false,
+      // Domain view is a flat list; projects and further domain discovery are
+      // not relevant while browsing one domain's pages.
+      loadProjectsAlongside: false,
+      loadDomainsAlongside: false,
+      resetRenderLimitFirst: true
+    };
+  }
+
+  async function loadDrawerScope(scope, { query = state.query, syncUrl = true } = {}) {
+    if (scope.resetRenderLimitFirst) {
+      resetRenderLimit();
+    }
+    // Selecting a domain scope leaves the sparse home view for the browse list.
+    // (all-pages sets this via loadDrawerResults; project scope is entered from
+    // elsewhere that has already settled the view.)
+    if (scope.type === 'domain') {
+      setDrawerView(state, 'browse');
+    }
+
+    const requestId = nextDrawerRequestId(state);
     const trimmedQuery = query.trim();
 
-    state.isLoading = true;
+    setDrawerLoading(state, true);
     setDrawerSearchValue(trimmedQuery);
 
     if (syncUrl && isDrawerOpen()) {
@@ -206,41 +296,47 @@ export function createDrawerDataController({
     }
 
     if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
-      state.isLoading = false;
-      state.hasInitialized = true;
+      setDrawerLoading(state, false);
+      setDrawerInitialized(state, true);
       savedPagesStore.reset({ emit: false });
-      state.allPages = [];
-      state.pages = [];
+      // Reset the scope's own store too (project/domain). For the all-pages
+      // scope this is the same store as above — a redundant reset, harmless.
+      scope.getStore()?.reset?.({ emit: false });
+      setDrawerAllPages(state, []);
+      // all-pages uses null (no scope overlay); scoped views use [] (empty
+      // scope set). Both clear to "no scope pages loaded".
+      setDrawerLoadedScopePages(state, scope.type === 'all' ? null : []);
+      setDrawerRenderedPages(state, []);
       renderDrawerSignInState();
       return;
     }
 
-    const savedPagesSnapshot = savedPagesStore.getSnapshot();
-    if (!savedPagesSnapshot.allPages.length && !hasRenderableWarmCache(savedPagesSnapshot)) {
-      // Post-login the store is in non-lazy prefetch mode (set by the
+    const store = scope.getStore();
+    const snapshot = store?.getSnapshot?.() || null;
+    if (store && !snapshot?.allPages?.length && !hasRenderableWarmCache(snapshot)) {
+      // Post-login the all-pages store is in non-lazy prefetch mode (set by the
       // interactive Sign-in button). Arm the warming phase on state so the
       // dispatcher renders the warming pane (not the bare dog, and not cards
-      // mid-warm-up). The subscriber takes over progress updates once the
-      // first batch lands.
-      if (savedPagesStore.options.lazy === false) {
-        state.warmUpInProgress = true;
-        state.warmUpProgress = { percent: 0, indeterminate: true };
+      // mid-warm-up). The subscriber takes over progress updates once the first
+      // batch lands. Scoped views (project/domain) don't have this path.
+      if (scope.armWarming && store.options?.lazy === false) {
+        beginDrawerWarming(state, { percent: 0, indeterminate: true });
         renderDrawerResults();
       } else {
-        renderDrawerLoadingState(trimmedQuery ? 'Searching your saved pages…' : 'Gathering your saved pages…');
+        renderDrawerLoadingState(trimmedQuery ? scope.messages.searching : scope.messages.gathering);
       }
     }
 
     try {
-      const projectsPromise = ensureDrawerProjectsLoaded();
-      const snapshot = await savedPagesStore.hydrate();
+      const projectsPromise = scope.loadProjectsAlongside ? ensureDrawerProjectsLoaded() : null;
+      const fresh = await store.hydrate();
 
       if (requestId !== state.requestId) {
         return;
       }
 
-      syncDrawerStateFromStore(snapshot, { query: trimmedQuery, render: false });
-      state.hasInitialized = true;
+      scope.syncFromStore(fresh, { query: trimmedQuery, render: false });
+      setDrawerInitialized(state, true);
       renderDrawerResults();
 
       if (projectsPromise) {
@@ -254,103 +350,65 @@ export function createDrawerDataController({
         });
       }
 
-      // Load domains for the sidebar section alongside projects (non-blocking).
-      void ensureDrawerDomainsLoaded().then(() => {
-        if (requestId !== state.requestId) {
-          return;
-        }
-        renderDrawerResults();
-      });
+      // Load domains for the sidebar section alongside the all-pages view
+      // (non-blocking). Scoped views don't surface the domain list.
+      if (scope.loadDomainsAlongside) {
+        void ensureDrawerDomainsLoaded().then(() => {
+          if (requestId !== state.requestId) {
+            return;
+          }
+          renderDrawerResults();
+        });
+      }
     } catch (error) {
       if (requestId !== state.requestId) {
         return;
       }
 
-      console.error('[newtab] Drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Could not reach your saved pages.');
+      console.error(scope.messages.logTag, error);
+      renderDrawerErrorState(error.message || scope.messages.failed);
     } finally {
       if (requestId === state.requestId) {
-        state.isLoading = false;
+        setDrawerLoading(state, false);
       }
     }
   }
 
-  async function loadDrawerProjectPages(projectId, { query = state.query, syncUrl = true } = {}) {
+  async function loadDrawerBasePages(options) {
+    return loadDrawerScope(allPagesScope(), options);
+  }
+
+  async function loadDrawerProjectPages(projectId, options) {
+    // Pinned-pages sentinel and a null/empty id both route to the all-pages
+    // view — that's the "All pages" pseudo-scope.
     if (!projectId || projectId === PINNED_PAGES_SCOPE_ID) {
-      await loadDrawerBasePages({ query, syncUrl });
-      return;
+      return loadDrawerBasePages(options);
     }
+    return loadDrawerScope(projectScope(projectId), options);
+  }
 
-    const requestId = ++state.requestId;
-    const trimmedQuery = query.trim();
-    resetRenderLimit();
-
-    state.isLoading = true;
-    setDrawerSearchValue(trimmedQuery);
-
-    if (syncUrl && isDrawerOpen()) {
-      updateDrawerUrl(true, trimmedQuery);
+  // Pick the scope that matches the currently-selected project/domain so callers
+  // (forceReload) don't have to replicate the project-vs-domain-vs-all branch.
+  // Returns null when no scope is selected and the drawer hasn't initialized —
+  // callers should fall back to loadDrawerBasePages in that case.
+  function scopeForCurrentSelection() {
+    if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
+      return projectScope(state.selectedProjectId);
     }
-
-    if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
-      state.isLoading = false;
-      state.hasInitialized = true;
-      savedPagesStore.reset({ emit: false });
-      getProjectSavedPagesStore(projectId)?.reset({ emit: false });
-      state.allPages = [];
-      state.loadedProjectPages = [];
-      state.pages = [];
-      renderDrawerSignInState();
-      return;
+    if (state.selectedDomainId) {
+      // selectedDomainId is stored WITH the "domain:" prefix (the nav-row
+      // convention), but the domain loaders receive the bare domain — strip
+      // it here so the scope id matches what the sync helper guards on.
+      const domain = state.selectedDomainId.startsWith('domain:')
+        ? state.selectedDomainId.slice('domain:'.length)
+        : state.selectedDomainId;
+      return domainScope(domain);
     }
+    return allPagesScope();
+  }
 
-    const projectSavedPagesStore = getProjectSavedPagesStore(projectId);
-    const projectSnapshot = projectSavedPagesStore?.getSnapshot?.() || null;
-    if (
-      projectSavedPagesStore &&
-      !projectSnapshot?.allPages?.length &&
-      !hasRenderableWarmCache(projectSnapshot)
-    ) {
-      renderDrawerLoadingState(trimmedQuery ? 'Searching project pages…' : 'Gathering project pages…');
-    }
-
-    try {
-      const projectsPromise = ensureDrawerProjectsLoaded();
-      const snapshot = await projectSavedPagesStore.hydrate();
-
-      if (requestId !== state.requestId) {
-        return;
-      }
-
-      syncProjectDrawerStateFromStore(projectId, snapshot, {
-        query: trimmedQuery,
-        render: false
-      });
-      state.hasInitialized = true;
-      renderDrawerResults();
-
-      if (projectsPromise) {
-        void projectsPromise.then(() => {
-          if (requestId !== state.requestId) {
-            return;
-          }
-
-          projectManager.refreshProjectCounts(savedPagesView);
-          renderDrawerResults();
-        });
-      }
-    } catch (error) {
-      if (requestId !== state.requestId) {
-        return;
-      }
-
-      console.error('[newtab] Project drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Could not reach your project pages.');
-    } finally {
-      if (requestId === state.requestId) {
-        state.isLoading = false;
-      }
-    }
+  async function loadDrawerScopeForCurrentSelection(options) {
+    return loadDrawerScope(scopeForCurrentSelection(), options);
   }
 
   async function handleDrawerDelete(id) {
@@ -383,7 +441,7 @@ export function createDrawerDataController({
       await savedPagesStore.removePage(id);
       await removeFromCachedProjectStores(id, deletedPage?.project_ids || []);
       if (Array.isArray(state.loadedProjectPages)) {
-        state.loadedProjectPages = state.loadedProjectPages.filter(page => page.id !== id);
+        setDrawerLoadedScopePages(state, state.loadedProjectPages.filter(page => page.id !== id));
       }
       syncDrawerStateFromStore(savedPagesStore.getSnapshot(), {
         query: state.query,
@@ -406,7 +464,7 @@ export function createDrawerDataController({
     }
 
     const nextPinnedState = !page.pinned;
-    updateDrawerPageCollections(id, entry => ({ ...entry, pinned: nextPinnedState }));
+    updateDrawerPageCollections(state, id, entry => ({ ...entry, pinned: nextPinnedState }));
     void savedPagesView.persistAllPages();
     void updateCachedProjectStores(page, entry => ({ ...entry, pinned: nextPinnedState }));
     renderDrawerResults();
@@ -414,7 +472,7 @@ export function createDrawerDataController({
     try {
       await api.pinPage(id, nextPinnedState);
     } catch (error) {
-      updateDrawerPageCollections(id, entry => ({ ...entry, pinned: !nextPinnedState }));
+      updateDrawerPageCollections(state, id, entry => ({ ...entry, pinned: !nextPinnedState }));
       void savedPagesView.persistAllPages();
       renderDrawerResults();
       console.error('[newtab] Failed to update pin:', error);
@@ -427,8 +485,8 @@ export function createDrawerDataController({
       return;
     }
 
-    state.editingPageId = id;
-    state.savingEditPageId = null;
+    setDrawerEditingPage(state, id);
+    setDrawerSavingEdit(state, null);
     renderDrawerResults();
   }
 
@@ -437,7 +495,7 @@ export function createDrawerDataController({
       return;
     }
 
-    state.editingPageId = null;
+    setDrawerEditingPage(state, null);
     renderDrawerResults();
   }
 
@@ -454,7 +512,7 @@ export function createDrawerDataController({
       return;
     }
 
-    state.savingEditPageId = id;
+    setDrawerSavingEdit(state, id);
     renderDrawerResults();
 
     try {
@@ -468,15 +526,15 @@ export function createDrawerDataController({
         title: nextTitle,
         ai_summary_brief: nextAiSummaryBrief
       });
-      updateDrawerPageCollections(id, applyResponseToPage);
-      state.editingPageId = null;
-      state.savingEditPageId = null;
+      updateDrawerPageCollections(state, id, applyResponseToPage);
+      setDrawerEditingPage(state, null);
+      setDrawerSavingEdit(state, null);
       await savedPagesView.persistAllPages();
       await updateCachedProjectStores(page, applyResponseToPage);
       applyDrawerFilters(state.query);
       renderDrawerResults();
     } catch (error) {
-      state.savingEditPageId = null;
+      setDrawerSavingEdit(state, null);
       renderDrawerResults();
       console.error('[newtab] Failed to update page:', error);
       reportFailure('Failed to update page. Please try again.');
@@ -488,9 +546,7 @@ export function createDrawerDataController({
 
     // Empty query: nothing to search semantically. Clear any prior results.
     if (!trimmedQuery) {
-      state.semanticResults = [];
-      state.semanticQuery = '';
-      state.semanticLoading = false;
+      setDrawerSemantic(state, { results: [], query: '', loading: false });
       renderDrawerResults();
       return;
     }
@@ -498,20 +554,13 @@ export function createDrawerDataController({
     // Only attempt semantic search when the API supports it; otherwise no-op
     // rather than erroring, so the saved-page filter still works.
     if (typeof api?.searchContent !== 'function') {
-      state.semanticResults = [];
-      state.semanticQuery = trimmedQuery;
-      state.semanticLoading = false;
+      setDrawerSemantic(state, { results: [], query: trimmedQuery, loading: false });
       renderDrawerResults();
       return;
     }
 
-    const requestId = state.semanticRequestId + 1;
-    state.semanticRequestId = requestId;
-    state.semanticQuery = trimmedQuery;
-    // Clear prior results so the loading state is shown on every new search,
-    // including follow-on tag clicks from an existing results page.
-    state.semanticResults = [];
-    state.semanticLoading = true;
+    const requestId = nextDrawerSemanticRequestId(state);
+    setDrawerSemantic(state, { query: trimmedQuery, results: [], loading: true });
     renderDrawerResults();
 
     // Run the search inside a Sentry span when available (production) so the
@@ -547,15 +596,15 @@ export function createDrawerDataController({
       }
 
       const results = Array.isArray(response?.results) ? response.results : [];
-      state.semanticResults = results.map(result => result?.thing_data).filter(Boolean);
+      setDrawerSemantic(state, { results: results.map(result => result?.thing_data).filter(Boolean) });
     } catch (error) {
       console.error('[newtab] Semantic search failed:', error);
       if (state.semanticRequestId === requestId) {
-        state.semanticResults = [];
+        setDrawerSemantic(state, { results: [] });
       }
     } finally {
       if (state.semanticRequestId === requestId) {
-        state.semanticLoading = false;
+        setDrawerSemantic(state, { loading: false });
         renderDrawerResults();
       }
     }
@@ -570,7 +619,7 @@ export function createDrawerDataController({
 
     // Any search intent (typed, submitted, cleared, topic-pill click) leaves
     // the sparse home view for the browse list.
-    state.view = 'browse';
+    setDrawerView(state, 'browse');
 
     if (!state.hasInitialized) {
       await loadDrawerBasePages({ query: trimmedQuery, syncUrl });
@@ -598,87 +647,27 @@ export function createDrawerDataController({
     }
     try {
       const domains = await api.getDomains();
-      state.domains = Array.isArray(domains) ? domains : [];
+      setDrawerDomains(state, Array.isArray(domains) ? domains : []);
       return state.domains;
     } catch (error) {
       console.error('Failed to load domains:', error);
-      state.domains = [];
+      setDrawerDomains(state, []);
       return state.domains;
     }
   }
 
   // Load pages scoped to a domain (broad category), using the same per-scope
-  // warm-cache approach as project pages.
-  async function loadDrawerDomainPages(domain, { query = state.query, syncUrl = true } = {}) {
+  // warm-cache approach as project pages. Thin wrapper over loadDrawerScope —
+  // see the scope-loading section above for the shared algorithm.
+  async function loadDrawerDomainPages(domain, options) {
     if (!domain) {
-      await loadDrawerBasePages({ query, syncUrl });
-      return;
+      return loadDrawerBasePages(options);
     }
-
-    // Selecting a domain scope leaves the sparse home view.
-    state.view = 'browse';
-    resetRenderLimit();
-    const requestId = ++state.requestId;
-    const trimmedQuery = query.trim();
-
-    state.isLoading = true;
-    setDrawerSearchValue(trimmedQuery);
-
-    if (syncUrl && isDrawerOpen()) {
-      updateDrawerUrl(true, trimmedQuery);
-    }
-
-    if (!(await canHydrateDrawerWithWarmCache(api, getCurrentUser))) {
-      state.isLoading = false;
-      state.hasInitialized = true;
-      savedPagesStore.reset({ emit: false });
-      getDomainSavedPagesStore(domain)?.reset({ emit: false });
-      state.allPages = [];
-      state.loadedProjectPages = [];
-      state.pages = [];
-      renderDrawerSignInState();
-      return;
-    }
-
-    const domainSavedPagesStore = getDomainSavedPagesStore(domain);
-    const domainSnapshot = domainSavedPagesStore?.getSnapshot?.() || null;
-    if (
-      domainSavedPagesStore &&
-      !domainSnapshot?.allPages?.length &&
-      !hasRenderableWarmCache(domainSnapshot)
-    ) {
-      renderDrawerLoadingState(trimmedQuery ? 'Searching pages from this domain…' : 'Gathering pages from this domain…');
-    }
-
-    try {
-      const snapshot = await domainSavedPagesStore.hydrate();
-
-      if (requestId !== state.requestId) {
-        return;
-      }
-
-      syncDomainDrawerStateFromStore(domain, snapshot, {
-        query: trimmedQuery,
-        render: false
-      });
-      state.hasInitialized = true;
-      renderDrawerResults();
-    } catch (error) {
-      if (requestId !== state.requestId) {
-        return;
-      }
-
-      console.error('[newtab] Domain drawer load failed:', error);
-      renderDrawerErrorState(error.message || 'Could not reach pages from this domain.');
-    } finally {
-      if (requestId === state.requestId) {
-        state.isLoading = false;
-      }
-    }
+    return loadDrawerScope(domainScope(domain), options);
   }
 
   function resetRenderLimit() {
-    state.renderLimit = INITIAL_RENDER_LIMIT;
+    resetDrawerRenderLimit(state);
   }
 
   // Track in-flight lazy loads so concurrent scroll events don't stack calls.
@@ -697,7 +686,7 @@ export function createDrawerDataController({
 
     const fullCount = state.pages.length;
     if (state.renderLimit < fullCount) {
-      state.renderLimit += RENDER_LIMIT_INCREMENT;
+      growDrawerRenderLimit(state);
       renderDrawerResults();
     }
 
@@ -736,6 +725,7 @@ export function createDrawerDataController({
     loadDrawerDomainPages,
     loadDrawerProjectPages,
     loadDrawerResults,
+    loadDrawerScopeForCurrentSelection,
     loadSemanticResults,
     resetRenderLimit
   };

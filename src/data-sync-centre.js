@@ -23,6 +23,8 @@ import { readAllBookmarks } from './bookmark-reader.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { addPendingSaves } from './pending-saves.js';
 import { createDialogLifecycle } from './dialog-lifecycle.js';
+import { createEl, createQueryId } from './shared-ui-helpers.js';
+import { sendRuntimeMessage } from './send-runtime-message.js';
 import {
   parseRaindropCsv,
   parseNetscapeHtml,
@@ -39,13 +41,7 @@ export function createDataSyncCentre({
   notify = () => {},
   onImportComplete = () => {}
 } = {}) {
-  const queryId = (id) => {
-    try {
-      return documentObj?.getElementById?.(id) ?? null;
-    } catch {
-      return null;
-    }
-  };
+  const queryId = createQueryId(documentObj);
   const getBackdrop = () => queryId('data-sync-centre-backdrop');
   const getDialog = () => queryId('data-sync-centre-dialog');
 
@@ -65,24 +61,7 @@ export function createDataSyncCentre({
     }
   });
 
-  function el(tag, { className, text, html, attrs, onClick, children } = {}) {
-    const node = documentObj.createElement(tag);
-    if (className) node.className = className;
-    if (text != null) node.textContent = text;
-    if (html != null) node.innerHTML = html;
-    if (attrs) {
-      // Skip null/undefined values so callers can conditionally omit an
-      // attribute (e.g. disabled: busy ? 'disabled' : null). setAttribute
-      // stringifies null to "null", which for boolean attributes like
-      // 'disabled' would wrongly enable them.
-      for (const [k, v] of Object.entries(attrs)) {
-        if (v != null) node.setAttribute(k, v);
-      }
-    }
-    if (onClick) node.onclick = onClick;
-    if (children) node.append(...children);
-    return node;
-  }
+  const el = createEl(documentObj);
 
   // --- helpers -------------------------------------------------------------
 
@@ -366,26 +345,11 @@ export function createDataSyncCentre({
     ] });
   }
 
-  // Minimal runtime.sendMessage wrapper (Promise-based for both Firefox & Chrome).
+  // Thin wrapper over the shared sendRuntimeMessage helper so the call sites
+  // below can pass just the message. `runtime` is the injected factory param
+  // (the browser.runtime or chrome.runtime namespace).
   function sendRuntime(message) {
-    if (!runtime?.sendMessage) {
-      return Promise.reject(new Error('Browser runtime API not available'));
-    }
-    return new Promise((resolve, reject) => {
-      try {
-        const response = runtime.sendMessage(message, (res) => {
-          const lastError = runtime.lastError;
-          if (lastError) { reject(new Error(lastError.message)); return; }
-          resolve(res);
-        });
-        // Firefox returns a promise from sendMessage when no callback is given.
-        if (response && typeof response.then === 'function') {
-          response.then(resolve, reject);
-        }
-      } catch (error) {
-        reject(error);
-      }
-    });
+    return sendRuntimeMessage(runtime, message);
   }
 
   function render() {

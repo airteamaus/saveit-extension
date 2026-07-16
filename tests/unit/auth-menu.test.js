@@ -1,6 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import '../../src/auth-menu.js';
+import { sendRuntimeMessage } from '../../src/send-runtime-message.js';
+
+// auth-menu.js is a classic script that reads window.sendRuntimeMessage
+// (seeded by config-loader.js in production). Seed it here so the real helper
+// is exercised — the tests previously mocked sendMessage as promise-returning,
+// which hid the callback-form path the helper exists to handle.
+beforeEach(() => {
+  window.sendRuntimeMessage = sendRuntimeMessage;
+});
 
 describe('AuthMenu.signIn', () => {
   beforeEach(() => {

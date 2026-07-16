@@ -1,3 +1,5 @@
+import { sendRuntimeMessage } from './send-runtime-message.js';
+
 const browserApi = globalThis.browser?.runtime ? globalThis.browser : globalThis.chrome;
 
 const saveDefaultBtn = document.getElementById('save-default-btn');
@@ -20,26 +22,8 @@ function setBusy(isBusy, message = '') {
   setStatus(message, isBusy ? 'info' : statusEl?.dataset?.state || 'info');
 }
 
-async function sendRuntimeMessage(message) {
-  if (!browserApi?.runtime?.sendMessage) {
-    throw new Error('Browser runtime API not available');
-  }
-
-  if (globalThis.browser?.runtime?.sendMessage) {
-    return await globalThis.browser.runtime.sendMessage(message);
-  }
-
-  return await new Promise((resolve, reject) => {
-    globalThis.chrome.runtime.sendMessage(message, (response) => {
-      const runtimeError = globalThis.chrome.runtime?.lastError;
-      if (runtimeError) {
-        reject(new Error(runtimeError.message));
-        return;
-      }
-
-      resolve(response);
-    });
-  });
+function send(message) {
+  return sendRuntimeMessage(browserApi.runtime, message);
 }
 
 function renderProjects(projects) {
@@ -74,7 +58,7 @@ async function loadProjects() {
   projectList?.setAttribute('aria-busy', 'true');
   setStatus('');
 
-  const response = await sendRuntimeMessage({ action: 'getToolbarProjects' });
+  const response = await send({ action: 'getToolbarProjects' });
   if (!response?.success) {
     renderProjects([]);
     setStatus(response?.error || 'Failed to load projects.', 'error');
@@ -88,7 +72,7 @@ async function loadProjects() {
 async function handleSave(projectId = null, loadingMessage = 'Saving...') {
   setBusy(true, loadingMessage);
 
-  const response = await sendRuntimeMessage({
+  const response = await send({
     action: 'saveCurrentPage',
     ...(projectId ? { projectId } : {})
   });

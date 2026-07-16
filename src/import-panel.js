@@ -11,6 +11,7 @@
 import { readAllBookmarks } from './bookmark-reader.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
 import { createDialogLifecycle } from './dialog-lifecycle.js';
+import { createEl, createQueryId } from './shared-ui-helpers.js';
 
 const STEP = { PREVIEW: 'preview', PROGRESS: 'progress', RESULT: 'result' };
 
@@ -22,13 +23,7 @@ export function createImportPanel({
 } = {}) {
   // Resolve the dialog elements lazily/tolerantly so the panel can be created
   // even when the document doesn't expose the elements (e.g. test harnesses).
-  const queryId = (id) => {
-    try {
-      return documentObj?.getElementById?.(id) ?? null;
-    } catch {
-      return null;
-    }
-  };
+  const queryId = createQueryId(documentObj);
   const getBackdrop = () => queryId('import-panel-backdrop');
   const getDialog = () => queryId('import-panel-dialog');
   let state = { step: STEP.PREVIEW, bookmarks: null, total: 0, skipped: 0, result: null, error: null };
@@ -42,25 +37,7 @@ export function createImportPanel({
     }
   });
 
-  function el(tag, { className, text, html, attrs, onClick, children } = {}) {
-    const node = documentObj.createElement(tag);
-    if (className) node.className = className;
-    if (text != null) node.textContent = text;
-    if (html != null) node.innerHTML = html;
-    if (attrs) {
-      // Skip null/undefined values: setAttribute stringifies null to "null",
-      // which for boolean attributes like 'disabled' would wrongly enable them.
-      for (const [k, v] of Object.entries(attrs)) {
-        if (v != null) node.setAttribute(k, v);
-      }
-    }
-    if (onClick) node.onclick = onClick;
-    if (children) {
-      // Append() returns undefined, so do it explicitly and return the node.
-      node.append(...children);
-    }
-    return node;
-  }
+  const el = createEl(documentObj);
 
   function renderPreview() {
     getDialog()?.replaceChildren(

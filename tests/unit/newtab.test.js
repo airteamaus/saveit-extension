@@ -944,6 +944,18 @@ describe('newtab modules', () => {
        ...(overrides.projectSavedPagesStore || {})
      };
      const createProjectSavedPagesStoreFn = overrides.createProjectSavedPagesStoreFn || vi.fn(() => projectSavedPagesStore);
+     let domainStoreSnapshot = {
+       allPages: [],
+       total: 0
+     };
+     const domainSavedPagesStore = {
+       getSnapshot: vi.fn(() => domainStoreSnapshot),
+       hydrate: vi.fn(async () => domainStoreSnapshot),
+       subscribe: vi.fn(() => () => {}),
+       reset: vi.fn(),
+       ...(overrides.domainSavedPagesStore || {})
+     };
+     const createDomainSavedPagesStoreFn = overrides.createDomainSavedPagesStoreFn || vi.fn(() => domainSavedPagesStore);
      const projectsStore = {
        hydrate: vi.fn().mockResolvedValue({ projects: [] }),
        ...(overrides.projectsStore || {})
@@ -989,6 +1001,7 @@ describe('newtab modules', () => {
        }),
        applyDrawerFilters,
        createProjectSavedPagesStoreFn,
+      createDomainSavedPagesStoreFn,
        windowObj: {
          confirm: vi.fn(() => true),
          alert: vi.fn(),
@@ -1008,10 +1021,12 @@ describe('newtab modules', () => {
        api,
        savedPagesStore,
        projectSavedPagesStore,
+      domainSavedPagesStore,
        projectsStore,
        projectManager,
        savedPagesView,
        createProjectSavedPagesStoreFn,
+      createDomainSavedPagesStoreFn,
        applyDrawerFilters,
        dependencies
      };
@@ -1138,6 +1153,104 @@ describe('newtab modules', () => {
      expect(state.loadedProjectPages.map(page => page.id)).toEqual(['page-1', 'page-2']);
      expect(state.pages.map(page => page.id)).toEqual(['page-1', 'page-2']);
      expect(dependencies.renderDrawerResults).toHaveBeenCalled();
+   });
+
+   it('hydrates domain pages through the merged loadDrawerScope path (parity with project)', async () => {
+     const domainSnapshot = {
+       allPages: [
+         { id: 'd-1', title: 'Example one', domain: 'example.com' },
+         { id: 'd-2', title: 'Example two', domain: 'example.com' }
+       ],
+       total: 2
+     };
+     const {
+       controller,
+       state,
+       api,
+       domainSavedPagesStore,
+       createDomainSavedPagesStoreFn,
+       dependencies
+     } = createDrawerDataHarness({
+       // Production stores the id WITH the "domain:" prefix; the loader
+       // receives the bare domain. Mirror both halves of that contract.
+       state: { selectedDomainId: 'domain:example.com' },
+       domainSavedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue(domainSnapshot),
+         subscribe: vi.fn(() => () => {})
+       },
+       applyDrawerFilters: vi.fn(query => applySavedPagesDrawerFilters({
+         state,
+         projectManager: { getScopedPages: (dashboard, pages) => pages },
+         savedPagesView: {},
+         query
+       }))
+     });
+
+     await controller.loadDrawerDomainPages('example.com', { query: '  ex  ' });
+     await Promise.resolve();
+
+     expect(createDomainSavedPagesStoreFn).toHaveBeenCalledWith(api, 'example.com', expect.objectContaining({
+       initialFetchLimit: expect.any(Number),
+       prefetchBatchLimit: expect.any(Number)
+     }));
+     expect(domainSavedPagesStore.hydrate).toHaveBeenCalledTimes(1);
+     // Domain view does NOT side-load projects (loadProjectsAlongside: false).
+     expect(state.projects).toEqual([]);
+     expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching pages from this domain…');
+     expect(state.allPages.map(page => page.id)).toEqual(['d-1', 'd-2']);
+     expect(state.loadedProjectPages.map(page => page.id)).toEqual(['d-1', 'd-2']);
+     expect(state.view).toBe('browse');
+     expect(state.hasInitialized).toBe(true);
+   });
+
+   it('loadDrawerScopeForCurrentSelection routes a domain selection to the domain store, not all-pages', async () => {
+     // Regression: forceReload used to branch on project-vs-base only, so a
+     // domain selection silently fell through to loadDrawerBasePages. The
+     // merged scope picker must recognise selectedDomainId and hydrate the
+     // domain store instead.
+     const {
+       controller,
+       savedPagesStore,
+       domainSavedPagesStore
+     } = createDrawerDataHarness({
+       // Stored WITH the "domain:" prefix (nav-row convention).
+       state: { selectedDomainId: 'domain:example.com' },
+       domainSavedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue({ allPages: [{ id: 'd-1', domain: 'example.com' }], total: 1 }),
+         subscribe: vi.fn(() => () => {})
+       }
+     });
+
+     await controller.loadDrawerScopeForCurrentSelection({ syncUrl: false });
+     await Promise.resolve();
+
+     expect(domainSavedPagesStore.hydrate).toHaveBeenCalledTimes(1);
+     // The all-pages store must NOT have been the one hydrated for this scope.
+     expect(savedPagesStore.hydrate).not.toHaveBeenCalled();
+   });
+
+   it('loadDrawerScopeForCurrentSelection routes an all-pages selection to the base store', async () => {
+     const {
+       controller,
+       savedPagesStore,
+       domainSavedPagesStore
+     } = createDrawerDataHarness({
+       state: { selectedProjectId: null, selectedDomainId: null },
+       savedPagesStore: {
+         getSnapshot: vi.fn(() => ({ allPages: [], total: 0 })),
+         hydrate: vi.fn().mockResolvedValue({ allPages: [{ id: 'a-1' }], total: 1 }),
+         reset: vi.fn(),
+         options: { lazy: true }
+       }
+     });
+
+     await controller.loadDrawerScopeForCurrentSelection({ syncUrl: false });
+     await Promise.resolve();
+
+     expect(savedPagesStore.hydrate).toHaveBeenCalledTimes(1);
+     expect(domainSavedPagesStore.hydrate).not.toHaveBeenCalled();
    });
 
    it('keeps pinned and all-pages sidebar counts tied to the canonical page collection when a project is selected', async () => {

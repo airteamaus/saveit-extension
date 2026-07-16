@@ -1,4 +1,5 @@
 import { canHydrateDrawerWithWarmCache } from './newtab-drawer-coordination.js';
+import { setDrawerInitialized } from './newtab-drawer-state.js';
 
 export function createDrawerSyncLifecycle({
   api,
@@ -63,13 +64,13 @@ export function createDrawerSyncLifecycle({
         return;
       }
 
-      state.hasInitialized = false;
+      setDrawerInitialized(state, false);
       savedPagesStore.reset({ emit: false });
       await loadDrawerResults(getSearchQuery(), { syncUrl: false });
       return;
     }
 
-    state.hasInitialized = false;
+    setDrawerInitialized(state, false);
     savedPagesStore.reset({ emit: false });
     await loadSummary();
   }

@@ -14,6 +14,7 @@
 
 import { isOwnedProject } from './project-manager-state.js';
 import { createDialogLifecycle } from './dialog-lifecycle.js';
+import { createEl, createQueryId } from './shared-ui-helpers.js';
 
 export function createSharingCentre({
   api,
@@ -22,13 +23,7 @@ export function createSharingCentre({
   getProjectManager,
   onProjectsChanged = () => {}
 } = {}) {
-  const queryId = (id) => {
-    try {
-      return documentObj?.getElementById?.(id) ?? null;
-    } catch {
-      return null;
-    }
-  };
+  const queryId = createQueryId(documentObj);
   const getBackdrop = () => queryId('sharing-centre-backdrop');
   const getDialog = () => queryId('sharing-centre-dialog');
 
@@ -43,21 +38,7 @@ export function createSharingCentre({
     }
   });
 
-  function el(tag, { className, text, attrs, onClick, children } = {}) {
-    const node = documentObj.createElement(tag);
-    if (className) node.className = className;
-    if (text != null) node.textContent = text;
-    if (attrs) {
-      // Skip null/undefined values: setAttribute stringifies null to "null",
-      // which for boolean attributes like 'disabled' would wrongly enable them.
-      for (const [key, value] of Object.entries(attrs)) {
-        if (value != null) node.setAttribute(key, value);
-      }
-    }
-    if (onClick) node.onclick = onClick;
-    if (children) node.append(...children);
-    return node;
-  }
+  const el = createEl(documentObj);
 
   function audienceLabel(project) {
     if (project.visibility !== 'company' || !project.company_domain) {

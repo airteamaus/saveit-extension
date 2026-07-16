@@ -59,6 +59,207 @@ export function createInitialDrawerState() {
   };
 }
 
+// --- Single mutation owner -------------------------------------------------
+//
+// Every write to the drawer `state` bag MUST go through one of the functions
+// below. This module is the complete answer to "who sets a drawer state field?"
+// — keeping all writes here means a render path can be followed without holding
+// six files of mutation in your head, and the races that used to require
+// long narrating comments (warming UI, hasInitialized resets) now have one
+// search location.
+//
+// The bag stays a plain readable object: functions take `state` as their first
+// arg and mutate it in place. Normalization that the savedPagesView proxy used
+// to apply (array-coerce, `|| null`, the 'browse'|'home' clamp) lives here now,
+// so direct-writers and proxy-writers share one path.
+
+export function resetDrawerState(state) {
+  Object.assign(state, createInitialDrawerState());
+}
+
+// --- Load lifecycle --------------------------------------------------------
+
+export function setDrawerLoading(state, value) {
+  state.isLoading = value === true;
+}
+
+// Monotonic stale-guard token. Returns the new id so callers can capture it
+// before the await that may be superseded (the standard ++write/===read guard).
+export function nextDrawerRequestId(state) {
+  state.requestId += 1;
+  return state.requestId;
+}
+
+export function setDrawerInitialized(state, value) {
+  state.hasInitialized = value === true;
+}
+
+// --- Pages -----------------------------------------------------------------
+
+export function setDrawerAllPages(state, pages) {
+  state.allPages = Array.isArray(pages) ? pages : [];
+}
+
+export function setDrawerRenderedPages(state, pages) {
+  state.pages = Array.isArray(pages) ? pages : [];
+}
+
+// null clears the scope-source overlay (back to the All-pages view); an array
+// installs it for a project/domain scope. Stored on the same field for both.
+export function setDrawerLoadedScopePages(state, pages) {
+  state.loadedProjectPages = Array.isArray(pages) ? pages : null;
+}
+
+// Apply a single updater to the page collections the drawer renders from. Used
+// by optimistic edit/pin/delete flows that must update the in-memory copy in
+// lockstep. Returns the updated page for convenience.
+export function updateDrawerPageCollections(state, id, updater) {
+  if (typeof updater !== 'function') return null;
+  const apply = (page) => (page.id === id ? updater(page) : page);
+  state.allPages = state.allPages.map(apply);
+  if (Array.isArray(state.loadedProjectPages)) {
+    state.loadedProjectPages = state.loadedProjectPages.map(apply);
+  }
+  state.pages = state.pages.map(apply);
+  return state.allPages.find(page => page.id === id) || null;
+}
+
+// --- Projects --------------------------------------------------------------
+
+export function setDrawerProjects(state, projects) {
+  state.projects = Array.isArray(projects) ? projects : [];
+}
+
+export function setDrawerProjectsLoading(state, value) {
+  state.projectsLoading = value === true;
+}
+
+export function setDrawerProjectsAvailability(state, { available, message } = {}) {
+  if (available !== undefined) state.projectsAvailable = available !== false;
+  if (message !== undefined) state.projectsUnavailableMessage = message || '';
+}
+
+// --- Scope selection -------------------------------------------------------
+
+export function selectDrawerProject(state, projectId) {
+  state.selectedProjectId = projectId || null;
+}
+
+export function selectDrawerDomain(state, domainId) {
+  state.selectedDomainId = domainId || null;
+}
+
+export function setDrawerView(state, value) {
+  state.view = value === 'browse' ? 'browse' : 'home';
+}
+
+// --- Edit lifecycle --------------------------------------------------------
+
+export function setDrawerEditingPage(state, id) {
+  state.editingPageId = id || null;
+}
+
+export function setDrawerSavingEdit(state, id) {
+  state.savingEditPageId = id || null;
+}
+
+// --- Render window ---------------------------------------------------------
+
+export function resetDrawerRenderLimit(state) {
+  state.renderLimit = INITIAL_RENDER_LIMIT;
+}
+
+export function growDrawerRenderLimit(state, increment = RENDER_LIMIT_INCREMENT) {
+  state.renderLimit += increment;
+}
+
+// --- Semantic search -------------------------------------------------------
+
+export function nextDrawerSemanticRequestId(state) {
+  state.semanticRequestId += 1;
+  return state.semanticRequestId;
+}
+
+export function setDrawerSemantic(state, { results, query, loading } = {}) {
+  if (results !== undefined) state.semanticResults = Array.isArray(results) ? results : [];
+  if (query !== undefined) state.semanticQuery = query;
+  if (loading !== undefined) state.semanticLoading = loading === true;
+}
+
+// --- Domains ---------------------------------------------------------------
+
+export function setDrawerDomains(state, domains) {
+  state.domains = Array.isArray(domains) ? domains : [];
+}
+
+// --- Warming ---------------------------------------------------------------
+// The most heavily cross-closure cluster: armed by loadDrawerBasePages, driven
+// by the store subscriber, cleared on completion or sign-out. Concentrating
+// these writes here is the direct fix for the trampling race the long comments
+// used to narrate.
+
+export function beginDrawerWarming(state, progress) {
+  state.warmUpInProgress = true;
+  if (progress !== undefined) {
+    state.warmUpProgress = progress;
+  } else {
+    state.warmUpProgress = { percent: 0, indeterminate: true };
+  }
+}
+
+export function updateDrawerWarming(state, progress) {
+  state.warmUpInProgress = true;
+  if (progress !== undefined) {
+    state.warmUpProgress = progress;
+  }
+}
+
+export function clearDrawerWarming(state) {
+  // Clear the flag and the clamp bookkeeping, but leave warmUpProgress at its
+  // last value. Both call sites (the completion timer and the drawer-closed
+  // drop) want the bar to hold its final reading — the completion path shows
+  // 100% briefly before the dispatcher switches to cards, and a full reset
+  // (including progress) only happens on sign-out via resetDrawerState.
+  state.warmUpInProgress = false;
+  state.warmUpLastPercent = 0;
+  state.warmUpDeterminate = false;
+}
+
+// --- Totals ----------------------------------------------------------------
+// Normally derived inside applyDrawerFilters/syncDrawerStateFromStore, but the
+// savedPagesView proxy exposes totalPages/allItemsTotal setters (used by some
+// project-manager paths) so they need a home here too to keep the invariant.
+
+export function setDrawerTotal(state, value) {
+  state.total = value;
+}
+
+export function setDrawerAllItemsTotal(state, value) {
+  state.allItemsTotal = value;
+}
+
+// --- Editor + filter -------------------------------------------------------
+// These had no proxy setter previously, so nested writes
+// (state.currentFilter.projectId = x) bypassed normalization. Exposing them as
+// first-class mutations keeps the "one write surface" invariant honest.
+
+function getDefaultProjectEditorState() {
+  return { pageId: null, query: '' };
+}
+
+export function setDrawerProjectEditorState(state, value) {
+  state.projectEditorState = value || getDefaultProjectEditorState();
+}
+
+export function setDrawerCurrentFilter(state, { search, projectId, cursor } = {}) {
+  if (!state.currentFilter || typeof state.currentFilter !== 'object') {
+    state.currentFilter = { search: '', projectId: null, cursor: null };
+  }
+  if (search !== undefined) state.currentFilter.search = search;
+  if (projectId !== undefined) state.currentFilter.projectId = projectId || null;
+  if (cursor !== undefined) state.currentFilter.cursor = cursor || null;
+}
+
 // Computes the warming progress bar value from the store snapshot, persisting
 // the clamp state on `state` so the bar never decreases across renders. Once a
 // determinate reading has been shown, it never goes back below it; an unknown
@@ -92,6 +293,12 @@ export function computeWarmingProgress(snapshot, state, { complete = false } = {
   state.warmUpLastPercent = percent;
   return { percent, indeterminate: false };
 }
+
+// Note: computeWarmingProgress persists its clamp side-effects directly on the
+// warming fields. Those reads/writes are intrinsic to the clamp math (the
+// computed value depends on the prior value), so they stay inline rather than
+// threading through updateDrawerWarming — which would require the prior value
+// before computing the next, defeating the single-assignment intent.
 
 // Returns true when the store snapshot reflects a terminal idle state — i.e.
 // the store has finished whatever work the warm-up was waiting on.
@@ -139,7 +346,7 @@ export function applyDrawerFilters({
 }) {
   const trimmedQuery = query.trim();
   state.query = trimmedQuery;
-  state.currentFilter.search = trimmedQuery;
+  setDrawerCurrentFilter(state, { search: trimmedQuery });
 
   // When a project or domain scope is active, use the scoped page set
   // (loadedProjectPages holds domain pages too). Otherwise use all pages.
@@ -153,12 +360,12 @@ export function applyDrawerFilters({
   state.total = scopedPages.length;
 
   if (!trimmedQuery) {
-    state.pages = [...scopedPages];
+    setDrawerRenderedPages(state, [...scopedPages]);
     return;
   }
 
   const loweredQuery = trimmedQuery.toLowerCase();
-  state.pages = scopedPages.filter(page => getDrawerSearchableText(page).includes(loweredQuery));
+  setDrawerRenderedPages(state, scopedPages.filter(page => getDrawerSearchableText(page).includes(loweredQuery)));
 }
 
 export function syncDrawerStateFromStore({
@@ -171,8 +378,8 @@ export function syncDrawerStateFromStore({
   query = state.query,
   render = state.hasInitialized
 }) {
-  state.allPages = snapshot.allPages || [];
-  state.loadedProjectPages = null;
+  setDrawerAllPages(state, snapshot.allPages || []);
+  setDrawerLoadedScopePages(state, null);
   state.allItemsTotal = Math.max(
     typeof snapshot.total === 'number' ? snapshot.total : 0,
     state.allPages.length
@@ -194,9 +401,8 @@ export function syncProjectsStateFromStore({
   renderDrawerChrome,
   render = state.hasInitialized
 }) {
-  state.projects = snapshot.projects || snapshot.allPages || [];
-  state.projectsAvailable = true;
-  state.projectsUnavailableMessage = '';
+  setDrawerProjects(state, snapshot.projects || snapshot.allPages || []);
+  setDrawerProjectsAvailability(state, { available: true, message: '' });
   projectManager.refreshProjectCounts(savedPagesView);
 
   if (render) {
