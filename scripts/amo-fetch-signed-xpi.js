@@ -122,7 +122,18 @@ export async function fetchSignedXpiForVersion({
   }
 
   const outPath = path.join(artifactsDir, `saveit-${version}.xpi`);
-  await downloadSignedXpi({ fileUrl: result.fileUrl, outPath, fetchImpl, writeFile });
+  try {
+    await downloadSignedXpi({ fileUrl: result.fileUrl, outPath, fetchImpl, writeFile });
+  } catch (error) {
+    // The version lookup (200 + fileUrl) said the file exists, but the download
+    // failed. This happens when a prior, cancelled run left a half-submitted
+    // version on AMO whose signed file is not yet downloadable (HTTP 404), or
+    // the URL is transiently unreachable. Rather than fail the whole release,
+    // fall back to a fresh sign: AMO will either accept it (genuine first
+    // upload) or report "version already exists", which the caller surfaces.
+    console.error(`⚠️  Signed file for ${version} not reusable (${error.message}); falling back to sign.`);
+    return { needsSigning: true };
+  }
   return { needsSigning: false, outPath };
 }
 

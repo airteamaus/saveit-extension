@@ -130,6 +130,25 @@ describe('fetchSignedXpiForVersion', () => {
     })).rejects.toThrow(/HTTP 500/);
   });
 
+  it('falls back to needsSigning when the version exists but its signed file 404s', async () => {
+    // Regression: a cancelled prior run can leave a version record on AMO whose
+    // signed file URL is not yet downloadable (HTTP 404 on the file, not the
+    // version lookup). The old code threw on this — failing the whole release —
+    // instead of falling back to a fresh sign. Treat an un-downloadable file as
+    // "not reusable" so the caller signs fresh.
+    const fetchImpl = vi.fn(async (url) => {
+      if (String(url).includes('/versions/1.24.0/')) {
+        return mockResponse({ status: 200, json: { file: { url: 'https://amo.example/gone.xpi' } } });
+      }
+      // The signed-file download: AMO returns 404 (pending/incomplete).
+      return mockResponse({ status: 404 });
+    });
+    const result = await fetchSignedXpiForVersion({
+      version: '1.24.0', issuer: 'k', secret: 's', artifactsDir: '/tmp/x', fetchImpl
+    });
+    expect(result).toEqual({ needsSigning: true });
+  });
+
   it('uses EXIT_NEEDS_SIGNING (10) as a sentinel distinct from success/error', () => {
     expect(EXIT_NEEDS_SIGNING).toBe(10);
     expect(EXIT_NEEDS_SIGNING).not.toBe(0);
