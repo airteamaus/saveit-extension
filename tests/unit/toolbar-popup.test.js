@@ -88,7 +88,10 @@ describe('toolbar popup', () => {
 
     document.querySelector('.toolbar-popup-project-btn')?.click();
     await vi.waitFor(() => {
-      expect(sendMessage).toHaveBeenNthCalledWith(2, {
+      // The shared sendRuntimeMessage helper passes (message, callback); assert
+      // on the message argument of the second call rather than the whole call
+      // shape, since the callback is an internal detail.
+      expect(sendMessage.mock.calls[1]?.[0]).toEqual({
         action: 'saveCurrentPage',
         projectId: 'project-1'
       });

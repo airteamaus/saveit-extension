@@ -105,7 +105,11 @@ const AuthMenu = {
       throw new Error('Browser runtime not available');
     }
 
-    const response = await runtime.sendMessage({ action: 'signIn' });
+    // Route through the shared sendRuntimeMessage helper (exposed as a global
+    // by config-loader.js) so the callback-vs-promise runtime shape is handled
+    // uniformly. Awaiting runtime.sendMessage directly only works once the
+    // polyfill has loaded; this resolves correctly even before that.
+    const response = await window.sendRuntimeMessage(runtime, { action: 'signIn' });
     if (response?.success === false) {
       throw new Error(response.error || 'Sign-in failed');
     }
@@ -121,7 +125,7 @@ const AuthMenu = {
       throw new Error('Browser runtime not available');
     }
 
-    const response = await runtime.sendMessage({ action: 'signOut' });
+    const response = await window.sendRuntimeMessage(runtime, { action: 'signOut' });
     if (response?.success === false) {
       throw new Error(response.error || 'Sign-out failed');
     }

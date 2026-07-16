@@ -8,6 +8,7 @@ import { CONFIG } from './config.js';
 import { getSessionToken } from './session-store.js';
 import { RealtimeClient } from './realtime-client.js';
 import { RealtimeEventBus } from './realtime-event-bus.js';
+import { sendRuntimeMessage } from './send-runtime-message.js';
 import {
   createProjectsStore,
   createSavedPagesDrawerController,
@@ -194,17 +195,15 @@ export function createNewtabApp({
           // Clear the optimistic pending-save tile — replaces the enrichment poll.
           // The background SW owns pending-saves; relay via a runtime message.
           const browserApi = globalThis.browser ?? globalThis.chrome;
-          if (!browserApi?.runtime?.sendMessage) {
-            console.warn('[realtime] runtime.sendMessage unavailable; cannot relay enrichment event');
-            return;
-          }
           try {
-            await browserApi.runtime.sendMessage({
+            await sendRuntimeMessage(browserApi.runtime, {
               action: 'realtimePageEnriched',
               url: null,
               pageId: event.pageId
             });
           } catch (err) {
+            // Fire-and-forget relay: a failure here must never break the
+            // newtab page. The next refresh / realtime event recovers.
             console.warn('[realtime] failed to relay enrichment event:', err?.message || err);
           }
         }

@@ -236,10 +236,6 @@ export class WarmCacheListStore {
       return this.getSnapshot();
     }
 
-    if (this.state.requestId !== requestId) {
-      return this.getSnapshot();
-    }
-
     this.state.warmCacheState = createWarmCacheState(warmCache.status, {
       ageMs: warmCache.ageMs,
       timestamp: warmCache.timestamp,

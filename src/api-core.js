@@ -36,6 +36,34 @@ export async function parseErrorResponse(response) {
   }
 }
 
+// Sliding session refresh: when the backend rotates a session token it returns
+// the replacement via response headers. Read the new token/expiry and persist
+// it. Shared by the API facade (_applySessionRotation below) and background.js's
+// lean fetch path. Best-effort: a failure here does not invalidate the request
+// that carried the rotation. The optional logger lets the background surface
+// rotation outcomes (the facade stays silent — the request already succeeded).
+export async function applySessionRotation(response, { logger } = {}) {
+  const headers = response.headers;
+  if (!headers || typeof headers.get !== 'function') {
+    return;
+  }
+  const newToken = headers.get('X-Session-Token');
+  const newExpiry = headers.get('X-Session-Expires-At');
+  if (!newToken || !newExpiry) {
+    return;
+  }
+  try {
+    const uid = await getSessionUserId();
+    if (uid) {
+      await setSession({ sessionToken: newToken, uid, expiresAt: newExpiry });
+      logger?.log?.('Session token rotated by backend');
+    }
+  } catch (error) {
+    // Non-fatal: the current request already succeeded.
+    logger?.warn?.('Failed to apply session rotation', { error: error.message });
+  }
+}
+
 export function applyApiCore(API, dependencies = {}) {
   const {
     cacheManagerClass = CacheManager,
@@ -291,23 +319,7 @@ export function applyApiCore(API, dependencies = {}) {
     },
 
     async _applySessionRotation(response) {
-      const headers = response.headers;
-      if (!headers || typeof headers.get !== 'function') {
-        return;
-      }
-      const newToken = headers.get('X-Session-Token');
-      const newExpiry = headers.get('X-Session-Expires-At');
-      if (!newToken || !newExpiry) {
-        return;
-      }
-      try {
-        const uid = await getSessionUserId();
-        if (uid) {
-          await setSession({ sessionToken: newToken, uid, expiresAt: newExpiry });
-        }
-      } catch {
-        // Non-fatal: the current request already succeeded.
-      }
+      await applySessionRotation(response);
     },
 
     async _fetchWithAuth(endpoint, params = null, options = {}) {
