@@ -4,7 +4,7 @@ The browser extension behind **Buckley's Bookmarks**.
 
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
-Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features semantic search, hierarchical topic navigation, pinned and all-pages feeds, and project collections directly on the new tab.
+Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features semantic search, hierarchical topic navigation, pinned and all-pages feeds, project collections directly on the new tab, and a consolidated Data & sync screen for importing, exporting, and browser-bookmark sync.
 
 ## For Testers
 
@@ -18,13 +18,13 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 5. Select the downloaded `.xpi` file
 6. Click "Add" when prompted
 
-### Chrome Installation
+### Chrome / Brave Installation
 
 1. Download or clone this repository
-2. Open Chrome and go to `chrome://extensions/`
+2. Open Chrome or Brave and go to `chrome://extensions/`
 3. Enable "Developer mode" (toggle in top-right)
 4. Click "Load unpacked"
-5. Select the extension directory
+5. Select the **repo root** directory (where `manifest.json` lives, not `src/`)
 6. Extension will remain until manually removed
 
 ### Getting Started
@@ -35,6 +35,7 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 4. **Search & discover**: Use semantic search to find related content by topic
 5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
 6. **Organize projects**: Create project collections from the new-tab sidebar, add pages to multiple projects, and share a project with your company domain when needed
+7. **Import & export**: Open the avatar menu → "Data & sync" to import bookmarks from a Raindrop CSV, browser bookmarks HTML, or a Buckley's JSON backup; export your data in any of those formats; or toggle browser-bookmark sync
 
 ### Known Limitations (Beta)
 

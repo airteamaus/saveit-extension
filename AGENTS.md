@@ -40,9 +40,24 @@ SaveIt is a browser extension for saving and enriching bookmarks. The main repo 
 | Mode | Protocol | Data source | Use case |
 |---|---|---|---|
 | Standalone | `file://` | Mock data | UI development |
-| Extension | `moz-extension://` | Cloud Functions | Real data and auth flows |
+| Extension | `moz-extension://` or `chrome-extension://` | Cloud Functions | Real data and auth flows |
 
-Mode detection is handled in `src/api.js`.
+Mode detection is handled in `src/api.js`. The config layer (`src/config.js`) detects dev/staging/production from the manifest version and protocol.
+
+### Backend overview
+
+The backend (`/Users/rich/Code/saveit-backend/`) is **6 Cloud Functions across 4 source dirs**, each with its own deploy script. This is a known friction point — see the architecture-improvement notes below.
+
+| Function | Source dir | Role |
+|---|---|---|
+| `saveit` | `cloud-function/` | HTTP API: save, bulk-import, read, delete, projects, auth |
+| `saveit-enrich` (controller) | `cloud-function-enrich/` | Finds unenriched events, creates Cloud Tasks |
+| `saveit-enrich-worker` | `cloud-function-enrich/` | Processes one event: fetch content, AI classify, write Firestore doc |
+| `saveit-realtime` | `cloud-function-realtime/` | SSE stream: fans Firestore changes to connected clients |
+| `saveit-realtime-trigger-things` | `cloud-function-realtime-trigger/` | Firestore onWrite → emits realtime event docs |
+| `saveit-realtime-trigger-projects` | `cloud-function-realtime-trigger/` | Firestore onWrite → emits realtime event docs |
+
+Key pipeline: `extension save → saveit (BigQuery save_events) → enrich controller (Cloud Tasks) → worker (fetch + AI) → Firestore things doc → realtime trigger → SSE → extension`.
 
 ### Local development setup
 
@@ -194,3 +209,21 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 - Keep OAuth scopes minimal.
 - Do not commit secrets or embed private credentials in the extension.
 - Treat client-side storage and cache as convenience layers, not security boundaries.
+- `manifest.json` `host_permissions` must list **every** Cloud Run origin the extension calls. The realtime SSE service (`saveit-realtime`) runs on a separate subdomain from the main API — both must be listed or the browser silently blocks the fetch. Adding a new backend service means adding its origin here.
+
+## Known architectural debt
+
+These friction points caused real debugging time during the Data & sync overhaul. They are candidates for a future architecture improvement pass:
+
+1. **Backend deployment has too many moving parts.** 6 Cloud Functions, 4 deploy scripts, and `just deploy-all` only covers 3 of the 6 functions (it omits both realtime services). The realtime deploys have no justfile target at all and must be run by hand. Each script copies `shared/` and `contracts/` into its function dir by hand, and two scripts additionally copy handler files from `cloud-function/` — an implicit cross-dir dependency.
+
+2. **Ingestion pipeline has confusing branching.** Two writers of `save_events` (save vs bulk-import) duplicate the trigger logic. Duplicate detection runs at two levels (worker `thingExists` vs core `checkDuplicateThing`) with different semantics around soft-deleted docs — the worker gate can short-circuit before the core's undelete logic runs. `source` dispatch is a binary `if (client) else (jina)` with no validation.
+
+3. **Auth responsibilities are not DRY.** `shared/auth-helpers.js` has three near-identical authenticate functions (`authenticateWithToken`, `authenticateControllerRequest`, `authenticateWorkerRequest`) that differ only in which header they accept. The `paths.js` bootstrap is manually duplicated across 3 directories.
+
+4. **No staging environment for the backend.** Every backend deploy goes straight to the production project. The extension has a real staging path; the backend does not.
+
+5. **Post-deploy verification is partial.** Only the enrich functions have a smoke test. The main API, realtime SSE, and Firestore triggers have no automated post-deploy check.
+
+6. **Version-drift detection covers half the fleet.** `check-deployed-versions.sh` only reports 3 of 6 functions.
+
