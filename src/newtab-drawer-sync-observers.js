@@ -52,33 +52,47 @@ export function createDrawerCacheInvalidationObserver({
         return;
       }
 
+      // After the reload settles, re-sync pending saves once so optimistic tiles
+      // survive the reset() inside hydrate/forceReload. This is a one-shot
+      // callback on the reload promise — NOT a store subscription — because
+      // subscribing syncPendingSaves to every store emit creates an infinite
+      // loop (prependOptimisticPage → emitChange → syncPendingSaves → …).
+      const reSyncPendingSaves = () => { void syncPendingSaves(); };
+      const afterReload = (result) => {
+        if (result && typeof result.then === 'function') {
+          result.then(reSyncPendingSaves, reSyncPendingSaves);
+        } else {
+          reSyncPendingSaves();
+        }
+      };
+
       refreshFavorites?.();
       void projectsStore.hydrate();
       if (isDrawerOpen()) {
         if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
-          void loadDrawerProjectPages(state.selectedProjectId, {
+          afterReload(loadDrawerProjectPages(state.selectedProjectId, {
             query: getSearchQuery(),
             syncUrl: false
-          });
+          }));
           return;
         }
 
-        void loadDrawerBasePages({
+        afterReload(loadDrawerBasePages({
           query: getSearchQuery(),
           syncUrl: false
-        });
+        }));
         return;
       }
 
       if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
-        void loadDrawerProjectPages(state.selectedProjectId, {
+        afterReload(loadDrawerProjectPages(state.selectedProjectId, {
           query: getSearchQuery(),
           syncUrl: false
-        });
+        }));
         return;
       }
 
-      void savedPagesStore.hydrate();
+      afterReload(savedPagesStore.hydrate());
     }, 50);
   }
 
@@ -116,8 +130,9 @@ export function createDrawerCacheInvalidationObserver({
       return;
     }
     const records = await getPendingSaves(browserApi.storage.local);
+    const snapshot = savedPagesStore.getSnapshot();
     const existingUrls = new Set(
-      savedPagesStore.getSnapshot().allPages
+      (snapshot?.allPages || [])
         .filter(p => p.optimistic !== true)
         .map(p => p.url)
         .filter(Boolean)
@@ -133,12 +148,13 @@ export function createDrawerCacheInvalidationObserver({
 
   function initPendingSavesSync() {
     const browserApi = globalThis.browser ?? globalThis.chrome;
-    if (!browserApi?.storage?.onChanged?.addListener) {
-      return;
-    }
 
     // Seed any records that already exist (e.g. newtab opened after a save).
     void syncPendingSaves();
+
+    if (!browserApi?.storage?.onChanged?.addListener) {
+      return;
+    }
 
     browserApi.storage.onChanged.addListener((changes, areaName) => {
       if (areaName !== 'local' || !changes || !(PENDING_SAVES_KEY in changes)) {

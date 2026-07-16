@@ -906,6 +906,79 @@ export async function mirrorSavedPage({
   return { created: true, bookmarkId: created.id };
 }
 
+/**
+ * Tear down the mirror: recursively remove the Buckley's/ folder the mirror
+ * owns and clear all persisted mirror state (ownership map, folder ids).
+ *
+ * This is the inverse of enabling + seeding. Disabling sync should leave the
+ * user's browser bookmarks exactly as they were before the mirror ran, rather
+ * than orphaning a Buckley's/ folder the user then has to delete by hand.
+ *
+ * Best-effort on the bookmark removal: if the folder was already deleted (or
+ * moved somewhere unreadable) we still clear the state so the mirror is fully
+ * reset. Only bookmarks under the tracked rootFolderId are removed — strays
+ * the user created outside Buckley's/ are never touched.
+ *
+ * @returns {Promise<{ removed: boolean }>}
+ */
+export async function removeMirror({
+  bookmarksApi = DEFAULT_BOOKMARKS_API,
+  storage
+} = {}) {
+  if (!storage?.get || !storage?.set) {
+    throw new Error('Storage not available');
+  }
+
+  const state = await getMirrorState(storage);
+  let removed = false;
+
+  if (state.rootFolderId) {
+    try {
+      // removeTree recursively deletes a folder and all its children — the
+      // mirror only ever creates bookmarks under Buckley's/, so this cleans up
+      // every bookmark we own in one call without touching anything else.
+      if (bookmarksApi?.removeTree) {
+        await bookmarksApi.removeTree(state.rootFolderId);
+        removed = true;
+      } else if (bookmarksApi?.remove) {
+        // Fallback for environments without removeTree: walk the tree and remove
+        // leaf-first. Included for completeness; all target browsers have removeTree.
+        await removeFolderRecursive(bookmarksApi, state.rootFolderId);
+        removed = true;
+      }
+    } catch {
+      // The folder may already be gone (user deleted it manually). Clearing
+      // state regardless is the correct recovery — never leave the mirror half-
+      // torn-down.
+    }
+  }
+
+  await setMirrorState(storage, {
+    enabled: false,
+    rootFolderId: null,
+    projectFolders: {},
+    domainFolders: {},
+    ownership: {},
+    lastFullReconcileAt: null
+  });
+
+  return { removed };
+}
+
+// Recursively remove a folder by deleting its children leaf-first, then the
+// empty folder. Only used when removeTree is unavailable.
+async function removeFolderRecursive(bookmarksApi, folderId) {
+  const children = (await bookmarksApi.getChildren(folderId)) || [];
+  for (const child of children) {
+    if (child.url !== undefined) {
+      await bookmarksApi.remove(child.id);
+    } else if (Array.isArray(child.children)) {
+      await removeFolderRecursive(bookmarksApi, child.id);
+    }
+  }
+  await bookmarksApi.remove(folderId);
+}
+
 export const _internal = {
   ROOT_FOLDER_TITLE,
   LEGACY_ROOT_FOLDER_TITLES,

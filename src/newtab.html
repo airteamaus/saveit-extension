@@ -73,13 +73,13 @@
             </button>
             <div id="hero-user-dropdown" class="user-dropdown hidden" data-dropdown-mode="class">
               <div id="hero-theme-toggle-container"></div>
-              <button id="hero-import-btn" class="dropdown-item" type="button">
+              <button id="hero-data-sync-btn" class="dropdown-item" type="button" title="Import, export, and browser bookmark sync">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                   <polyline points="7 10 12 15 17 10"></polyline>
                   <line x1="12" y1="15" x2="12" y2="3"></line>
                 </svg>
-                Import bookmarks
+                Data &amp; sync
               </button>
               <button id="hero-refresh-btn" class="dropdown-item" type="button" title="Clear the local cache and reload everything from the server">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -88,12 +88,6 @@
                   <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
                 </svg>
                 Refresh cache
-              </button>
-              <button id="hero-mirror-toggle" class="dropdown-item" type="button" aria-pressed="false" title="Keep a Buckley's/ folder in your browser bookmarks in sync with your saved pages">
-                <svg class="dropdown-item-icon mirror-toggle-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
-                </svg>
-                <span class="dropdown-item-label">Sync to browser</span>
               </button>
               <button id="hero-sharing-btn" class="dropdown-item" type="button" title="Review who can see each of your projects">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -160,6 +154,15 @@
     role="dialog"
     aria-modal="true"
     aria-labelledby="sharing-centre-title"
+  ></div>
+
+  <div id="data-sync-centre-backdrop" class="project-editor-backdrop hidden" aria-hidden="true"></div>
+  <div
+    id="data-sync-centre-dialog"
+    class="project-editor-dialog data-sync-dialog hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="data-sync-centre-title"
   ></div>
 
   <!-- Toast notifications (e.g. mirror-toggle confirmations). Auto-dismiss. -->

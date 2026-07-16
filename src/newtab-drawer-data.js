@@ -358,9 +358,28 @@ export function createDrawerDataController({
       return;
     }
 
+    const deletedPage = findDrawerPage(id);
+
+    // Optimistic placeholders (pending saves not yet enriched) have synthetic
+    // IDs like "optimistic:<url>". There's no backend doc to delete — just clear
+    // the pending-save record and drop the tile locally. Calling the API with a
+    // synthetic ID would fail silently and leave the tile behind.
+    if (id.startsWith('optimistic:')) {
+      const browserApi = globalThis.browser ?? globalThis.chrome;
+      // Clear the pending-save record BEFORE removing the tile. removePage
+      // emits a store change that can trigger syncPendingSaves via the storage
+      // listener, which would re-prepend the tile if the record still exists.
+      if (deletedPage?.url && browserApi?.storage?.local) {
+        const { clearPendingSave } = await import('./pending-saves.js');
+        await clearPendingSave(browserApi.storage.local, deletedPage.url).catch(() => {});
+      }
+      await savedPagesStore.removePage(id);
+      renderDrawerResults();
+      return;
+    }
+
     try {
       await api.deletePage(id);
-      const deletedPage = findDrawerPage(id);
       await savedPagesStore.removePage(id);
       await removeFromCachedProjectStores(id, deletedPage?.project_ids || []);
       if (Array.isArray(state.loadedProjectPages)) {

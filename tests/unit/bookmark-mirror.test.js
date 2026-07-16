@@ -5,7 +5,8 @@ import {
   ensureMirrorFolders,
   indexFolderChildrenByNormalizedUrl,
   mirrorSavedPage,
-  reconcile
+  reconcile,
+  removeMirror
 } from '../../src/bookmark-mirror.js';
 import {
   getMirrorState,
@@ -38,6 +39,35 @@ function createFakeBookmarksApi(initialTree) {
     };
     walk(tree);
     return found;
+  };
+
+  // Detach a node from whichever children array holds it, searching the whole
+  // tree. Unlike relying on node.parentId, this works for top-level folders
+  // created without an explicit parent link.
+  const detach = (id) => {
+    const walk = (nodes) => {
+      for (const node of nodes) {
+        if (Array.isArray(node.children)) {
+          const before = node.children.length;
+          node.children = node.children.filter((c) => c.id !== id);
+          if (node.children.length !== before) {
+            return true;
+          }
+          if (walk(node.children)) {
+            return true;
+          }
+        }
+      }
+      return false;
+    };
+    // Also check the top-level array itself.
+    for (let i = 0; i < tree.length; i += 1) {
+      if (tree[i].id === id) {
+        tree.splice(i, 1);
+        return;
+      }
+    }
+    walk(tree);
   };
 
   return {
@@ -80,14 +110,13 @@ function createFakeBookmarksApi(initialTree) {
       return node;
     },
     async remove(id) {
-      const node = findNode(id);
-      if (!node) {
-        return;
-      }
-      const parent = findNode(node.parentId);
-      if (parent?.children) {
-        parent.children = parent.children.filter((c) => c.id !== id);
-      }
+      detach(id);
+    },
+    // removeTree: recursively delete a folder and all descendants. Mirrors the
+    // real browser API used by removeMirror. detach() handles the whole subtree
+    // because it drops the node from its parent's children wholesale.
+    async removeTree(id) {
+      detach(id);
     }
   };
 }
@@ -1129,5 +1158,106 @@ describe('reconcile (end-to-end against fakes)', () => {
     expect(Object.keys(state.ownership).sort()).toEqual(['p-colleague', 'p-mine']);
     expect(state.ownership['p-colleague'][0].bucketKey).toBe('project:shared-proj');
     expect(state.ownership['p-mine'].map((e) => e.bucketKey)).toContain('project:shared-proj');
+  });
+});
+
+describe('removeMirror', () => {
+  // A Buckley's/ tree with two project sub-folders and a few bookmarks,
+  // matching what reconcile would produce.
+  const treeWithMirror = () => [{
+    id: 'root',
+    title: '',
+    children: [{
+      id: 'toolbar',
+      title: 'Bookmarks Toolbar',
+      children: [{
+        id: 'buckleys-root',
+        title: "Buckley's",
+        children: [
+          { id: 'proj-folder', title: 'Cooking', children: [
+            { id: 'bm1', parentId: 'proj-folder', title: 'Recipe', url: 'https://recipe.com' }
+          ]},
+          { id: 'other-folder', title: 'Other', children: [
+            { id: 'bm2', parentId: 'other-folder', title: 'Misc', url: 'https://misc.com' }
+          ]}
+        ]
+      }]
+    }]
+  }];
+
+  it('removes the Buckley\'s/ root folder and all children via removeTree', async () => {
+    const api = createFakeBookmarksApi(treeWithMirror());
+    const storage = createFakeStorage();
+    // Seed state as if a reconcile had run.
+    await setMirrorState(storage, {
+      enabled: true,
+      rootFolderId: 'buckleys-root',
+      projectFolders: { cooking: { id: 'proj-folder', name: 'Cooking' } },
+      ownership: { 'p1': [{ bucketKey: 'project:cooking', bookmarkId: 'bm1', title: 'Recipe', parentId: 'proj-folder' }] },
+      lastFullReconcileAt: 1000
+    });
+
+    const { removed } = await removeMirror({ bookmarksApi: api, storage });
+    expect(removed).toBe(true);
+
+    // The Buckley's/ folder is gone from the tree (no node with that id remains).
+    const tree = await api.getTree();
+    const flat = JSON.stringify(tree);
+    expect(flat).not.toContain('"buckleys-root"');
+    expect(flat).not.toContain('recipe.com');
+  });
+
+  it('clears all persisted mirror state', async () => {
+    const api = createFakeBookmarksApi(treeWithMirror());
+    const storage = createFakeStorage();
+    await setMirrorState(storage, {
+      enabled: true,
+      rootFolderId: 'buckleys-root',
+      projectFolders: { cooking: { id: 'proj-folder', name: 'Cooking' } },
+      domainFolders: { __other__: { id: 'other-folder', name: 'Other' } },
+      ownership: { p1: [{ bucketKey: 'project:cooking', bookmarkId: 'bm1', title: 'R', parentId: 'proj-folder' }] },
+      lastFullReconcileAt: 1000
+    });
+
+    await removeMirror({ bookmarksApi: api, storage });
+
+    const state = await getMirrorState(storage);
+    expect(state.enabled).toBe(false);
+    expect(state.rootFolderId).toBeNull();
+    expect(state.projectFolders).toEqual({});
+    expect(state.domainFolders).toEqual({});
+    expect(state.ownership).toEqual({});
+    expect(state.lastFullReconcileAt).toBeNull();
+  });
+
+  it('still clears state when the folder is already gone (no throw)', async () => {
+    const api = createFakeBookmarksApi([]); // empty tree — no Buckley's/ folder
+    const storage = createFakeStorage();
+    await setMirrorState(storage, {
+      enabled: true,
+      rootFolderId: 'missing-folder',
+      ownership: { p1: [] }
+    });
+
+    const { removed } = await removeMirror({ bookmarksApi: api, storage });
+    // removeTree was called against a node that doesn't exist in the fake; the
+    // important assertion is that state is reset regardless.
+    const state = await getMirrorState(storage);
+    expect(state.enabled).toBe(false);
+    expect(state.rootFolderId).toBeNull();
+    expect(state.ownership).toEqual({});
+  });
+
+  it('returns removed=false when no bookmarks API is provided', async () => {
+    const storage = createFakeStorage();
+    await setMirrorState(storage, { enabled: true, rootFolderId: 'buckleys-root' });
+    const { removed } = await removeMirror({ storage });
+    expect(removed).toBe(false);
+    // State is still cleared.
+    expect((await getMirrorState(storage)).enabled).toBe(false);
+  });
+
+  it('throws when storage is unavailable', async () => {
+    await expect(removeMirror({ storage: null })).rejects.toThrow(/Storage not available/);
   });
 });

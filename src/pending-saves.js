@@ -80,6 +80,31 @@ export async function addPendingSave(storage, record) {
   await storage.set({ [PENDING_SAVES_KEY]: records });
 }
 
+// Write many pending-save records in a single read-modify-write. Used by bulk
+// import so a large batch (up to 1000) doesn't trigger a read-modify-write per
+// row. Records map by normalized url, so a batch with duplicate urls (or urls
+// already pending from a prior save) collapses to one tile each.
+export async function addPendingSaves(storage, records) {
+  if (!storage?.get || !storage?.set || !Array.isArray(records) || records.length === 0) {
+    return;
+  }
+  const existing = await getPendingSaves(storage);
+  for (const record of records) {
+    if (!record?.url) continue;
+    const key = normalizePendingUrl(record.url);
+    if (!key) continue;
+    existing[key] = {
+      url: record.url,
+      title: record.title || '',
+      description: record.description || null,
+      image: record.image || null,
+      saved_at: record.saved_at || new Date().toISOString(),
+      project_ids: Array.isArray(record.project_ids) ? record.project_ids : []
+    };
+  }
+  await storage.set({ [PENDING_SAVES_KEY]: existing });
+}
+
 // Remove a single pending save by url (normalized). Safe if it doesn't exist.
 export async function clearPendingSave(storage, url) {
   if (!storage?.get || !storage?.remove) {

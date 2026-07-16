@@ -4,9 +4,8 @@ export function getSubmittedSearchQuery(searchInput) {
 
 export function getNewtabElements(documentObj = document) {
   return {
-    importBtn: documentObj.getElementById('hero-import-btn'),
+    dataSyncBtn: documentObj.getElementById('hero-data-sync-btn'),
     refreshBtn: documentObj.getElementById('hero-refresh-btn'),
-    mirrorToggle: documentObj.getElementById('hero-mirror-toggle'),
     sharingBtn: documentObj.getElementById('hero-sharing-btn'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
@@ -14,6 +13,8 @@ export function getNewtabElements(documentObj = document) {
     importPanelDialog: documentObj.getElementById('import-panel-dialog'),
     sharingCentreBackdrop: documentObj.getElementById('sharing-centre-backdrop'),
     sharingCentreDialog: documentObj.getElementById('sharing-centre-dialog'),
+    dataSyncCentreBackdrop: documentObj.getElementById('data-sync-centre-backdrop'),
+    dataSyncCentreDialog: documentObj.getElementById('data-sync-centre-dialog'),
     toastRegion: documentObj.getElementById('toast-region'),
     savedPagesPageHeader: documentObj.getElementById('saved-pages-page-header'),
     savedPagesPageShell: documentObj.getElementById('saved-pages-page-shell'),
@@ -54,60 +55,6 @@ export function bindNewtabEventHandlers({
   documentObj.addEventListener('click', event => {
     authController.hideDropdownForOutsideClick(event.target);
   });
-}
-
-// Wire the bookmark-mirror toggle: read its current state on init, flip the
-// persisted flag via a runtime message on click. The background owns the
-// state and triggers the seed reconcile; the UI just reflects and requests.
-// `notify` is an optional toast callback for confirmation/error feedback.
-export function initMirrorToggle({ elements, runtime, notify } = {}) {
-  const toggle = elements?.mirrorToggle;
-  if (!toggle) {
-    return;
-  }
-
-  // State is carried by aria-pressed; the leading icon turns green via CSS
-  // (.dropdown-item[aria-pressed="true"] .dropdown-item-icon). No trailing
-  // checkmark — the icon is the state.
-  const renderState = (enabled) => {
-    toggle.setAttribute('aria-pressed', enabled ? 'true' : 'false');
-  };
-
-  const safeNotify = (message, options) => {
-    if (typeof notify === 'function') {
-      try { notify(message, options); } catch { /* toast must never break the toggle */ }
-    }
-  };
-
-  // Best-effort initial read. Non-extension contexts (file:// standalone
-  // preview) have no runtime — leave the toggle in its default off state.
-  if (runtime?.sendMessage) {
-    runtime.sendMessage({ action: 'getBookmarkMirrorState' }, (response) => {
-      if (runtime.lastError || !response?.success) {
-        return;
-      }
-      renderState(Boolean(response.enabled));
-    });
-
-    toggle.addEventListener('click', () => {
-      const next = toggle.getAttribute('aria-pressed') !== 'true';
-      renderState(next); // optimistic, so the click feels instant
-      runtime.sendMessage(
-        { action: 'setBookmarkMirrorEnabled', enabled: next },
-        (response) => {
-          if (runtime.lastError || !response?.success) {
-            // Revert on failure and tell the user something went wrong.
-            renderState(!next);
-            safeNotify('Could not change browser bookmark sync — try again', { type: 'error' });
-            return;
-          }
-          // Close the dropdown so the user sees the bookmark tree, not the menu.
-          elements.userDropdown?.classList.add('hidden');
-          safeNotify(next ? 'Browser bookmark sync enabled' : 'Browser bookmark sync disabled');
-        }
-      );
-    });
-  }
 }
 
 export async function startNewtabPage({
