@@ -37,7 +37,8 @@ describe('newtab drawer runtime', () => {
       handleSignedIn: vi.fn(),
       handleSignedOut: vi.fn(),
       init: vi.fn(),
-      loadSummary: vi.fn()
+      loadSummary: vi.fn(),
+      markForceReloadInitiated: vi.fn()
     };
     const initSavedPagesDrawerEventsFn = vi.fn();
 

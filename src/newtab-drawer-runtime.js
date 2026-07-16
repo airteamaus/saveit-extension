@@ -235,6 +235,13 @@ export function createSavedPagesDrawerController({
   // by the "Refresh cache" button so that pages saved by other project members
   // (which were never in the local in-memory store) actually appear.
   async function forceReload() {
+    // Arm the one-shot self-invalidation token. The caller (refresh button)
+    // invalidates the cache immediately before this call, which fires
+    // storage.onChanged in THIS window too. Without suppression the observer
+    // would schedule a second hydrate() ~50ms later that bumps requestId and
+    // kills the prefetch this load starts — leaving the warm cache at the
+    // initial partial batch and drifting from subsequent windows.
+    syncCoordinator.markForceReloadInitiated();
     await refreshCachedUser();
     setDrawerInitialized(state, false);
     savedPagesStore.reset({ emit: false });

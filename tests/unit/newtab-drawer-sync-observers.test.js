@@ -165,6 +165,126 @@ describe('drawer sync observers', () => {
     expect(loadDrawerProjectPages).not.toHaveBeenCalled();
   });
 
+  it('skips its own reload when forceReload armed the self-invalidation token', () => {
+    let listener;
+    globalThis.browser = {
+      storage: {
+        onChanged: {
+          addListener: vi.fn((callback) => {
+            listener = callback;
+          })
+        }
+      }
+    };
+    const windowObj = {
+      clearTimeout: vi.fn(),
+      setTimeout: vi.fn((callback) => {
+        callback();
+        return 1;
+      })
+    };
+    const loadDrawerBasePages = vi.fn();
+    const savedPagesStore = { hydrate: vi.fn() };
+    const projectsStore = { hydrate: vi.fn() };
+    // forceReload arms the token before invalidating; the observer consumes it.
+    let armed = false;
+    const consumeSelfInvalidation = () => {
+      if (armed) {
+        armed = false;
+        return true;
+      }
+      return false;
+    };
+
+    const observer = createDrawerCacheInvalidationObserver({
+      state: { hasInitialized: true, selectedProjectId: null },
+      savedPagesStore,
+      projectsStore,
+      getCurrentUser: vi.fn(() => ({ uid: 'user-1' })),
+      getSearchQuery: vi.fn(() => ''),
+      isDrawerOpen: vi.fn(() => true),
+      refreshFavorites: vi.fn(),
+      loadDrawerBasePages,
+      loadDrawerProjectPages: vi.fn(),
+      consumeSelfInvalidation,
+      windowObj
+    });
+
+    observer.initSavedPagesCacheSync();
+
+    // forceReload's own invalidateCache fires this; the token is armed, so the
+    // observer must NOT schedule its competing hydrate.
+    armed = true;
+    listener(
+      { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+      'local'
+    );
+
+    expect(loadDrawerBasePages).not.toHaveBeenCalled();
+    expect(savedPagesStore.hydrate).not.toHaveBeenCalled();
+  });
+
+  it('still reloads on a genuine (non-self) invalidation after consuming the token', () => {
+    let listener;
+    globalThis.browser = {
+      storage: {
+        onChanged: {
+          addListener: vi.fn((callback) => {
+            listener = callback;
+          })
+        }
+      }
+    };
+    const windowObj = {
+      clearTimeout: vi.fn(),
+      setTimeout: vi.fn((callback) => {
+        callback();
+        return 1;
+      })
+    };
+    const loadDrawerBasePages = vi.fn();
+    const savedPagesStore = { hydrate: vi.fn() };
+    let armed = false;
+    const consumeSelfInvalidation = () => {
+      if (armed) {
+        armed = false;
+        return true;
+      }
+      return false;
+    };
+
+    const observer = createDrawerCacheInvalidationObserver({
+      state: { hasInitialized: true, selectedProjectId: null },
+      savedPagesStore,
+      projectsStore: { hydrate: vi.fn() },
+      getCurrentUser: vi.fn(() => ({ uid: 'user-1' })),
+      getSearchQuery: vi.fn(() => ''),
+      isDrawerOpen: vi.fn(() => true),
+      refreshFavorites: vi.fn(),
+      loadDrawerBasePages,
+      loadDrawerProjectPages: vi.fn(),
+      consumeSelfInvalidation,
+      windowObj
+    });
+
+    observer.initSavedPagesCacheSync();
+
+    // First event: self-invalidation, suppressed.
+    armed = true;
+    listener(
+      { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+      'local'
+    );
+    // Second event: a genuine invalidation (e.g. a delete in another surface).
+    // Token already consumed, so this must reload.
+    listener(
+      { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+      'local'
+    );
+
+    expect(loadDrawerBasePages).toHaveBeenCalledTimes(1);
+  });
+
   describe('createDrawerStoreSubscriptions warming UI', () => {
     // In production, loadDrawerBasePages arms state.warmUpInProgress before
     // the store emits (newtab-drawer-data.js:213). The subscriber only drives
@@ -763,6 +883,98 @@ describe('drawer sync observers', () => {
 
       // Tile IS prepended — the existing entry was optimistic, not a real doc
       expect(prependOptimisticPage).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('forceReload self-invalidation suppression', () => {
+    // Regression guard for refresh-cache vs subsequent-window drift: the refresh
+    // button invalidates the cache (firing storage.onChanged in its OWN window)
+    // and then reloads via forceReload → hydrate. Without suppression the
+    // observer schedules a second hydrate ~50ms later that bumps requestId and
+    // aborts forceReload's prefetch, leaving the warm cache at the partial
+    // initial batch. markForceReloadInitiated arms a one-shot token the observer
+    // consumes so this window skips its own competing reload.
+    function makeCoordinatorHarness() {
+      // The coordinator registers TWO storage.onChanged listeners (cache
+      // invalidation first, then pending-saves). Capture the FIRST — that's the
+      // cache-invalidation listener under test.
+      const listeners = [];
+      globalThis.browser = {
+        storage: {
+          onChanged: {
+            addListener: vi.fn((callback) => {
+              listeners.push(callback);
+            })
+          }
+        }
+      };
+      const windowObj = {
+        clearTimeout: vi.fn(),
+        setTimeout: vi.fn((callback) => {
+          callback();
+          return 1;
+        })
+      };
+      const loadDrawerBasePages = vi.fn();
+      const savedPagesStore = { hydrate: vi.fn(), subscribe: () => () => {} };
+      const projectsStore = { hydrate: vi.fn(), subscribe: () => () => {} };
+
+      const coordinator = createDrawerSyncCoordinator({
+        api: { isExtension: true },
+        state: { hasInitialized: true, query: '' },
+        savedPagesStore,
+        projectsStore,
+        getCurrentUser: () => ({ uid: 'user-1' }),
+        isDrawerOpen: () => true,
+        getSearchQuery: () => '',
+        notifySavedPagesTotalChange: vi.fn(),
+        refreshFavorites: vi.fn(),
+        syncDrawerStateFromStore: vi.fn(),
+        syncProjectsStateFromStore: vi.fn(),
+        loadDrawerBasePages,
+        loadDrawerProjectPages: vi.fn(),
+        loadDrawerResults: vi.fn(),
+        renderDrawerSignInState: vi.fn(),
+        renderDrawerResults: vi.fn(),
+        resetDrawerState: vi.fn(),
+        setSuppressSavedPagesStoreSync: vi.fn(),
+        getSuppressSavedPagesStoreSync: () => false,
+        windowObj
+      });
+      coordinator.init();
+      return { coordinator, getListener: () => listeners[0], loadDrawerBasePages, savedPagesStore };
+    }
+
+    it('marks and consumes the self-invalidation token so forceReload does not double-load', () => {
+      const { coordinator, getListener, loadDrawerBasePages } = makeCoordinatorHarness();
+      const listener = getListener();
+
+      // Simulate the refresh click: arm the token, then fire the self-invalidation.
+      coordinator.markForceReloadInitiated();
+      listener(
+        { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+        'local'
+      );
+
+      expect(loadDrawerBasePages).not.toHaveBeenCalled();
+    });
+
+    it('only suppresses one invalidation (a later genuine one still reloads)', () => {
+      const { coordinator, getListener, loadDrawerBasePages } = makeCoordinatorHarness();
+      const listener = getListener();
+
+      coordinator.markForceReloadInitiated();
+      listener(
+        { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+        'local'
+      );
+      // Token consumed; a second, genuine invalidation must reload.
+      listener(
+        { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+        'local'
+      );
+
+      expect(loadDrawerBasePages).toHaveBeenCalledTimes(1);
     });
   });
 });

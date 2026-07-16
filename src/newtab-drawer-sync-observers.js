@@ -45,6 +45,13 @@ export function createDrawerCacheInvalidationObserver({
   refreshFavorites,
   loadDrawerBasePages,
   loadDrawerProjectPages,
+  // When true, the next cache-invalidation event in THIS window was triggered
+  // by the drawer's own forceReload (which already reloads via hydrate). The
+  // observer consumes the token once and skips its own reload to avoid a
+  // second hydrate() that would bump requestId and kill the in-flight prefetch
+  // — the root cause of refresh-cache vs subsequent-window drift. Other windows
+  // never set the token, so they reload normally.
+  consumeSelfInvalidation = () => false,
   windowObj = window
 }) {
   let savedPagesCacheRefreshTimer = null;
@@ -52,6 +59,19 @@ export function createDrawerCacheInvalidationObserver({
   function syncSavedPagesAfterCacheInvalidation() {
     windowObj.clearTimeout(savedPagesCacheRefreshTimer);
     savedPagesCacheRefreshTimer = windowObj.setTimeout(() => {
+      // The refresh button invalidates the cache and then immediately reloads
+      // via forceReload → hydrate. storage.onChanged fires in this window too,
+      // and without this guard the 50ms-deferred reload below would start a
+      // SECOND hydrate that bumps requestId and aborts forceReload's in-flight
+      // prefetch — leaving the warm cache at the initial partial batch. That
+      // partial cache is what every subsequent window then paints, drifting
+      // from the (fuller) display the refreshing window showed. forceReload
+      // arms this token before invalidating; consume it once here. Other
+      // windows never arm it, so they reload as intended.
+      if (consumeSelfInvalidation()) {
+        return;
+      }
+
       setDrawerInitialized(state, false);
 
       if (!getCurrentUser()) {
