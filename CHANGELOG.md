@@ -9,6 +9,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
+
+### 🐛 Bug Fixes
+
+- guard el() helpers against setAttribute(key, null) (3b6aac5)
+
+### ♻️ Refactoring
+
+- dedup cross-surface helpers (el, queryId, session rotation, sendRuntime) (389d525)
+- **drawer:** merge three drifted load paths; delete dead re-export; slim DI seam (754e01c)
+- **drawer:** make newtab-drawer-state.js the single mutation owner (a8b010d)
+
+### 📚 Documentation
+
+- update AGENTS.md + README for v1.23.0 (Data & sync, backend overview, known debt) (9ed7ad6)
+- fix outdated/misleading info across user-facing docs (babbc4f)
+
+### ✅ Tests
+
+- enforce every configured backend host is in manifest host_permissions (3f12688)
+
+## [1.23.0] - 2026-07-16
+
+### ✨ Features
+
 - Data & sync overhaul — consolidated import/export/sync modal (9a47088)
 
 ### 📚 Documentation
@@ -120,12 +145,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.20.1] - 2026-07-09
 
-### 🐛 Bug Fixes
-
-- **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
-
-## [1.20.0] - 2026-07-09
-
 ### ✨ Features
 
 - **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
@@ -199,6 +218,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
 - **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
 - **newtab:** hide the project sidebar while signed out (9c51831)
 - **newtab:** harden bootstrap against cold-start session loss (ed9b624)
