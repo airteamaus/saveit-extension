@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- Data & sync overhaul — consolidated import/export/sync modal (9a47088)
+
+### 📚 Documentation
+
+- fix outdated/misleading info across user-facing docs (7a3f3d5)
+
+## [1.22.0] - 2026-07-14
+
+### ✨ Features
+
 - **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
 - **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
 - **realtime:** RealtimeEventBus typed pub/sub (8efa830)
@@ -119,15 +129,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
-
-### 🐛 Bug Fixes
-
-- **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
-
-## [1.19.3] - 2026-07-08
-
-### ✨ Features
-
 - **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
 - **mirror:** rename to 'Sync browser', icon-as-state, toast feedback (41c8ff7)
@@ -198,6 +199,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
 - **newtab:** hide the project sidebar while signed out (9c51831)
 - **newtab:** harden bootstrap against cold-start session loss (ed9b624)
 - **mirror:** create SaveIt/ under a writable container, not the immovable root (0f78e60)
