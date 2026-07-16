@@ -8,7 +8,7 @@ import {
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
-import { createInitialDrawerState } from './newtab-drawer-state.js';
+import { createInitialDrawerState, resetDrawerState, setDrawerInitialized } from './newtab-drawer-state.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
@@ -29,13 +29,10 @@ export function createSavedPagesDrawerController({
 }) {
   const {
     createDrawerDataControllerFn = createDrawerDataController,
-    createDrawerFiltersApplierFn = createDrawerFiltersApplier,
     createDrawerShellControllerFn = createDrawerShellController,
-    createDrawerStateSyncHelpersFn = createDrawerStateSyncHelpers,
     createDrawerSyncCoordinatorFn = createDrawerSyncCoordinator,
     createDrawerUiControllerFn = createDrawerUiController,
     createInitialDrawerStateFn = createInitialDrawerState,
-    createSavedPagesTotalNotifierFn = createSavedPagesTotalNotifier,
     createSavedPagesViewFn = createSavedPagesView,
     getDrawerCurrentUserFn = getDrawerCurrentUser,
     initSavedPagesDrawerEventsFn = initSavedPagesDrawerEvents
@@ -56,7 +53,7 @@ export function createSavedPagesDrawerController({
   let dataController;
   let savedPagesView;
   let uiController;
-  const notifySavedPagesTotalChange = createSavedPagesTotalNotifierFn({
+  const notifySavedPagesTotalChange = createSavedPagesTotalNotifier({
     savedPagesStore,
     onSavedPagesTotalChange
   });
@@ -70,7 +67,7 @@ export function createSavedPagesDrawerController({
   // init, refreshed on sign-in, and cleared on sign-out.
   let cachedUser = null;
   const getCurrentUser = () => cachedUser;
-  const applyDrawerFilters = createDrawerFiltersApplierFn({
+  const applyDrawerFilters = createDrawerFiltersApplier({
     state,
     projectManager,
     getSavedPagesView: () => savedPagesView
@@ -110,7 +107,7 @@ export function createSavedPagesDrawerController({
     projectSidebar?.classList?.remove('hidden');
     return uiController.renderResults(...args);
   };
-  const { syncDrawerStateFromStore, syncProjectsStateFromStore } = createDrawerStateSyncHelpersFn({
+  const { syncDrawerStateFromStore, syncProjectsStateFromStore } = createDrawerStateSyncHelpers({
     state,
     projectManager,
     getSavedPagesView: () => savedPagesView,
@@ -207,7 +204,7 @@ export function createSavedPagesDrawerController({
     renderDrawerSignInState,
     renderDrawerResults,
     resetDrawerState: () => {
-      Object.assign(state, createInitialDrawerStateFn());
+      resetDrawerState(state);
     },
     setSuppressSavedPagesStoreSync: (value) => {
       suppressSavedPagesStoreSync = value === true;
@@ -239,25 +236,23 @@ export function createSavedPagesDrawerController({
   // (which were never in the local in-memory store) actually appear.
   async function forceReload() {
     await refreshCachedUser();
-    state.hasInitialized = false;
+    setDrawerInitialized(state, false);
     savedPagesStore.reset({ emit: false });
-
+    // Reset the currently-selected scope's store so hydrate() does a full
+    // network fetch, not a warm-cache paint of the stale in-memory list. This
+    // mirrors the sign-in gate inside loadDrawerScope, but forceReload runs
+    // already-authenticated so it must reset up-front.
     if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
-      // Reset the project store so hydrate() does a full network fetch, not a
-      // warm-cache paint of the stale in-memory list.
-      const projectId = state.selectedProjectId;
-      const projectStore = dataController.getProjectSavedPagesStore?.(projectId);
+      const projectStore = dataController.getProjectSavedPagesStore?.(state.selectedProjectId);
       projectStore?.reset({ emit: false });
-      await dataController.loadDrawerProjectPages(projectId, {
-        query: shellController.getSearchQuery(),
-        syncUrl: false
-      });
-    } else {
-      await dataController.loadDrawerBasePages({
-        query: shellController.getSearchQuery(),
-        syncUrl: false
-      });
     }
+    // loadDrawerScopeForCurrentSelection picks all/project/domain from the
+    // live selection — previously this branched on project-vs-base only and
+    // silently routed a domain selection to all-pages (a latent bug).
+    await dataController.loadDrawerScopeForCurrentSelection({
+      query: shellController.getSearchQuery(),
+      syncUrl: false
+    });
   }
 
   function handleSignedOut() {

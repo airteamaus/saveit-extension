@@ -1,8 +1,19 @@
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
-
-function getDefaultProjectEditorState() {
-  return { pageId: null, query: '' };
-}
+import {
+  selectDrawerDomain,
+  selectDrawerProject,
+  setDrawerAllItemsTotal,
+  setDrawerAllPages,
+  setDrawerCurrentFilter,
+  setDrawerDomains,
+  setDrawerProjectEditorState,
+  setDrawerProjects,
+  setDrawerProjectsAvailability,
+  setDrawerProjectsLoading,
+  setDrawerRenderedPages,
+  setDrawerTotal,
+  setDrawerView
+} from './newtab-drawer-state.js';
 
 function hasSelectedProjectScope(state) {
   return Boolean(state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID);
@@ -27,83 +38,94 @@ export function createSavedPagesView({
       return state.allPages;
     },
     set allPages(value) {
-      state.allPages = Array.isArray(value) ? value : [];
+      setDrawerAllPages(state, value);
     },
     get pages() {
       return state.pages;
     },
     set pages(value) {
-      state.pages = Array.isArray(value) ? value : [];
+      setDrawerRenderedPages(state, value);
     },
     get projects() {
       return state.projects;
     },
     set projects(value) {
-      state.projects = Array.isArray(value) ? value : [];
+      setDrawerProjects(state, value);
     },
     get domains() {
       return state.domains;
     },
     set domains(value) {
-      state.domains = Array.isArray(value) ? value : [];
+      setDrawerDomains(state, value);
     },
     get selectedDomainId() {
       return state.selectedDomainId;
     },
     set selectedDomainId(value) {
-      state.selectedDomainId = value || null;
+      selectDrawerDomain(state, value);
     },
     get projectsLoading() {
       return state.projectsLoading;
     },
     set projectsLoading(value) {
-      state.projectsLoading = value === true;
+      setDrawerProjectsLoading(state, value);
     },
     get selectedProjectId() {
       return state.selectedProjectId;
     },
     set selectedProjectId(value) {
-      state.selectedProjectId = value || null;
+      selectDrawerProject(state, value);
     },
     get view() {
       return state.view;
     },
     set view(value) {
-      state.view = value === 'browse' ? 'browse' : 'home';
+      setDrawerView(state, value);
     },
     get projectsAvailable() {
       return state.projectsAvailable;
     },
     set projectsAvailable(value) {
-      state.projectsAvailable = value !== false;
+      setDrawerProjectsAvailability(state, { available: value });
     },
     get projectsUnavailableMessage() {
       return state.projectsUnavailableMessage;
     },
     set projectsUnavailableMessage(value) {
-      state.projectsUnavailableMessage = value || '';
+      setDrawerProjectsAvailability(state, { message: value });
     },
     projectsStore,
     get projectEditorState() {
       return state.projectEditorState;
     },
     set projectEditorState(value) {
-      state.projectEditorState = value || getDefaultProjectEditorState();
+      setDrawerProjectEditorState(state, value);
     },
     get currentFilter() {
       return state.currentFilter;
+    },
+    set currentFilter(value) {
+      // Whole-object replacement: rebuild with normalization. Nested field
+      // writes (dashboard.currentFilter.projectId = x) go through the getter's
+      // live object and are NOT routed here — project-manager code calls
+      // setDrawerCurrentFilter directly for those, see pm-actions.js.
+      setDrawerCurrentFilter(state, {
+        search: value?.search,
+        projectId: value?.projectId,
+        cursor: value?.cursor
+      });
     },
     get totalPages() {
       return state.total;
     },
     set totalPages(value) {
-      state.total = value;
+      setDrawerTotal(state, value);
     },
     get allItemsTotal() {
       return state.allItemsTotal;
     },
     set allItemsTotal(value) {
-      state.allItemsTotal = value;
+      setDrawerAllItemsTotal(state, value);
     },
     getCurrentUser,
     async persistAllPages() {

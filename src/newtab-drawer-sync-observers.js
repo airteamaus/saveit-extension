@@ -1,6 +1,12 @@
 import { isSavedPagesCacheInvalidation } from './saved-pages-cache.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
-import { computeWarmingProgress, isWarmUpComplete } from './newtab-drawer-state.js';
+import {
+  clearDrawerWarming,
+  computeWarmingProgress,
+  isWarmUpComplete,
+  setDrawerInitialized,
+  updateDrawerWarming
+} from './newtab-drawer-state.js';
 import {
   PENDING_SAVES_KEY,
   getPendingSaves,
@@ -46,7 +52,7 @@ export function createDrawerCacheInvalidationObserver({
   function syncSavedPagesAfterCacheInvalidation() {
     windowObj.clearTimeout(savedPagesCacheRefreshTimer);
     savedPagesCacheRefreshTimer = windowObj.setTimeout(() => {
-      state.hasInitialized = false;
+      setDrawerInitialized(state, false);
 
       if (!getCurrentUser()) {
         return;
@@ -239,8 +245,7 @@ export function createDrawerStoreSubscriptions({
         clearCompletionTimer();
 
         const progress = computeWarmingProgress(snapshot, state, { complete });
-        state.warmUpInProgress = true;
-        state.warmUpProgress = progress;
+        updateDrawerWarming(state, progress);
 
         // Route through the dispatcher — the single render authority. It sees
         // warmUpInProgress and renders the warming pane, never cards.
@@ -251,9 +256,7 @@ export function createDrawerStoreSubscriptions({
           // then clear the flag so the next dispatcher call renders cards.
           completionTimer = timers.setTimeout(() => {
             completionTimer = null;
-            state.warmUpInProgress = false;
-            state.warmUpLastPercent = 0;
-            state.warmUpDeterminate = false;
+            clearDrawerWarming(state);
             // The store snapshot already populated state.allPages via the
             // loadDrawerBasePages -> syncDrawerStateFromStore path; the
             // dispatcher reads it now that the warming flag is clear.
@@ -278,9 +281,7 @@ export function createDrawerStoreSubscriptions({
       // state so a future warm-up starts fresh.
       if (state.warmUpInProgress && !isDrawerOpen()) {
         clearCompletionTimer();
-        state.warmUpInProgress = false;
-        state.warmUpLastPercent = 0;
-        state.warmUpDeterminate = false;
+        clearDrawerWarming(state);
       }
 
       if (
