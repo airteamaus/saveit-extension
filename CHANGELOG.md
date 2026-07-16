@@ -5,11 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [1.24.0] - 2026-07-17
 
 ### 🐛 Bug Fixes
 
-- **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (de28a02)
+- **release:** fall back to signing when AMO's signed file is not downloadable (cb1f1db)
+- **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (6c4c9a5)
 
 ## [1.23.1] - 2026-07-16
 
@@ -126,27 +127,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **save:** capture page content at save time, send source=client (06299d2)
 - **capture:** add scripting injector + scripting permission (b8a63d8)
 - **capture:** add Readability-based page-capture pure module (0fe8d42)
-
-### 🐛 Bug Fixes
-
-- **ui:** give sidebar overlay an opaque background (96dfb1f)
-- **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
-
-### ♻️ Refactoring
-
-- **capture:** switch injector to files-based bundle with real Readability (112f41c)
-
-### 📚 Documentation
-
-- client-side page capture implementation plan (b701619)
-- correct content-storage mechanism in capture design (a60e32e)
-- drop hard-coded page count from capture design (2273ae3)
-- client-side page capture design spec (7a8a6ce)
-
-## [1.20.2] - 2026-07-09
-
-### ✨ Features
-
 - **auth:** replace Firebase client SDK with backend session tokens (#23) (d3fe427)
 - **mirror:** organise bookmarks by project and domain, sub-bucket large folders (9b7e6b4)
 - **ui:** Enter-to-save in page editor; route action failures through toast (d820c11)
@@ -218,6 +198,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **ui:** give sidebar overlay an opaque background (96dfb1f)
+- **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
 - **mirror:** populate empty category and shared project folders (#25) (bc2370d)
 - **telemetry:** capture genuine page-surface errors to Sentry (#24) (bf70d27)
 - **release:** checkout main in updates-json job; backfill v1.19.3 (#20) (44196ce)
@@ -308,6 +290,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ♻️ Refactoring
 
+- **capture:** switch injector to files-based bundle with real Readability (112f41c)
 - **auth:** centralise the first-auth-state race (f0b5092)
 - improve footer layout with grid-based alignment (c7f594f)
 - switch favicon provider from Google to DuckDuckGo (d2453c3)
@@ -539,6 +522,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Documentation
 
+- client-side page capture implementation plan (b701619)
+- correct content-storage mechanism in capture design (a60e32e)
+- drop hard-coded page count from capture design (2273ae3)
+- client-side page capture design spec (7a8a6ce)
 - update CLAUDE.md with comprehensive tool reference (41a6338)
 - finalize newtab.js refactor plan and update architecture docs (4ed4452)
 - update documentation for v0.99.99 and cross-browser support (62b8569)
