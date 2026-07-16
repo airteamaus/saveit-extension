@@ -1,6 +1,6 @@
 # Cache Isolation Fix - Cross-User Data Leakage
 
-**Status:** Fixed in v0.13.5 (pending release)
+**Status:** Shipped (historical postmortem). User-scoped cache keys are now standard across the codebase — see `src/cache-keys.js`.
 **Severity:** Critical Security/Privacy Bug
 **Date:** 2025-11-14
 

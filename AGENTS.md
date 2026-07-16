@@ -44,6 +44,10 @@ SaveIt is a browser extension for saving and enriching bookmarks. The main repo 
 
 Mode detection is handled in `src/api.js`.
 
+### Local development setup
+
+The author runs the extension for local development in **Brave** (Chromium), loaded as an **unpacked extension in dev mode**. Load the **repo root** (where `manifest.json` lives), not `src/` — there is no manifest inside `src/`, so pointing the unpacked loader at `src/` will not load. The `just run` / `just run-chrome` targets and the Firefox dev profile are available but are not the primary dev path.
+
 ### Important surfaces
 
 - `src/newtab.js` - main new-tab UI, favorites, saved pages drawer
@@ -52,6 +56,9 @@ Mode detection is handled in `src/api.js`.
 - `src/cache-manager.js` - browser storage cache
 - `src/warm-cache-list-store.js` - local-first paginated list syncing
 - `src/background.js` - toolbar save and auth integration
+- `src/data-sync-centre.js` - consolidated Import / Export / Browser-sync modal
+- `src/bookmark-import.js` / `src/bookmark-export.js` - pure CSV/HTML/JSON parsers and serializers
+- `src/bookmark-mirror.js` - server-to-browser bookmark sync (reconcile, removeMirror)
 
 ### Two-repo note
 

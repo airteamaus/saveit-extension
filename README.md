@@ -1,5 +1,7 @@
 # SaveIt Browser Extension
 
+The browser extension behind **Buckley's Bookmarks**.
+
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
 Save web pages with AI-powered organization. Automatically extracts content, generates summaries, and creates semantic tags using AI classification. Features semantic search, hierarchical topic navigation, pinned and all-pages feeds, and project collections directly on the new tab.
@@ -10,7 +12,7 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 
 **Install from GitHub Release (Signed)**
 1. Go to [Releases](https://github.com/airteamaus/saveit-extension/releases)
-2. Download the latest `.xpi` file (current: v0.99.99)
+2. Download the latest `.xpi` file
 3. Open Firefox and go to `about:addons`
 4. Click the gear icon ⚙️ → "Install Add-on From File..."
 5. Select the downloaded `.xpi` file
@@ -27,16 +29,15 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 
 ### Getting Started
 
-1. **Sign in**: Click the SaveIt button in your toolbar and sign in with Google
-2. **Save pages**: Click the SaveIt button on any page to save it
-3. **Open your library**: Open a new tab - SaveIt replaces the new tab page with your pinned feed, all pages feed, and project collections
+1. **Sign in**: Click the toolbar button and sign in with Google
+2. **Save pages**: Click the toolbar button on any page, then choose a project (or just Save)
+3. **Open your library**: Open a new tab - Buckley's replaces the new tab page with your pinned feed, all pages feed, and project collections
 4. **Search & discover**: Use semantic search to find related content by topic
 5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
 6. **Organize projects**: Create project collections from the new-tab sidebar, add pages to multiple projects, and share a project with your company domain when needed
 
 ### Known Limitations (Beta)
 
-- Chrome support is experimental and may have issues
 - AI classification requires backend API access
 - Some sites may block content extraction
 - Large batch operations may be slow

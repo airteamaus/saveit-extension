@@ -30,24 +30,28 @@ npm run test:e2e
 tests/
 ├── setup.js                 # Global test configuration
 ├── unit/                    # Unit tests (fast, isolated)
-│   ├── newtab.test.js
-│   └── project-manager.test.js
-└── e2e/                     # End-to-end tests (full user flows)
-    └── standalone.spec.js
+│   ├── api/                 # API-layer tests (mode detection, auth, crud, ...)
+│   ├── newtab-*.test.js     # New-tab surface (app, drawer, auth, home, ...)
+│   ├── background.test.js   # Service worker logic
+│   └── ...                  # One test file per module
+├── integration/             # Cross-module behavior (e.g. realtime relay)
+└── e2e/                     # End-to-end tests (full user flows in a browser)
+    └── *.spec.js
 ```
+
+Run `find tests -name '*.test.js' -o -name '*.spec.js'` for the full list.
 
 ## Unit Tests
 
 Test individual functions and modules in isolation.
 
 ```javascript
-// tests/unit/api.test.js
+// tests/unit/api/mode-detection.test.js
 import { describe, it, expect } from 'vitest';
 
-describe('API.getSavedPages', () => {
-  it('should return mock data in standalone mode', async () => {
-    const pages = await API.getSavedPages();
-    expect(pages).toHaveLength(12);
+describe('mode detection', () => {
+  it('returns standalone in file:// context', () => {
+    // ...asserts api.js environment detection
   });
 });
 ```
@@ -62,9 +66,9 @@ describe('API.getSavedPages', () => {
 
 ## Integration Coverage
 
-The current suite covers cross-module behavior through `newtab.test.js`, `project-manager.test.js`, and the standalone Playwright flow in `tests/e2e/standalone.spec.js`.
+The current suite covers cross-module behavior in `tests/integration/` (e.g. the realtime relay that refreshes the new-tab view on a `project_page_changed` event), plus the standalone Playwright flows in `tests/e2e/`.
 
-**Run:** Same as unit tests (`npm test`) plus `npm run test:e2e -- tests/e2e/standalone.spec.js`
+**Run:** Same as unit tests (`npm test`) plus `npm run test:e2e`
 
 ## E2E Tests
 
@@ -74,10 +78,9 @@ Test complete user workflows in a real browser.
 // tests/e2e/standalone.spec.js
 test('should search and filter pages', async ({ page }) => {
   await page.goto(`file://${newtabPath}`);
-  await page.fill('#search', 'JavaScript');
-  await page.waitForTimeout(500);
+  await page.fill('#saved-pages-search-input', 'JavaScript');
 
-  const results = await page.locator('.saved-page-card').count();
+  const results = await page.locator('.saved-pages-drawer-card').count();
   expect(results).toBeGreaterThan(0);
 });
 ```
@@ -151,7 +154,7 @@ GitHub Actions automatically run on every PR and push.
 
 ### Release Workflow (`.github/workflows/release.yml`)
 
-Triggered when pushing version tags (e.g., `v0.13.5`):
+Triggered when pushing version tags (e.g., `v1.0.0`):
 1. Build extension
 2. Sign with Mozilla
 3. Create GitHub Release
@@ -201,25 +204,23 @@ just run
 just install
 ```
 
-- Real Firebase auth
+- Real session-token auth (Google OAuth via `launchWebAuthFlow` → backend-issued session token)
 - Cloud Function integration
 - Production-like behavior
 
 ### Staging Environment
 
-Deploy beta versions to test with real backend before production:
+Deploy to staging to test against the real backend before production:
 
 ```bash
-# Bump to beta version
-npm version 0.14.0-beta.1
-
-# Push (triggers staging deployment)
-git push origin main --tags
+# Bump patch version, tag, and push to trigger a staging release
+just deploy-staging
 ```
 
-- Extension detects `beta` in version → uses staging config
-- Staging Cloud Function: `https://saveit-staging-xxx.run.app`
+- Staging Cloud Function: `https://saveit-staging-5pu7ljvnuq-uc.a.run.app`
 - Real data, safe to break
+
+Note: Firefox manifest versions must be dot-separated numbers, so staging releases use a numeric patch bump rather than a `-beta` suffix. (`config.js` still maps any version containing `beta` to staging, but that path isn't used for the signed Firefox build.)
 
 ## Writing New Tests
 
@@ -270,7 +271,7 @@ test.describe('My Feature', () => {
 
 ```bash
 # Run specific test file
-npx vitest tests/unit/api.test.js
+npx vitest tests/unit/background.test.js
 
 # Run tests matching pattern
 npx vitest -t "should filter by search"
