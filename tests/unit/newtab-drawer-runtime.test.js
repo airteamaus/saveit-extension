@@ -65,16 +65,10 @@ describe('newtab drawer runtime', () => {
       documentObj: { id: 'document' },
       dependencies: {
         createDrawerDataControllerFn: vi.fn(() => dataController),
-        createDrawerFiltersApplierFn: vi.fn(() => vi.fn()),
         createDrawerShellControllerFn: vi.fn(() => shellController),
-        createDrawerStateSyncHelpersFn: vi.fn(() => ({
-          syncDrawerStateFromStore: vi.fn(),
-          syncProjectsStateFromStore: vi.fn()
-        })),
         createDrawerSyncCoordinatorFn: vi.fn(() => syncCoordinator),
         createDrawerUiControllerFn: vi.fn(() => uiController),
         createInitialDrawerStateFn: vi.fn(() => state),
-        createSavedPagesTotalNotifierFn: vi.fn(() => vi.fn()),
         createSavedPagesViewFn: vi.fn(() => savedPagesView),
         getDrawerCurrentUserFn: vi.fn(() => ({ uid: 'user-1' })),
         initSavedPagesDrawerEventsFn
@@ -200,13 +194,8 @@ describe('newtab drawer runtime', () => {
           setDrawerToggleState: vi.fn(),
           updateDrawerUrl: vi.fn()
         })),
-        createDrawerStateSyncHelpersFn: vi.fn(() => ({
-          syncDrawerStateFromStore: vi.fn(),
-          syncProjectsStateFromStore: vi.fn()
-        })),
         createDrawerUiControllerFn: vi.fn(() => uiController),
         createInitialDrawerStateFn: vi.fn(() => state),
-        createSavedPagesTotalNotifierFn: vi.fn(() => vi.fn()),
         createSavedPagesViewFn: vi.fn(() => ({})),
         // Signed in for the restore path so shouldSyncDrawerStoreUpdate passes.
         getDrawerCurrentUserFn: vi.fn(() => ({ uid: 'user-1' })),
@@ -281,16 +270,12 @@ describe('newtab drawer runtime', () => {
           openSavedPagesDrawer: vi.fn(), setDrawerSearchValue: vi.fn(),
           setDrawerToggleState: vi.fn(), updateDrawerUrl: vi.fn()
         })),
-        createDrawerStateSyncHelpersFn: vi.fn(() => ({
-          syncDrawerStateFromStore: vi.fn(), syncProjectsStateFromStore: vi.fn()
-        })),
         createDrawerUiControllerFn: vi.fn(() => ({
           renderDrawerChrome: vi.fn(), renderErrorState: vi.fn(),
           renderLoadingState: vi.fn(), renderProjectSidebar: vi.fn(),
           refreshDrawerCard: vi.fn(), renderResults: vi.fn(), renderSignInState: vi.fn()
         })),
         createInitialDrawerStateFn: vi.fn(() => ({ hasInitialized: false })),
-        createSavedPagesTotalNotifierFn: vi.fn(() => vi.fn()),
         createSavedPagesViewFn: vi.fn(({ getCurrentUser }) => {
           viewGetCurrentUser = getCurrentUser;
           return { getCurrentUser };

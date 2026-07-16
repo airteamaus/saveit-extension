@@ -1,4 +1,4 @@
-export { createSavedPagesDrawerController } from './newtab-drawer-controller.js';
+export { createSavedPagesDrawerController } from './newtab-drawer-runtime.js';
 export {
   createProjectSavedPagesStore,
   createProjectsStore,
