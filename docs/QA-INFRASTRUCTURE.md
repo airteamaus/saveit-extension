@@ -121,7 +121,7 @@ just pre-deploy
 
 **Setup:** Auto-installed via `npm install`
 
-### 8. Environment-Specific Configs
+### 7. Environment-Specific Configs
 
 Three environments with auto-detection:
 
@@ -222,7 +222,7 @@ just deploy-prod
 
 ```bash
 # Run specific test file
-npx vitest tests/unit/api.test.js
+npx vitest tests/unit/background.test.js
 
 # Run with pattern
 npx vitest -t "should filter by search"

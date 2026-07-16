@@ -1,6 +1,6 @@
 # New Tab Page Design Exploration
 
-**Status:** Exploratory / Not yet implemented
+**Status:** Historical. The recommended direction (sparse, search-forward layout with project navigation and a saved-pages drawer — "Hybrid A + C" below) shipped in the current new-tab page (`src/newtab.html`, `src/newtab.js`). The analytics-driven phases (frequently-opened, reading progress, temporal rediscovery) remain unimplemented.
 **Date:** 2025-11-12
 **Context:** Current new tab shows full dashboard (dense, browse-first). Exploring sparse, quick-access alternatives.
 
