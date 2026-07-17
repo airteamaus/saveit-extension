@@ -17,7 +17,26 @@ export class RealtimeClient {
     this.buffer = '';
   }
 
+  // Whether a stream is currently open. Callers (e.g. the newtab pagehide /
+  // pageshow lifecycle) use this to decide whether to connect after a bfcache
+  // restore without orphaning an existing stream.
+  isConnected() {
+    return this.controller !== null && !this.disconnected;
+  }
+
   async connect() {
+    // Idempotent guard: if a stream is already open, keep it. Without this,
+    // a second connect() (e.g. a pageshow bfcache-restore firing while the
+    // original stream is still alive) would create a fresh AbortController
+    // and orphan the previous one, leaking the connection.
+    if (this.isConnected()) {
+      return;
+    }
+
+    // Reset the disconnect flag from any prior lifecycle so a fresh stream
+    // can toast again if it later drops. (disconnect() sets this to suppress
+    // the toast on intentional teardown.)
+    this.disconnected = false;
     this.controller = new AbortController();
 
     try {

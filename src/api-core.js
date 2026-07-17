@@ -1,13 +1,16 @@
 // api-core.js - Core API runtime, auth, transport, and cache helpers
 
-// api-core.js - Core API runtime, auth, transport, and cache helpers
-
 import { CacheManager } from './cache-manager.js';
+import { requestWithAuth } from './api-transport.js';
 import {
   CONFIG as defaultConfig,
   getBrowserRuntime as defaultGetBrowserRuntime,
   getStorageAPI as defaultGetStorageAPI
 } from './config.js';
+import {
+  PROJECTS_CACHE_PREFIX,
+  DOMAINS_CACHE_PREFIX
+} from './cache-keys.js';
 import {
   getSessionToken,
   getCurrentUserId as getSessionUserId,
@@ -73,9 +76,17 @@ export function applyApiCore(API, dependencies = {}) {
   } = dependencies;
 
   API._cacheManager = null;
+  API._projectsCacheManager = null;
+  API._domainsCacheManager = null;
   API._lastKnownUserId = undefined;
   API.LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
 
+  // Each data surface gets its own CacheManager with its own storage prefix, so
+  // a mutation on one surface (e.g. a project edit) can invalidate narrowly
+  // without dropping the others (saved pages, domains). This satisfies the
+  // caching-redux rules "cache keys match query shape" (#6) and "invalidate
+  // narrowly, recover broadly" (#8). The default cacheManager is the
+  // saved-pages surface; projects and domains get their own below.
   Object.defineProperty(API, 'cacheManager', {
     configurable: true,
     enumerable: true,
@@ -90,6 +101,42 @@ export function applyApiCore(API, dependencies = {}) {
         );
       }
       return this._cacheManager;
+    }
+  });
+
+  Object.defineProperty(API, 'projectsCacheManager', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!this._projectsCacheManager && this.isExtension) {
+        this._projectsCacheManager = new cacheManagerClass(
+          () => this.getCurrentUserId(),
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId(),
+            keyPrefix: PROJECTS_CACHE_PREFIX
+          }
+        );
+      }
+      return this._projectsCacheManager;
+    }
+  });
+
+  Object.defineProperty(API, 'domainsCacheManager', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!this._domainsCacheManager && this.isExtension) {
+        this._domainsCacheManager = new cacheManagerClass(
+          () => this.getCurrentUserId(),
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId(),
+            keyPrefix: DOMAINS_CACHE_PREFIX
+          }
+        );
+      }
+      return this._domainsCacheManager;
     }
   });
 
@@ -204,7 +251,21 @@ export function applyApiCore(API, dependencies = {}) {
       };
     },
 
+    // Attach a { fromCache } meta flag to a response. Lists return a plain
+    // object ({ pages, pagination }) so meta is merged in via spread; projects
+    // and domains return Arrays, where spread would destroy array-ness
+    // (Array.isArray({...arr}) === false), so those use a non-enumerable
+    // defineProperty instead. Either way, consumers read meta?.fromCache.
     _withCacheMetadata(response, fromCache) {
+      if (Array.isArray(response)) {
+        Object.defineProperty(response, 'meta', {
+          value: { ...(response.meta || {}), fromCache },
+          configurable: true,
+          enumerable: false,
+          writable: true
+        });
+        return response;
+      }
       return {
         ...response,
         meta: {
@@ -216,6 +277,52 @@ export function applyApiCore(API, dependencies = {}) {
 
     async parseErrorResponse(response) {
       return parseErrorResponse(response);
+    },
+
+    // Shared cached-read flow used by the saved-pages, projects, and domains
+    // surfaces. Each surface inlined its own version of this 5-step dance
+    // (build scope → check skipCache → read cache → fetch+normalize → write
+    // cache → tag meta); this factors it into one place. Callers pass:
+    //   - cacheScope: the scope key for the surface's own CacheManager
+    //   - readCache / writeCache: bound to the surface's CM methods
+    //   - fetcher: () => Promise<raw backend data>
+    //   - normalize: (raw) => value-to-cache-and-return (only called on a
+    //     fresh fetch; cache hits return the stored value as-is, since it was
+    //     normalized before being written)
+    //   - mockFetcher: standalone-mode fallback (options) => value
+    //   - context: label for telemetry/logging
+    //   - options: the caller's options (carries skipCache etc.)
+    async _getCachedOrFreshList({
+      cacheScope,
+      readCache,
+      writeCache,
+      fetcher,
+      normalize,
+      mockFetcher,
+      context,
+      options = {}
+    }) {
+      if (this.isExtension) {
+        if (!options.skipCache) {
+          const cached = await readCache(cacheScope);
+          if (cached) {
+            return this._withCacheMetadata(cached, true);
+          }
+        }
+
+        return this._executeWithErrorHandling(
+          async () => {
+            const data = await fetcher();
+            const normalized = normalize(data);
+            await writeCache(normalized, cacheScope);
+            return this._withCacheMetadata(normalized, false);
+          },
+          context,
+          { options }
+        );
+      }
+
+      return this._withCacheMetadata(mockFetcher(options), false);
     },
 
     async getIdToken() {
@@ -271,6 +378,79 @@ export function applyApiCore(API, dependencies = {}) {
       return await this.cacheManager.cleanupLegacyCache();
     },
 
+    // --- projects surface cache (own prefix: PROJECTS_CACHE_PREFIX) ---
+    async getProjectsCachedPages(scope = {}, options = {}) {
+      if (!this.isExtension) return null;
+      return await this.projectsCacheManager.getCachedPages(scope, options);
+    },
+
+    async getProjectsCachedPagesState(scope = {}, options = {}) {
+      if (!this.isExtension) {
+        return {
+          status: 'empty',
+          response: null,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'not-extension',
+          usable: false
+        };
+      }
+      return await this.projectsCacheManager.getCachedPagesState(scope, options);
+    },
+
+    async setProjectsCachedPages(response, scope = {}) {
+      if (!this.isExtension) return;
+      return await this.projectsCacheManager.setCachedPages(response, scope);
+    },
+
+    async invalidateProjectsCache(scope = null) {
+      if (!this.isExtension) return;
+      return await this.projectsCacheManager.invalidateCache(scope);
+    },
+
+    // --- domains surface cache (own prefix: DOMAINS_CACHE_PREFIX) ---
+    async getDomainsCachedPages(scope = {}, options = {}) {
+      if (!this.isExtension) return null;
+      return await this.domainsCacheManager.getCachedPages(scope, options);
+    },
+
+    async getDomainsCachedPagesState(scope = {}, options = {}) {
+      if (!this.isExtension) {
+        return {
+          status: 'empty',
+          response: null,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'not-extension',
+          usable: false
+        };
+      }
+      return await this.domainsCacheManager.getCachedPagesState(scope, options);
+    },
+
+    async setDomainsCachedPages(response, scope = {}) {
+      if (!this.isExtension) return;
+      return await this.domainsCacheManager.setCachedPages(response, scope);
+    },
+
+    async invalidateDomainsCache(scope = null) {
+      if (!this.isExtension) return;
+      return await this.domainsCacheManager.invalidateCache(scope);
+    },
+
+    // Invalidate every surface cache. Used by the user-facing "reload from
+    // server" affordance, where the intent is to bust everything and re-fetch.
+    async invalidateAllCaches() {
+      if (!this.isExtension) return;
+      await Promise.all([
+        this.invalidateCache(),
+        this.invalidateProjectsCache(),
+        this.invalidateDomainsCache()
+      ]);
+    },
+
     async _executeWithErrorHandling(operation, context, metadata = {}) {
       try {
         return await operation();
@@ -282,40 +462,21 @@ export function applyApiCore(API, dependencies = {}) {
     },
 
     async _requestWithAuth(endpoint, params = null, options = {}) {
-      const idToken = await this.getIdToken();
-
-      let url = endpoint.startsWith('http') ? endpoint : `${config.cloudFunctionUrl}${endpoint}`;
-      if (params) {
-        const searchParams = params instanceof URLSearchParams
-          ? params
-          : new URLSearchParams(params);
-        url = `${url}?${searchParams}`;
-      }
-
-      // eslint-disable-next-line no-unused-vars
-      const { headers: _, ...fetchOptions } = options;
-
-      const response = await fetch(url, {
-        ...fetchOptions,
+      // Delegate to the shared transport (api-transport.js) so the facade and
+      // the background SW use one authenticated-fetch implementation. Facade
+      // callers pre-serialize `body` (a JSON string) and may set Content-Type
+      // in headers; both are passed through verbatim.
+      return await requestWithAuth({
+        url: endpoint,
+        baseUrl: config.cloudFunctionUrl,
+        params,
         method: options.method || 'GET',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          ...options.headers
-        }
+        body: options.body,
+        headers: options.headers,
+        getIdToken: () => this.getIdToken(),
+        onRotation: (response) => this._applySessionRotation(response),
+        parseError: (response) => this.parseErrorResponse(response)
       });
-
-      if (!response.ok) {
-        const errorMessage = await this.parseErrorResponse(response);
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
-      }
-
-      // Sliding session refresh: store a rotated token if the backend
-      // returned one. Best-effort — does not affect the current response.
-      await this._applySessionRotation(response);
-
-      return response;
     },
 
     async _applySessionRotation(response) {

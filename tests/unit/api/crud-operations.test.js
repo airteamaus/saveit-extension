@@ -139,8 +139,11 @@ describe('API - CRUD Operations', () => {
       };
       global.fetch = vi.fn(async () => mockResponse);
 
-      // Mock cache manager
+      // Mock cache managers — deletePage invalidates saved-pages and domains.
       API._cacheManager = {
+        invalidateCache: vi.fn()
+      };
+      API._domainsCacheManager = {
         invalidateCache: vi.fn()
       };
 
@@ -156,6 +159,7 @@ describe('API - CRUD Operations', () => {
         })
       );
       expect(API._cacheManager.invalidateCache).toHaveBeenCalled();
+      expect(API._domainsCacheManager.invalidateCache).toHaveBeenCalled();
       expect(result.success).toBe(true);
     });
 
@@ -206,6 +210,9 @@ describe('API - CRUD Operations', () => {
       API._cacheManager = {
         invalidateCache: vi.fn()
       };
+      API._domainsCacheManager = {
+        invalidateCache: vi.fn()
+      };
 
       const result = await API.updatePage('page-123', { notes: 'New notes' });
 
@@ -222,6 +229,7 @@ describe('API - CRUD Operations', () => {
       );
       expect(result.notes).toBe('New notes');
       expect(API._cacheManager.invalidateCache).toHaveBeenCalled();
+      expect(API._domainsCacheManager.invalidateCache).toHaveBeenCalled();
     });
 
     it('should throw error when page not found in standalone mode', async () => {
@@ -264,7 +272,7 @@ describe('API - CRUD Operations', () => {
         ok: true,
         json: async () => ({ id: 'project-1', name: 'New project', visibility: 'private' })
       }));
-      API._cacheManager = {
+      API._projectsCacheManager = {
         invalidateCache: vi.fn()
       };
 
@@ -286,7 +294,8 @@ describe('API - CRUD Operations', () => {
           body: JSON.stringify({ name: 'New project' })
         })
       );
-      expect(API._cacheManager.invalidateCache).toHaveBeenCalled();
+      // createProject only affects the projects surface.
+      expect(API._projectsCacheManager.invalidateCache).toHaveBeenCalled();
     });
 
     it('should update project in standalone mode', async () => {
@@ -306,7 +315,7 @@ describe('API - CRUD Operations', () => {
         ok: true,
         json: async () => ({ id: 'project-1', visibility: 'private' })
       }));
-      API._cacheManager = {
+      API._projectsCacheManager = {
         invalidateCache: vi.fn()
       };
 
@@ -343,7 +352,7 @@ describe('API - CRUD Operations', () => {
       harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
-      API._cacheManager = {
+      API._projectsCacheManager = {
         getCachedPages: vi.fn(async () => null),
         setCachedPages: vi.fn(async () => {})
       };
@@ -369,14 +378,14 @@ describe('API - CRUD Operations', () => {
     it('should return cached projects in extension mode when available', async () => {
       harness.setExtensionMode({ local: {} }, { id: 'test' });
 
-      API._cacheManager = {
+      API._projectsCacheManager = {
         getCachedPages: vi.fn(async () => [{ id: 'project-1', name: 'Cached project' }]),
         setCachedPages: vi.fn()
       };
 
       const result = await API.getProjects();
 
-      expect(API._cacheManager.getCachedPages).toHaveBeenCalled();
+      expect(API._projectsCacheManager.getCachedPages).toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result.meta.fromCache).toBe(true);
     });
@@ -386,7 +395,7 @@ describe('API - CRUD Operations', () => {
       harness.setCloudFunctionUrl('https://test.run.app');
       global.window.firebaseAuth = { currentUser: { uid: 'user123' } };
       global.window.firebaseGetIdToken = vi.fn(async () => 'token');
-      API._cacheManager = {
+      API._projectsCacheManager = {
         getCachedPages: vi.fn(async () => null),
         setCachedPages: vi.fn(async () => {})
       };

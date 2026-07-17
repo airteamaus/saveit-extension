@@ -343,7 +343,7 @@ export function createNewtabApp({
       elements.refreshBtn?.addEventListener('click', async () => {
         elements.userDropdown?.classList.add('hidden');
         try {
-          await API.invalidateCache();
+          await API.invalidateAllCaches();
           savedPagesStore.setLazy(false);
           void projectsStore.hydrate();
           // forceReload resets hasInitialized + the relevant store and fetches

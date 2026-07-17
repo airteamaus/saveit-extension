@@ -174,4 +174,58 @@ describe('RealtimeClient', () => {
     expect(capturedSignal.aborted).toBe(true);
     expect(notify).not.toHaveBeenCalled();  // manual disconnect does not toast
   });
+
+  test('isConnected reflects the stream state across the lifecycle', async () => {
+    mockFetch.mockImplementation(() => new Promise(() => {}));  // stays open
+    const client = makeClient();
+
+    expect(client.isConnected()).toBe(false);
+
+    client.connect();  // not awaited — the mock never resolves
+    await new Promise(r => setTimeout(r, 10));
+    expect(client.isConnected()).toBe(true);
+
+    client.disconnect();
+    expect(client.isConnected()).toBe(false);
+  });
+
+  test('connect is idempotent: a second connect while open does not open a second stream', async () => {
+    mockFetch.mockImplementation(() => new Promise(() => {}));  // stays open
+    const client = makeClient();
+
+    client.connect();
+    await new Promise(r => setTimeout(r, 10));
+    await client.connect();  // second call while the first is still open
+
+    // Exactly one fetch — the second connect early-returned without orphaning
+    // the first stream's AbortController.
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('after disconnect, connect reopens the stream and re-arms the disconnect toast', async () => {
+    // First connect: stream closes immediately → toast fires.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([]),
+      headers: new Map()
+    });
+    const client = makeClient();
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+    expect(notify).toHaveBeenCalledTimes(1);
+
+    // The stream has ended and disconnected; reconnect must succeed and the
+    // toast must fire again when the second stream also closes.
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([]),
+      headers: new Map()
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+    expect(notify).toHaveBeenCalledTimes(2);  // re-armed after the reconnect
+  });
 });

@@ -31,8 +31,13 @@ export function applyApiImport(API) {
               body: JSON.stringify({ bulk: true, projectId, bookmarks })
             });
 
-            // One cache invalidation for the whole batch, not per item.
-            await this.invalidateCache();
+            // One cache invalidation per affected surface for the whole batch,
+            // not per item. Bulk imports create saved pages and may assign them
+            // to a project (options.projectId), so both surfaces can be stale.
+            await Promise.all([
+              this.invalidateCache(),
+              this.invalidateProjectsCache()
+            ]);
             return response;
           },
           'bulkImportBookmarks',

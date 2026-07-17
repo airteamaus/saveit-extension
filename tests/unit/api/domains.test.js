@@ -22,6 +22,8 @@ describe('API - getDomains', () => {
     harness = createApiTestHarness({ cloudFunctionUrl: 'https://test-function.run.app' });
     API = harness.API;
     API._cacheManager = null;
+    API._projectsCacheManager = null;
+    API._domainsCacheManager = null;
     vi.clearAllMocks();
   });
 
@@ -77,7 +79,7 @@ describe('API - getDomains', () => {
       const cachedDomains = [
         { domain: 'cached.example', count: 5 }
       ];
-      API._cacheManager = {
+      API._domainsCacheManager = {
         getCachedPages: vi.fn(async () => cachedDomains),
         setCachedPages: vi.fn()
       };
@@ -87,7 +89,7 @@ describe('API - getDomains', () => {
       expect(result).toBe(cachedDomains);
       expect(result.meta).toEqual({ fromCache: true });
       // Cache hit must short-circuit before a network fetch.
-      expect(API._cacheManager.setCachedPages).not.toHaveBeenCalled();
+      expect(API._domainsCacheManager.setCachedPages).not.toHaveBeenCalled();
     });
 
     it('fetches and caches domains on a cache miss', async () => {
@@ -100,7 +102,7 @@ describe('API - getDomains', () => {
         ok: true,
         json: async () => ({ domains: fetchedDomains })
       }));
-      API._cacheManager = {
+      API._domainsCacheManager = {
         getCachedPages: vi.fn(async () => null),
         setCachedPages: vi.fn()
       };
@@ -110,7 +112,7 @@ describe('API - getDomains', () => {
       expect(result).toEqual(fetchedDomains);
       expect(result.meta).toEqual({ fromCache: false });
       // The fetched batch must be written back to the cache.
-      expect(API._cacheManager.setCachedPages).toHaveBeenCalledWith(
+      expect(API._domainsCacheManager.setCachedPages).toHaveBeenCalledWith(
         fetchedDomains,
         { surface: 'domains' }
       );
@@ -126,7 +128,7 @@ describe('API - getDomains', () => {
         json: async () => ({ domains: [{ domain: 'skipped-cache', count: 1 }] })
       }));
       const cachedDomains = [{ domain: 'stale.example', count: 9 }];
-      API._cacheManager = {
+      API._domainsCacheManager = {
         getCachedPages: vi.fn(async () => cachedDomains),
         setCachedPages: vi.fn()
       };
@@ -134,7 +136,7 @@ describe('API - getDomains', () => {
       const result = await API.getDomains({ skipCache: true });
 
       // skipCache must skip the read entirely and go to the network.
-      expect(API._cacheManager.getCachedPages).not.toHaveBeenCalled();
+      expect(API._domainsCacheManager.getCachedPages).not.toHaveBeenCalled();
       expect(global.fetch).toHaveBeenCalled();
       expect(result[0].domain).toBe('skipped-cache');
     });
@@ -148,7 +150,7 @@ describe('API - getDomains', () => {
         ok: true,
         json: async () => ({})
       }));
-      API._cacheManager = {
+      API._domainsCacheManager = {
         getCachedPages: vi.fn(async () => null),
         setCachedPages: vi.fn()
       };
@@ -167,7 +169,7 @@ describe('API - getDomains', () => {
       global.fetch = vi.fn(async () => {
         throw new Error('network down');
       });
-      API._cacheManager = {
+      API._domainsCacheManager = {
         getCachedPages: vi.fn(async () => null),
         setCachedPages: vi.fn()
       };
@@ -176,7 +178,7 @@ describe('API - getDomains', () => {
       // underlying error must propagate rather than being swallowed.
       await expect(API.getDomains()).rejects.toThrow('network down');
       // Nothing should be written to the cache when the fetch failed.
-      expect(API._cacheManager.setCachedPages).not.toHaveBeenCalled();
+      expect(API._domainsCacheManager.setCachedPages).not.toHaveBeenCalled();
     });
   });
 });

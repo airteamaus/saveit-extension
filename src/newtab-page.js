@@ -95,9 +95,19 @@ export async function startNewtabPage({
   // does not auto-reconnect; a page refresh re-establishes it.
   void realtimeClient?.connect();
 
-  // Disconnect when the page is torn down so a bfcache restore doesn't leave
-  // a zombie stream and the server can free the connection promptly.
+  // Lifecycle for bfcache: a pagehide fires both on final teardown and when
+  // the browser stashes the page in the back/forward cache. On a bfcache
+  // restore the page is reused without re-running this init, so we must
+  // reconnect the stream ourselves on pageshow. The listeners persist for the
+  // page's lifetime (not { once: true }) — otherwise a back→forward cycle
+  // leaves the restored page with no teardown and no reconnect.
   globalThis.addEventListener('pagehide', () => {
     realtimeClient?.disconnect();
-  }, { once: true });
+  });
+  globalThis.addEventListener('pageshow', (event) => {
+    // event.persisted is true only on a bfcache restore, not on the initial load.
+    if (event.persisted) {
+      void realtimeClient?.connect();
+    }
+  });
 }
