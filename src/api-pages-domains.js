@@ -9,17 +9,6 @@ function buildDomainsCacheScope() {
   return { surface: 'domains' };
 }
 
-function withDomainsCacheMetadata(domains, fromCache) {
-  Object.defineProperty(domains, 'meta', {
-    value: { fromCache },
-    configurable: true,
-    enumerable: false,
-    writable: true
-  });
-
-  return domains;
-}
-
 export function applyApiDomains(API) {
   Object.assign(API, {
     /**
@@ -30,27 +19,19 @@ export function applyApiDomains(API) {
      */
     async getDomains(options = {}) {
       if (this.isExtension) {
-        return this._executeWithErrorHandling(
-          async () => {
-            const cacheScope = buildDomainsCacheScope();
-            if (!options.skipCache) {
-              const cached = await this.getDomainsCachedPages(cacheScope);
-              if (cached) {
-                return withDomainsCacheMetadata(cached, true);
-              }
-            }
-
-            const response = await this._fetchWithAuth('', { domains: 'true' });
-            const domains = Array.isArray(response?.domains) ? response.domains : [];
-            await this.setDomainsCachedPages(domains, cacheScope);
-            return withDomainsCacheMetadata(domains, false);
-          },
-          'getDomains',
-          { options }
-        );
+        return this._getCachedOrFreshList({
+          cacheScope: buildDomainsCacheScope(),
+          readCache: (scope) => this.getDomainsCachedPages(scope),
+          writeCache: (value, scope) => this.setDomainsCachedPages(value, scope),
+          fetcher: () => this._fetchWithAuth('', { domains: 'true' }),
+          normalize: (response) => Array.isArray(response?.domains) ? response.domains : [],
+          mockFetcher: getStandaloneDomains,
+          context: 'getDomains',
+          options
+        });
       }
 
-      return withDomainsCacheMetadata(getStandaloneDomains(options), false);
+      return this._withCacheMetadata(getStandaloneDomains(options), false);
     }
   });
 

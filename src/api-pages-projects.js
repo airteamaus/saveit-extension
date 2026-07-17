@@ -36,17 +36,6 @@ function buildProjectsCacheScope(options = {}) {
   };
 }
 
-function withProjectsCacheMetadata(projects, fromCache) {
-  Object.defineProperty(projects, 'meta', {
-    value: { fromCache },
-    configurable: true,
-    enumerable: false,
-    writable: true
-  });
-
-  return projects;
-}
-
 function buildCreateProjectPayload(project) {
   const payload = {
     name: project.name?.trim()
@@ -89,29 +78,21 @@ export function applyApiProjects(API) {
   Object.assign(API, {
     async getProjects(options = {}) {
       if (this.isExtension) {
-        return this._executeWithErrorHandling(
-          async () => {
-            const cacheScope = buildProjectsCacheScope(options);
-            if (!options.skipCache) {
-              const cached = await this.getProjectsCachedPages(cacheScope);
-              if (cached) {
-                return withProjectsCacheMetadata(normalizeProjectsResponse(cached), true);
-              }
-            }
+        const params = {};
+        if (options.includeArchived !== undefined) {
+          params.includeArchived = String(options.includeArchived);
+        }
 
-            const params = {};
-            if (options.includeArchived !== undefined) {
-              params.includeArchived = String(options.includeArchived);
-            }
-
-            const response = await this._fetchWithAuth('/projects', params);
-            const normalized = normalizeProjectsResponse(response);
-            await this.setProjectsCachedPages(normalized, cacheScope);
-            return withProjectsCacheMetadata(normalized, false);
-          },
-          'getProjects',
-          { options }
-        );
+        return this._getCachedOrFreshList({
+          cacheScope: buildProjectsCacheScope(options),
+          readCache: (scope) => this.getProjectsCachedPages(scope),
+          writeCache: (value, scope) => this.setProjectsCachedPages(value, scope),
+          fetcher: () => this._fetchWithAuth('/projects', params),
+          normalize: normalizeProjectsResponse,
+          mockFetcher: getStandaloneProjects,
+          context: 'getProjects',
+          options
+        });
       }
 
       return getStandaloneProjects(options);

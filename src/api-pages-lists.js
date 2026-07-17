@@ -126,33 +126,23 @@ async function getCachedOrFreshList(API, {
     skipCache: options.skipCache || false
   });
 
-  if (API.isExtension) {
-    const cacheScope = API._buildListCacheScope(surface, options);
-
-    if (!options.skipCache) {
-      const cached = await API.getCachedPages(cacheScope);
-      if (cached) {
-        debug(`[${context}] Returning cached data:`, {
-          count: cached.pages?.length,
-          total: cached.pagination?.total
-        });
-        return API._withCacheMetadata(cached, true);
-      }
-    }
-
-    return API._executeWithErrorHandling(
-      async () => {
-        const data = await fetcher(options);
-        const normalized = normalizePagesResponse(data, context);
-        await API.setCachedPages(normalized, cacheScope);
-        return API._withCacheMetadata(normalized, false);
-      },
-      context,
-      { options }
-    );
-  }
-
-  return API._withCacheMetadata(mockFetcher(options), false);
+  // Delegate the cache-or-fetch dance to the shared helper (api-core
+  // _getCachedOrFreshList). Lists carry a `surface` (dashboard / favorites)
+  // and a sort/cursor/projectId scope, and normalize backend responses into
+  // the { pages, pagination, meta } shape. The cache stores already-
+  // normalized payloads, so normalize is a no-op on cache hits (the data
+  // already has .pages) and a real normalization on fresh fetches.
+  const cacheScope = API._buildListCacheScope(surface, options);
+  return API._getCachedOrFreshList({
+    cacheScope,
+    readCache: (scope) => API.getCachedPages(scope),
+    writeCache: (value, scope) => API.setCachedPages(value, scope),
+    fetcher: () => fetcher(options),
+    normalize: (data) => normalizePagesResponse(data, context),
+    mockFetcher,
+    context,
+    options
+  });
 }
 
 async function headListFreshness(API, {

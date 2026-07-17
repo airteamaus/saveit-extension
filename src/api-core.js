@@ -251,7 +251,21 @@ export function applyApiCore(API, dependencies = {}) {
       };
     },
 
+    // Attach a { fromCache } meta flag to a response. Lists return a plain
+    // object ({ pages, pagination }) so meta is merged in via spread; projects
+    // and domains return Arrays, where spread would destroy array-ness
+    // (Array.isArray({...arr}) === false), so those use a non-enumerable
+    // defineProperty instead. Either way, consumers read meta?.fromCache.
     _withCacheMetadata(response, fromCache) {
+      if (Array.isArray(response)) {
+        Object.defineProperty(response, 'meta', {
+          value: { ...(response.meta || {}), fromCache },
+          configurable: true,
+          enumerable: false,
+          writable: true
+        });
+        return response;
+      }
       return {
         ...response,
         meta: {
@@ -263,6 +277,52 @@ export function applyApiCore(API, dependencies = {}) {
 
     async parseErrorResponse(response) {
       return parseErrorResponse(response);
+    },
+
+    // Shared cached-read flow used by the saved-pages, projects, and domains
+    // surfaces. Each surface inlined its own version of this 5-step dance
+    // (build scope → check skipCache → read cache → fetch+normalize → write
+    // cache → tag meta); this factors it into one place. Callers pass:
+    //   - cacheScope: the scope key for the surface's own CacheManager
+    //   - readCache / writeCache: bound to the surface's CM methods
+    //   - fetcher: () => Promise<raw backend data>
+    //   - normalize: (raw) => value-to-cache-and-return (only called on a
+    //     fresh fetch; cache hits return the stored value as-is, since it was
+    //     normalized before being written)
+    //   - mockFetcher: standalone-mode fallback (options) => value
+    //   - context: label for telemetry/logging
+    //   - options: the caller's options (carries skipCache etc.)
+    async _getCachedOrFreshList({
+      cacheScope,
+      readCache,
+      writeCache,
+      fetcher,
+      normalize,
+      mockFetcher,
+      context,
+      options = {}
+    }) {
+      if (this.isExtension) {
+        if (!options.skipCache) {
+          const cached = await readCache(cacheScope);
+          if (cached) {
+            return this._withCacheMetadata(cached, true);
+          }
+        }
+
+        return this._executeWithErrorHandling(
+          async () => {
+            const data = await fetcher();
+            const normalized = normalize(data);
+            await writeCache(normalized, cacheScope);
+            return this._withCacheMetadata(normalized, false);
+          },
+          context,
+          { options }
+        );
+      }
+
+      return this._withCacheMetadata(mockFetcher(options), false);
     },
 
     async getIdToken() {
