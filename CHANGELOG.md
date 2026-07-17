@@ -5,6 +5,26 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - TBD
+
+### 🐛 Bug Fixes
+
+- **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
+
+### 📝 Other Improvements
+
+- **api:** unify cache-metadata decorators and cached-read flow (7daa706)
+- **transport:** share one authenticated fetch between facade and background (37a0082)
+- **cache:** per-surface CacheManagers with scoped invalidation (aca0c05)
+
+### 📚 Documentation
+
+- **agents:** document per-surface cache architecture, shared transport, realtime lifecycle (18d8f89)
+
+## [1.24.1] - 2026-07-17
+
+No notable changes.
+
 ## [1.24.0] - 2026-07-17
 
 ### 🐛 Bug Fixes
@@ -116,11 +136,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
-
-## [1.20.3] - 2026-07-09
-
-### ✨ Features
-
 - **layout:** keep sidebar to 700px, hamburger below, more summary lines (75cb3fc)
 - **ui:** lengthen card summary to fill two lines (47611eb)
 - **cache:** optimistic tile + smart poll for post-save visibility (02ce890)
