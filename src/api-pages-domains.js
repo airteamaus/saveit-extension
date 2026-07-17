@@ -34,7 +34,7 @@ export function applyApiDomains(API) {
           async () => {
             const cacheScope = buildDomainsCacheScope();
             if (!options.skipCache) {
-              const cached = await this.getCachedPages(cacheScope);
+              const cached = await this.getDomainsCachedPages(cacheScope);
               if (cached) {
                 return withDomainsCacheMetadata(cached, true);
               }
@@ -42,7 +42,7 @@ export function applyApiDomains(API) {
 
             const response = await this._fetchWithAuth('', { domains: 'true' });
             const domains = Array.isArray(response?.domains) ? response.domains : [];
-            await this.setCachedPages(domains, cacheScope);
+            await this.setDomainsCachedPages(domains, cacheScope);
             return withDomainsCacheMetadata(domains, false);
           },
           'getDomains',

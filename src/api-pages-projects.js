@@ -93,7 +93,7 @@ export function applyApiProjects(API) {
           async () => {
             const cacheScope = buildProjectsCacheScope(options);
             if (!options.skipCache) {
-              const cached = await this.getCachedPages(cacheScope);
+              const cached = await this.getProjectsCachedPages(cacheScope);
               if (cached) {
                 return withProjectsCacheMetadata(normalizeProjectsResponse(cached), true);
               }
@@ -106,7 +106,7 @@ export function applyApiProjects(API) {
 
             const response = await this._fetchWithAuth('/projects', params);
             const normalized = normalizeProjectsResponse(response);
-            await this.setCachedPages(normalized, cacheScope);
+            await this.setProjectsCachedPages(normalized, cacheScope);
             return withProjectsCacheMetadata(normalized, false);
           },
           'getProjects',
@@ -130,7 +130,7 @@ export function applyApiProjects(API) {
               body: JSON.stringify(payload)
             });
 
-            await this.invalidateCache();
+            await this.invalidateProjectsCache();
             return response;
           },
           'createProject',
@@ -154,7 +154,7 @@ export function applyApiProjects(API) {
               body: JSON.stringify(payload)
             });
 
-            await this.invalidateCache();
+            await this.invalidateProjectsCache();
             return response;
           },
           'updateProject',
@@ -177,7 +177,12 @@ export function applyApiProjects(API) {
               body: JSON.stringify({ pageId })
             });
 
-            await this.invalidateCache();
+            // Adding a page to a project changes both the projects cache
+            // (membership) and the saved-pages cache (the page's project_ids).
+            await Promise.all([
+              this.invalidateProjectsCache(),
+              this.invalidateCache()
+            ]);
             return response;
           },
           'addPageToProject',
@@ -198,7 +203,11 @@ export function applyApiProjects(API) {
               { method: 'DELETE' }
             );
 
-            await this.invalidateCache();
+            // Removing a page from a project changes both surfaces — see addPageToProject.
+            await Promise.all([
+              this.invalidateProjectsCache(),
+              this.invalidateCache()
+            ]);
             return response;
           },
           'removePageFromProject',

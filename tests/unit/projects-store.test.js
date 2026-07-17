@@ -21,8 +21,10 @@ describe('ProjectsStore', () => {
     ], false);
     const api = {
       isExtension: true,
-      getCachedPages: vi.fn(async () => cachedProjects),
-      setCachedPages: vi.fn(async () => {}),
+      // ProjectsStore reads/writes its warm cache via the projects-surface
+      // methods (PROJECTS_CACHE_PREFIX), not the inherited saved-pages ones.
+      getProjectsCachedPages: vi.fn(async () => cachedProjects),
+      setProjectsCachedPages: vi.fn(async () => {}),
       getProjects: vi
         .fn()
         .mockResolvedValueOnce(freshProjects)
@@ -37,7 +39,7 @@ describe('ProjectsStore', () => {
     });
 
     expect(api.getProjects).toHaveBeenCalledWith({ skipCache: true });
-    expect(api.setCachedPages).toHaveBeenCalledWith(
+    expect(api.setProjectsCachedPages).toHaveBeenCalledWith(
       expect.arrayContaining([
         expect.objectContaining({ id: 'project-1', name: 'Fresh project' })
       ]),

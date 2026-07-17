@@ -4,14 +4,14 @@ import { createBackgroundAuth } from './background-auth.js';
 import { getCurrentUserId as getSessionUserId } from './session-store.js';
 import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
-import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
+import { invalidateToolbarSaveCaches } from './saved-pages-cache.js';
 import { reconcile, mirrorSavedPage, removeMirror } from './bookmark-mirror.js';
 import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
 import { capturePageContent } from './page-capture-injector.js';
 import { addPendingSave } from './pending-saves.js';
 import { applySessionRotation, parseErrorResponse } from './api-core.js';
-import { PROJECTS_CACHE_PREFIX, migrateProjectsCacheKeys } from './cache-keys.js';
+import { PROJECTS_CACHE_PREFIX, migrateProjectsCacheKeys, migrateDomainsCacheKeys } from './cache-keys.js';
 
 const logger = createLogger('background');
 const authLogger = createLogger('background-auth');
@@ -181,10 +181,17 @@ const toolbarProjectsStore = new ProjectsStore({
     const projects = await fetchBackgroundApi('/projects');
     return Array.isArray(projects) ? projects : [];
   },
-  getCachedPages(scope, options) {
+  // ProjectsStore reads/writes its warm cache via the projects-surface methods
+  // (PROJECTS_CACHE_PREFIX) so it doesn't collide with the saved-pages cache.
+  // The toolbar has its own CacheManager instance for the projects surface
+  // because the full API facade isn't loaded in the background.
+  getProjectsCachedPages(scope, options) {
     return toolbarProjectsCacheManager.getCachedPages(scope, options);
   },
-  setCachedPages(projects, scope) {
+  getProjectsCachedPagesState(scope, options) {
+    return toolbarProjectsCacheManager.getCachedPagesState(scope, options);
+  },
+  setProjectsCachedPages(projects, scope) {
     return toolbarProjectsCacheManager.setCachedPages(projects, scope);
   }
 });
@@ -340,6 +347,8 @@ browserApi.runtime.onInstalled?.addListener(() => {
     // Evict projects keys written under the old savedPages_cache prefix before
     // projects got their own namespace. No-op after the first run.
     await migrateProjectsCacheKeys(browserApi.storage.local);
+    // Same one-time eviction for domains, now that domains have their own prefix.
+    await migrateDomainsCacheKeys(browserApi.storage.local);
   })();
 });
 
@@ -454,7 +463,7 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
   }
 
   try {
-    const cacheKeysRemoved = await invalidateSavedPagesCacheStorage(browserApi.storage.local);
+    const cacheKeysRemoved = await invalidateToolbarSaveCaches(browserApi.storage.local);
     logger.log('Cache invalidated after save', {
       cacheKeysRemoved
     });
@@ -642,9 +651,13 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // reconciliation or newtab reload clears it via onOptimisticReconciled.
     (async () => {
       try {
-        await invalidateSavedPagesCacheStorage(browserApi.storage.local);
-        logger.log('Realtime enrichment relay; invalidated saved-pages cache', {
-          pageId: message.pageId || null
+        // Invalidate saved-pages and domains: enrichment writes the real doc
+        // (saved-pages surface) and may assign a domain classification
+        // (domains surface). Projects are unaffected by enrichment.
+        const keysRemoved = await invalidateToolbarSaveCaches(browserApi.storage.local);
+        logger.log('Realtime enrichment relay; invalidated caches', {
+          pageId: message.pageId || null,
+          keysRemoved
         });
       } catch (error) {
         logger.error('Failed to invalidate cache on realtime relay', error);

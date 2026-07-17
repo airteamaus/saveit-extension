@@ -66,12 +66,15 @@ export class ProjectsStore extends WarmCacheListStore {
       };
     }
 
-    const cacheState = this.api.getCachedPagesState
-      ? await this.api.getCachedPagesState(this.options.warmCacheScope, {
+    // Projects live under their own cache surface (PROJECTS_CACHE_PREFIX), so
+    // route warm-cache reads through the projects-surface methods rather than
+    // the default saved-pages ones inherited from WarmCacheListStore.
+    const cacheState = this.api.getProjectsCachedPagesState
+      ? await this.api.getProjectsCachedPagesState(this.options.warmCacheScope, {
         allowExpired: true
       })
       : await (async () => {
-        const response = await this.api.getCachedPages(this.options.warmCacheScope, {
+        const response = await this.api.getProjectsCachedPages(this.options.warmCacheScope, {
           allowExpired: true
         });
         return {
@@ -126,6 +129,6 @@ export class ProjectsStore extends WarmCacheListStore {
       return;
     }
 
-    await this.api.setCachedPages(this.state.allPages, this.options.warmCacheScope);
+    await this.api.setProjectsCachedPages(this.state.allPages, this.options.warmCacheScope);
   }
 }

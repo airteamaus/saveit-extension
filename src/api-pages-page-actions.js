@@ -14,7 +14,12 @@ export function applyApiPageActions(API) {
               method: 'DELETE',
             });
 
-            await this.invalidateCache();
+            // Deleting a page shifts its domain's count, so invalidate the
+            // domains cache alongside the saved-pages cache.
+            await Promise.all([
+              this.invalidateCache(),
+              this.invalidateDomainsCache()
+            ]);
             return response;
           },
           'deletePage',
@@ -37,7 +42,12 @@ export function applyApiPageActions(API) {
               body: JSON.stringify({ id, ...updates })
             });
 
-            await this.invalidateCache();
+            // An update can change classification/title (which feeds the
+            // domains list), so invalidate domains alongside saved pages.
+            await Promise.all([
+              this.invalidateCache(),
+              this.invalidateDomainsCache()
+            ]);
             return response;
           },
           'updatePage',
@@ -60,6 +70,8 @@ export function applyApiPageActions(API) {
               body: JSON.stringify({ id, pinned })
             });
 
+            // Pinning doesn't change domain membership, so only the saved-pages
+            // surface (which carries the pinned flag) needs invalidation.
             await this.invalidateCache();
             return response;
           },

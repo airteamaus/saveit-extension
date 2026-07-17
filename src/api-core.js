@@ -9,6 +9,10 @@ import {
   getStorageAPI as defaultGetStorageAPI
 } from './config.js';
 import {
+  PROJECTS_CACHE_PREFIX,
+  DOMAINS_CACHE_PREFIX
+} from './cache-keys.js';
+import {
   getSessionToken,
   getCurrentUserId as getSessionUserId,
   setSession
@@ -73,9 +77,17 @@ export function applyApiCore(API, dependencies = {}) {
   } = dependencies;
 
   API._cacheManager = null;
+  API._projectsCacheManager = null;
+  API._domainsCacheManager = null;
   API._lastKnownUserId = undefined;
   API.LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
 
+  // Each data surface gets its own CacheManager with its own storage prefix, so
+  // a mutation on one surface (e.g. a project edit) can invalidate narrowly
+  // without dropping the others (saved pages, domains). This satisfies the
+  // caching-redux rules "cache keys match query shape" (#6) and "invalidate
+  // narrowly, recover broadly" (#8). The default cacheManager is the
+  // saved-pages surface; projects and domains get their own below.
   Object.defineProperty(API, 'cacheManager', {
     configurable: true,
     enumerable: true,
@@ -90,6 +102,42 @@ export function applyApiCore(API, dependencies = {}) {
         );
       }
       return this._cacheManager;
+    }
+  });
+
+  Object.defineProperty(API, 'projectsCacheManager', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!this._projectsCacheManager && this.isExtension) {
+        this._projectsCacheManager = new cacheManagerClass(
+          () => this.getCurrentUserId(),
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId(),
+            keyPrefix: PROJECTS_CACHE_PREFIX
+          }
+        );
+      }
+      return this._projectsCacheManager;
+    }
+  });
+
+  Object.defineProperty(API, 'domainsCacheManager', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!this._domainsCacheManager && this.isExtension) {
+        this._domainsCacheManager = new cacheManagerClass(
+          () => this.getCurrentUserId(),
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId(),
+            keyPrefix: DOMAINS_CACHE_PREFIX
+          }
+        );
+      }
+      return this._domainsCacheManager;
     }
   });
 
@@ -269,6 +317,79 @@ export function applyApiCore(API, dependencies = {}) {
     async cleanupLegacyCache() {
       if (!this.isExtension) return;
       return await this.cacheManager.cleanupLegacyCache();
+    },
+
+    // --- projects surface cache (own prefix: PROJECTS_CACHE_PREFIX) ---
+    async getProjectsCachedPages(scope = {}, options = {}) {
+      if (!this.isExtension) return null;
+      return await this.projectsCacheManager.getCachedPages(scope, options);
+    },
+
+    async getProjectsCachedPagesState(scope = {}, options = {}) {
+      if (!this.isExtension) {
+        return {
+          status: 'empty',
+          response: null,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'not-extension',
+          usable: false
+        };
+      }
+      return await this.projectsCacheManager.getCachedPagesState(scope, options);
+    },
+
+    async setProjectsCachedPages(response, scope = {}) {
+      if (!this.isExtension) return;
+      return await this.projectsCacheManager.setCachedPages(response, scope);
+    },
+
+    async invalidateProjectsCache(scope = null) {
+      if (!this.isExtension) return;
+      return await this.projectsCacheManager.invalidateCache(scope);
+    },
+
+    // --- domains surface cache (own prefix: DOMAINS_CACHE_PREFIX) ---
+    async getDomainsCachedPages(scope = {}, options = {}) {
+      if (!this.isExtension) return null;
+      return await this.domainsCacheManager.getCachedPages(scope, options);
+    },
+
+    async getDomainsCachedPagesState(scope = {}, options = {}) {
+      if (!this.isExtension) {
+        return {
+          status: 'empty',
+          response: null,
+          error: null,
+          ageMs: null,
+          timestamp: null,
+          reason: 'not-extension',
+          usable: false
+        };
+      }
+      return await this.domainsCacheManager.getCachedPagesState(scope, options);
+    },
+
+    async setDomainsCachedPages(response, scope = {}) {
+      if (!this.isExtension) return;
+      return await this.domainsCacheManager.setCachedPages(response, scope);
+    },
+
+    async invalidateDomainsCache(scope = null) {
+      if (!this.isExtension) return;
+      return await this.domainsCacheManager.invalidateCache(scope);
+    },
+
+    // Invalidate every surface cache. Used by the user-facing "reload from
+    // server" affordance, where the intent is to bust everything and re-fetch.
+    async invalidateAllCaches() {
+      if (!this.isExtension) return;
+      await Promise.all([
+        this.invalidateCache(),
+        this.invalidateProjectsCache(),
+        this.invalidateDomainsCache()
+      ]);
     },
 
     async _executeWithErrorHandling(operation, context, metadata = {}) {

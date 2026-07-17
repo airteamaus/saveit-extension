@@ -6,24 +6,33 @@
 
 export const SAVED_PAGES_CACHE_PREFIX = 'savedPages_cache';
 export const PROJECTS_CACHE_PREFIX = 'projects_cache';
+export const DOMAINS_CACHE_PREFIX = 'domains_cache';
 
-// One-time migration: before projects got their own prefix, they were cached
-// under savedPages_cache_* with a surface=projects scope. Those stale keys are
-// now both misleading and invisible to the projects cache manager (which reads
-// projects_cache_*), so evict them. Match narrowly on the projects scope to
-// avoid touching legitimate saved-pages keys.
-export async function migrateProjectsCacheKeys(storage) {
+// One-time migration: before a surface got its own prefix, it was cached under
+// savedPages_cache_* with a surface=<scope> query fragment. Those stale keys
+// are invisible to the surface's own cache manager (which reads <surface>_cache_*),
+// so evict them. Match narrowly on the surface scope to avoid touching
+// legitimate saved-pages keys.
+async function migrateSurfaceCacheKeys(storage, surfaceScope) {
   if (!storage?.get || !storage?.remove) return 0;
 
   const allItems = await storage.get(null);
   const staleKeys = Object.keys(allItems).filter(key => (
     key.startsWith(`${SAVED_PAGES_CACHE_PREFIX}_`) &&
-    key.includes('surface%3Dprojects')
+    key.includes(`surface%3D${surfaceScope}`)
   ));
 
   if (staleKeys.length > 0) {
     await storage.remove(staleKeys);
   }
   return staleKeys.length;
+}
+
+export function migrateProjectsCacheKeys(storage) {
+  return migrateSurfaceCacheKeys(storage, 'projects');
+}
+
+export function migrateDomainsCacheKeys(storage) {
+  return migrateSurfaceCacheKeys(storage, 'domains');
 }
 
