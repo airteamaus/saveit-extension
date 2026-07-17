@@ -1,8 +1,7 @@
 // api-core.js - Core API runtime, auth, transport, and cache helpers
 
-// api-core.js - Core API runtime, auth, transport, and cache helpers
-
 import { CacheManager } from './cache-manager.js';
+import { requestWithAuth } from './api-transport.js';
 import {
   CONFIG as defaultConfig,
   getBrowserRuntime as defaultGetBrowserRuntime,
@@ -403,40 +402,21 @@ export function applyApiCore(API, dependencies = {}) {
     },
 
     async _requestWithAuth(endpoint, params = null, options = {}) {
-      const idToken = await this.getIdToken();
-
-      let url = endpoint.startsWith('http') ? endpoint : `${config.cloudFunctionUrl}${endpoint}`;
-      if (params) {
-        const searchParams = params instanceof URLSearchParams
-          ? params
-          : new URLSearchParams(params);
-        url = `${url}?${searchParams}`;
-      }
-
-      // eslint-disable-next-line no-unused-vars
-      const { headers: _, ...fetchOptions } = options;
-
-      const response = await fetch(url, {
-        ...fetchOptions,
+      // Delegate to the shared transport (api-transport.js) so the facade and
+      // the background SW use one authenticated-fetch implementation. Facade
+      // callers pre-serialize `body` (a JSON string) and may set Content-Type
+      // in headers; both are passed through verbatim.
+      return await requestWithAuth({
+        url: endpoint,
+        baseUrl: config.cloudFunctionUrl,
+        params,
         method: options.method || 'GET',
-        headers: {
-          'Authorization': `Bearer ${idToken}`,
-          ...options.headers
-        }
+        body: options.body,
+        headers: options.headers,
+        getIdToken: () => this.getIdToken(),
+        onRotation: (response) => this._applySessionRotation(response),
+        parseError: (response) => this.parseErrorResponse(response)
       });
-
-      if (!response.ok) {
-        const errorMessage = await this.parseErrorResponse(response);
-        const error = new Error(errorMessage);
-        error.status = response.status;
-        throw error;
-      }
-
-      // Sliding session refresh: store a rotated token if the backend
-      // returned one. Best-effort — does not affect the current response.
-      await this._applySessionRotation(response);
-
-      return response;
     },
 
     async _applySessionRotation(response) {

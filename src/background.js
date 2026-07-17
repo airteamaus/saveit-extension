@@ -11,6 +11,7 @@ import { createLogger, getSafePageContext } from './telemetry.js';
 import { capturePageContent } from './page-capture-injector.js';
 import { addPendingSave } from './pending-saves.js';
 import { applySessionRotation, parseErrorResponse } from './api-core.js';
+import { requestWithAuth } from './api-transport.js';
 import { PROJECTS_CACHE_PREFIX, migrateProjectsCacheKeys, migrateDomainsCacheKeys } from './cache-keys.js';
 
 const logger = createLogger('background');
@@ -197,47 +198,23 @@ const toolbarProjectsStore = new ProjectsStore({
 });
 
 async function fetchBackgroundApi(path = '', { method = 'GET', body, params } = {}) {
-  const { idToken } = await getAuthenticatedSession();
-  const headers = {
-    'Authorization': `Bearer ${idToken}`
-  };
-
-  if (body !== undefined) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  // Query params are the only way to pass options on a GET — a request body
-  // is ignored by the server and silently dropped. Build a query string like
-  // the newtab path does (api-core _requestWithAuth) so GET requests actually
-  // carry their parameters.
-  let url = `${CONFIG.cloudFunctionUrl}${path}`;
-  if (params) {
-    const searchParams = new URLSearchParams();
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== null) {
-        searchParams.set(key, String(value));
-      }
-    }
-    const qs = searchParams.toString();
-    if (qs) {
-      url = `${url}?${qs}`;
-    }
-  }
-
-  const response = await fetch(url, {
+  // Delegate to the shared transport (api-transport.js) so the toolbar and the
+  // newtab facade share one authenticated-fetch implementation. The shared
+  // helper handles URL/params building, the Bearer header, error parsing, and
+  // session rotation; this wrapper keeps the background's return shape
+  // (parsed JSON, or null for 204) that its callers depend on.
+  const response = await requestWithAuth({
+    url: path,
+    baseUrl: CONFIG.cloudFunctionUrl,
+    params,
     method,
-    headers,
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {})
+    // The shared transport passes body through verbatim and sets Content-Type,
+    // so pre-serialize here (callers pass plain objects, not JSON strings).
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+    getIdToken: async () => (await getAuthenticatedSession()).idToken,
+    onRotation: (res) => applySessionRotation(res, { logger }),
+    parseError: parseErrorResponse
   });
-
-  if (!response.ok) {
-    throw new Error(await parseErrorResponse(response));
-  }
-
-  // Sliding session refresh: the backend rotates the token inline once it
-  // crosses the refresh threshold and returns the replacement here. Store it
-  // so subsequent calls use the new token.
-  await applySessionRotation(response, { logger });
 
   if (response.status === 204) {
     return null;
