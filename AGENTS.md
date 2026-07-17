@@ -249,5 +249,5 @@ These friction points caused real debugging time during the Data & sync overhaul
 
 5. **Post-deploy verification is partial.** Only the enrich functions have a smoke test. The main API, realtime SSE, and Firestore triggers have no automated post-deploy check.
 
-6. **Version-drift detection covers half the fleet.** `check-deployed-versions.sh` only reports 3 of 6 functions.
+6. **Version-drift detection covers half the fleet.** `check-deployed-versions.sh` only reports 3 of 7 functions.
 
