@@ -175,6 +175,7 @@ export function createSavedPagesDrawerController({
       handleDrawerEditCancel: dataController.handleDrawerEditCancel,
       handleDrawerEditStart: dataController.handleDrawerEditStart,
       handleDrawerPin: dataController.handleDrawerPin,
+      handleDrawerTogglePrivacy: dataController.handleDrawerTogglePrivacy,
       handleDrawerUpdate: dataController.handleDrawerUpdate,
       handleDrawerDelete: dataController.handleDrawerDelete,
       handleDrawerScrollNearEnd: dataController.handleDrawerScrollNearEnd,

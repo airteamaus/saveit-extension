@@ -82,6 +82,29 @@ export function renderDrawerCardMarkup(page, {
       </svg>
     </button>
   `;
+  // "Hide from organisation" / "Show in organisation". `private` governs only
+  // whether the page appears in org-mates' Slack /links results (bucket 2);
+  // the owner always sees their own private pages. Mirrors the pin button's
+  // is-active + title/aria-label pattern.
+  const isPrivate = page.private === true;
+  const privacyButtonLabel = isPrivate ? 'Show in organisation' : 'Hide from organisation';
+  const privacyButtonHtml = `
+    <button
+      class="saved-pages-drawer-action-btn saved-pages-drawer-privacy-btn ${isPrivate ? 'is-active' : ''}"
+      type="button"
+      data-action="toggle-privacy"
+      data-id="${escapeHtml(page.id)}"
+      title="${privacyButtonLabel}"
+      aria-label="${privacyButtonLabel}"
+      aria-pressed="${isPrivate ? 'true' : 'false'}"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+        ${isPrivate
+          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M1 1l22 22"></path>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'}
+      </svg>
+    </button>
+  `;
   const projectsButtonLabel = projectsUnavailable ? 'Projects unavailable' : 'Manage projects';
   const projectsButtonHtml = `
     <button
@@ -162,6 +185,7 @@ export function renderDrawerCardMarkup(page, {
               <path d="M8 3h8l-1 5 3 3v2H6v-2l3-3-1-5z"></path>
             </svg>
           </button>
+          ${isEditing ? '' : privacyButtonHtml}
           ${projectsButtonHtml}
           <button
             class="saved-pages-drawer-action-btn saved-pages-drawer-delete-btn"

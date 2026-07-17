@@ -23,6 +23,7 @@ import {
   updateDrawerPageCollections
 } from './newtab-drawer-state.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
+import { togglePagePrivacy } from './newtab-privacy.js';
 
 export function createDrawerDataController({
   api,
@@ -480,6 +481,34 @@ export function createDrawerDataController({
     }
   }
 
+  // Toggle org-search visibility (the "Hide from organisation" card button).
+  // `private` only affects Slack /links bucket 2 (org-mates' results); the
+  // owner always sees their own pages. Mirrors handleDrawerPin: optimistic
+  // state update + cached-store sync + re-render, then the API call via the
+  // extracted togglePagePrivacy handler, rolling back on failure.
+  async function handleDrawerTogglePrivacy(id) {
+    const page = findDrawerPage(id);
+    if (!page) {
+      return;
+    }
+
+    const nextPrivateState = !page.private;
+    updateDrawerPageCollections(state, id, entry => ({ ...entry, private: nextPrivateState }));
+    void savedPagesView.persistAllPages();
+    void updateCachedProjectStores(page, entry => ({ ...entry, private: nextPrivateState }));
+    renderDrawerResults();
+
+    try {
+      await togglePagePrivacy(api, page);
+    } catch (error) {
+      updateDrawerPageCollections(state, id, entry => ({ ...entry, private: !nextPrivateState }));
+      void savedPagesView.persistAllPages();
+      renderDrawerResults();
+      console.error('[newtab] Failed to update page visibility:', error);
+      reportFailure('Failed to update visibility. Please try again.');
+    }
+  }
+
   function handleDrawerEditStart(id) {
     if (!findDrawerPage(id)) {
       return;
@@ -720,6 +749,7 @@ export function createDrawerDataController({
     handleDrawerEditStart,
     handleDrawerPin,
     handleDrawerScrollNearEnd,
+    handleDrawerTogglePrivacy,
     handleDrawerUpdate,
     loadDrawerBasePages,
     loadDrawerDomainPages,

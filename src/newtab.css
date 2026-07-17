@@ -316,6 +316,11 @@ body {
   border-color: var(--saved-pages-panel-border-active);
 }
 
+.saved-pages-drawer-privacy-btn.is-active {
+  color: var(--color-primary);
+  border-color: var(--saved-pages-panel-border-active);
+}
+
 .saved-pages-drawer-delete-btn:hover {
   color: var(--color-danger, #dc2626);
   border-color: color-mix(in srgb, #dc2626 32%, var(--color-border));
