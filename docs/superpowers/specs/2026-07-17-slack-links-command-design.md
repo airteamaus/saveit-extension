@@ -27,7 +27,7 @@ The feature leverages the existing email-domain-derived "organisation" concept (
 | Identity link | Auto-match Slack user → SaveIt user by profile email | Zero onboarding friction; reuses Firebase `getUserByEmail` |
 | Slack handler home | New 7th Cloud Function (`saveit-slack`, dir `cloud-function-slack/`) | Clean separation; own secrets, scaling, signature-verify lifecycle; does not muddy the main API's Bearer-token contract |
 | Reindex strategy | One-shot backfill of all existing `thing_classifications` datapoints | Full bucket-2 coverage on day one; no "slowly improves over months" UX |
-| Privacy rollout | Existing saves flip to org-visible on day one, with pre-launch heads-up | Maximises feature value; `private` flag gives an honest per-page opt-out |
+| Privacy rollout | Existing saves flip to org-visible on day one, no announcement | Maximises feature value; `private` flag gives an honest per-page opt-out for users who want it |
 | Per-page `private` toggle UI | Shipped in the extension alongside the backend | Users need the opt-out the moment their saves become org-visible; honest default |
 | Result links | Title links to source URL; summary shown inline as list items | No new web surface required; keeps scope honest and matches "smallest solution" |
 | Slack response delivery | Deferred via `response_url` (immediate 200 ack) | Robust against Slack's 3-second timeout; gives a "Searching…" UX |
@@ -179,7 +179,7 @@ New script: `scripts/backfill-org-search-tokens.sh` (or `.js`, following house s
 
 **Verification:** a dry-run mode that counts docs to be touched and samples a few datapoints before/after. Followed by `scripts/check-deployed-versions.sh`-style smoke check that runs a known bucket-2 query and asserts non-empty results for a test domain.
 
-**Order:** Phase A must complete before Phase B (Phase B reads `company_domain` from the doc). Both must complete before `saveit-slack` is deployed to production and before the day-one flip announcement.
+**Order:** Phase A must complete before Phase B (Phase B reads `company_domain` from the doc). Both must complete before `saveit-slack` is deployed to production.
 
 ### 7. Firestore index
 
@@ -260,7 +260,7 @@ Every cell returns an ephemeral Slack message via `response_url` (or, for the si
 5. Verify bucket-2 query returns non-empty for a test domain.
 6. Deploy `saveit-slack`.
 7. Add the extension toggle.
-8. Pre-launch heads-up to users (in-app + email), then enable the Slack app in the workspace.
+8. Enable the Slack app in the workspace.
 
 **Staging:** the extension has a staging path; the backend does not (AGENTS.md known-debt #4). For this feature, test the backfill and `saveit-slack` against a staging Firebase project + a separate staging Slack workspace if feasible. If a staging backend project is not available, the dry-run mode in the backfill script is the primary safety net.
 
@@ -292,7 +292,7 @@ Every cell returns an ephemeral Slack message via `response_url` (or, for the si
 - **Deploy-script sprawl worsens.** This adds a 5th source dir and 7th function to a backend already flagged in AGENTS.md as having too many moving parts. `just deploy-all` will need a new target. Accepted as the cost of clean isolation; do not paper over it with a route on `saveit`.
 - **No staging backend.** Testing the backfill against prod data is the highest-risk step. The dry-run mode and idempotency are the mitigation, but a real staging project would be materially safer. Not in scope to fix here.
 - **`getUserCompanyDomain` lives in `cloud-function/firestore-projects.js`** but the enrich worker and the new Slack function both need it. Move to `shared/` as part of this work (small refactor, follows the "DRY auth responsibilities" debt note).
-- **Day-one flip communication.** Some existing saves (job offers, health articles, job-hunting pages) will become org-searchable. The in-app + email heads-up must give users time to mark pages private before launch. The toggle ships first; the backfill flips the default after a grace period.
+- **Day-one flip.** Existing saves become org-searchable immediately on launch. There is intentionally no announcement — the `private` toggle is available from launch for users who want to opt individual pages out, but we are not pre-warning the user base. This is a deliberate product call; revisit if it generates support tickets.
 - **Two companies sharing an email domain** (rare but possible — e.g. two firms on a shared `gmail.com` domain) would see each other's bucket-2 results. This is inherited behaviour from the company-project model, not introduced here, but worth noting in the heads-up for consumer-domain users.
 
 ## Out of scope
