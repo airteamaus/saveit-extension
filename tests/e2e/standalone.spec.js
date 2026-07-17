@@ -380,9 +380,12 @@ test.describe('Standalone Mode', () => {
     expect(archiveRed).toBeGreaterThan(150); // red channel dominant (#dc2626 = 220)
   });
 
-  test('imports bookmarks via the import panel: preview → progress → result', async ({ page }) => {
+  test('imports bookmarks via the Data & sync centre', async ({ page }) => {
     // Inject a fake bookmarks tree before the page boots. Standalone mode has
     // no real browser.bookmarks API, so the reader would otherwise throw.
+    // The tree includes two invalid/duplicate entries (a javascript: bookmarklet
+    // and a github.com duplicate) that readAllBookmarks filters out before
+    // import, leaving two importable: github + HN.
     await page.addInitScript(() => {
       const fakeTree = [
         {
@@ -401,26 +404,31 @@ test.describe('Standalone Mode', () => {
 
     await openStandaloneNewtab(page);
 
-    // Import lives behind the avatar dropdown. Reveal the menu (hidden until
-    // signed in in real use) and open the dropdown, then click Import.
+    // The Data & sync centre lives behind the avatar dropdown. Reveal the menu
+    // (hidden until signed in in real use) and open the dropdown, then click
+    // the Data & sync entry.
     await page.evaluate(() => {
       document.getElementById('hero-user-menu')?.classList.remove('hidden');
       document.getElementById('hero-user-dropdown')?.classList.remove('hidden');
     });
-    await page.locator('#hero-import-btn').click();
+    await page.locator('#hero-data-sync-btn').click();
 
-    // Preview step: shows 2 importable (github + HN), 2 skipped (bookmarklet + dup).
-    const dialog = page.locator('#import-panel-dialog');
+    // The modal opens with its three sections (Import / Export / Browser sync).
+    const dialog = page.locator('#data-sync-centre-dialog');
     await expect(dialog).toBeVisible({ timeout: 5000 });
-    await expect(dialog).toContainText('2 to import');
-    await expect(dialog).toContainText('Import 2 bookmarks');
+    await expect(dialog).toContainText('Data & sync');
 
-    // Run the import — standalone mock returns success immediately.
-    await dialog.locator('button', { hasText: 'Import 2 bookmarks' }).click();
+    // Trigger the browser-bookmarks import. The new flow has no preview step —
+    // readAllBookmarks filters/dedupes, then runImport posts the batch and the
+    // modal closes on success, surfacing a confirmation toast.
+    await dialog.locator('button', { hasText: 'From this browser' }).click();
 
-    // Result step: complete with counts.
-    await expect(dialog).toContainText('Import complete', { timeout: 5000 });
-    await expect(dialog).toContainText('Imported 2 bookmarks');
+    // The modal closes and a success toast appears in the toast region. The
+    // standalone bulkImport mock returns { imported: 2, skipped: 0 }, so the
+    // "Import complete" path runs (the warning variant only fires when the
+    // backend reports skips).
+    await expect(dialog).toBeHidden({ timeout: 5000 });
+    await expect(page.locator('#toast-region')).toContainText('Import complete', { timeout: 5000 });
   });
 
   test('renders a Domains section in the sidebar and scopes on click', async ({ page }) => {
