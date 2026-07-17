@@ -503,6 +503,7 @@ export function createDrawerDataController({
     } catch (error) {
       updateDrawerPageCollections(state, id, entry => ({ ...entry, private: !nextPrivateState }));
       void savedPagesView.persistAllPages();
+      void updateCachedProjectStores(page, entry => ({ ...entry, private: page.private }));
       renderDrawerResults();
       console.error('[newtab] Failed to update page visibility:', error);
       reportFailure('Failed to update visibility. Please try again.');
