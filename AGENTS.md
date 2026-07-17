@@ -67,13 +67,36 @@ The author runs the extension for local development in **Brave** (Chromium), loa
 
 - `src/newtab.js` - main new-tab UI, favorites, saved pages drawer
 - `src/project-manager.js` - project navigation and membership editing
-- `src/api.js` / `src/api-pages.js` - API layer
-- `src/cache-manager.js` - browser storage cache
+- `src/api.js` / `src/api-pages.js` - API layer (facade composed from `applyX(API)` mixins)
+- `src/api-core.js` - core API runtime: auth, transport delegation, per-surface cache routing
+- `src/api-transport.js` - single authenticated `fetch` shared by the facade and the background SW (URL/params/Bearer/error/rotation in one place)
+- `src/cache-manager.js` - browser storage cache (one instance per surface)
+- `src/cache-keys.js` - per-surface cache prefixes (`savedPages_cache`, `projects_cache`, `domains_cache`) and one-time key migrations
 - `src/warm-cache-list-store.js` - local-first paginated list syncing
-- `src/background.js` - toolbar save and auth integration
+- `src/projects-store.js` - `WarmCacheListStore` subclass for projects (routes its warm cache through the projects surface)
+- `src/realtime-client.js` - single SSE connection per open new-tab page (idempotent `connect()`, no auto-reconnect; bfcache restore reconnects via `pageshow`)
+- `src/background.js` - toolbar save and auth integration (composes `api-transport.js`; its own `CacheManager` instance for the toolbar's projects warm cache)
 - `src/data-sync-centre.js` - consolidated Import / Export / Browser-sync modal
 - `src/bookmark-import.js` / `src/bookmark-export.js` - pure CSV/HTML/JSON parsers and serializers
 - `src/bookmark-mirror.js` - server-to-browser bookmark sync (reconcile, removeMirror)
+
+### Per-surface cache architecture
+
+The facade lazily constructs **three `CacheManager` instances**, one per data surface, each with its own storage prefix so a mutation on one surface invalidates narrowly without dropping the others:
+
+| Surface | CacheManager getter | Prefix | Methods |
+|---|---|---|---|
+| Saved pages | `API.cacheManager` | `savedPages_cache` | `getCachedPages` / `setCachedPages` / `invalidateCache` / `getCachedPagesState` |
+| Projects | `API.projectsCacheManager` | `projects_cache` | `getProjectsCachedPages` / `setProjectsCachedPages` / `invalidateProjectsCache` / `getProjectsCachedPagesState` |
+| Domains | `API.domainsCacheManager` | `domains_cache` | `getDomainsCachedPages` / `setDomainsCachedPages` / `invalidateDomainsCache` / `getDomainsCachedPagesState` |
+
+Mutation invalidation is scoped to the surfaces a write can actually change: `createProject`/`updateProject` invalidate only projects; `deletePage`/`updatePage` invalidate saved-pages + domains (classification/title shifts affect domain counts); `pinPage` invalidates only saved-pages; `addPageToProject`/`removePageFromProject` invalidate both projects and saved-pages (membership vs `project_ids`). `API.invalidateAllCaches()` exists for the user-facing "reload from server" affordance. The background SW (which doesn't load the facade) uses the storage-direct helpers in `saved-pages-cache.js` (`invalidateToolbarSaveCaches` for save + realtime relay).
+
+The cached-read flow (`API._getCachedOrFreshList`) is shared across all three surfaces. The cache-scope builders (`_buildListCacheScope`, `buildProjectsCacheScope`, `buildDomainsCacheScope`) are intentionally separate — each surface has its own query dimensions (lists carry sort/cursor/projectId; projects carry includeArchived; domains carry none), so forcing them through one builder would add parameters most surfaces ignore.
+
+### Realtime lifecycle
+
+One SSE stream per open new-tab page. `RealtimeClient.connect()` is idempotent (a second call while a stream is open is a no-op, so a bfcache `pageshow` reconnect can't orphan the existing `AbortController`). There is **no mid-stream token refresh** and **no auto-reconnect** — a dropped stream toasts once and the user refreshes to re-establish. The newtab page registers persistent `pagehide`/`pageshow` listeners (not `once`) so a bfcache restore reconnects the stream and a second navigation away still tears it down.
 
 ### Two-repo note
 
