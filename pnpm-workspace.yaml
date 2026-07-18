@@ -5,3 +5,12 @@ allowBuilds:
   spawn-sync: true
 minimumReleaseAgeExclude:
   - vite@8.1.2
+# Overrides for Dependabot alerts on dev-only transitive deps.
+# esbuild: GHSA-g7r4-m6w7-qqqr (low, dev-server Windows-only file read; fix 0.28.1)
+#   Pulled transitively by vite. Extension uses esbuild ^0.27.7 directly too —
+#   bump to ^0.28.1 in devDependencies AND here for the transitive copy.
+# adm-zip: GHSA-xcpc-8h2w-3j85 (high, 4GB mem alloc on crafted zip; fix 0.6.0)
+#   Pulled by web-ext (Firefox extension tooling, dev-only — never ships).
+overrides:
+  esbuild: 0.28.1
+  adm-zip: 0.6.0
