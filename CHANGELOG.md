@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- rebrand Buckley's → Newtab Bookmarks (8131cf5)
+- **extension:** per-page Hide from organisation toggle (cea7268)
+- **extension:** accept private flag on page schema (bcd8357)
+
+### 🐛 Bug Fixes
+
+- **deps:** override esbuild 0.28.1 + adm-zip 0.6.0 (dev-only Dependabot alerts) (4bfd107)
+- **extension:** rollback cached project store on privacy-toggle failure (3e1f6a1)
+
+### 📚 Documentation
+
+- **agents:** bump version-drift debt count to 3 of 7 functions (4ff0192)
+- **agents:** add saveit-slack to backend overview (8cc4978)
+- **plan:** extract shared restricts helper (Task 5) (dcb14b5)
+- **plan:** Slack /links command implementation plan (d30fa97)
+- **spec:** drop day-one flip announcement from Slack /links design (1958f94)
+- **spec:** Slack /links command design (1947bc4)
+
+### ✅ Tests
+
+- **e2e:** update import test for the Data & sync centre (8883801)
+
+## [1.24.2] - 2026-07-17
+
 ### 🐛 Bug Fixes
 
 - **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
@@ -127,12 +153,6 @@ No notable changes.
 
 ## [1.20.5] - 2026-07-09
 
-### 🐛 Bug Fixes
-
-- **sidebar:** bind synchronous current user so ownership resolves (1a65934)
-
-## [1.20.4] - 2026-07-09
-
 ### ✨ Features
 
 - **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
@@ -213,6 +233,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **sidebar:** bind synchronous current user so ownership resolves (1a65934)
 - **ui:** give sidebar overlay an opaque background (96dfb1f)
 - **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
 - **mirror:** populate empty category and shared project folders (#25) (bc2370d)
