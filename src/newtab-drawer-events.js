@@ -30,6 +30,7 @@ export function initSavedPagesDrawerEvents({
   handleDrawerEditCancel,
   handleDrawerEditStart,
   handleDrawerPin,
+  handleDrawerTogglePrivacy,
   handleDrawerUpdate,
   handleDrawerDelete,
   handleDrawerScrollNearEnd,
@@ -116,6 +117,11 @@ export function initSavedPagesDrawerEvents({
 
     if (action === 'pin') {
       void handleDrawerPin(id);
+      return;
+    }
+
+    if (action === 'toggle-privacy') {
+      void handleDrawerTogglePrivacy(id);
       return;
     }
 

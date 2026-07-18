@@ -63,6 +63,8 @@ export const PageSchema = z.strictObject({
   deleted: z.boolean().optional().default(false),
   deleted_at: z.iso.datetime().optional(),
   pinned: z.boolean().optional().default(false),
+  // User opt-out from org-wide search (Slack /links bucket 2). Default false.
+  private: z.boolean().optional().default(false),
   updated_at: z.iso.datetime().optional(),
   user_id: z.string().optional(),
   content_ref: z.string().optional(),

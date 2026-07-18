@@ -32,6 +32,8 @@
 |---|---|---|
 | `shared/company-domain.js` | Pure helper `deriveCompanyDomain(email)` → lowercased email domain or null. New canonical home; replaces the duplicated logic in `cloud-function/firestore-projects.js`. | Create |
 | `shared/company-domain.test.js` | Unit tests for `deriveCompanyDomain`. | Create |
+| `shared/build-classification-restricts.js` | Pure helpers `buildClassificationRestricts` + `buildClassificationDatapoint` — single source of truth for the Vector Search restricts object shape. Consumed by enrich (Task 6), PATCH handler (Task 7), and backfill (Task 9). | Create |
+| `shared/build-classification-restricts.test.js` | Unit tests for both helpers. | Create |
 | `shared/vector-search-client.js` | Extend `queryClassifications` to accept `companyDomain` + `includePrivate` (bucket-2 path) in addition to `userId` (bucket-1 path). | Modify (`:53-106`) |
 | `shared/vector-search-client.test.js` | Tests for both restrict paths. | Create (if absent) or extend |
 | `cloud-function/firestore-projects.js` | Replace local `getUserCompanyDomain` with import from `shared/company-domain.js` (keep a thin re-export for backwards compat). | Modify (`:9-15`) |
@@ -509,17 +511,194 @@ git commit -m "feat(vector-search): add bucket-2 company_domain + private restri
 
 ## Phase 3: Enrichment writer (forward writes)
 
-### Task 5: Add `company_domain` + `private` to enrich upsert restricts
+### Task 5: Shared classification-restricts helper
 
-There are **two** identical upsert sites in `enrichment-core.js` (source='client' at `:535-555`, source='jina' at `:615-635`). Both build the same restricts object; both must be updated identically.
+**Rationale:** Tasks 5 (enrich), 7 (PATCH handler), and 9 (backfill) all build the same Vector Search restricts object for a classification datapoint. Without a helper, the same object literal is triplicated; the reviewer rubric treats verbatim duplication of a logic block as an Important defect. Extract once, consume everywhere.
+
+**Files:**
+- Create: `/Users/rich/Code/saveit-backend/shared/build-classification-restricts.js`
+- Test: `/Users/rich/Code/saveit-backend/shared/build-classification-restricts.test.js`
+
+**Interfaces:**
+- Consumes: `deriveCompanyDomain` from Task 1.
+- Produces:
+  ```ts
+  buildClassificationRestricts({
+    userId: string,
+    userEmail: string|null|undefined,
+    thingId: string,
+    classification: { type: string, label: string },
+    isPrivate?: boolean   // default false
+  }) → {
+    user_id: string,
+    deleted: 'false',
+    private: 'true'|'false',
+    company_domain: string|null,
+    thing_id: string,
+    classification_label: string,
+    classification_type: string
+  }
+  ```
+  Also exports a sibling `buildClassificationDatapoint(...)` that wraps restricts + embedding + id into the full upsert payload shape — the three call sites all build `{id, embedding, restricts}` so this removes the last duplication too.
+
+- [ ] **Step 1: Write the failing test**
+
+```js
+// shared/build-classification-restricts.test.js
+const { describe, it, expect } = require('@jest/globals');
+const {
+  buildClassificationRestricts,
+  buildClassificationDatapoint
+} = require('./build-classification-restricts');
+
+describe('buildClassificationRestricts', () => {
+  const classification = { type: 'topic', label: 'Krill' };
+
+  it('builds the full restricts object with private:false default', () => {
+    const r = buildClassificationRestricts({
+      userId: 'u1',
+      userEmail: 'jane@airteam.com.au',
+      thingId: 'thing_abc',
+      classification
+    });
+    expect(r).toEqual({
+      user_id: 'u1',
+      deleted: 'false',
+      private: 'false',
+      company_domain: 'airteam.com.au',
+      thing_id: 'thing_abc',
+      classification_label: 'Krill',
+      classification_type: 'topic'
+    });
+  });
+
+  it('private:true sets the token to "true"', () => {
+    const r = buildClassificationRestricts({
+      userId: 'u1', userEmail: 'a@b.com', thingId: 't', classification, isPrivate: true
+    });
+    expect(r.private).toBe('true');
+  });
+
+  it('null userEmail yields null company_domain (no throw)', () => {
+    const r = buildClassificationRestricts({
+      userId: 'u1', userEmail: null, thingId: 't', classification
+    });
+    expect(r.company_domain).toBeNull();
+  });
+});
+
+describe('buildClassificationDatapoint', () => {
+  it('composes id, embedding, and restricts', () => {
+    const dp = buildClassificationDatapoint({
+      userId: 'u1',
+      userEmail: 'jane@airteam.com.au',
+      thingId: 'thing_abc',
+      classification: { type: 'topic', label: 'Krill', embedding: [0.1, 0.2] },
+      index: 0
+    });
+    expect(dp.id).toBe('thing_abc_topic_0');
+    expect(dp.embedding).toEqual([0.1, 0.2]);
+    expect(dp.restricts.user_id).toBe('u1');
+    expect(dp.restricts.company_domain).toBe('airteam.com.au');
+    expect(dp.restricts.classification_label).toBe('Krill');
+  });
+});
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `cd /Users/rich/Code/saveit-backend/shared && npx jest build-classification-restricts.test.js`
+Expected: FAIL — module not found.
+
+- [ ] **Step 3: Implement**
+
+```js
+// shared/build-classification-restricts.js
+const { deriveCompanyDomain } = require('./company-domain');
+
+/**
+ * Build the Vector Search restricts object for a single classification
+ * datapoint.
+ *
+ * Single source of truth for the restrict shape — consumed by:
+ *   - the enrich worker (forward writes)
+ *   - the PATCH / private-toggle write path (re-upsert on privacy change)
+ *   - the one-shot org-search backfill
+ *
+ * `deleted` is always 'false' here: a soft-deleted thing's datapoints are
+ * stale by design (filtered out at query time via the deleted:'false' query
+ * restrict); we never upsert a deleted:'true' datapoint.
+ */
+function buildClassificationRestricts({
+  userId,
+  userEmail,
+  thingId,
+  classification,
+  isPrivate = false
+}) {
+  return {
+    user_id: String(userId),
+    deleted: 'false',
+    private: isPrivate ? 'true' : 'false',
+    company_domain: deriveCompanyDomain(userEmail),
+    thing_id: String(thingId),
+    classification_label: classification.label,
+    classification_type: classification.type
+  };
+}
+
+/**
+ * Build the full datapoint payload ({id, embedding, restricts}) for upsert.
+ * `index` is the classification's position in the thing's classifications
+ * array — datapoint ids are `{thingId}_{type}_{index}` to match the existing
+ * id convention in enrichment-core.js.
+ */
+function buildClassificationDatapoint({
+  userId,
+  userEmail,
+  thingId,
+  classification,
+  index,
+  isPrivate = false
+}) {
+  return {
+    id: `${thingId}_${classification.type}_${index}`,
+    embedding: classification.embedding,
+    restricts: buildClassificationRestricts({
+      userId, userEmail, thingId, classification, isPrivate
+    })
+  };
+}
+
+module.exports = { buildClassificationRestricts, buildClassificationDatapoint };
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `cd /Users/rich/Code/saveit-backend/shared && npx jest build-classification-restricts.test.js`
+Expected: PASS (4 tests).
+
+- [ ] **Step 5: Commit**
+
+```bash
+cd /Users/rich/Code/saveit-backend
+git add shared/build-classification-restricts.js shared/build-classification-restricts.test.js
+git commit -m "feat(shared): buildClassificationRestricts + Datapoint helpers"
+```
+
+---
+
+### Task 6: Add `company_domain` + `private` to enrich upsert restricts
+
+There are **two** identical upsert sites in `enrichment-core.js` (source='client' at `:535-555`, source='jina' at `:615-635`). Both build the same restricts object; both must be updated to consume the shared helper from Task 5 — eliminating what would otherwise be duplicated logic.
 
 **Files:**
 - Modify: `/Users/rich/Code/saveit-backend/cloud-function-enrich/enrichment-core.js:535-555` and `:615-635`
 - Test: `/Users/rich/Code/saveit-backend/cloud-function-enrich/enrichment-core.test.js`
 
 **Interfaces:**
-- Consumes: `deriveCompanyDomain` from Task 1.
-- Produces: every new datapoint upserted by the enrich worker carries `company_domain` and `private:'false'` restricts in addition to the existing ones.
+- Consumes: `buildClassificationDatapoint` from Task 5.
+- Produces: every new datapoint upserted by the enrich worker carries `company_domain` and `private:'false'` restricts (via the helper).
 
 - [ ] **Step 1: Read the existing test file to find the upsert-mocking pattern**
 
@@ -568,24 +747,26 @@ describe('vector search upsert restricts (org-search tokens)', () => {
 
 The implementer's job in this step: (a) wire the `jest.doMock` target to match the existing pattern, (b) drive the enrichment with the same fixture builder the surrounding tests use, populated with `user_id: 'u1'`, `user_email: 'Jane@AirTeam.com.au'`, and one classification with an embedding. The four assertions per datapoint are the fixed contract.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [ ] **Step 3: Run test to verify it fails**
 
 Run: `cd /Users/rich/Code/saveit-backend/cloud-function-enrich && pnpm test`
 Expected: FAIL — `company_domain` undefined in the restricts.
 
-- [ ] **Step 3: Update both upsert sites**
+- [ ] **Step 4: Update both upsert sites to consume the helper**
 
-In `cloud-function-enrich/enrichment-core.js`, find the `require(getSharedPath('company-domain.js'))` import at the top of the file. Add it alongside the existing shared requires:
+In `cloud-function-enrich/enrichment-core.js`, add a require for the helper at the top of the file alongside the existing shared requires:
 
 ```js
-const { deriveCompanyDomain } = require(getSharedPath('company-domain.js'));
+const { buildClassificationDatapoint } = require(getSharedPath('build-classification-restricts.js'));
 ```
 
-(`getSharedPath` resolves to `../shared/` at runtime — this follows the existing pattern in the file.)
-
-Then at **both** upsert sites (`:535-555` and `:615-635`), update the restricts object inside the `.map()` to add the two new fields. The existing block at each site:
+Then at **both** upsert sites (`:535-555` and `:615-635`), replace the inline `.map()` that builds `{id, embedding, restricts: {...}}` with a call to the helper. The existing block at each site:
 
 ```js
+        await upsertClassificationVectors(
+          thing.classifications.map((c, i) => ({
+            id: `${thing.id}_${c.type}_${i}`,
+            embedding: c.embedding,
             restricts: {
               user_id: thing.user_id,
               deleted: 'false',
@@ -593,30 +774,33 @@ Then at **both** upsert sites (`:535-555` and `:615-635`), update the restricts 
               classification_label: c.label,
               classification_type: c.type
             }
+          }))
+        );
 ```
 
 becomes:
 
 ```js
-            restricts: {
-              user_id: thing.user_id,
-              deleted: 'false',
-              private: 'false',
-              company_domain: deriveCompanyDomain(thing.user_email),
-              thing_id: thing.id,
-              classification_label: c.label,
-              classification_type: c.type
-            }
+        await upsertClassificationVectors(
+          thing.classifications.map((c, i) => buildClassificationDatapoint({
+            userId: thing.user_id,
+            userEmail: thing.user_email,
+            thingId: thing.id,
+            classification: c,
+            index: i
+            // isPrivate defaults to false — enrich always writes public datapoints
+          }))
+        );
 ```
 
-Both sites are byte-identical; update both. (If they diverge in this codebase, update each to match its surrounding context, preserving the new two fields.)
+Both sites are byte-identical; update both to call the helper. This removes the duplication and guarantees the three call sites (enrich, PATCH, backfill) produce the same restrict shape.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [ ] **Step 5: Run test to verify it passes**
 
 Run: `cd /Users/rich/Code/saveit-backend/cloud-function-enrich && pnpm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 6: Commit**
 
 ```bash
 cd /Users/rich/Code/saveit-backend
@@ -628,7 +812,7 @@ git commit -m "feat(enrich): add company_domain + private restricts to vector up
 
 ## Phase 4: Privacy toggle write path (PATCH handler)
 
-### Task 6: Accept `private` in PATCH and re-upsert datapoints
+### Task 7: Accept `private` in PATCH and re-upsert datapoints
 
 **Files:**
 - Modify: `/Users/rich/Code/saveit-backend/cloud-function/index.js:715-769`
@@ -636,7 +820,7 @@ git commit -m "feat(enrich): add company_domain + private restricts to vector up
 - Test: `/Users/rich/Code/saveit-backend/cloud-function/firestore-patch-private.test.js`
 
 **Interfaces:**
-- Consumes: `deriveCompanyDomain` (Task 1), `upsertClassificationVectors` (existing), the Firestore `thing_classifications` collection (existing).
+- Consumes: `buildClassificationDatapoint` (Task 5), `upsertClassificationVectors` (existing), the Firestore `thing_classifications` collection (existing).
 - Produces: `PATCH /` with `{id, private: boolean}` updates the `things.private` field and re-upserts that thing's `thing_classifications` datapoints with the new `private` token.
 
 - [ ] **Step 1: Inspect `firestore-update.js` to see how it whitelists fields**
@@ -648,9 +832,9 @@ Determine whether `updateThingFields` whitelists allowed keys or passes them thr
 
 In `cloud-function/firestore-update.js`, add `private` to whatever whitelist/allow-list mechanism Step 1 revealed. If it's an explicit `if (key in ALLOWED)` check, add `'private'` to the `ALLOWED` array. If it passes through the `updates` object directly to `docRef.update`, no change is needed here. Do not add `company_domain` — that field is derived, never user-editable.
 
-- [ ] **Step 3: Write the failing test for the re-upsert side-effect**
+- [ ] **Step 3: Write the failing test for the re-upsert helper**
 
-Create `cloud-function/firestore-patch-private.test.js`. This tests the new helper function in isolation (not the full HTTP handler — that requires too much middleware mocking). The helper takes the thing's classifications + new private value + user_email and rebuilds the upsert payload.
+Create `cloud-function/firestore-patch-private.test.js`. This tests the thin wrapper that maps the PATCH inputs into helper calls.
 
 ```js
 // cloud-function/firestore-patch-private.test.js
@@ -658,17 +842,18 @@ const { describe, it, expect } = require('@jest/globals');
 const { buildPrivateToggleDatapoints } = require('./firestore-patch-private');
 
 describe('buildPrivateToggleDatapoints', () => {
-  it('rebuilds datapoints with private token reflecting the new value', () => {
-    const classifications = [
-      { type: 'topic', label: 'X', embedding: [0.1, 0.2] },
-      { type: 'domain', label: 'Y', embedding: [0.3, 0.4] }
-    ];
+  const classifications = [
+    { type: 'topic', label: 'X', embedding: [0.1, 0.2] },
+    { type: 'domain', label: 'Y', embedding: [0.3, 0.4] }
+  ];
+
+  it('rebuilds datapoints with private=true reflected in the token', () => {
     const datapoints = buildPrivateToggleDatapoints({
       thingId: 'thing_abc',
       userId: 'u1',
       userEmail: 'jane@airteam.com.au',
       classifications,
-      private: true
+      isPrivate: true
     });
 
     expect(datapoints).toHaveLength(2);
@@ -687,7 +872,7 @@ describe('buildPrivateToggleDatapoints', () => {
 
   it('returns [] when classifications is empty', () => {
     expect(buildPrivateToggleDatapoints({
-      thingId: 'x', userId: 'u', userEmail: 'a@b.com', classifications: [], private: false
+      thingId: 'x', userId: 'u', userEmail: 'a@b.com', classifications: [], isPrivate: false
     })).toEqual([]);
   });
 });
@@ -698,17 +883,17 @@ describe('buildPrivateToggleDatapoints', () => {
 Run: `cd /Users/rich/Code/saveit-backend/cloud-function && npx jest firestore-patch-private.test.js`
 Expected: FAIL — module not found.
 
-- [ ] **Step 5: Create the pure helper**
+- [ ] **Step 5: Create the thin wrapper helper**
 
-Create `cloud-function/firestore-patch-private.js`:
+Create `cloud-function/firestore-patch-private.js`. This is intentionally thin — it delegates restricts building to the shared helper (Task 5) so the PATCH path cannot drift from enrich/backfill:
 
 ```js
-const { deriveCompanyDomain } = require('../shared/company-domain');
+const { buildClassificationDatapoint } = require('../shared/build-classification-restricts');
 
 /**
  * Rebuild the Vector Search datapoint payload for a thing's classifications
- * when its `private` flag is toggled. Mirrors the enrich write path
- * (enrichment-core.js) so the index stays in lockstep with the things doc.
+ * when its `private` flag is toggled. Delegates to the shared helper so the
+ * PATCH path produces the same restrict shape as enrich and the backfill.
  *
  * Pure: produces the payload only. The caller is responsible for calling
  * upsertClassificationVectors(datapoints) and for non-fatal error wrapping.
@@ -718,23 +903,17 @@ const { deriveCompanyDomain } = require('../shared/company-domain');
  * @param {string} params.userId
  * @param {string} params.userEmail
  * @param {Array<{type:string,label:string,embedding:number[]}>} params.classifications
- * @param {boolean} params.private
+ * @param {boolean} params.isPrivate
  * @returns {Array<{id:string,embedding:number[],restricts:Object}>}
  */
-function buildPrivateToggleDatapoints({ thingId, userId, userEmail, classifications, private: isPrivate }) {
-  const companyDomain = deriveCompanyDomain(userEmail);
-  return (classifications || []).map((c, i) => ({
-    id: `${thingId}_${c.type}_${i}`,
-    embedding: c.embedding,
-    restricts: {
-      user_id: userId,
-      deleted: 'false',
-      private: isPrivate ? 'true' : 'false',
-      company_domain: companyDomain,
-      thing_id: thingId,
-      classification_label: c.label,
-      classification_type: c.type
-    }
+function buildPrivateToggleDatapoints({ thingId, userId, userEmail, classifications, isPrivate }) {
+  return (classifications || []).map((c, i) => buildClassificationDatapoint({
+    userId,
+    userEmail,
+    thingId,
+    classification: c,
+    index: i,
+    isPrivate
   }));
 }
 
@@ -788,7 +967,7 @@ In `cloud-function/index.js`, modify `handlePatchPage` (lines 715-769):
            userId: user.user_id,
            userEmail: user.email,
            classifications,
-           private
+           isPrivate: private
          });
          await upsertClassificationVectors(datapoints);
        }
@@ -821,7 +1000,7 @@ git commit -m "feat(api): PATCH private flag re-upserts vector datapoints"
 
 ## Phase 5: One-shot backfills
 
-### Task 7: Phase A backfill — add `private` + `company_domain` to existing `things` docs
+### Task 8: Phase A backfill — add `private` + `company_domain` to existing `things` docs
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/scripts/migrate-add-org-fields.js`
@@ -936,13 +1115,13 @@ git commit -m "feat(scripts): backfill private + company_domain on things docs"
 
 ---
 
-### Task 8: Phase B backfill — re-upsert Vector Search datapoints with new restricts
+### Task 9: Phase B backfill — re-upsert Vector Search datapoints with new restricts
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/scripts/backfill-org-search-vectors.js`
 
 **Interfaces:**
-- Consumes: `upsertClassificationVectors` from `shared/vector-search-client.js`, `deriveCompanyDomain` from `shared/company-domain.js`.
+- Consumes: `buildClassificationDatapoint` from Task 5, `upsertClassificationVectors` from `shared/vector-search-client.js`.
 
 - [ ] **Step 1: Read the existing vector export script for the Firestore read pattern**
 
@@ -951,7 +1130,7 @@ Confirm the shape of a `thing_classifications` doc and how embeddings are stored
 
 - [ ] **Step 2: Write the backfill script**
 
-Create `scripts/backfill-org-search-vectors.js`. It reads `thing_classifications`, rebuilds the datapoints with the new restricts, and stream-upserts in batches. Dry-run mode prints counts and a sample without writing.
+Create `scripts/backfill-org-search-vectors.js`. It reads `thing_classifications`, rebuilds the datapoints via the shared helper from Task 5, and stream-upserts in batches. Dry-run mode prints counts and a sample without writing.
 
 ```js
 #!/usr/bin/env node
@@ -975,7 +1154,7 @@ const path = require('path');
 
 const configPath = path.join(__dirname, '..', 'shared', 'config.js');
 const { PROJECT_ID } = require(configPath);
-const { deriveCompanyDomain } = require(path.join(__dirname, '..', 'shared', 'company-domain.js'));
+const { buildClassificationDatapoint } = require(path.join(__dirname, '..', 'shared', 'build-classification-restricts.js'));
 const { upsertClassificationVectors } = require(path.join(__dirname, '..', 'shared', 'vector-search-client.js'));
 
 const DRY_RUN = !!process.env.DRY_RUN;
@@ -1027,7 +1206,6 @@ async function backfill() {
       totalSkipped++;
       continue;
     }
-    const companyDomain = deriveCompanyDomain(thing.user_email);
 
     // Each thing_classifications doc carries the per-classification embedding.
     // Re-read the field layout from export-vectors-to-index.js if this doesn't
@@ -1035,19 +1213,16 @@ async function backfill() {
     const entries = Array.isArray(data.classifications) ? data.classifications : [];
     entries.forEach((c, i) => {
       if (!c.embedding || !Array.isArray(c.embedding)) return;
-      pending.push({
-        id: `${thingId}_${c.type}_${i}`,
-        embedding: c.embedding,
-        restricts: {
-          user_id: thing.user_id,
-          deleted: 'false',
-          private: 'false',
-          company_domain: companyDomain,
-          thing_id: thingId,
-          classification_label: c.label,
-          classification_type: c.type
-        }
-      });
+      // Single source of truth for the restrict shape — same helper enrich
+      // and the PATCH handler use. isPrivate defaults to false (existing docs
+      // were saved before the private flag existed; day-one-flip decision).
+      pending.push(buildClassificationDatapoint({
+        userId: thing.user_id,
+        userEmail: thing.user_email,
+        thingId,
+        classification: c,
+        index: i
+      }));
     });
 
     if (pending.length >= BATCH_SIZE) {
@@ -1066,7 +1241,7 @@ backfill()
   .catch((err) => { console.error('Fatal error:', err); process.exit(1); });
 ```
 
-**Note on doc shape:** the implementer MUST verify the `thing_classifications` doc shape (`data.classifications` array vs flat fields) by reading the existing `scripts/export-vectors-to-index.js` and `cloud-function/firestore-search.js` before finalising the field paths above. The restrict contract is fixed; the read paths may need adjusting to match the actual schema.
+**Note on doc shape:** the implementer MUST verify the `thing_classifications` doc shape (`data.classifications` array vs flat fields) by reading the existing `scripts/export-vectors-to-index.js` and `cloud-function/firestore-search.js` before finalising the field paths above. The helper call is fixed; the read paths may need adjusting to match the actual schema.
 
 - [ ] **Step 3: Verify it parses**
 
@@ -1085,7 +1260,7 @@ git commit -m "feat(scripts): backfill org-search tokens on vector index"
 
 ## Phase 6: `saveit-slack` Cloud Function
 
-### Task 9: Slack signature verification
+### Task 10: Slack signature verification
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/cloud-function-slack/slack-signature.js`
@@ -1215,7 +1390,7 @@ git commit -m "feat(slack): verify Slack request signatures"
 
 ---
 
-### Task 10: Slack response block builder
+### Task 11: Slack response block builder
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/cloud-function-slack/slack-response.js`
@@ -1442,7 +1617,7 @@ git commit -m "feat(slack): build ephemeral search response blocks"
 
 ---
 
-### Task 11: Slack search orchestrator
+### Task 12: Slack search orchestrator
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/cloud-function-slack/slack-search.js`
@@ -1456,7 +1631,7 @@ git commit -m "feat(slack): build ephemeral search response blocks"
   - `searchOrgPages({companyDomain, queryVector, limit}) → Hit[]`
   - `generateEmbedding(query) → number[]`
   - `postToResponseUrl(url, payload) → void`
-  - `buildSearchResponseBlocks`, `buildErrorMessage` from Task 10.
+  - `buildSearchResponseBlocks`, `buildErrorMessage` from Task 11.
 - Produces: `runSlackSearch({slackUserId, query, responseUrl, deps}) → Promise<void>` — orchestrates and POSTs.
 
 - [ ] **Step 1: Write the failing test**
@@ -1626,7 +1801,7 @@ git commit -m "feat(slack): two-bucket search orchestrator"
 
 ---
 
-### Task 12: HTTP entry point + production dep wiring
+### Task 13: HTTP entry point + production dep wiring
 
 **Files:**
 - Create: `/Users/rich/Code/saveit-backend/cloud-function-slack/index.js`
@@ -1869,7 +2044,7 @@ echo "  https://saveit-slack-${PROJECT_ID//bookmarking-/}-uc.a.run.app/slack/com
 - [ ] **Step 4: Verify the entry point parses and unit tests still pass**
 
 Run: `cd /Users/rich/Code/saveit-backend/cloud-function-slack && node --check index.js && npx jest`
-Expected: all prior Task 9-11 tests still PASS; `node --check` succeeds.
+Expected: all prior Task 10-12 tests still PASS; `node --check` succeeds.
 
 - [ ] **Step 5: Make the deploy script executable and commit**
 
@@ -1884,7 +2059,7 @@ git commit -m "feat(slack): HTTP entry point, package.json, deploy script"
 
 ## Phase 7: Extension privacy toggle
 
-### Task 13: Accept `private` in the extension validators and API
+### Task 14: Accept `private` in the extension validators and API
 
 **Files:**
 - Modify: `/Users/rich/Code/saveit-extension/src/validators.js:35-76`
@@ -1925,12 +2100,12 @@ git commit -m "feat(extension): accept private flag on page schema"
 
 ---
 
-### Task 14: "Hide from organisation" toggle in the page card
+### Task 15: "Hide from organisation" toggle in the page card
 
 **Files:**
 - Modify: `/Users/rich/Code/saveit-extension/src/newtab.js`
 
-**Interfaces:** consumes `API.updatePage(id, { private: boolean })` (Task 13 / existing).
+**Interfaces:** consumes `API.updatePage(id, { private: boolean })` (Task 14 / existing).
 
 - [ ] **Step 1: Locate the existing card affordances**
 
@@ -2032,7 +2207,7 @@ git commit -m "feat(extension): per-page Hide from organisation toggle"
 
 ## Phase 8: Deploy & verify
 
-### Task 15: Run backfills against production
+### Task 16: Run backfills against production
 
 **Files:** none (operations only)
 
@@ -2061,7 +2236,7 @@ Expected: non-zero results, confirming the backfill populated the new restricts 
 
 ---
 
-### Task 16: Deploy `saveit-slack` and configure the Slack app
+### Task 17: Deploy `saveit-slack` and configure the Slack app
 
 **Files:** none (operations + Slack admin console)
 
@@ -2097,7 +2272,7 @@ Expected:
 
 ---
 
-### Task 17: Update `AGENTS.md` backend overview
+### Task 18: Update `AGENTS.md` backend overview
 
 **Files:**
 - Modify: `/Users/rich/Code/saveit-extension/AGENTS.md`
@@ -2130,8 +2305,8 @@ git commit -m "docs(agents): add saveit-slack to backend overview"
 
 ## Self-review notes
 
-**Spec coverage:** Each spec section maps to a task — decisions table (Tasks 1-17 implement every locked decision); architecture flow (Task 11 + 12); Vector Search change (Task 4); privacy-filter strict choice (Task 4 bucket-2 restricts); data model (Tasks 3, 5, 6); backfill (Tasks 7, 8, 15); saveit-slack components (Tasks 9-12, 16); Slack response format (Task 10); error handling matrix (Tasks 10, 11); extension toggle (Tasks 13, 14); deployment sequencing (Tasks 15, 16); testing (every task includes tests).
+**Spec coverage:** Each spec section maps to a task — decisions table (Tasks 1-18 implement every locked decision); architecture flow (Task 12 + 13); Vector Search change (Task 4); privacy-filter strict choice (Task 4 bucket-2 restricts); restricts helper (Task 5); data model (Tasks 3, 6, 7); backfill (Tasks 8, 9, 16); saveit-slack components (Tasks 10-13, 17); Slack response format (Task 11); error handling matrix (Tasks 11, 12); extension toggle (Tasks 14, 15); deployment sequencing (Tasks 16, 17); testing (every task includes tests).
 
-**Type consistency:** `deriveCompanyDomain` (Task 1) is imported unchanged in Tasks 2, 5, 6, 8, 11. `queryClassifications` signature (Task 4) is consumed by Tasks 8 (backfill via upsert — separate function), 11 (via deps), 12 (production). `Hit` shape (`title, url, ai_summary_brief, saved_at, user_email`) is consistent across Tasks 10, 11, 12. `buildSearchResponseBlocks` / `buildErrorMessage` (Task 10) consumed by Task 11 and 12. Restrict token values `'true'`/`'false'` consistent everywhere.
+**Type consistency:** `deriveCompanyDomain` (Task 1) is imported unchanged in Tasks 2, 5, 6, 8. `buildClassificationDatapoint` (Task 5) is consumed by Tasks 6 (enrich), 7 (PATCH), 9 (backfill) — the single source of truth for restricts shape. `queryClassifications` signature (Task 4) is consumed by Tasks 9 (backfill via upsert — separate function), 12 (via deps), 13 (production). `Hit` shape (`title, url, ai_summary_brief, saved_at, user_email`) is consistent across Tasks 11, 12, 13. `buildSearchResponseBlocks` / `buildErrorMessage` (Task 11) consumed by Tasks 12 and 13. Restrict token values `'true'`/`'false'` consistent everywhere.
 
-**Open implementation risks flagged inline:** (a) `thing_classifications` doc shape in Task 8 — implementer must verify field paths against `export-vectors-to-index.js`. (b) `getThingClassifications` in Task 6 — may need adding to `firestore-queries.js`. (c) `updateThingFields` whitelist mechanism in Task 6 Step 1. (d) The exact card UI wiring in Task 14 Step 6 depends on the existing `newtab.js` structure; the handler is fully specified but the DOM binding follows local idiom.
+**Open implementation risks flagged inline:** (a) `thing_classifications` doc shape in Task 9 — implementer must verify field paths against `export-vectors-to-index.js`. (b) `getThingClassifications` in Task 7 — may need adding to `firestore-queries.js`. (c) `updateThingFields` whitelist mechanism in Task 7 Step 1. (d) The exact card UI wiring in Task 15 Step 6 depends on the existing `newtab.js` structure; the handler is fully specified but the DOM binding follows local idiom.

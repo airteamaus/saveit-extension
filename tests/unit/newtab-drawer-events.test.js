@@ -28,6 +28,7 @@ function buildHarness() {
   const handlers = {
     handleDrawerEditCancel: vi.fn(),
     handleDrawerUpdate: vi.fn(),
+    handleDrawerTogglePrivacy: vi.fn(),
     navigateDrawerCard: vi.fn()
   };
 
@@ -50,6 +51,7 @@ function buildHarness() {
     handleDrawerEditCancel: handlers.handleDrawerEditCancel,
     handleDrawerEditStart: noop,
     handleDrawerPin: noop,
+    handleDrawerTogglePrivacy: handlers.handleDrawerTogglePrivacy,
     handleDrawerUpdate: handlers.handleDrawerUpdate,
     handleDrawerDelete: noop,
     handleDrawerScrollNearEnd: noop,
@@ -112,5 +114,62 @@ describe('edit form keydown', () => {
 
     expect(handleDrawerEditCancel).toHaveBeenCalled();
     expect(handleDrawerUpdate).not.toHaveBeenCalled();
+  });
+});
+
+describe('privacy toggle click delegation', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('a card privacy button click routes to handleDrawerTogglePrivacy with the page id', () => {
+    document.body.innerHTML = `
+      <div id="results">
+        <div class="saved-pages-drawer-card" data-page-id="page-7">
+          <button type="button" data-action="toggle-privacy" data-id="page-7">Hide from organisation</button>
+        </div>
+      </div>
+    `;
+    const handlers = {
+      handleDrawerTogglePrivacy: vi.fn(),
+      handleDrawerUpdate: vi.fn(),
+      handleDrawerEditCancel: vi.fn(),
+      navigateDrawerCard: vi.fn()
+    };
+    const noop = () => {};
+    initSavedPagesDrawerEvents({
+      savedPagesDrawerSearchForm: null,
+      savedPagesDrawerSearchInput: null,
+      savedPagesDrawerClearBtn: null,
+      savedPagesDrawerResults: document.getElementById('results'),
+      projectSidebar: null,
+      projectEditorBackdrop: null,
+      projectEditorDialog: null,
+      projectManager: {},
+      savedPagesView: {},
+      openSavedPagesDrawer: noop,
+      closeSavedPagesDrawer: noop,
+      loadDrawerResults: noop,
+      loadDrawerDomainPages: noop,
+      navigateDrawerCard: handlers.navigateDrawerCard,
+      handleDrawerEditCancel: handlers.handleDrawerEditCancel,
+      handleDrawerEditStart: noop,
+      handleDrawerPin: noop,
+      handleDrawerTogglePrivacy: handlers.handleDrawerTogglePrivacy,
+      handleDrawerUpdate: handlers.handleDrawerUpdate,
+      handleDrawerDelete: noop,
+      handleDrawerScrollNearEnd: noop,
+      setDrawerSearchValue: noop,
+      setDrawerToggleState: noop,
+      isDrawerOpen: () => true,
+      windowObj: window,
+      documentObj: document
+    });
+
+    const btn = document.querySelector('[data-action="toggle-privacy"]');
+    btn.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(handlers.handleDrawerTogglePrivacy).toHaveBeenCalledTimes(1);
+    expect(handlers.handleDrawerTogglePrivacy).toHaveBeenCalledWith('page-7');
   });
 });

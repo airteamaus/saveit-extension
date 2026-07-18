@@ -46,7 +46,7 @@ Mode detection is handled in `src/api.js`. The config layer (`src/config.js`) de
 
 ### Backend overview
 
-The backend (`/Users/rich/Code/saveit-backend/`) is **6 Cloud Functions across 4 source dirs**, each with its own deploy script. This is a known friction point — see the architecture-improvement notes below.
+The backend (`/Users/rich/Code/saveit-backend/`) is **7 Cloud Functions across 5 source dirs**, each with its own deploy script. This is a known friction point — see the architecture-improvement notes below.
 
 | Function | Source dir | Role |
 |---|---|---|
@@ -56,6 +56,7 @@ The backend (`/Users/rich/Code/saveit-backend/`) is **6 Cloud Functions across 4
 | `saveit-realtime` | `cloud-function-realtime/` | SSE stream: fans Firestore changes to connected clients |
 | `saveit-realtime-trigger-things` | `cloud-function-realtime-trigger/` | Firestore onWrite → emits realtime event docs |
 | `saveit-realtime-trigger-projects` | `cloud-function-realtime-trigger/` | Firestore onWrite → emits realtime event docs |
+| `saveit-slack` | `cloud-function-slack/` | HTTP: Slack `/links` slash command (signature-verified, deferred `response_url` response) |
 
 Key pipeline: `extension save → saveit (BigQuery save_events) → enrich controller (Cloud Tasks) → worker (fetch + AI) → Firestore things doc → realtime trigger → SSE → extension`.
 
@@ -238,7 +239,7 @@ cd /Users/rich/Code/saveit-backend && ./scripts/deploy-function.sh
 
 These friction points caused real debugging time during the Data & sync overhaul. They are candidates for a future architecture improvement pass:
 
-1. **Backend deployment has too many moving parts.** 6 Cloud Functions, 4 deploy scripts, and `just deploy-all` only covers 3 of the 6 functions (it omits both realtime services). The realtime deploys have no justfile target at all and must be run by hand. Each script copies `shared/` and `contracts/` into its function dir by hand, and two scripts additionally copy handler files from `cloud-function/` — an implicit cross-dir dependency.
+1. **Backend deployment has too many moving parts.** 7 Cloud Functions, 5 deploy scripts, and `just deploy-all` only covers 3 of the 7 functions (it omits both realtime services and Slack). The realtime and Slack deploys have no justfile target at all and must be run by hand. Each script copies `shared/` and `contracts/` into its function dir by hand, and two scripts additionally copy handler files from `cloud-function/` — an implicit cross-dir dependency.
 
 2. **Ingestion pipeline has confusing branching.** Two writers of `save_events` (save vs bulk-import) duplicate the trigger logic. Duplicate detection runs at two levels (worker `thingExists` vs core `checkDuplicateThing`) with different semantics around soft-deleted docs — the worker gate can short-circuit before the core's undelete logic runs. `source` dispatch is a binary `if (client) else (jina)` with no validation.
 
@@ -248,5 +249,5 @@ These friction points caused real debugging time during the Data & sync overhaul
 
 5. **Post-deploy verification is partial.** Only the enrich functions have a smoke test. The main API, realtime SSE, and Firestore triggers have no automated post-deploy check.
 
-6. **Version-drift detection covers half the fleet.** `check-deployed-versions.sh` only reports 3 of 6 functions.
+6. **Version-drift detection covers half the fleet.** `check-deployed-versions.sh` only reports 3 of 7 functions.
 
