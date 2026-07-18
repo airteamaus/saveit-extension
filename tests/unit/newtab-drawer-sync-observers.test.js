@@ -666,6 +666,29 @@ describe('drawer sync observers', () => {
       expect(renderDrawerResults).toHaveBeenCalled();
     });
 
+    it('does not treat a load-more inter-batch idle as completion (regression: bar jumping to 100% mid-warm)', () => {
+      // loadMore() emits change events with { status: 'idle', phase: 'load-more' }
+      // after EACH batch resolves, while the prefetch loop is still running. The
+      // bar must reflect real progress (50/90 ≈ 56%), NOT jump to 100% — jumping
+      // mid-warm was the symptom of isWarmUpComplete treating any idle as
+      // terminal. The real-bug repro is the e2e test; this unit test pins the
+      // exact snapshot shape that loadMore emits between batches.
+      const harness = createWarmingHarness({
+        snapshot: {
+          allPages: Array.from({ length: 50 }, (_, i) => ({ id: `p${i}` })),
+          total: 90,
+          refreshState: { status: 'idle', phase: 'load-more', reason: 'appended-pages' }
+        }
+      });
+
+      harness.savedPagesStore.emit();
+
+      // 50/90 rounds to 56%. If this reads 100, isWarmUpComplete wrongly
+      // treated the inter-batch idle as terminal and forced percent to 100.
+      expect(harness.state.warmUpProgress.percent).toBe(56);
+      expect(harness.state.warmUpProgress.indeterminate).toBe(false);
+    });
+
     it('integration: hands off to results rendering even when hasInitialized is still false at completion', async () => {
       // Reproduces the "warming UI stays permanently at 100%, never shows cards"
       // symptom. The race: prefetchAllPages is launched fire-and-forget DURING

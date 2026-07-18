@@ -119,22 +119,36 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
       });
 
       // Arm + trigger the warm-up exactly as the interactive sign-in button does.
-      // Set a fake current user so canHydrateDrawerWithWarmCache (which gates
-      // loadDrawerBasePages) passes — getCurrentUser reads window.firebaseAuth.
-      // Then load() opens the drawer (so isDrawerOpen() is true for the
-      // subscriber's warming branch) and triggers loadDrawerBasePages -> hydrate.
-      // Drive the warm-up: open the drawer (so the subscriber's isDrawerOpen()
-      // check passes while events flow), arm the warm-up, and hydrate directly.
-      // The store + subscriber + renderer are the production code under test;
+      // Seed the session store (the production user source) so
+      // canHydrateDrawerWithWarmCache — which gates loadDrawerBasePages — passes.
+      // Then open the drawer and drive handleSignedIn so the real arming path
+      // runs (loadDrawerBasePages -> beginDrawerWarming). The store + subscriber
+      // + renderer are the production code under test;
       // we bypass only the OAuth/gate plumbing (already covered by unit tests).
       await page.evaluate(async () => {
         const win = window;
-        win.firebaseAuth = { currentUser: { uid: 'test-user', email: 'test@example.com' } };
         const app = globalThis.__saveit.app;
-        app.drawerController.open();
-        app.savedPagesStore.reset({ emit: false });
+
+        // Arm the warm-up exactly as the interactive Sign-in button does.
         app.savedPagesStore.setLazy(false);
-        await app.savedPagesStore.hydrate();
+
+        // Seed the session store the way real OAuth does (session-store.js
+        // reads from browser.storage.local under saveit_session, not from
+        // win.firebaseAuth — that was the pre-session-store seam).
+        await chrome.storage.local.set({
+          saveit_session: {
+            sessionToken: 'fake-test-token',
+            uid: 'test-user',
+            email: 'test@example.com',
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+          }
+        });
+
+        // Open the drawer + drive handleSignedIn so the production arming path
+        // runs (loadDrawerBasePages -> beginDrawerWarming). Direct hydrate() is
+        // not enough: warming is armed in loadDrawerBasePages, not hydrate.
+        app.drawerController.open();
+        await app.drawerController.handleSignedIn();
       });
 
       // The warming pane must appear with a partial % (per-batch rendering).
@@ -214,8 +228,17 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
         // Arm the warm-up exactly as the Sign-in button would.
         app.savedPagesStore.setLazy(false);
 
-        // OAuth "completes": set the user so getCurrentUser() returns it.
-        win.firebaseAuth = { currentUser: { uid: 'test-user', email: 'test@example.com' } };
+        // OAuth "completes": seed the session store the way real OAuth does
+        // (session-store.js reads from browser.storage.local under saveit_session,
+        // not from win.firebaseAuth — that was the pre-session-store seam).
+        await chrome.storage.local.set({
+          saveit_session: {
+            sessionToken: 'fake-test-token',
+            uid: 'test-user',
+            email: 'test@example.com',
+            expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString()
+          }
+        });
 
         // handleSignedIn: resets the store and triggers loadDrawerResults,
         // which (with hasInitialized=false) calls loadDrawerBasePages -> hydrate.

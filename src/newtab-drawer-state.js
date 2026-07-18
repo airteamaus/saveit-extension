@@ -312,12 +312,26 @@ export function computeWarmingProgress(snapshot, state, { complete = false } = {
 // on the common "log out, log back in, nothing changed" path, because the
 // completion timer that clears warmUpInProgress was never armed.
 //
-// Any idle refreshState is a completion signal: once the store is idle it has
-// no further work pending, so if we're still showing the warming UI we should
-// hand off to results. Non-idle states (loading/checking/error) leave the bar
-// in progress; error is handled separately by the dispatcher's error branch.
+// Completion requires `status === 'idle'` AND a non-null `phase` naming the
+// operation that finished (prefetch, up-to-date, incremental-refresh, etc.).
+// Two idle emits must NOT count as completion:
+//   1. phase 'load-more' — loadMore() emits {idle, 'load-more', 'appended-pages'}
+//      after EACH batch resolves while the prefetch loop is still running.
+//      Treating that inter-batch idle as terminal forced the bar to 100% on the
+//      first batch (e.g. 50/90) instead of letting it climb per-batch.
+//   2. phase null — that is the store's pre-fetch resting state during hydrate's
+//      synchronous setup window (before prefetchAllPages has emitted anything).
+//      The total may already be seeded from the warm cache, so a total>0 check
+//      can't distinguish it from a real completion; only the absent phase does.
+// Non-idle states (loading/checking/error) leave the bar in progress; error is
+// handled separately by the dispatcher's error branch.
 export function isWarmUpComplete(snapshot) {
-  return snapshot?.refreshState?.status === 'idle';
+  const refreshState = snapshot?.refreshState;
+  if (refreshState?.status !== 'idle') {
+    return false;
+  }
+  const phase = refreshState?.phase;
+  return phase != null && phase !== 'load-more';
 }
 
 export function getDrawerSearchableText(page = {}) {
