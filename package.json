@@ -42,7 +42,7 @@
     "chokidar": "^4.0.3",
     "chrome-webstore-upload": "^4.0.4",
     "dotenv": "^17.4.2",
-    "esbuild": "^0.27.7",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.4",
     "globals": "^16.5.0",
     "happy-dom": "^20.10.6",
@@ -61,8 +61,5 @@
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
     "@sentry/browser": "^8.55.2"
-  },
-  "overrides": {
-    "vite": "7.3.2"
   }
 }
