@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate the Buckleys brand icon: a bold sage (#5b8c7a) "B" on transparency.
+"""Generate the Newtab brand icon: a bold sage (#5b8c7a) "N" on transparency.
 
 Outputs 16/32/48/128 px PNGs into src/. Rendered at 4x then downsampled for
 crisp edges at small sizes (toolbar icons are read at 16-19px). Uses the
@@ -12,7 +12,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 SAGE = (0x5B, 0x8C, 0x7A, 0xFF)  # var(--color-primary) from shared-ui.css
-LETTER = "B"
+LETTER = "N"
 
 SIZES = [16, 32, 48, 128]
 SS = 4  # supersample factor for anti-aliasing
@@ -36,13 +36,13 @@ def load_font(size_px):
 
 
 def draw_icon(size):
-    """Render the B centred in a transparent `size`x`size` canvas."""
+    """Render the N centred in a transparent `size`x`size` canvas."""
     canvas = size * SS
     img = Image.new("RGBA", (canvas, canvas), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
 
-    # Vertical stems of a B look optically top-heavy when geometrically
-    # centred; nudge the baseline down a touch so the glyph reads centred.
+    # N is vertically symmetric, so it reads centred at its geometric middle
+    # — no baseline nudge needed (unlike letters with ascenders/descenders).
     font = load_font(int(round(canvas * 0.74)))
     try:
         (l, t, r, b) = draw.textbbox((0, 0), LETTER, font=font)
@@ -52,7 +52,7 @@ def draw_icon(size):
     w = r - l
     h = b - t
     x = (canvas - w) / 2 - l
-    y = (canvas - h) / 2 - t + int(canvas * 0.04)
+    y = (canvas - h) / 2 - t
 
     draw.text((x, y), LETTER, font=font, fill=SAGE)
 

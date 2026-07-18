@@ -1,4 +1,4 @@
-// background.js - Service worker for the Buckley's extension (manifest v3)
+// background.js - Service worker for the Newtab extension (manifest v3)
 import { CONFIG } from './config.js';
 import { createBackgroundAuth } from './background-auth.js';
 import { getCurrentUserId as getSessionUserId } from './session-store.js';
@@ -365,7 +365,7 @@ async function handleSaveError(error, tab) {
   browserApi.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: "Buckley's - Error",
+    title: 'Newtab - Error',
     message: userMessage
   });
 
@@ -491,7 +491,7 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
   browserApi.notifications.create({
     type: 'basic',
     iconUrl: 'icon.png',
-    title: "Buckley's",
+    title: 'Newtab',
     message: 'Page saved!'
   });
 
@@ -592,7 +592,7 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'setBookmarkMirrorEnabled') {
     (async () => {
       // On enable, seed immediately so the folder tree appears without waiting
-      // up to 4h for the alarm. On disable, remove the Buckley's/ folder and
+      // up to 4h for the alarm. On disable, remove the Newtab/ folder and
       // clear all mirror state so the user's bookmarks return to how they were
       // before sync — rather than orphaning a folder they'd have to delete by hand.
       if (message.enabled) {

@@ -1,10 +1,10 @@
 // Bookmark mirror: a server-authoritative rendering of a user's saved pages
-// into the browser's native bookmarks tree as Buckley's/<project>/ folders.
+// into the browser's native bookmarks tree as Newtab/<project>/ folders.
 //
 // The server is canonical. The browser folder is a managed rendering of it:
 //   - Pages are created/moved/removed to match the server set.
 //   - The mirror only ever touches bookmarks it OWNS — others (including
-//     strays the user drops inside Buckley's/) are left alone. Ownership is
+//     strays the user drops inside Newtab/) are left alone. Ownership is
 //     tracked in the persisted state map keyed by saveItPageId.
 //   - A stray whose URL matches a desired page is ADOPTED (claimed, then
 //     updated/moved like any owned node) rather than duplicated.
@@ -19,13 +19,14 @@ import {
   setMirrorState
 } from './bookmark-mirror-settings.js';
 
-const ROOT_FOLDER_TITLE = "Buckley's";
+const ROOT_FOLDER_TITLE = 'Newtab';
 // Earlier brand names for the root folder. Users who enabled the mirror under
 // a previous name keep that folder (same id, same children); on the next
 // reconcile we rename it in place to the current title rather than orphaning
 // it for a fresh tree. 'SaveIt' is the pre-rebrand name; 'Buckleys' was a
-// short-lived interim brand before the apostrophe was added.
-const LEGACY_ROOT_FOLDER_TITLES = ['SaveIt', 'Buckleys'];
+// short-lived interim brand before the apostrophe was added; "Buckley's" was
+// the brand immediately before the rename to Newtab.
+const LEGACY_ROOT_FOLDER_TITLES = ['SaveIt', 'Buckleys', "Buckley's"];
 const OTHER_FOLDER_TITLE = 'Other'; // pages with no AI general classification
 const GENERAL_SUBBUCKET_TITLE = 'General'; // sub-folder for pages with no AI domain classification within a >10 bucket
 // Sentinel general label for pages that have no AI 'general' classification.
@@ -96,8 +97,8 @@ function subBucketLabel(page) {
 
 // --- bucket keys ----------------------------------------------------------
 // A bucket key names a single folder placement. Two families:
-//   project:<projectId>  -> Buckley's/<ProjectName>/[<SubLabel>/]
-//   domain:<generalKey>  -> Buckley's/<GeneralLabel-or-Other>/[<SubLabel>/]
+//   project:<projectId>  -> Newtab/<ProjectName>/[<SubLabel>/]
+//   domain:<generalKey>  -> Newtab/<GeneralLabel-or-Other>/[<SubLabel>/]
 // The generalKey is the label string or the OTHER_DOMAIN_KEY sentinel.
 
 function projectBucketKey(projectId) {
@@ -344,7 +345,7 @@ function findChildFolder(parentChildren, title) {
 }
 
 // Recursively search the whole tree for a folder by title. Used to locate an
-// existing Buckley's/ root regardless of where the user may have moved it — we
+// existing Newtab/ root regardless of where the user may have moved it — we
 // must not create a duplicate just because it isn't under the default root.
 function findFolderByTitleRecursive(nodes, title) {
   for (const node of nodes || []) {
@@ -379,7 +380,7 @@ function findNodeById(nodes, id) {
   return null;
 }
 
-// Resolve a top-level folder under Buckley's/ for a given title, reusing an
+// Resolve a top-level folder under Newtab/.
 // existing one or creating it. `tracked` is the caller's { id, name } map to
 // keep in sync (projectFolders or domainFolders).
 async function ensureTopLevelFolder({
@@ -403,7 +404,7 @@ async function ensureTopLevelFolder({
   return folder.id;
 }
 
-// Ensure Buckley's/ exists, then one top-level folder per project and per domain
+// Ensure Newtab/ exists, then one top-level folder per project and per domain
 // (general classification label), plus per-sub-domain child folders under any
 // bucket that exceeds the sub-bucket threshold. Returns a folders descriptor
 // consumed by computeReconcileOps + reconcile.
@@ -430,7 +431,7 @@ export async function ensureMirrorFolders({
   // Mobile bookmarks in Chrome; the toolbar/other roots in Firefox). Creating
   // directly on that immovable root throws "Can't modify the root bookmark
   // folders", so descend one level and use the first writable container
-  // (one that itself holds children) as the parent for Buckley's/.
+  // (one that itself holds children) as the parent for Newtab/.
   const treeRoot = Array.isArray(tree) && tree.length ? tree[0] : null;
   const writableContainers = treeRoot && Array.isArray(treeRoot.children)
     ? treeRoot.children.filter((node) => Array.isArray(node.children))
@@ -447,7 +448,7 @@ export async function ensureMirrorFolders({
 
   const rootParentId = writableRoot.id;
 
-  // --- Buckley's/ root ---
+  // --- Newtab/ root ---
   let rootFolderId = state.rootFolderId;
   if (rootFolderId) {
     // Rebrand migration for a tracked root: if the tracked folder still
@@ -459,7 +460,7 @@ export async function ensureMirrorFolders({
       await bookmarksApi.update(rootFolderId, { title: ROOT_FOLDER_TITLE });
     }
   } else {
-    // The user may have moved Buckley's/ anywhere; search the whole tree
+    // The user may have moved Newtab/ anywhere; search the whole tree
     // before creating a duplicate.
     let rootFolder = findFolderByTitleRecursive(tree, ROOT_FOLDER_TITLE);
     if (!rootFolder) {
@@ -485,7 +486,7 @@ export async function ensureMirrorFolders({
     rootFolderId = rootFolder.id;
   }
 
-  // Always re-read Buckley's/'s children so we observe the current truth
+  // Always re-read Newtab/'s children so we observe the current truth
   // (the user may have added folders since our last reconcile).
   const saveItChildren = (await bookmarksApi.getChildren(rootFolderId)) || [];
 
@@ -500,7 +501,7 @@ export async function ensureMirrorFolders({
   const byBucket = {};
   const bySubBucket = {};
 
-  // Index Buckley's children by title once for reuse lookups.
+  // Index Newtab children by title once for reuse lookups.
   const saveItChildByTitle = new Map(
     saveItChildren.filter((n) => n.url === undefined).map((n) => [n.title, n])
   );
@@ -893,7 +894,7 @@ export async function mirrorSavedPage({
     : state.domainFolders?.[OTHER_DOMAIN_KEY]?.id;
 
   if (!targetFolderId) {
-    // Fall back to the Buckley's/ root if neither a project nor Other folder is
+    // Fall back to the Newtab/ root if neither a project nor Other folder is
     // tracked yet — the next reconcile will place it correctly.
     targetFolderId = state.rootFolderId;
   }
@@ -907,17 +908,17 @@ export async function mirrorSavedPage({
 }
 
 /**
- * Tear down the mirror: recursively remove the Buckley's/ folder the mirror
+ * Tear down the mirror: recursively remove the Newtab/ folder the mirror
  * owns and clear all persisted mirror state (ownership map, folder ids).
  *
  * This is the inverse of enabling + seeding. Disabling sync should leave the
  * user's browser bookmarks exactly as they were before the mirror ran, rather
- * than orphaning a Buckley's/ folder the user then has to delete by hand.
+ * than orphaning a Newtab/ folder the user then has to delete by hand.
  *
  * Best-effort on the bookmark removal: if the folder was already deleted (or
  * moved somewhere unreadable) we still clear the state so the mirror is fully
  * reset. Only bookmarks under the tracked rootFolderId are removed — strays
- * the user created outside Buckley's/ are never touched.
+ * the user created outside Newtab/ are never touched.
  *
  * @returns {Promise<{ removed: boolean }>}
  */
@@ -935,7 +936,7 @@ export async function removeMirror({
   if (state.rootFolderId) {
     try {
       // removeTree recursively deletes a folder and all its children — the
-      // mirror only ever creates bookmarks under Buckley's/, so this cleans up
+      // mirror only ever creates bookmarks under Newtab/, so this cleans up
       // every bookmark we own in one call without touching anything else.
       if (bookmarksApi?.removeTree) {
         await bookmarksApi.removeTree(state.rootFolderId);

@@ -74,7 +74,7 @@ function toUnixSeconds(isoOrMs) {
 }
 
 /**
- * Serialize pages + projects to a versioned Buckley's JSON backup. This is the
+ * Serialize pages + projects to a versioned Newtab JSON backup. This is the
  * full-fidelity format: round-trips with parseBackupJson.
  *
  * @param {Array} pages
@@ -83,7 +83,7 @@ function toUnixSeconds(isoOrMs) {
  */
 export function toJsonBackup(pages, projects = []) {
   const backup = {
-    format: 'buckleys-backup',
+    format: 'newtab-backup',
     version: 1,
     exportedAt: new Date().toISOString(),
     pages: (pages || [])
@@ -124,7 +124,7 @@ function escapeHtmlAttr(text) {
 /**
  * Serialize pages to a Netscape-format bookmarks HTML file, importable by every
  * browser (Chrome, Firefox, Safari, Edge). A single flat folder under
- * "Buckley's" — browser import doesn't need project/domain subfolders, and a
+ * "Newtab" — browser import doesn't need project/domain subfolders, and a
  * flat export is the least surprising artifact.
  *
  * @param {Array} pages
@@ -138,7 +138,7 @@ export function toNetscapeHtml(pages) {
     '<TITLE>Bookmarks</TITLE>',
     '<H1>Bookmarks</H1>',
     '<DL><p>',
-    `    <DT><H3 ADD_DATE="${toUnixSeconds(date)}">Buckley's</H3>`,
+    `    <DT><H3 ADD_DATE="${toUnixSeconds(date)}">Newtab</H3>`,
     '    <DL><p>'
   ];
 

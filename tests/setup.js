@@ -23,7 +23,7 @@ global.browser = {
   runtime: {
     getManifest: vi.fn(() => ({
       version: '0.13.4',
-      name: "Buckley's Bookmarks"
+      name: "Newtab Bookmarks"
     })),
     sendMessage: vi.fn(),
     onMessage: {

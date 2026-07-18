@@ -286,7 +286,7 @@ describe('ProjectSchema', () => {
   it('should accept a valid private project', () => {
     const result = ProjectSchema.safeParse({
       id: 'project-saveit-product',
-      name: "Buckley's product",
+      name: "Newtab product",
       owner_user_id: 'user-123',
       visibility: 'private',
       company_domain: null,

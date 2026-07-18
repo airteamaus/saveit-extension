@@ -525,7 +525,7 @@ describe('ensureMirrorFolders', () => {
 
   const domainLabelFor = (key) => key === '__other__' ? 'Other' : key;
 
-  it('creates Buckley\'s/ and one folder per project + domain bucket', async () => {
+  it('creates Newtab/ and one folder per project + domain bucket', async () => {
     const api = createFakeBookmarksApi(baseTree());
     const bucketPlan = {
       buckets: {
@@ -578,7 +578,7 @@ describe('ensureMirrorFolders', () => {
     // Real browsers throw "Can't modify the root bookmark folders" if you
     // bookmarks.create with parentId === the top-level root id. The fake API
     // below mirrors that constraint so this test catches the v1.17/v1.18 bug
-    // where Buckley's/ was created on the immovable root.
+    // where Newtab/ was created on the immovable root.
     const tree = [{
       id: '0', // immovable root, like Chrome's real bookmark tree root
       title: '',
@@ -639,13 +639,13 @@ describe('ensureMirrorFolders', () => {
     expect(saveIt.parentId).toBe('1');
   });
 
-  it('reuses an existing Buckley\'s/ folder rather than duplicating', async () => {
+  it('reuses an existing Newtab/ folder rather than duplicating', async () => {
     const tree = [{
       id: 'root',
       children: [{
         id: 'toolbar',
         title: 'toolbar',
-        children: [{ id: 'existing-buckleys', title: "Buckley's", children: [] }]
+        children: [{ id: 'existing-buckleys', title: 'Newtab', children: [] }]
       }]
     }];
     const api = createFakeBookmarksApi(tree);
@@ -660,7 +660,7 @@ describe('ensureMirrorFolders', () => {
     expect(statePatch.rootFolderId).toBe('existing-buckleys');
   });
 
-  it('migrates a legacy SaveIt/ folder to Buckley\'s/ in place (preserves id + children)', async () => {
+  it('migrates a legacy SaveIt/ folder to Newtab/ in place (preserves id + children)', async () => {
     // Pre-rebrand users have a SaveIt/ folder. On the first post-rebrand
     // reconcile we rename it (same id, same children) instead of orphaning it
     // for a fresh tree — otherwise mirrored bookmarks would be lost.
@@ -696,12 +696,12 @@ describe('ensureMirrorFolders', () => {
       return null;
     })(api._tree);
     // Title renamed; children preserved.
-    expect(migrated.title).toBe("Buckley's");
+    expect(migrated.title).toBe('Newtab');
     expect(migrated.children).toHaveLength(1);
     expect(migrated.children[0]).toMatchObject({ id: 'stray-bookmark', url: 'https://old.com' });
   });
 
-  it('migrates an interim Buckleys/ folder to Buckley\'s/ in place (preserves id)', async () => {
+  it('migrates an interim Buckleys/ folder to Newtab/ in place (preserves id)', async () => {
     // 'Buckleys' (no apostrophe) was a short-lived interim brand. A user who
     // adopted the mirror then has a tracked rootFolderId pointing at a folder
     // still titled 'Buckleys'; the next reconcile must rename it in place.
@@ -736,12 +736,50 @@ describe('ensureMirrorFolders', () => {
       }
       return null;
     })(api._tree);
-    expect(migrated.title).toBe("Buckley's");
+    expect(migrated.title).toBe('Newtab');
     expect(migrated.children).toHaveLength(1);
   });
 
-  it('does not rename a legacy SaveIt/ folder when a Buckley\'s/ folder already exists', async () => {
-    // If the user already has Buckley's/ (e.g. created it manually or already
+  // Regression guard for the Newtab rebrand: a tracked root titled "Buckley's"
+  // (the brand immediately before Newtab) must be renamed in place to Newtab,
+  // reusing the same folder id and preserving children.
+  it('migrates a Buckley\'s/ folder to Newtab/ in place (preserves id)', async () => {
+    const tree = [{
+      id: 'root',
+      children: [{
+        id: 'toolbar',
+        title: 'toolbar',
+        children: [{
+          id: 'prior-buckleys',
+          title: "Buckley's",
+          children: [{ id: 'prior-page', title: 'P', url: 'https://p.com' }]
+        }]
+      }]
+    }];
+    const api = createFakeBookmarksApi(tree);
+    const state = { ...getDefaultMirrorState(), rootFolderId: 'prior-buckleys' };
+    const { statePatch } = await ensureMirrorFolders({
+      bookmarksApi: api,
+      state,
+      projects: [],
+      bucketPlan: { buckets: {} },
+      domainLabelFor,
+      existingTree: null
+    });
+    expect(statePatch.rootFolderId).toBe('prior-buckleys');
+    const migrated = (function find(nodes) {
+      for (const n of nodes) {
+        if (n.id === 'prior-buckleys') return n;
+        if (n.children) { const f = find(n.children); if (f) return f; }
+      }
+      return null;
+    })(api._tree);
+    expect(migrated.title).toBe('Newtab');
+    expect(migrated.children).toHaveLength(1);
+  });
+
+  it('does not rename a legacy SaveIt/ folder when a Newtab/ folder already exists', async () => {
+    // If the user already has Newtab/ (e.g. created it manually or already
     // migrated), a lingering SaveIt/ must be left alone, not claimed.
     const tree = [{
       id: 'root',
@@ -749,7 +787,7 @@ describe('ensureMirrorFolders', () => {
         id: 'toolbar',
         title: 'toolbar',
         children: [
-          { id: 'current-buckleys', title: "Buckley's", children: [] },
+          { id: 'current-newtab', title: 'Newtab', children: [] },
           { id: 'legacy-saveit', title: 'SaveIt', children: [] }
         ]
       }]
@@ -763,7 +801,7 @@ describe('ensureMirrorFolders', () => {
       domainLabelFor,
       existingTree: null
     });
-    expect(statePatch.rootFolderId).toBe('current-buckleys');
+    expect(statePatch.rootFolderId).toBe('current-newtab');
     const legacy = (function find(nodes) {
       for (const n of nodes) {
         if (n.id === 'legacy-saveit') return n;
@@ -895,7 +933,7 @@ describe('mirrorSavedPage', () => {
     expect(otherFolder.children[0].url).toBe('https://a.com');
   });
 
-  it('falls back to the Buckley\'s root when neither project nor Other folder is tracked', async () => {
+  it('falls back to the Newtab root when neither project nor Other folder is tracked', async () => {
     const tree = [{
       id: 'root',
       children: [{
@@ -911,7 +949,7 @@ describe('mirrorSavedPage', () => {
         rootFolderId: 'saveit'
       }
     });
-    // No project, no Other folder tracked yet → land in Buckley's/ root; the next
+    // No project, no Other folder tracked yet → land in Newtab/ root; the next
     // full reconcile will place it in the correct domain folder.
     const result = await mirrorSavedPage({
       bookmarksApi: api,
@@ -1075,7 +1113,7 @@ describe('reconcile (end-to-end against fakes)', () => {
   });
 
   it('a single op failure is logged and does not abort the pass', async () => {
-    // Pre-create the Buckley's/ tree with the Other folder so the only create()
+    // Pre-create the Newtab/ tree with the Other folder so the only create()
     // calls are bookmark creates (folder creation is not wrapped in try/catch
     // in ensureMirrorFolders).
     const bookmarksApi = createFakeBookmarksApi([{
@@ -1162,7 +1200,7 @@ describe('reconcile (end-to-end against fakes)', () => {
 });
 
 describe('removeMirror', () => {
-  // A Buckley's/ tree with two project sub-folders and a few bookmarks,
+  // A Newtab/ tree with two project sub-folders and a few bookmarks,
   // matching what reconcile would produce.
   const treeWithMirror = () => [{
     id: 'root',
@@ -1172,7 +1210,7 @@ describe('removeMirror', () => {
       title: 'Bookmarks Toolbar',
       children: [{
         id: 'buckleys-root',
-        title: "Buckley's",
+        title: 'Newtab',
         children: [
           { id: 'proj-folder', title: 'Cooking', children: [
             { id: 'bm1', parentId: 'proj-folder', title: 'Recipe', url: 'https://recipe.com' }
@@ -1185,7 +1223,7 @@ describe('removeMirror', () => {
     }]
   }];
 
-  it('removes the Buckley\'s/ root folder and all children via removeTree', async () => {
+  it('removes the Newtab/ root folder and all children via removeTree', async () => {
     const api = createFakeBookmarksApi(treeWithMirror());
     const storage = createFakeStorage();
     // Seed state as if a reconcile had run.
@@ -1200,7 +1238,7 @@ describe('removeMirror', () => {
     const { removed } = await removeMirror({ bookmarksApi: api, storage });
     expect(removed).toBe(true);
 
-    // The Buckley's/ folder is gone from the tree (no node with that id remains).
+    // The Newtab/ folder is gone from the tree (no node with that id remains).
     const tree = await api.getTree();
     const flat = JSON.stringify(tree);
     expect(flat).not.toContain('"buckleys-root"');
@@ -1231,7 +1269,7 @@ describe('removeMirror', () => {
   });
 
   it('still clears state when the folder is already gone (no throw)', async () => {
-    const api = createFakeBookmarksApi([]); // empty tree — no Buckley's/ folder
+    const api = createFakeBookmarksApi([]); // empty tree — no Newtab/ folder
     const storage = createFakeStorage();
     await setMirrorState(storage, {
       enabled: true,

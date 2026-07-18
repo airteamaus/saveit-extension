@@ -83,7 +83,7 @@ describe('toRaindropCsv', () => {
 describe('toJsonBackup', () => {
   it('produces a versioned backup envelope', () => {
     const json = JSON.parse(toJsonBackup(PAGES, [{ id: 'proj-1', name: 'Dev' }]));
-    expect(json.format).toBe('buckleys-backup');
+    expect(json.format).toBe('newtab-backup');
     expect(json.version).toBe(1);
     expect(json.pages).toHaveLength(2);
     expect(json.projects).toHaveLength(1);
@@ -119,7 +119,7 @@ describe('toNetscapeHtml', () => {
   it('produces a valid Netscape bookmark document', () => {
     const html = toNetscapeHtml(PAGES);
     expect(html).toContain('<!DOCTYPE NETSCAPE-Bookmark-file-1>');
-    expect(html).toContain('Buckley\'s');
+    expect(html).toContain('Newtab');
     expect(html).toContain('https://example.com');
   });
 

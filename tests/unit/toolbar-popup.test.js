@@ -42,7 +42,7 @@ describe('toolbar popup', () => {
         return {
           success: true,
           projects: [
-            { id: 'project-1', name: "Buckley's product" },
+            { id: 'project-1', name: "Newtab product" },
             { id: 'project-2', name: 'AI radar' }
           ]
         };
@@ -61,7 +61,7 @@ describe('toolbar popup', () => {
     await Promise.resolve();
 
     const projectButtons = [...document.querySelectorAll('.toolbar-popup-project-btn')];
-    expect(projectButtons.map((button) => button.textContent)).toEqual(["Buckley's product", 'AI radar']);
+    expect(projectButtons.map((button) => button.textContent)).toEqual(["Newtab product", 'AI radar']);
   });
 
   it('sends the selected project when a project button is clicked', async () => {
@@ -70,7 +70,7 @@ describe('toolbar popup', () => {
       if (message.action === 'getToolbarProjects') {
         return {
           success: true,
-          projects: [{ id: 'project-1', name: "Buckley's product" }]
+          projects: [{ id: 'project-1', name: "Newtab product" }]
         };
       }
 

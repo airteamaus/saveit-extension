@@ -1,6 +1,6 @@
 # SaveIt Browser Extension
 
-The browser extension behind **Buckley's Bookmarks**.
+The browser extension behind **Newtab Bookmarks**.
 
 **⚠️ BETA SOFTWARE** - This extension is in active development. Features may change and bugs may occur.
 
@@ -31,11 +31,11 @@ Save web pages with AI-powered organization. Automatically extracts content, gen
 
 1. **Sign in**: Click the toolbar button and sign in with Google
 2. **Save pages**: Click the toolbar button on any page, then choose a project (or just Save)
-3. **Open your library**: Open a new tab - Buckley's replaces the new tab page with your pinned feed, all pages feed, and project collections
+3. **Open your library**: Open a new tab - Newtab replaces the new tab page with your pinned feed, all pages feed, and project collections
 4. **Search & discover**: Use semantic search to find related content by topic
 5. **Navigate topics**: Browse hierarchical topic tags to explore your saved pages by category
 6. **Organize projects**: Create project collections from the new-tab sidebar, add pages to multiple projects, and share a project with your company domain when needed
-7. **Import & export**: Open the avatar menu → "Data & sync" to import bookmarks from a Raindrop CSV, browser bookmarks HTML, or a Buckley's JSON backup; export your data in any of those formats; or toggle browser-bookmark sync
+7. **Import & export**: Open the avatar menu → "Data & sync" to import bookmarks from a Raindrop CSV, browser bookmarks HTML, or a Newtab JSON backup; export your data in any of those formats; or toggle browser-bookmark sync
 
 ### Known Limitations (Beta)
 

@@ -1,6 +1,6 @@
 # SaveIt Browser Extension
 
-Cross-browser extension (Firefox + Chromium) for saving pages to the backend via Cloud Function. User-facing name: **Buckley's Bookmarks**.
+Cross-browser extension (Firefox + Chromium) for saving pages to the backend via Cloud Function. User-facing name: **Newtab Bookmarks**.
 
 ## Project collections
 
@@ -39,9 +39,9 @@ The extension ships with environment-aware config (`src/config.js` detects dev/s
 
 Import, export, and browser-bookmark sync live in one modal (avatar menu → "Data & sync"):
 
-- **Import** — bring bookmarks in from this browser, a Raindrop CSV, a browser bookmarks HTML file, or a Buckley's JSON backup. File parsing is in `src/bookmark-import.js` (pure); the bulk-import API carries notes/tags/created date through `client_payload` for full-fidelity imports.
+- **Import** — bring bookmarks in from this browser, a Raindrop CSV, a browser bookmarks HTML file, or a Newtab JSON backup. File parsing is in `src/bookmark-import.js` (pure); the bulk-import API carries notes/tags/created date through `client_payload` for full-fidelity imports.
 - **Export** — download all saved pages as CSV (Raindrop-compatible), JSON (full backup), or HTML (browser-importable). Serialization is in `src/bookmark-export.js` (pure); export pages through the existing `getSavedPages` read, so no backend endpoint is needed.
-- **Browser sync** — a one-way, continuous rendering of saved pages into a `Buckley's/` folder in the browser's native bookmarks (`src/bookmark-mirror.js`). Turning it off removes the folder and clears mirror state.
+- **Browser sync** — a one-way, continuous rendering of saved pages into a `Newtab/` folder in the browser's native bookmarks (`src/bookmark-mirror.js`). Turning it off removes the folder and clears mirror state.
 
 ## Development
 

@@ -6,7 +6,7 @@
 // Shape:
 //   {
 //     enabled: bool,                       // mirror toggle (off by default)
-//     rootFolderId: string | null,         // Buckley's/ folder id once created
+//     rootFolderId: string | null,         // Newtab/ folder id once created
 //     projectFolders: { [projectId]: { id, name } },
 //     ownership: { [saveItPageId]: [{ projectId: string|null, bookmarkId: string }] },
 //     lastFullReconcileAt: number | null   // epoch ms; gates the HEAD short-circuit

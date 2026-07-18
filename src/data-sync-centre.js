@@ -233,13 +233,13 @@ export function createDataSyncCentre({
       }
     });
 
-    return renderSection('Import', 'Bring bookmarks into Buckley\u2019s.', [
+    return renderSection('Import', 'Bring bookmarks into Newtab.', [
       fileInput,
       el('div', { className: 'data-sync-actions', children: [
         fileBtn,
         browserBtn
       ] }),
-      el('p', { className: 'data-sync-hint', text: 'Accepts Raindrop CSV, browser bookmarks HTML, or a Buckley\u2019s JSON backup.' })
+      el('p', { className: 'data-sync-hint', text: 'Accepts Raindrop CSV, browser bookmarks HTML, or a Newtab JSON backup.' })
     ]);
   }
 
@@ -258,11 +258,11 @@ export function createDataSyncCentre({
       const date = timestampForFilename();
 
       if (format === 'csv') {
-        downloadText(`buckleys-${date}.csv`, toRaindropCsv(pages, projectNameById), 'text/csv');
+        downloadText(`newtab-${date}.csv`, toRaindropCsv(pages, projectNameById), 'text/csv');
       } else if (format === 'json') {
-        downloadText(`buckleys-${date}.json`, toJsonBackup(pages, projects), 'application/json');
+        downloadText(`newtab-${date}.json`, toJsonBackup(pages, projects), 'application/json');
       } else if (format === 'html') {
-        downloadText(`buckleys-${date}.html`, toNetscapeHtml(pages), 'text/html');
+        downloadText(`newtab-${date}.html`, toNetscapeHtml(pages), 'text/html');
       }
 
       state.busy = false;
@@ -289,13 +289,13 @@ export function createDataSyncCentre({
   // --- Browser sync ---------------------------------------------------------
 
   // Optimistic toggle: flip the UI immediately, send the message, revert on
-  // failure. Disabling removes the Buckley's/ folder (the background handler
+  // failure. Disabling removes the Newtab/ folder (the background handler
   // calls removeMirror), so confirm the destructive turn-off.
   async function handleSyncToggle(next) {
     if (state.busy) return;
     if (!next) {
       const confirmed = documentObj.confirm(
-        'Turning off browser sync will remove the Buckley\u2019s bookmark folder from this browser. Your saved pages on the server are not affected.'
+        'Turning off browser sync will remove the Newtab bookmark folder from this browser. Your saved pages on the server are not affected.'
       );
       if (!confirmed) return;
     }
@@ -326,7 +326,7 @@ export function createDataSyncCentre({
       el('div', { className: 'data-sync-row', children: [
         el('div', { className: 'data-sync-row-main', children: [
           el('span', { className: 'data-sync-row-name', text: state.syncEnabled ? 'Sync is on' : 'Sync is off' }),
-          el('span', { className: 'sharing-centre-audience', text: 'A Buckley\u2019s folder is kept in sync with your saved pages. One-way: server \u2192 browser.' })
+          el('span', { className: 'sharing-centre-audience', text: 'A Newtab folder is kept in sync with your saved pages. One-way: server \u2192 browser.' })
         ] }),
         toggle
       ] })

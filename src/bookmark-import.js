@@ -1,6 +1,6 @@
 // bookmark-import.js - Pure parsers for bookmark import sources.
 //
-// All four sources (Raindrop CSV, Netscape HTML, Buckley's JSON backup, and
+// All four sources (Raindrop CSV, Netscape HTML, Newtab JSON backup, and
 // the browser-bookmarks reader) produce the same internal shape consumed by
 // the bulk-import step:
 //
@@ -286,10 +286,18 @@ export function parseNetscapeHtml(htmlText) {
   return { bookmarks, errors };
 }
 
-// --- Buckley's JSON backup parsing ----------------------------------------
+// --- Newtab JSON backup parsing -------------------------------------------
+
+// The writer always emits 'newtab-backup'. The reader accepts the prior
+// 'buckleys-backup' format string too, so .json backups exported before the
+// rebrand keep importing unchanged (AGENTS.md rule #7: additive compatibility
+// at API boundaries). The presence of a `pages` array is still the real
+// schema gate, so very old backups with no `format` field still import.
+const ACCEPTED_BACKUP_FORMATS = ['newtab-backup', 'buckleys-backup'];
 
 /**
- * Parse a Buckley's JSON backup (produced by bookmark-export.js toJsonBackup).
+ * Parse a Newtab JSON backup (produced by bookmark-export.js toJsonBackup).
+ * Also accepts legacy 'buckleys-backup' backups.
  *
  * @param {string} jsonText
  * @returns {{ bookmarks: Array, errors: string[] }}
@@ -309,7 +317,11 @@ export function parseBackupJson(jsonText) {
   }
 
   if (!data || typeof data !== 'object' || !Array.isArray(data.pages)) {
-    return { bookmarks: [], errors: ['JSON is not a Buckley\'s backup (missing "pages" array)'] };
+    return { bookmarks: [], errors: ['JSON is not a Newtab backup (missing "pages" array)'] };
+  }
+
+  if (data.format !== undefined && !ACCEPTED_BACKUP_FORMATS.includes(data.format)) {
+    return { bookmarks: [], errors: [`JSON is not a Newtab backup (unrecognized format "${data.format}")`] };
   }
 
   const bookmarks = [];

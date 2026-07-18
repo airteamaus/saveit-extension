@@ -180,9 +180,9 @@ describe('parseNetscapeHtml', () => {
 });
 
 describe('parseBackupJson', () => {
-  it('restores a Buckley\'s backup with full fidelity', () => {
+  it('restores a Newtab backup with full fidelity', () => {
     const json = JSON.stringify({
-      format: 'buckleys-backup',
+      format: 'newtab-backup',
       version: 1,
       exportedAt: '2025-01-01T00:00:00Z',
       pages: [
@@ -201,9 +201,36 @@ describe('parseBackupJson', () => {
     });
   });
 
+  // Regression guard: backups exported before the rebrand carry the legacy
+  // 'buckleys-backup' format string and must keep importing unchanged
+  // (AGENTS.md rule #7: additive compatibility at API boundaries).
+  it('still accepts a legacy buckleys-backup backup', () => {
+    const json = JSON.stringify({
+      format: 'buckleys-backup',
+      version: 1,
+      pages: [{ url: 'https://legacy.example', title: 'Legacy' }],
+      projects: []
+    });
+    const { bookmarks, errors } = parseBackupJson(json);
+    expect(errors).toHaveLength(0);
+    expect(bookmarks[0]).toMatchObject({ url: 'https://legacy.example', title: 'Legacy' });
+  });
+
+  it('rejects an unrecognized format string', () => {
+    const json = JSON.stringify({
+      format: 'something-else',
+      version: 1,
+      pages: [{ url: 'https://x.example' }],
+      projects: []
+    });
+    const { bookmarks, errors } = parseBackupJson(json);
+    expect(bookmarks).toHaveLength(0);
+    expect(errors[0]).toMatch(/unrecognized format/i);
+  });
+
   it('skips pages without a URL', () => {
     const json = JSON.stringify({
-      format: 'buckleys-backup', version: 1, pages: [{ title: 'no url' }], projects: []
+      format: 'newtab-backup', version: 1, pages: [{ title: 'no url' }], projects: []
     });
     const { bookmarks, errors } = parseBackupJson(json);
     expect(bookmarks).toHaveLength(0);
@@ -217,7 +244,7 @@ describe('parseBackupJson', () => {
   });
 
   it('errors when pages array is missing', () => {
-    const { bookmarks, errors } = parseBackupJson(JSON.stringify({ format: 'buckleys-backup' }));
+    const { bookmarks, errors } = parseBackupJson(JSON.stringify({ format: 'newtab-backup' }));
     expect(bookmarks).toHaveLength(0);
     expect(errors[0]).toMatch(/missing.*pages/i);
   });
