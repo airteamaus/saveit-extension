@@ -489,7 +489,7 @@ body {
   letter-spacing: 0.04em;
 }
 
-/* Sidebar section labels (e.g. "My projects") carry a colored dot that ties
+/* Sidebar section labels (e.g. "Projects") carry a colored dot that ties
    the group to its accent and a divider line above to separate groups. */
 .project-nav-section-label {
   display: flex;
@@ -565,14 +565,14 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 42px;
+  height: 42px;
   padding: 0;
 }
 
 .project-sidebar-create-icon {
-  width: 14px;
-  height: 14px;
+  width: 21px;
+  height: 21px;
   /* Sage green so the create icon reads as the primary action. */
   color: var(--color-primary);
 }

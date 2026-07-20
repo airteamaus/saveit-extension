@@ -44,13 +44,13 @@ function createIconElement(documentObj, action) {
 
 function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
   // The header now holds nothing visible: the create button moved next to the
-  // "My projects" label. Kept as a stable attachment point so callers and
+  // "Projects" label. Kept as a stable attachment point so callers and
   // tests that reference it still work.
   void disableCreate;
   return createElement(documentObj, 'div', { className: 'project-sidebar-header' });
 }
 
-// Create-project icon button. Lives next to the "My projects" section label.
+// Create-project icon button. Lives next to the "Projects" section label.
 function createCreateButton(documentObj, { disableCreate = false } = {}) {
   const createBtn = createElement(documentObj, 'button', {
     className: 'project-sidebar-create',
@@ -242,7 +242,7 @@ export function renderProjectSidebar(container, {
       const activeClass = project.id === dashboard.selectedProjectId ? 'is-active' : '';
       // Show owner attribution only on projects the viewer doesn't own — that's
       // the only place it adds information ("who shared this to me?"). On owned
-      // rows the section header already says "My projects".
+      // rows the section header already says "Projects".
       const owned = isOwnedProject(dashboard, project);
       const subtitle = owned ? null
         : (project.owner_user_email ? `by ${project.owner_user_email}` : 'shared with your team');
@@ -273,7 +273,7 @@ export function renderProjectSidebar(container, {
       });
     };
   // Three-way split that keeps both distinctions the user cares about:
-  //   - "My projects"      : owned by me, private (only I can see them)
+  //   - "Projects"         : owned by me, private (only I can see them)
   //   - "Shared by you"    : owned by me, shared with the company
   //   - "Shared with me"   : owned by someone else, shared into my domain
   // The earlier visibility-only split put my *own* shared projects under
@@ -307,7 +307,7 @@ export function renderProjectSidebar(container, {
   const hasOwnProjects = myPrivateProjects.length || mySharedProjects.length;
 
   if (myPrivateProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
+    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-primary)', createButton));
     myPrivateProjects.forEach(project => nav.append(createProjectRow(project)));
   }
   if (mySharedProjects.length) {
@@ -326,9 +326,9 @@ export function renderProjectSidebar(container, {
     sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
   }
   if (!hasOwnProjects && !sharedWithMe.length) {
-    // No projects at all: still show the "My projects" label so the create
+    // No projects at all: still show the "Projects" label so the create
     // button is reachable, plus the empty hint.
-    nav.append(createSectionLabel(documentObj, 'My projects', 'var(--color-primary)', createButton));
+    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-primary)', createButton));
     nav.append(createElement(documentObj, 'p', {
       className: 'project-sidebar-empty',
       text: 'No projects yet. Create one to group related pages.'
