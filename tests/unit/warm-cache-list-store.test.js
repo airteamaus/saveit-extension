@@ -589,3 +589,262 @@ describe('WarmCacheListStore', () => {
     expect(snapshot.total).toBe(0);
   });
 });
+
+// Regression coverage for the Tier 2 refactor (refreshBuffer → refreshSession).
+// These pin the contract: a refresh never truncates state.allPages below what's
+// already loaded; it only adds/replaces by id, and drops stale entries when the
+// refresh chain reaches authoritative coverage.
+describe('WarmCacheListStore refresh truncation guarantee', () => {
+  function createStore(apiOverrides = {}, optionOverrides = {}) {
+    const api = {
+      isExtension: true,
+      getCachedPages: vi.fn(async () => null),
+      setCachedPages: vi.fn(async () => {}),
+      ...apiOverrides
+    };
+    const store = new WarmCacheListStore(api, {
+      initialFetchLimit: 50,
+      prefetchBatchLimit: 100,
+      warmCacheScope: { surface: 'test' },
+      getList: apiOverrides.getList,
+      buildInitialFetchOptions: (overrides = {}) => ({ limit: 50, sort: 'newest', ...overrides }),
+      buildLoadMoreFetchOptions: cursor => ({ limit: 100, sort: 'newest', cursor, skipCache: true }),
+      ...optionOverrides
+    });
+    return { api, store };
+  }
+
+  // The v1.25.1 bug shape: state momentarily had a small allPages, and the
+  // early-return `state.allPages.length <= response.pages.length` branch
+  // overwrote a 754-page cache with 50. The refactor makes this structurally
+  // impossible: applyResponse always merges by id, which can only grow or
+  // replace-by-id.
+  it('never truncates a broad state when a refresh arrives with a smaller batch (v1.25.1 regression)', async () => {
+    const cachedPages = makePages(754);
+    const refreshBatch = makePages(50);
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 754,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      getList: vi.fn().mockResolvedValue({
+        pages: refreshBatch,
+        pagination: { total: 754, hasNextPage: true, nextCursor: 'page-50' },
+        meta: { fromCache: false }
+      })
+    });
+
+    await store.hydrate();
+    // The refresh fires fire-and-forget; wait for it to land.
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(754);
+    });
+
+    // A refresh must NEVER bring state below the 754 pages already loaded,
+    // regardless of how small the response batch is.
+    expect(store.getSnapshot().allPages).toHaveLength(754);
+  });
+
+  it('never drops below current coverage between batches of a multi-batch refresh', async () => {
+    // Seed 100 pages in the warm cache (partial — total is 200); the refresh
+    // delivers the full set in 4 batches of 50. Between every batch, state
+    // must stay >= the prior floor (the warm cache's 100, then grow only).
+    const cachedPages = makePages(100);
+    const batches = [
+      makePages(50, 1),    // batch 1: overlap with cache
+      makePages(50, 51),   // batch 2
+      makePages(50, 101),  // batch 3: new territory
+      makePages(50, 151)   // batch 4: new territory
+    ].map((pages, i) => ({
+      pages,
+      pagination: {
+        total: 200,
+        hasNextPage: i < 3,
+        nextCursor: i < 3 ? `page-${(i + 1) * 50}` : null
+      },
+      meta: { fromCache: false }
+    }));
+    const getList = vi.fn();
+    batches.forEach(b => getList.mockResolvedValueOnce(b));
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 100,
+        hasNextPage: true,
+        nextCursor: 'page-100'
+      }, true)),
+      getList
+    });
+
+    const seenLengths = [];
+    store.subscribe(() => {
+      seenLengths.push(store.getSnapshot().allPages.length);
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(getList).toHaveBeenCalledTimes(4);
+    });
+
+    // Every emit during the refresh must preserve the 100-page floor from the
+    // warm cache; the multi-batch refresh only grows from there.
+    expect(seenLengths.every(len => len >= 100)).toBe(true);
+    expect(store.getSnapshot().allPages).toHaveLength(200);
+  });
+
+  it('keeps a stale entry mid-chain and drops it only when coverage completes', async () => {
+    // Cache has 5 pages including page-4; server total drops to 4 (page-4
+    // deleted). Batches of 2: [p1,p2], [p3,p5]. page-4 must survive after
+    // batch 1 and be dropped only after batch 2 completes coverage.
+    const cachedPages = makePages(5);
+    // Gate the second batch behind a promise we control, so the mid-chain
+    // assertion is deterministic rather than a race against the prefetch loop.
+    let releaseBatch2;
+    const batch2Promise = new Promise(resolve => { releaseBatch2 = resolve; });
+    const getList = vi.fn()
+      .mockResolvedValueOnce({
+        pages: [cachedPages[0], cachedPages[1]],
+        pagination: { total: 4, hasNextPage: true, nextCursor: 'page-2' },
+        meta: { fromCache: false }
+      })
+      .mockImplementationOnce(() => batch2Promise.then(() => ({
+        pages: [cachedPages[2], cachedPages[4]],
+        pagination: { total: 4, hasNextPage: false, nextCursor: null },
+        meta: { fromCache: false }
+      })));
+
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 5,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      getList
+    }, {
+      initialFetchLimit: 2,
+      prefetchBatchLimit: 2
+    });
+
+    await store.hydrate();
+    // Wait for batch 1 to land; batch 2 is held at the gate.
+    await vi.waitFor(() => {
+      expect(getList).toHaveBeenCalledTimes(2); // initial + first loadMore
+    });
+    // page-4 is still present mid-chain: coverage hasn't been reached.
+    expect(store.getSnapshot().allPages.map(p => p.id)).toContain('page-4');
+    expect(store.getSnapshot().allPages).toHaveLength(5);
+
+    // Release batch 2; coverage completes and page-4 is dropped.
+    releaseBatch2();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(4);
+    });
+    expect(store.getSnapshot().allPages.map(p => p.id)).toEqual([
+      'page-1',
+      'page-2',
+      'page-3',
+      'page-5'
+    ]);
+  });
+
+  it('does not spuriously drop pages when the first batch already covers the total', async () => {
+    // 50 cached pages; refresh returns the same 50 with hasNextPage:false.
+    // Coverage is reached on batch 1; the seen set is the full 50, so nothing
+    // is dropped and hasNextPage ends up false.
+    const cachedPages = makePages(50);
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 50,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      getList: vi.fn().mockResolvedValue({
+        pages: cachedPages,
+        pagination: { total: 50, hasNextPage: false, nextCursor: null },
+        meta: { fromCache: false }
+      })
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(store.getSnapshot().allPages).toHaveLength(50);
+    });
+
+    expect(store.getSnapshot().hasNextPage).toBe(false);
+    expect(store.getSnapshot().allPages.map(p => p.id)).toEqual(
+      cachedPages.map(p => p.id)
+    );
+  });
+
+  it('ignores an applyFreshResponse whose requestId is stale (no session, no mutation)', async () => {
+    const cachedPages = makePages(3);
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 3,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      getList: vi.fn().mockResolvedValue({
+        pages: makePages(50),
+        pagination: { total: 50, hasNextPage: true, nextCursor: 'page-50' },
+        meta: { fromCache: false }
+      })
+    });
+
+    await store.hydrate();
+    const beforeIds = store.getSnapshot().allPages.map(p => p.id);
+    const staleRequestId = store.state.requestId - 999;
+
+    const result = store.applyFreshResponse(
+      {
+        pages: makePages(5),
+        pagination: { total: 5, hasNextPage: false, nextCursor: null }
+      },
+      { requestId: staleRequestId, preserveExistingCoverage: true }
+    );
+
+    expect(result).toBe(false);
+    expect(store.refreshSession).toBeNull();
+    // state untouched
+    expect(store.getSnapshot().allPages.map(p => p.id)).toEqual(beforeIds);
+  });
+
+  it('clears refreshSession on reset, applyIncrementalResponse, and setPages', async () => {
+    const cachedPages = makePages(20);
+    const getList = vi.fn().mockResolvedValue({
+      pages: makePages(5),
+      pagination: { total: 20, hasNextPage: true, nextCursor: 'page-5' },
+      meta: { fromCache: false }
+    });
+    const { store } = createStore({
+      getCachedPages: vi.fn(async () => buildListCachePayload(cachedPages, {
+        total: 20,
+        hasNextPage: false,
+        nextCursor: null
+      }, true)),
+      getList
+    });
+
+    await store.hydrate();
+    await vi.waitFor(() => {
+      expect(getList).toHaveBeenCalled();
+    });
+
+    // Each mutation that begins a new data context must clear any in-flight
+    // session so the next refresh starts from a clean accumulator.
+    store.refreshSession = { requestId: store.state.requestId, accumulatedPages: [], total: null, hasNextPage: false, nextCursor: null };
+    store.reset({ emit: false });
+    expect(store.refreshSession).toBeNull();
+
+    store.refreshSession = { requestId: store.state.requestId, accumulatedPages: [], total: null, hasNextPage: false, nextCursor: null };
+    await store.setPages(makePages(2), { total: 2, hasNextPage: false, nextCursor: null });
+    expect(store.refreshSession).toBeNull();
+
+    store.refreshSession = { requestId: store.state.requestId, accumulatedPages: [], total: null, hasNextPage: false, nextCursor: null };
+    store.applyIncrementalResponse(
+      { pages: makePages(1, 100), pagination: { total: 1, hasNextPage: false, nextCursor: null } },
+      { requestId: store.state.requestId }
+    );
+    expect(store.refreshSession).toBeNull();
+  });
+});

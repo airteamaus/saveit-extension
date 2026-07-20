@@ -178,7 +178,10 @@ export class WarmCacheListStore {
     this.state = createInitialState();
     this.events = new EventTarget();
     this.loadingPromise = null;
-    this.refreshBuffer = null;
+    // Tracks seen ids across the batches of one refresh chain so the chain can
+    // drop stale entries when it reaches authoritative coverage. Bookkeeping
+    // only — state.allPages is always the display + pagination source.
+    this.refreshSession = null;
   }
 
   subscribe(listener) {
@@ -210,7 +213,7 @@ export class WarmCacheListStore {
 
   reset({ emit = true } = {}) {
     const requestId = this.state.requestId + 1;
-    this.refreshBuffer = null;
+    this.refreshSession = null;
     this.state = {
       ...createInitialState(),
       requestId
@@ -322,10 +325,11 @@ export class WarmCacheListStore {
       }
 
       if (updateStatus?.hasUpdates === false) {
+        const active = this._activePagination(requestId);
         if (
-          this.getActiveHasNextPage(requestId) &&
-          this.getActiveNextCursor(requestId) &&
-          this.getAuthoritativeCount(requestId) < this.options.maxItems
+          active.hasNextPage &&
+          active.nextCursor &&
+          this.state.allPages.length < this.options.maxItems
         ) {
           this.state.refreshState = createRefreshState('loading', {
             phase: 'prefetch'
@@ -434,15 +438,37 @@ export class WarmCacheListStore {
     }
   }
 
+  // Effective pagination for the prefetch loop. state.allPages is always the
+  // display + pagination source for normal operation, but during an in-flight
+  // refresh chain the session carries the *fresh* cursor the loop must follow
+  // — reconcilePagination collapses state.hasNextPage to false once state
+  // reaches the (smaller) authoritative total, which would otherwise stop the
+  // refresh before it has seen every authoritative batch. This is the single
+  // narrow exception to "state is the source of truth"; it replaces the
+  // buffer's separate pagination without the dual-data-source read overhead.
+  _activePagination(requestId = this.state.requestId) {
+    if (this.refreshSession?.requestId === requestId) {
+      return {
+        hasNextPage: this.refreshSession.hasNextPage,
+        nextCursor: this.refreshSession.nextCursor
+      };
+    }
+    return {
+      hasNextPage: this.state.hasNextPage,
+      nextCursor: this.state.nextCursor
+    };
+  }
+
   async loadMore(requestId = this.state.requestId) {
     if (this.loadingPromise) {
       return this.loadingPromise;
     }
 
+    const active = this._activePagination(requestId);
     if (
       !this.options.getList ||
-      !this.getActiveHasNextPage(requestId) ||
-      !this.getActiveNextCursor(requestId)
+      !active.hasNextPage ||
+      !active.nextCursor
     ) {
       return createRefreshResult('unchanged', {
         phase: 'load-more',
@@ -459,7 +485,7 @@ export class WarmCacheListStore {
     this.loadingPromise = (async () => {
       try {
         const previousCount = this.state.allPages.length;
-        const previousCursor = this.getActiveNextCursor(requestId);
+        const previousCursor = active.nextCursor;
         const response = await this.options.getList(
           this.buildLoadMoreFetchOptions(previousCursor)
         );
@@ -468,21 +494,6 @@ export class WarmCacheListStore {
           return createRefreshResult('skipped', {
             phase: 'load-more',
             reason: 'stale-request'
-          });
-        }
-
-        if (this.hasActiveRefreshBuffer(requestId)) {
-          const didUpdate = this.extendRefreshBuffer(response, { requestId });
-          await this.persistWarmCache(requestId);
-          if (didUpdate) {
-            this.state.refreshState = createRefreshState('idle', {
-              phase: 'load-more',
-              reason: 'extended-refresh-buffer'
-            });
-          }
-          return createRefreshResult(didUpdate ? 'updated' : 'unchanged', {
-            phase: 'load-more',
-            reason: didUpdate ? 'extended-refresh-buffer' : 'no-change'
           });
         }
 
@@ -516,6 +527,16 @@ export class WarmCacheListStore {
           this.state.hasNextPage = false;
           this.state.nextCursor = null;
           this.emitChange();
+        }
+
+        // If this batch is part of an in-flight refresh chain, accumulate the
+        // seen ids. When the chain reaches authoritative coverage, filter state
+        // to the seen set — this is the only path that drops stale entries.
+        if (this.refreshSession?.requestId === requestId) {
+          this.refreshSession = this._advanceRefreshSession(response, this.refreshSession.total, requestId);
+          if (this._refreshSessionHasCoverage(this.refreshSession)) {
+            this._completeRefreshSession(requestId);
+          }
         }
 
         await this.persistWarmCache(requestId);
@@ -569,8 +590,8 @@ export class WarmCacheListStore {
     try {
       while (
         this.state.requestId === requestId &&
-        this.getActiveHasNextPage(requestId) &&
-        this.getAuthoritativeCount(requestId) < this.options.maxItems
+        this._activePagination(requestId).hasNextPage &&
+        this.state.allPages.length < this.options.maxItems
       ) {
         const loaded = await this.loadMore(requestId);
         if (loaded.status !== 'updated') break;
@@ -642,36 +663,47 @@ export class WarmCacheListStore {
     preserveExistingCoverage = false,
     dataState = null
   } = {}) {
+    if (this.state.requestId !== requestId || !Array.isArray(response?.pages)) {
+      return false;
+    }
+
     const authoritativeTotal = typeof response?.pagination?.total === 'number'
       ? response.pagination.total
       : response?.pages?.length || 0;
-    const cappedAuthoritativeTotal = Math.min(authoritativeTotal, this.options.maxItems);
 
-    if (
-      !preserveExistingCoverage ||
-      !Array.isArray(response?.pages) ||
-      this.state.allPages.length === cappedAuthoritativeTotal ||
-      (
-        this.state.allPages.length <= response.pages.length &&
-        this.state.allPages.length <= authoritativeTotal
-      )
-    ) {
-      this.refreshBuffer = null;
-      return this.applyResponse(response, { requestId, preserveExistingCoverage, dataState });
+    // Merge the fresh batch into state by id. This is the core guarantee: a
+    // refresh never shrinks state.allPages below current coverage — it only
+    // adds new ids or replaces existing ones. reconcilePages (via
+    // mergeListPages / upsertListPages) can only grow or replace-by-id.
+    this.applyResponse(response, { requestId, preserveExistingCoverage, dataState });
+
+    if (!preserveExistingCoverage) {
+      this.refreshSession = null;
+      return true;
     }
 
-    this.refreshBuffer = {
-      requestId,
-      fallbackPages: [...this.state.allPages],
-      pages: response.pages.slice(0, this.options.maxItems),
-      total: authoritativeTotal,
-      hasNextPage: response?.pagination?.hasNextPage === true,
-      nextCursor: response?.pagination?.hasNextPage === true
-        ? response?.pagination?.nextCursor || null
-        : null
-    };
+    // Fast path: state already holds exactly the authoritative set (e.g. a
+    // broad warm cache whose total matches the fresh response). reconcilePages
+    // has already collapsed hasNextPage via reconcilePagination's coverage
+    // branch, so there's nothing more to fetch and no stale entries to drop.
+    // Strict equality is required: if state has MORE pages than the total, the
+    // extras may be stale entries the server no longer affirms, and the session
+    // must run to discover which (the drops-stale case).
+    const cappedAuthoritativeTotal = Math.min(authoritativeTotal, this.options.maxItems);
+    if (this.state.allPages.length === cappedAuthoritativeTotal) {
+      this.refreshSession = null;
+      return true;
+    }
 
-    this.applyRefreshBuffer(requestId);
+    // Track seen ids across the prefetch batches that follow, so the chain can
+    // drop stale entries when it reaches authoritative coverage. For a lazy
+    // store that only fetches one batch, coverage is usually never reached and
+    // the session is discarded on the next reset — no filtering, no stale-drop.
+    this.refreshSession = this._advanceRefreshSession(response, authoritativeTotal, requestId);
+
+    if (this._refreshSessionHasCoverage(this.refreshSession)) {
+      this._completeRefreshSession(requestId);
+    }
     return true;
   }
 
@@ -696,7 +728,7 @@ export class WarmCacheListStore {
           : nextPages.length
       );
 
-    this.refreshBuffer = null;
+    this.refreshSession = null;
     this.replaceData(nextPages, {
       total,
       hasNextPage: this.state.hasNextPage,
@@ -771,7 +803,7 @@ export class WarmCacheListStore {
   }
 
   async setPages(pages, pagination = {}, { requestId = this.state.requestId } = {}) {
-    this.refreshBuffer = null;
+    this.refreshSession = null;
     this.replaceData(pages, {
       total: typeof pagination?.total === 'number' ? pagination.total : pages.length,
       hasNextPage: pagination?.hasNextPage === true,
@@ -928,100 +960,71 @@ export class WarmCacheListStore {
     };
   }
 
-  hasActiveRefreshBuffer(requestId = this.state.requestId) {
-    return this.refreshBuffer?.requestId === requestId;
-  }
+  // Create or extend the per-refresh-chain session that tracks seen ids across
+  // batches. Bookkeeping only — state.allPages remains the display source; the
+  // session exists so _completeRefreshSession can drop stale entries when the
+  // chain reaches authoritative coverage.
+  _advanceRefreshSession(response, fallbackTotal, requestId) {
+    const pages = Array.isArray(response?.pages) ? response.pages : [];
+    const existing = this.refreshSession?.requestId === requestId
+      ? this.refreshSession
+      : {
+        requestId,
+        accumulatedPages: [],
+        total: null,
+        hasNextPage: false,
+        nextCursor: null
+      };
 
-  getAuthoritativeCount(requestId = this.state.requestId) {
-    if (this.hasActiveRefreshBuffer(requestId)) {
-      return this.refreshBuffer.pages.length;
-    }
-
-    return this.state.allPages.length;
-  }
-
-  getActiveHasNextPage(requestId = this.state.requestId) {
-    if (this.hasActiveRefreshBuffer(requestId)) {
-      return this.refreshBuffer.hasNextPage;
-    }
-
-    return this.state.hasNextPage;
-  }
-
-  getActiveNextCursor(requestId = this.state.requestId) {
-    if (this.hasActiveRefreshBuffer(requestId)) {
-      return this.refreshBuffer.nextCursor;
-    }
-
-    return this.state.nextCursor;
-  }
-
-  applyRefreshBuffer(requestId = this.state.requestId) {
-    if (!this.hasActiveRefreshBuffer(requestId)) {
-      return false;
-    }
-
-    const cappedTotal = typeof this.refreshBuffer.total === 'number'
-      ? Math.min(this.refreshBuffer.total, this.options.maxItems)
-      : null;
-    const hasAuthoritativeCoverage = cappedTotal !== null
-      ? this.refreshBuffer.pages.length >= cappedTotal
-      : this.refreshBuffer.hasNextPage !== true;
-
-    const nextPages = hasAuthoritativeCoverage
-      ? this.refreshBuffer.pages.slice(0, this.options.maxItems)
-      : mergeListPages(
-        this.refreshBuffer.pages,
-        this.refreshBuffer.fallbackPages,
-        this.options.maxItems
-      );
-
-    const authoritativeTotal = typeof this.refreshBuffer.total === 'number'
-      ? this.refreshBuffer.total
-      : nextPages.length;
-    const total = hasAuthoritativeCoverage
-      ? authoritativeTotal
-      : Math.max(authoritativeTotal, nextPages.length);
-
-    this.replaceData(nextPages, {
-      total,
-      hasNextPage: this.refreshBuffer.hasNextPage === true,
-      nextCursor: this.refreshBuffer.hasNextPage === true ? this.refreshBuffer.nextCursor : null
-    }, { requestId });
-
-    if (hasAuthoritativeCoverage) {
-      this.refreshBuffer = null;
-    }
-
-    return true;
-  }
-
-  extendRefreshBuffer(response, { requestId = this.state.requestId } = {}) {
-    if (!this.hasActiveRefreshBuffer(requestId) || !response?.pages) {
-      return false;
-    }
-
-    const previousDisplayCount = this.state.allPages.length;
-    const previousCursor = this.refreshBuffer.nextCursor;
-
-    this.refreshBuffer.pages = upsertListPages(
-      this.refreshBuffer.pages,
-      response.pages,
+    existing.accumulatedPages = upsertListPages(
+      existing.accumulatedPages,
+      pages,
       this.options.maxItems
     );
-    this.refreshBuffer.total = typeof response?.pagination?.total === 'number'
+    existing.total = typeof response?.pagination?.total === 'number'
       ? response.pagination.total
-      : this.refreshBuffer.total;
-    this.refreshBuffer.hasNextPage = response?.pagination?.hasNextPage === true;
-    this.refreshBuffer.nextCursor = this.refreshBuffer.hasNextPage
+      : fallbackTotal;
+    existing.hasNextPage = response?.pagination?.hasNextPage === true;
+    existing.nextCursor = existing.hasNextPage
       ? response?.pagination?.nextCursor || null
       : null;
+    return existing;
+  }
 
-    this.applyRefreshBuffer(requestId);
+  // True when the chain has fetched the full authoritative set: the accumulated
+  // pages meet the (capped) total AND the server reports no next page. This is
+  // the only condition under which a refresh drops stale entries — until it
+  // holds, the refresh can only add/replace-by-id.
+  _refreshSessionHasCoverage(session) {
+    if (!session || session.hasNextPage) {
+      return false;
+    }
+    const cappedTotal = typeof session.total === 'number'
+      ? Math.min(session.total, this.options.maxItems)
+      : null;
+    return cappedTotal === null
+      ? true
+      : session.accumulatedPages.length >= cappedTotal;
+  }
 
-    return (
-      this.state.allPages.length !== previousDisplayCount ||
-      this.getActiveNextCursor(requestId) !== previousCursor
+  // Replace state with the accumulated authoritative set, dropping any cached
+  // pages the refresh chain never saw. The only path that shrinks the list,
+  // and it only fires when the server has affirmed the full set.
+  _completeRefreshSession(requestId) {
+    const session = this.refreshSession;
+    if (!session || session.requestId !== requestId) {
+      return;
+    }
+
+    this.refreshSession = null;
+    this.replaceData(
+      session.accumulatedPages.slice(0, this.options.maxItems),
+      {
+        total: session.total,
+        hasNextPage: session.hasNextPage,
+        nextCursor: session.nextCursor
+      },
+      { requestId }
     );
   }
 
