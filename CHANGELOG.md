@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **ui:** clicking pinned shelf cards now opens the page (319de18)
+
+### 📝 Other Improvements
+
+- fix modal contrast, drop glass, widen, kill transparent buttons, remove 'null' (ae61062)
+- fix sidebar create icon cascade so it actually renders at 24px (f69bd17)
+- enlarge sidebar create icon to 24px (ee6ffbe)
+- keep create button at 28px, only enlarge the icon (cedc67e)
+- rename sidebar "My projects" to "Projects" and enlarge create icon (ee4beb0)
+- rename sidebar "Domains" section label to "By Category" (4ff92eb)
+
+## [1.26.0] - 2026-07-20
+
 ### ✨ Features
 
 - **ui:** Pinned shelf above the saved-pages browse list (aea71af)
@@ -142,13 +157,6 @@ No notable changes.
 - **realtime:** assert failing subscriber does not break others (d4c4167)
 
 ## [1.21.1] - 2026-07-10
-
-### 📝 Other Improvements
-
-- 1.21.0-beta.1 (a40862e)
-- Validated technical-debt cleanup (3 phases) (#26) (710791d)
-
-## [1.21.0] - 2026-07-10
 
 ### ✨ Features
 
@@ -370,6 +378,8 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- 1.21.0-beta.1 (a40862e)
+- Validated technical-debt cleanup (3 phases) (#26) (710791d)
 - Cancel duplicate release runs per tag via concurrency group (73e0407)
 - Add bookmark mirror: sync saved pages to browser bookmarks (782aaa1)
 - Fix warming bar stuck at 100% on warm-cache post-login path (3ee43f2)
