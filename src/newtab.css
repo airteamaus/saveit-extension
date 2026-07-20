@@ -570,7 +570,8 @@ body {
   padding: 0;
 }
 
-.project-sidebar-create-icon {
+.project-sidebar-create-icon,
+.project-sidebar-create .project-action-icon {
   width: 24px;
   height: 24px;
   /* Sage green so the create icon reads as the primary action. */
