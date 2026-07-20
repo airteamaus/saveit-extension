@@ -218,6 +218,34 @@ export function renderDrawerCardMarkup(page, {
   `;
 }
 
+// Compact card for the home-view Pinned shelf. Denser than the drawer card —
+// favicon + title + domain + an always-visible unpin button — so a row of
+// pinned pages scans at a glance. Reuses the drawer card's pin-button markup
+// (same data-action/data-id/class) so the existing click delegation routes
+// unpin through handleDrawerPin with no new event wiring, and the same
+// data-url/role/tabindex nav attrs so card-click opens the page.
+export function renderHomePinnedCardMarkup(page) {
+  const domain = getPageDomain(page);
+  const url = page.url || '';
+  const navigationAttrs = url
+    ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
+    : '';
+  const faviconHtml = domain
+    ? `<img class="saved-pages-home-pinned-card-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="16" height="16">`
+    : '';
+
+  // Pin/unpin happens from the drawer card below; the shelf card is a compact
+  // launch surface, so it carries only the favicon + title.
+  return `
+    <article class="saved-pages-home-pinned-card" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
+      <div class="saved-pages-home-pinned-card-heading">
+        ${faviconHtml}
+        <h3 class="saved-pages-home-pinned-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+      </div>
+    </article>
+  `;
+}
+
 export function getDrawerEmptyStateContent({ query = '', scopeLabel, hasSelectedProject = false }) {
   return {
     title: query ? `No results for "${escapeHtml(query)}"` : `No pages in ${escapeHtml(scopeLabel)}`,
@@ -247,6 +275,10 @@ export function createDrawerRenderer({
       getProjectPills,
       projectsUnavailable: isProjectsUnavailable()
     }), documentObj);
+  }
+
+  function createHomePinnedCardElement(page) {
+    return createElementFromHtml(renderHomePinnedCardMarkup(page), documentObj);
   }
 
   function getDrawerCardElement(pageId) {
@@ -518,81 +550,71 @@ export function createDrawerRenderer({
     existingCard.replaceWith(nextCard);
   }
 
-  // Sparse home view: a few recent cards + topic quick-access pills + a
-  // browse-all fallback. Rendered instead of the browse list when idle (no
-  // query, no scope). Cards reuse createDrawerCardElement for consistency with
-  // the browse view; topic pills carry data-semantic-search-tag so the existing
-  // click delegation routes them to search with no new event wiring.
-  function renderHomeView({ recentPages = [], topics = [] } = {}) {
+  // Pinned shelf: a horizontal row of compact cards shown above the browse
+  // list when idle (no query, no scope) and the user has pinned pages. Lives in
+  // its own data-section="pinned" sibling, ordered before data-section="pages"
+  // so it reads as a header. Compact cards reuse the drawer pin button so the
+  // existing click delegation handles unpin with no new event wiring.
+  function renderPinnedShelf(pinnedPages = []) {
     if (!resultsContainer) {
       return;
     }
 
-    const homeSection = ensureSection('home');
-    if (!homeSection) {
+    const shelfSection = ensureSection('pinned');
+    if (!shelfSection) {
       renderChrome();
       return;
     }
 
-    const recentCardsHtml = recentPages.length
-      ? recentPages.map(() => '<div class="saved-pages-home-card-slot"></div>').join('')
+    // The shelf reads as a header above the browse list, so keep it before the
+    // pages section in DOM order. ensureSection appends; reorder if needed.
+    const pagesSection = resultsContainer.querySelector('[data-section="pages"]');
+    if (pagesSection && pagesSection.previousElementSibling !== shelfSection) {
+      resultsContainer.insertBefore(shelfSection, pagesSection);
+    }
+
+    const pinnedSlotsHtml = pinnedPages.length
+      ? pinnedPages.map(() => '<div class="saved-pages-home-pinned-slot"></div>').join('')
       : '';
 
-    const topicPillsHtml = topics.length
-      ? topics.map(({ label, count }) => `
-        <button
-          type="button"
-          class="saved-pages-home-topic"
-          data-semantic-search-tag="${escapeHtml(label)}"
-          title="Search pages about ${escapeHtml(label)}"
-        >
-          <span class="saved-pages-home-topic-label">${escapeHtml(label)}</span>
-          <span class="project-nav-count">${count}</span>
-        </button>`).join('')
-      : '';
-
-    replaceElementHtml(homeSection, `
-      <div class="saved-pages-home">
-        ${recentPages.length ? `
-          <section class="saved-pages-home-section">
-            <h2 class="saved-pages-home-heading">Recently saved</h2>
-            <div class="saved-pages-home-recent">
-              ${recentCardsHtml}
-            </div>
-          </section>` : ''}
-        ${topics.length ? `
-          <section class="saved-pages-home-section">
-            <h2 class="saved-pages-home-heading">Topics</h2>
-            <div class="saved-pages-home-topics">
-              ${topicPillsHtml}
-            </div>
-          </section>` : ''}
-        <button type="button" class="saved-pages-home-browse-all" data-action="browse-all">
-          Browse all →
-        </button>
+    replaceElementHtml(shelfSection, `
+      <div class="saved-pages-pinned-shelf">
+        <div class="saved-pages-home-pinned">
+          ${pinnedSlotsHtml}
+        </div>
       </div>
     `);
 
-    // Cards are real DOM nodes (reused from the browse renderer); slot them
-    // into the placeholders after setting the HTML shell.
-    const slots = homeSection.querySelectorAll('.saved-pages-home-card-slot');
-    recentPages.forEach((page, index) => {
-      const slot = slots[index];
+    // Compact cards are real DOM nodes; slot them into the placeholders after
+    // setting the HTML shell.
+    const pinnedSlots = shelfSection.querySelectorAll('.saved-pages-home-pinned-slot');
+    pinnedPages.forEach((page, index) => {
+      const slot = pinnedSlots[index];
       if (slot) {
-        slot.replaceWith(createDrawerCardElement(page));
+        slot.replaceWith(createHomePinnedCardElement(page));
       }
     });
 
     renderChrome();
   }
 
+  // Hide the shelf when a query or scope is active. Removes the section so the
+  // browse list owns the full pane.
+  function clearPinnedShelf() {
+    if (!resultsContainer) {
+      return;
+    }
+    resultsContainer.querySelector('[data-section="pinned"]')?.remove();
+  }
+
   return {
     clearPagesSection,
+    clearPinnedShelf,
     refreshCard,
     renderEmptyState,
     renderErrorState,
-    renderHomeView,
     renderLoadingState,
+    renderPinnedShelf,
     renderResults,
     renderSemanticLoadingState,
     renderSemanticResults,

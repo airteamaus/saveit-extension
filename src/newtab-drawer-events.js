@@ -109,12 +109,6 @@ export function initSavedPagesDrawerEvents({
     event.stopPropagation();
 
     const { action, id } = actionButton.dataset;
-    if (action === 'browse-all') {
-      // Leave the sparse home view for the full browse list.
-      void loadDrawerResults('');
-      return;
-    }
-
     if (action === 'pin') {
       void handleDrawerPin(id);
       return;

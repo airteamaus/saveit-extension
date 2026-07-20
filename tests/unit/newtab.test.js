@@ -1200,7 +1200,6 @@ describe('newtab modules', () => {
      expect(dependencies.renderDrawerLoadingState).toHaveBeenCalledWith('Searching pages from this domain…');
      expect(state.allPages.map(page => page.id)).toEqual(['d-1', 'd-2']);
      expect(state.loadedProjectPages.map(page => page.id)).toEqual(['d-1', 'd-2']);
-     expect(state.view).toBe('browse');
      expect(state.hasInitialized).toBe(true);
    });
 

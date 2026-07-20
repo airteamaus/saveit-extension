@@ -11,8 +11,7 @@ import {
   setDrawerProjectsAvailability,
   setDrawerProjectsLoading,
   setDrawerRenderedPages,
-  setDrawerTotal,
-  setDrawerView
+  setDrawerTotal
 } from './newtab-drawer-state.js';
 
 function hasSelectedProjectScope(state) {
@@ -75,12 +74,6 @@ export function createSavedPagesView({
     },
     set selectedProjectId(value) {
       selectDrawerProject(state, value);
-    },
-    get view() {
-      return state.view;
-    },
-    set view(value) {
-      setDrawerView(state, value);
     },
     get projectsAvailable() {
       return state.projectsAvailable;

@@ -476,4 +476,88 @@ test.describe('Standalone Mode', () => {
       expect(allCount).toBeGreaterThan(scopedCount);
     }).toPass({ timeout: 5000 });
   });
+
+  // The Pinned shelf is a header row above the browse list, shown when idle
+  // (no query, no scope) and the user has pinned pages. Mock data ships with no
+  // pinned pages, so we pin seven base items before the page boots. The
+  // mock-data extension loop (mock-data.js:280) spreads base items into
+  // duplicates that inherit any pinned flag, so we derive the pinned state from
+  // the id on every read: base ids 1-7 are pinned, "-copy-" ids are not.
+  test('renders a Pinned shelf above the browse list when pages are pinned', async ({ page }) => {
+    await page.addInitScript(() => {
+      const pinnedIds = new Set(['1', '2', '3', '4', '5', '6', '7']);
+      Object.defineProperty(globalThis, 'MOCK_DATA', {
+        configurable: true,
+        get() {
+          // Re-derive pinned state from the id so the flag survives the
+          // extension loop's spread into duplicates (which copy the base
+          // item's pinned:true but get a new "-copy-" id).
+          if (Array.isArray(_data)) {
+            _data.forEach(p => {
+              p.pinned = pinnedIds.has(p.id);
+            });
+          }
+          return _data;
+        },
+        set(v) { _data = v; }
+      });
+      let _data;
+    });
+
+    await openStandaloneNewtab(page);
+
+    const results = page.locator('#saved-pages-results');
+
+    // The shelf renders seven compact cards above the browse list.
+    const pinnedCards = results.locator('.saved-pages-home-pinned-card');
+    await expect(pinnedCards).toHaveCount(7);
+
+    // The shelf sits as a header above the browse list (data-section="pinned"
+    // precedes data-section="pages" in DOM order).
+    const sections = await results.locator('[data-section]').evaluateAll(els =>
+      els.map(e => e.dataset.section)
+    );
+    expect(sections.indexOf('pinned')).toBeGreaterThan(-1);
+    expect(sections.indexOf('pages')).toBeGreaterThan(-1);
+    expect(sections.indexOf('pinned')).toBeLessThan(sections.indexOf('pages'));
+
+    // Browse list cards render below the shelf.
+    await expect(results.locator('.saved-pages-drawer-card').first()).toBeVisible();
+
+    // Each compact card carries the nav attrs so existing click delegation
+    // handles open-URL with no new event wiring. (Unpinning happens from the
+    // drawer card below; the shelf card carries no pin button.)
+    const firstCard = pinnedCards.first();
+    await expect(firstCard).toHaveAttribute('role', 'link');
+  });
+
+  test('hides the Pinned shelf when a query is typed', async ({ page }) => {
+    await page.addInitScript(() => {
+      const pinnedIds = new Set(['1', '2', '3', '4', '5', '6', '7']);
+      Object.defineProperty(globalThis, 'MOCK_DATA', {
+        configurable: true,
+        get() {
+          if (Array.isArray(_data)) {
+            _data.forEach(p => { p.pinned = pinnedIds.has(p.id); });
+          }
+          return _data;
+        },
+        set(v) { _data = v; }
+      });
+      let _data;
+    });
+
+    await openStandaloneNewtab(page);
+    const results = page.locator('#saved-pages-results');
+
+    // Shelf present on idle load.
+    await expect(results.locator('.saved-pages-home-pinned-card')).toHaveCount(7);
+
+    // Typing a query hides the shelf — it only shows when idle.
+    await page.locator('#saved-pages-search-input').fill('github');
+    await page.locator('#saved-pages-search-input').press('Enter');
+
+    await expect(results.locator('[data-section="pinned"]')).toHaveCount(0);
+    await expect(results.locator('.saved-pages-home-pinned-card')).toHaveCount(0);
+  });
 });

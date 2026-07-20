@@ -19,7 +19,6 @@ import {
   setDrawerRenderedPages,
   setDrawerSavingEdit,
   setDrawerSemantic,
-  setDrawerView,
   updateDrawerPageCollections
 } from './newtab-drawer-state.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
@@ -278,12 +277,6 @@ export function createDrawerDataController({
   async function loadDrawerScope(scope, { query = state.query, syncUrl = true } = {}) {
     if (scope.resetRenderLimitFirst) {
       resetRenderLimit();
-    }
-    // Selecting a domain scope leaves the sparse home view for the browse list.
-    // (all-pages sets this via loadDrawerResults; project scope is entered from
-    // elsewhere that has already settled the view.)
-    if (scope.type === 'domain') {
-      setDrawerView(state, 'browse');
     }
 
     const requestId = nextDrawerRequestId(state);
@@ -646,10 +639,6 @@ export function createDrawerDataController({
     // A new query re-filters in memory; start the render window fresh so the
     // first matches paint immediately and scroll re-grows it.
     resetRenderLimit();
-
-    // Any search intent (typed, submitted, cleared, topic-pill click) leaves
-    // the sparse home view for the browse list.
-    setDrawerView(state, 'browse');
 
     if (!state.hasInitialized) {
       await loadDrawerBasePages({ query: trimmedQuery, syncUrl });

@@ -146,3 +146,54 @@ describe('newtab drawer renderer warming state', () => {
     expect(fill.style.width).toBe('0%');
   });
 });
+
+describe('newtab drawer renderer pinned shelf', () => {
+  it('renders a Pinned shelf with a compact card per pinned page', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderPinnedShelf([
+      { id: 'p1', title: 'Pinned One', url: 'https://a.example', domain: 'a.example', pinned: true },
+      { id: 'p2', title: 'Pinned Two', url: 'https://b.example', domain: 'b.example', pinned: true }
+    ]);
+
+    expect(resultsContainer.querySelectorAll('.saved-pages-home-pinned-card')).toHaveLength(2);
+    // The compact card carries the same nav attrs as the drawer card so
+    // existing click delegation handles open-URL unchanged. Unpinning happens
+    // from the drawer card below; the shelf card carries no pin button.
+    const firstCard = resultsContainer.querySelector('.saved-pages-home-pinned-card');
+    expect(firstCard.getAttribute('data-url')).toBe('https://a.example');
+    expect(firstCard.getAttribute('role')).toBe('link');
+    expect(firstCard.querySelector('[data-action="pin"]')).toBeNull();
+    // Favicon + title render.
+    expect(firstCard.querySelector('.saved-pages-home-pinned-card-favicon')).not.toBeNull();
+    expect(firstCard.querySelector('.saved-pages-home-pinned-card-title').textContent).toBe('Pinned One');
+  });
+
+  it('orders the pinned section before the pages section in the DOM', () => {
+    // The shelf reads as a header above the browse list, so it must precede
+    // data-section="pages" when both are present.
+    const { resultsContainer, renderer } = createRenderer();
+
+    // Render the browse list first (creates data-section="pages"), then the
+    // shelf — the shelf must move itself before pages.
+    renderer.renderResults([{ id: 'r1', title: 'Recent', url: 'https://c.example', domain: 'c.example' }]);
+    renderer.renderPinnedShelf([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
+
+    const sections = [...resultsContainer.querySelectorAll('[data-section]')].map(s => s.dataset.section);
+    const pinnedIdx = sections.indexOf('pinned');
+    const pagesIdx = sections.indexOf('pages');
+    expect(pinnedIdx).toBeGreaterThan(-1);
+    expect(pagesIdx).toBeGreaterThan(-1);
+    expect(pinnedIdx).toBeLessThan(pagesIdx);
+  });
+
+  it('clearPinnedShelf removes the shelf section so the browse list owns the pane', () => {
+    const { resultsContainer, renderer } = createRenderer();
+
+    renderer.renderPinnedShelf([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
+    expect(resultsContainer.querySelector('[data-section="pinned"]')).not.toBeNull();
+
+    renderer.clearPinnedShelf();
+    expect(resultsContainer.querySelector('[data-section="pinned"]')).toBeNull();
+  });
+});

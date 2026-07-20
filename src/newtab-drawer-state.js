@@ -9,9 +9,6 @@ export function createInitialDrawerState() {
   return {
     hasInitialized: false,
     isLoading: false,
-    // 'home' (sparse: recent + topics) shows on initial idle load; any intent
-    // (search, topic pill, scope select, Browse all) flips to 'browse'.
-    view: 'home',
     query: '',
     currentFilter: {
       search: '',
@@ -147,10 +144,6 @@ export function selectDrawerProject(state, projectId) {
 
 export function selectDrawerDomain(state, domainId) {
   state.selectedDomainId = domainId || null;
-}
-
-export function setDrawerView(state, value) {
-  state.view = value === 'browse' ? 'browse' : 'home';
 }
 
 // --- Edit lifecycle --------------------------------------------------------
