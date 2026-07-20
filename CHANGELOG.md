@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **ui:** Pinned shelf above the saved-pages browse list (aea71af)
+
+### ♻️ Refactoring
+
+- **cache:** replace refreshBuffer with refreshSession accumulator (664c235)
+- **cache:** remove dead code and collapse duplicate helpers (e408031)
+
+## [1.25.1] - 2026-07-20
+
 ### 🐛 Bug Fixes
 
 - **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
@@ -139,17 +150,6 @@ No notable changes.
 
 ## [1.21.0] - 2026-07-10
 
-### 🐛 Bug Fixes
-
-- **cache:** prependOptimisticPage must not persist to warm cache (a022f74)
-- **cache:** clear stale pending-save records when real doc exists (9a57c82)
-
-### ♻️ Refactoring
-
-- **cache:** clean up optimistic tile lifecycle (a5f4708)
-
-## [1.20.6] - 2026-07-10
-
 ### ✨ Features
 
 - **capture:** fall back to innerText when Readability finds no article (41ce98d)
@@ -231,6 +231,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **cache:** prependOptimisticPage must not persist to warm cache (a022f74)
+- **cache:** clear stale pending-save records when real doc exists (9a57c82)
 - **sidebar:** bind synchronous current user so ownership resolves (abeb051)
 - **ui:** give sidebar overlay an opaque background (96dfb1f)
 - **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
@@ -324,6 +326,7 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- **cache:** clean up optimistic tile lifecycle (a5f4708)
 - **capture:** switch injector to files-based bundle with real Readability (112f41c)
 - **auth:** centralise the first-auth-state race (f0b5092)
 - improve footer layout with grid-based alignment (c7f594f)
