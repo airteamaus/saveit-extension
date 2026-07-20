@@ -571,8 +571,8 @@ body {
 }
 
 .project-sidebar-create-icon {
-  width: 21px;
-  height: 21px;
+  width: 24px;
+  height: 24px;
   /* Sage green so the create icon reads as the primary action. */
   color: var(--color-primary);
 }
