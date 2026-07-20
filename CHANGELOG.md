@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
+- **warming:** bar jumped to 100% mid-warm; e2e now seeds session store (be9167f)
+
+## [1.25.0] - 2026-07-18
+
 ### ✨ Features
 
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
@@ -146,15 +153,6 @@ No notable changes.
 ### ✨ Features
 
 - **capture:** fall back to innerText when Readability finds no article (41ce98d)
-
-### 🐛 Bug Fixes
-
-- **sidebar:** bind synchronous current user so ownership resolves (abeb051)
-
-## [1.20.5] - 2026-07-09
-
-### ✨ Features
-
 - **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
 - **layout:** keep sidebar to 700px, hamburger below, more summary lines (75cb3fc)
 - **ui:** lengthen card summary to fill two lines (47611eb)
@@ -233,7 +231,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
-- **sidebar:** bind synchronous current user so ownership resolves (1a65934)
+- **sidebar:** bind synchronous current user so ownership resolves (abeb051)
 - **ui:** give sidebar overlay an opaque background (96dfb1f)
 - **ui:** trim 1px line-clamp overflow; raise summary cap to 360 (b48c666)
 - **mirror:** populate empty category and shared project folders (#25) (bc2370d)
