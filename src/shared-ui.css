@@ -236,12 +236,12 @@ select {
 
 /* Sharing centre (also rendered inside the reused editor dialog shell). */
 .sharing-centre-dialog {
-  max-width: 560px;
+  max-width: 720px;
 }
 
 /* Data & sync centre: same shell, slightly wider to fit the action rows. */
 .data-sync-dialog {
-  max-width: 560px;
+  max-width: 720px;
 }
 
 .import-panel-header {

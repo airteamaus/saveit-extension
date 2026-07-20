@@ -82,7 +82,6 @@ body {
   --saved-pages-control-bg: transparent;
   --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-primary) 6%, transparent);
   --saved-pages-chip-bg: transparent;
-  --saved-pages-dialog-bg: color-mix(in srgb, var(--color-surface) 96%, transparent);
 }
 
 .saved-pages-page-header {
@@ -839,16 +838,14 @@ body {
   left: 50%;
   z-index: 46;
   transform: translate(-50%, -50%);
-  width: min(520px, calc(100vw - 32px));
+  width: min(640px, calc(100vw - 32px));
   max-height: min(80vh, 720px);
   overflow: auto;
   padding: var(--spacing-lg);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-2xl);
-  background: var(--saved-pages-dialog-bg);
+  background: var(--color-surface);
   box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
-  backdrop-filter: blur(22px);
-  -webkit-backdrop-filter: blur(22px);
 }
 
 .project-editor-header {
@@ -1301,7 +1298,10 @@ body {
   padding: var(--spacing-sm) var(--spacing-md);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: light-dark(rgba(255, 255, 255, 0.5), rgba(31, 34, 32, 0.5));
+  background: light-dark(
+    var(--color-surface),
+    color-mix(in srgb, var(--color-surface) 85%, var(--color-border))
+  );
 }
 
 .sharing-centre-row + .sharing-centre-row {
@@ -1342,7 +1342,7 @@ body {
 }
 
 .sharing-centre-row-owner {
-  color: var(--color-text-lighter);
+  color: var(--color-text-light);
   font-size: var(--font-size-2xs);
 }
 
@@ -1352,7 +1352,7 @@ body {
   padding: 6px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: transparent;
+  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
   color: var(--color-text);
   font-size: var(--font-size-sm);
   cursor: pointer;
@@ -1381,8 +1381,8 @@ body {
   padding: 6px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--color-text-light);
+  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
+  color: var(--color-text);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
@@ -1445,7 +1445,7 @@ body {
 }
 
 .data-sync-dialog .btn-secondary {
-  background: transparent;
+  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
   color: var(--color-text);
   border-color: var(--color-border);
 }

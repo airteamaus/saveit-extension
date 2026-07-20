@@ -25,7 +25,7 @@ export function createEl(documentObj = document) {
       }
     }
     if (onClick) node.onclick = onClick;
-    if (children) node.append(...children);
+    if (children) node.append(...children.filter((c) => c != null));
     return node;
   };
 }

@@ -365,13 +365,9 @@ export function createDataSyncCentre({
       ? el('p', { className: state.error ? 'sharing-centre-error' : 'sharing-centre-status', text: state.message })
       : null;
 
-    dialog.replaceChildren(
-      header,
-      renderImportSection(),
-      renderExportSection(),
-      renderSyncSection(),
-      statusLine
-    );
+    const children = [header, renderImportSection(), renderExportSection(), renderSyncSection()];
+    if (statusLine) children.push(statusLine);
+    dialog.replaceChildren(...children);
   }
 
   async function open() {
