@@ -1000,4 +1000,81 @@ describe('drawer sync observers', () => {
       expect(loadDrawerBasePages).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe('getCurrentUser contract', () => {
+    // Regression: production wires `getCurrentUserAsync` (an async function)
+    // into the coordinator, which forwards it to the cache observer and store
+    // subscriptions. Those call sites do `if (!getCurrentUser())` and
+    // `Boolean(getCurrentUser())` WITHOUT awaiting — so an async getter made
+    // every guard evaluate against a Promise (always truthy). The no-user
+    // short-circuit never fired and telemetry logged `[object Promise]`.
+    //
+    // The runtime fix injects the SYNC cached-user reader. This test pins the
+    // contract: the observer and subscriber must treat `getCurrentUser` as a
+    // synchronous user-or-null reader. If anyone reintroduces an async getter
+    // here, the null-user assertion below will fail.
+
+    it('cache observer short-circuits when the sync getter returns null', () => {
+      const refreshFavorites = vi.fn();
+      // Harness above doesn't expose refreshFavorites; rebuild inline to assert.
+      let listener;
+      globalThis.browser = {
+        storage: { onChanged: { addListener: vi.fn((cb) => { listener = cb; }) } }
+      };
+      const windowObj = {
+        clearTimeout: vi.fn(),
+        setTimeout: vi.fn((cb) => { cb(); return 1; })
+      };
+      const loadDrawerBasePages = vi.fn();
+      const observer = createDrawerCacheInvalidationObserver({
+        state: { hasInitialized: true, selectedProjectId: null },
+        savedPagesStore: { hydrate: vi.fn() },
+        projectsStore: { hydrate: vi.fn() },
+        // Sync null return — the contract the runtime now relies on.
+        getCurrentUser: () => null,
+        getSearchQuery: () => '',
+        isDrawerOpen: () => true,
+        refreshFavorites,
+        loadDrawerBasePages,
+        loadDrawerProjectPages: vi.fn(),
+        windowObj
+      });
+      observer.initSavedPagesCacheSync();
+      listener(
+        { savedPages_cache_all: { oldValue: { pages: [] }, newValue: undefined } },
+        'local'
+      );
+
+      // No user → no reload, no favorites refresh.
+      expect(loadDrawerBasePages).not.toHaveBeenCalled();
+      expect(refreshFavorites).not.toHaveBeenCalled();
+    });
+
+    it('store subscriber skips sync when the sync getter returns null (extension mode)', () => {
+      const syncDrawerStateFromStore = vi.fn();
+      const savedPagesSubscribers = [];
+      const subscriptions = createDrawerStoreSubscriptions({
+        api: { isExtension: true },
+        state: { hasInitialized: true, query: '' },
+        savedPagesStore: {
+          subscribe: vi.fn((cb) => { savedPagesSubscribers.push(cb); }),
+          getSnapshot: () => ({ allPages: [{ id: 'p1' }], total: 1 })
+        },
+        projectsStore: { subscribe: () => () => {} },
+        // Sync null return — the contract the runtime now relies on.
+        getCurrentUser: () => null,
+        isDrawerOpen: () => true,
+        getSuppressSavedPagesStoreSync: () => false,
+        notifySavedPagesTotalChange: vi.fn(),
+        syncDrawerStateFromStore,
+        syncProjectsStateFromStore: vi.fn()
+      });
+      subscriptions.initStoreSubscriptions();
+      savedPagesSubscribers[0]();
+
+      // shouldSyncDrawerStoreUpdate gates on hasCurrentUser in extension mode;
+      // a null user must prevent the sync.
+      expect(syncDrawerStateFromStore).not.toHaveBeenCalled();
+    });
+  });
 });

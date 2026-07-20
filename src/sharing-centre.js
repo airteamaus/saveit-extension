@@ -179,8 +179,7 @@ export function createSharingCentre({
 
     const notSharedSection = renderSection(
       'Your other projects',
-      notShared.map(project => createProjectRow(project, { showToggle: true })),
-      { hint: notShared.length ? undefined : undefined }
+      notShared.map(project => createProjectRow(project, { showToggle: true }))
     );
     if (notSharedSection) sections.push(notSharedSection);
 

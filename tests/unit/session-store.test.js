@@ -9,9 +9,7 @@ import {
   getCurrentUser,
   getCurrentUserId,
   setSession,
-  clearSession,
-  isSignedOut,
-  isSessionExpiringSoon
+  clearSession
 } from '../../src/session-store.js';
 
 describe('session-store', () => {
@@ -108,41 +106,6 @@ describe('session-store', () => {
     it('removes the saveit_session key', async () => {
       await clearSession();
       expect(browser.storage.local.remove).toHaveBeenCalledWith('saveit_session');
-    });
-  });
-
-  describe('isSignedOut', () => {
-    it('returns true when no session token', async () => {
-      browser.storage.local.get.mockResolvedValue({});
-      expect(await isSignedOut()).toBe(true);
-    });
-
-    it('returns false when a valid token exists', async () => {
-      browser.storage.local.get.mockResolvedValue({
-        saveit_session: { sessionToken: 'tok', uid: 'uid-1', expiresAt: new Date(Date.now() + 100000).toISOString() }
-      });
-      expect(await isSignedOut()).toBe(false);
-    });
-  });
-
-  describe('isSessionExpiringSoon', () => {
-    it('returns false when no session', async () => {
-      browser.storage.local.get.mockResolvedValue({});
-      expect(await isSessionExpiringSoon()).toBe(false);
-    });
-
-    it('returns false when expiry is far away', async () => {
-      browser.storage.local.get.mockResolvedValue({
-        saveit_session: { expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString() }
-      });
-      expect(await isSessionExpiringSoon()).toBe(false);
-    });
-
-    it('returns true when expiry is within the headroom window', async () => {
-      browser.storage.local.get.mockResolvedValue({
-        saveit_session: { expiresAt: new Date(Date.now() + 60 * 1000).toISOString() } // 1 min
-      });
-      expect(await isSessionExpiringSoon()).toBe(true);
     });
   });
 });

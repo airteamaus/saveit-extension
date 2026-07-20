@@ -6,6 +6,12 @@ import {
   clearSession
 } from './session-store.js';
 
+// Must match API.LAST_KNOWN_USER_KEY in api-core.js. The background doesn't
+// load the API facade, so it can't import the constant — but it must clear
+// this key on sign-out to close the cross-user window (see clearOnSignOut
+// below). Keeping the literal in sync is the price of the facade/SW split.
+const LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
+
 export function createBackgroundAuth({
   config,
   browserApi,
@@ -169,7 +175,21 @@ export function createBackgroundAuth({
         logger.warn('Session revoke request failed', { error: error.message });
       }
     }
+    // Clear the session AND the last-known-user bootstrap key together. The
+    // cache-manager's read path falls back to lastKnownUser when no session is
+    // present and the mismatch check then compares against the (same) bootstrap
+    // id — so leaving lastKnownUser set after sign-out lets a later
+    // signed-out or different-user read paint the previous user's cached pages.
+    // The facade's clearLastKnownUser only runs when a newtab page observes the
+    // session change; this call closes the window for the no-newtab-open case.
     await clearSession();
+    try {
+      await browserApi.storage?.local?.remove?.(LAST_KNOWN_USER_KEY);
+    } catch (error) {
+      // Non-fatal: the session is already gone, so a stale bootstrap key can
+      // at worst extend the cross-user window, not create a new one.
+      logger.warn('Failed to clear last-known-user on sign-out', { error: error.message });
+    }
     logger.log('Session cleared');
   }
 

@@ -186,4 +186,42 @@ describe('createBackgroundAuth', () => {
       expect.objectContaining({ error: 'network down' })
     );
   });
+
+  // Regression: signOut must also clear the lastKnownUser bootstrap key. The
+  // cache-manager's read path falls back to this key when no session is
+  // present, and the mismatch check compares against the (same) bootstrap id —
+  // so leaving it set after sign-out lets a later signed-out or different-user
+  // read paint the previous user's cached pages. The facade's
+  // clearLastKnownUser only runs when a newtab page observes the session
+  // change; this guard closes the window for the no-newtab-open case.
+  it('clears the lastKnownUser bootstrap key atomically with the session on signOut', async () => {
+    getSessionToken.mockResolvedValue('opaque-session-tok');
+    global.fetch.mockResolvedValue({ ok: true, status: 204 });
+    const removeSpy = vi.fn(async () => {});
+    browserApi.storage = { local: { remove: removeSpy } };
+
+    await backgroundAuth.signOut();
+
+    // Both cleared before signOut resolves — no window where session is gone
+    // but the bootstrap key lingers.
+    expect(clearSession).toHaveBeenCalled();
+    expect(removeSpy).toHaveBeenCalledWith('saveit_lastKnownUser');
+    // Order matters: the bootstrap clear must come AFTER clearSession so a
+    // concurrent reader that just lost the session can't fall back to a
+    // now-stale bootstrap id.
+    const clearSessionOrder = clearSession.mock.invocationCallOrder[0];
+    const removeOrder = removeSpy.mock.invocationCallOrder[0];
+    expect(removeOrder).toBeGreaterThan(clearSessionOrder);
+  });
+
+  it('still signs out when storage.local is unavailable (non-fatal bootstrap clear)', async () => {
+    getSessionToken.mockResolvedValue('opaque-session-tok');
+    global.fetch.mockResolvedValue({ ok: true, status: 204 });
+    // No browserApi.storage — production may run before storage is wired.
+
+    await backgroundAuth.signOut();
+
+    expect(clearSession).toHaveBeenCalled();
+    // Non-fatal: no throw, signOut resolves.
+  });
 });

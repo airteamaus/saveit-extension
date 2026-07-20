@@ -43,8 +43,6 @@ function buildHarness() {
     projectEditorDialog: document.getElementById('editor-dialog'),
     projectManager: {},
     savedPagesView: {},
-    openSavedPagesDrawer: noop,
-    closeSavedPagesDrawer: noop,
     loadDrawerResults: noop,
     loadDrawerDomainPages: noop,
     navigateDrawerCard: handlers.navigateDrawerCard,
@@ -57,7 +55,6 @@ function buildHarness() {
     handleDrawerScrollNearEnd: noop,
     setDrawerSearchValue: noop,
     setDrawerToggleState: noop,
-    isDrawerOpen: () => true,
     windowObj: window,
     documentObj: document
   });

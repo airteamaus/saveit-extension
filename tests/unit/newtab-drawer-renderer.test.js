@@ -281,3 +281,49 @@ describe('renderDrawerCardMarkup optimistic-tile action buttons', () => {
     expect(removeBtn.hasAttribute('disabled')).toBe(true);
   });
 });
+
+describe('renderDrawerCardMarkup privacy button icon', () => {
+  // Regression: a malformed ternary previously left a stray duplicated
+  // `<path>` as literal text inside the SVG in BOTH private and non-private
+  // states, and the icon path did not actually differ between states. The
+  // eye-off icon carries the diagonal slash (`M1 1l22 22`); the eye icon
+  // carries an iris `<circle>`. Neither state should leak raw `:`-prefixed
+  // template text.
+  function privacySvg(page) {
+    const html = renderDrawerCardMarkup(page, {
+      getProjectPills: () => [],
+      projectsUnavailable: false
+    });
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    return container.querySelector('[data-action="toggle-privacy"] svg');
+  }
+
+  it('renders the eye icon and no stray template text when the page is not private', () => {
+    const svg = privacySvg({ id: 'p1', url: 'https://x.example', title: 'T' });
+    const svgText = svg.textContent;
+
+    expect(svg.querySelector('circle')).not.toBeNull();
+    // No leftover `: '...'` template fragment inside the SVG.
+    expect(svgText).not.toContain(": '<path");
+    expect(svgText.trim()).toBe('');
+  });
+
+  it('renders the eye-off icon (diagonal slash) when the page is private', () => {
+    const svg = privacySvg({ id: 'p2', url: 'https://x.example', title: 'T', private: true });
+    const svgText = svg.textContent;
+
+    expect(svg.querySelector('circle')).toBeNull();
+    expect(svgText).not.toContain(": '<path");
+    expect(svgText.trim()).toBe('');
+  });
+
+  it('uses different icon paths for the two states', () => {
+    const eye = privacySvg({ id: 'p1', url: 'https://x.example', title: 'T' });
+    const eyeOff = privacySvg({ id: 'p2', url: 'https://x.example', title: 'T', private: true });
+
+    expect(eye.querySelectorAll('path').length).toBe(1);
+    expect(eyeOff.querySelectorAll('path').length).toBe(3);
+    expect(eye.innerHTML).not.toBe(eyeOff.innerHTML);
+  });
+});

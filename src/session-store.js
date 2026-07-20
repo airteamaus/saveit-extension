@@ -9,10 +9,6 @@ import { getStorageAPI } from './config.js';
 
 const SESSION_KEY = 'saveit_session';
 
-// Refresh proactively a little before the backend's threshold so the token
-// is still valid when the next request goes out.
-const REFRESH_HEADROOM_MS = 5 * 60 * 1000; // 5 minutes
-
 /**
  * Read the raw storage object. Returns null if absent or storage unavailable.
  * @returns {Promise<{sessionToken: string, uid: string, email: string, expiresAt: string}|null>}
@@ -105,31 +101,9 @@ export async function clearSession() {
   }
 }
 
-/**
- * True if no valid session is stored.
- * @returns {Promise<boolean>}
- */
-export async function isSignedOut() {
-  return (await getSessionToken()) === null;
-}
-
 function isExpired(expiresAtIso) {
   if (!expiresAtIso) {
     return true;
   }
   return new Date(expiresAtIso).getTime() <= Date.now();
-}
-
-/**
- * True if the session token is still valid but should be refreshed soon.
- * Used to decide whether to hint the user toward re-authenticating.
- * @returns {Promise<boolean>}
- */
-export async function isSessionExpiringSoon() {
-  const session = await readSession();
-  if (!session?.expiresAt) {
-    return false;
-  }
-  const expiresAt = new Date(session.expiresAt).getTime();
-  return expiresAt > Date.now() && expiresAt <= Date.now() + REFRESH_HEADROOM_MS;
 }

@@ -42,14 +42,6 @@ function createIconElement(documentObj, action) {
   return documentObj.importNode(iconDocument.body.firstElementChild, true);
 }
 
-function createSidebarHeader(documentObj, { disableCreate = false } = {}) {
-  // The header now holds nothing visible: the create button moved next to the
-  // "Projects" label. Kept as a stable attachment point so callers and
-  // tests that reference it still work.
-  void disableCreate;
-  return createElement(documentObj, 'div', { className: 'project-sidebar-header' });
-}
-
 // Create-project icon button. Lives next to the "Projects" section label.
 function createCreateButton(documentObj, { disableCreate = false } = {}) {
   const createBtn = createElement(documentObj, 'button', {
@@ -211,7 +203,6 @@ export function renderProjectSidebar(container, {
 
   if (isProjectsUnavailable(dashboard)) {
     container.replaceChildren(
-      createSidebarHeader(documentObj, { disableCreate: null }),
       createElement(documentObj, 'p', {
         className: 'project-sidebar-empty',
         text: getProjectsUnavailableMessage(dashboard)
@@ -222,7 +213,6 @@ export function renderProjectSidebar(container, {
 
   if (dashboard.projectsLoading) {
     container.replaceChildren(
-      createSidebarHeader(documentObj, { disableCreate: true }),
       createElement(documentObj, 'p', {
         className: 'project-sidebar-empty',
         text: 'Loading projects...'
@@ -350,10 +340,7 @@ export function renderProjectSidebar(container, {
     });
   }
 
-  container.replaceChildren(
-    createSidebarHeader(documentObj),
-    nav
-  );
+  container.replaceChildren(nav);
 }
 
 export function renderProjectEditor(backdrop, dialog, {

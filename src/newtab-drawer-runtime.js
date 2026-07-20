@@ -167,8 +167,6 @@ export function createSavedPagesDrawerController({
       projectEditorDialog,
       projectManager,
       savedPagesView,
-      openSavedPagesDrawer: shellController.openSavedPagesDrawer,
-      closeSavedPagesDrawer: shellController.closeSavedPagesDrawer,
       loadDrawerResults: dataController.loadDrawerResults,
       loadDrawerDomainPages: dataController.loadDrawerDomainPages,
       navigateDrawerCard: shellController.navigateDrawerCard,
@@ -181,7 +179,6 @@ export function createSavedPagesDrawerController({
       handleDrawerScrollNearEnd: dataController.handleDrawerScrollNearEnd,
       setDrawerSearchValue: shellController.setDrawerSearchValue,
       setDrawerToggleState: shellController.setDrawerToggleState,
-      isDrawerOpen: shellController.isDrawerOpen,
       windowObj,
       documentObj
     });
@@ -192,7 +189,16 @@ export function createSavedPagesDrawerController({
     state,
     savedPagesStore,
     projectsStore,
-    getCurrentUser: getCurrentUserAsync,
+    // The sync cached-user reader, NOT getCurrentUserAsync. The coordinator
+    // forwards this to the cache-invalidation observer and the store
+    // subscriptions, both of which call it WITHOUT awaiting (inside a
+    // setTimeout callback, inside a sync store-subscriber callback, inside a
+    // serialized telemetry object). Injecting the async form made every guard
+    // (`if (!getCurrentUser())`, `Boolean(getCurrentUser())`) evaluate against
+    // a Promise — always truthy, so the no-user short-circuit never fired and
+    // telemetry logged `[object Promise]`. canHydrateDrawerWithWarmCache
+    // awaits this value, which is a no-op for a non-Promise return.
+    getCurrentUser,
     isDrawerOpen: shellController.isDrawerOpen,
     getSearchQuery: shellController.getSearchQuery,
     notifySavedPagesTotalChange,

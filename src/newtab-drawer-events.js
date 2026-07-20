@@ -1,13 +1,9 @@
-export function getInitialDrawerUrlState(locationSearch = '', {
-  drawerParam = 'drawer',
-  drawerValue = 'saved-pages'
-} = {}) {
+// Extract the initial drawer search query from the URL search string. The
+// drawer is always open on the newtab page (it owns the saved-pages surface),
+// so there is no `?drawer=` open/close param to parse — only `?search=` matters.
+export function getInitialDrawerUrlState(locationSearch = '') {
   const urlParams = new URLSearchParams(locationSearch);
-  const isOpen = urlParams.get(drawerParam) === drawerValue;
-  void isOpen;
-
   return {
-    isOpen: true,
     searchQuery: urlParams.get('search') || ''
   };
 }
@@ -22,8 +18,6 @@ export function initSavedPagesDrawerEvents({
   projectEditorDialog,
   projectManager,
   savedPagesView,
-  openSavedPagesDrawer,
-  closeSavedPagesDrawer,
   loadDrawerResults,
   loadDrawerDomainPages,
   navigateDrawerCard,
@@ -36,13 +30,10 @@ export function initSavedPagesDrawerEvents({
   handleDrawerScrollNearEnd,
   setDrawerSearchValue,
   setDrawerToggleState,
-  isDrawerOpen,
   windowObj = window,
   documentObj = document
 }) {
   let drawerSearchDebounceTimer = null;
-  void closeSavedPagesDrawer;
-  void isDrawerOpen;
 
   savedPagesDrawerSearchForm?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -356,7 +347,6 @@ export function initSavedPagesDrawerEvents({
     }
   }, { passive: true });
 
-  void openSavedPagesDrawer;
   setDrawerToggleState(true);
   setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);
 }

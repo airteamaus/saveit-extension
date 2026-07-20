@@ -83,8 +83,6 @@ describe('newtab drawer runtime', () => {
     expect(initSavedPagesDrawerEventsFn.mock.calls[0][0]).toMatchObject({
       projectManager: { id: 'project-manager' },
       savedPagesView,
-      openSavedPagesDrawer: shellController.openSavedPagesDrawer,
-      closeSavedPagesDrawer: shellController.closeSavedPagesDrawer,
       loadDrawerResults: dataController.loadDrawerResults
     });
 

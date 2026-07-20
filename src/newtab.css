@@ -470,15 +470,6 @@ body {
   margin-left: auto;
 }
 
-.project-sidebar-header {
-  display: flex;
-  align-items: center;
-  /* The create button is the only child now (the title was removed), so push
-     it to the right edge of the sidebar. */
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-}
-
 .project-sidebar-eyebrow,
 .project-editor-eyebrow {
   font-size: var(--font-size-sm);

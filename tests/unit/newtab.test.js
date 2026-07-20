@@ -715,9 +715,8 @@ describe('newtab modules', () => {
     });
 
     describe('drawer event helpers', () => {
-      it('parses open drawer state from the URL search params', () => {
+      it('extracts the initial search query from the URL search params', () => {
         expect(getInitialDrawerUrlState('?drawer=saved-pages&search=alpha')).toEqual({
-          isOpen: true,
           searchQuery: 'alpha'
         });
       });
@@ -749,10 +748,9 @@ describe('newtab modules', () => {
         });
       });
 
-      it('ignores search when the drawer param is not active', () => {
-        expect(getInitialDrawerUrlState('?search=alpha')).toEqual({
-          isOpen: true,
-          searchQuery: 'alpha'
+      it('returns an empty search query when no search param is present', () => {
+        expect(getInitialDrawerUrlState('?drawer=saved-pages')).toEqual({
+          searchQuery: ''
         });
       });
     });

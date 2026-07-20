@@ -8,9 +8,7 @@ vi.mock('../src/session-store.js', () => ({
   getCurrentUserId: vi.fn(async () => 'user123'),
   getCurrentUser: vi.fn(async () => ({ uid: 'user123', email: 'test@example.com' })),
   setSession: vi.fn(async () => {}),
-  clearSession: vi.fn(async () => {}),
-  isSignedOut: vi.fn(async () => false),
-  isSessionExpiringSoon: vi.fn(async () => false)
+  clearSession: vi.fn(async () => {})
 }));
 
 import '../src/cache-manager.js';

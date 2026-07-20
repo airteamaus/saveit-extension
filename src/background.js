@@ -109,12 +109,6 @@ const backgroundAuth = createBackgroundAuth({
   }
 });
 
-// Export logout function for debugging
-globalThis.logout = async function() {
-  await backgroundAuth.signOut();
-  logger.log('Session cleared');
-};
-
 /**
  * Show visual feedback on the extension icon
  * @param {string} type - 'success' or 'error'
