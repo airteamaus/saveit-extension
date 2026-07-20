@@ -10,6 +10,7 @@ import {
   renderPageTags,
   truncateText
 } from './newtab-shared.js';
+import { isOptimisticPage } from './pending-saves.js';
 import { LOADING_ILLUSTRATION_SVG } from './loading-illustration.js';
 
 export function renderDrawerCardMarkup(page, {
@@ -20,6 +21,14 @@ export function renderDrawerCardMarkup(page, {
 }) {
   const isEditing = page.id === editingPageId;
   const isSavingEdit = page.id === savingEditPageId;
+  // Optimistic (not-yet-enriched) tiles carry a synthetic id that is not a
+  // valid Firestore path, so actions that POST it to the backend (pin, edit,
+  // privacy, project toggles) are disabled until the real doc arrives. Delete
+  // stays enabled — it cancels the pending save client-side. See
+  // isOptimisticPage for why the id can't reach the backend.
+  const optimistic = isOptimisticPage(page);
+  const actionDisabledAttr = optimistic ? 'disabled' : '';
+  const actionBusyTitle = optimistic ? 'Saving…' : null;
   const domain = getPageDomain(page);
   // Show the AI summary, falling back to the scraped page description when the
   // user clears the AI summary. Both fields are read-only here; the edit form
@@ -59,8 +68,9 @@ export function renderDrawerCardMarkup(page, {
               data-action="remove-project"
               data-id="${escapeHtml(page.id)}"
               data-project-id="${escapeHtml(project.id)}"
-              title="Remove from ${escapeHtml(project.name)}"
-              aria-label="Remove from ${escapeHtml(project.name)}"
+              title="${actionBusyTitle || `Remove from ${escapeHtml(project.name)}`}"
+              aria-label="${actionBusyTitle || `Remove from ${escapeHtml(project.name)}`}"
+              ${actionDisabledAttr}
             >×</button>
           </span>
         `).join('')}
@@ -73,8 +83,9 @@ export function renderDrawerCardMarkup(page, {
       type="button"
       data-action="edit"
       data-id="${escapeHtml(page.id)}"
-      title="Edit page"
-      aria-label="Edit page"
+      title="${actionBusyTitle || 'Edit page'}"
+      aria-label="${actionBusyTitle || 'Edit page'}"
+      ${actionDisabledAttr}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
         <path d="M12 20h9"></path>
@@ -94,31 +105,35 @@ export function renderDrawerCardMarkup(page, {
       type="button"
       data-action="toggle-privacy"
       data-id="${escapeHtml(page.id)}"
-      title="${privacyButtonLabel}"
-      aria-label="${privacyButtonLabel}"
+      title="${actionBusyTitle || privacyButtonLabel}"
+      aria-label="${actionBusyTitle || privacyButtonLabel}"
       aria-pressed="${isPrivate ? 'true' : 'false'}"
+      ${actionDisabledAttr}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
         ${isPrivate
-          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1-2.16 3.19"></path><path d="M1 1l22 22"></path>'
+          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1 -2.16 3.19"></path><path d="M1 1l22 22"></path>'
+          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'}
           : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'}
       </svg>
     </button>
   `;
-  const projectsButtonLabel = projectsUnavailable ? 'Projects unavailable' : 'Manage projects';
+  const projectsButtonLabel = projectsUnavailable
+    ? 'Projects unavailable'
+    : (actionBusyTitle || 'Manage projects');
   const projectsButtonHtml = `
     <button
       class="saved-pages-drawer-action-btn saved-pages-drawer-projects-btn btn-projects"
       type="button"
       data-action="projects"
       data-id="${escapeHtml(page.id)}"
-      ${projectsUnavailable ? 'disabled' : ''}
+      ${projectsUnavailable || optimistic ? 'disabled' : ''}
       title="${projectsButtonLabel}"
       aria-label="${projectsButtonLabel}"
       ${isEditing ? 'disabled' : ''}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-        <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path>
+        <path d="M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2h7.5A2.5 2.5 0 0 1 21 9.5v8a2.5 2.5 0 0 1 -2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z"></path>
       </svg>
     </button>
   `;
@@ -177,8 +192,9 @@ export function renderDrawerCardMarkup(page, {
             type="button"
             data-action="pin"
             data-id="${escapeHtml(page.id)}"
-            title="${page.pinned ? 'Unpin page' : 'Pin page'}"
-            aria-label="${page.pinned ? 'Unpin page' : 'Pin page'}"
+            title="${actionBusyTitle || (page.pinned ? 'Unpin page' : 'Pin page')}"
+            aria-label="${actionBusyTitle || (page.pinned ? 'Unpin page' : 'Pin page')}"
+            ${actionDisabledAttr}
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
               <path d="M12 17v5"></path>

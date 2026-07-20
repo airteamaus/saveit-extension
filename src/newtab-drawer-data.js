@@ -23,6 +23,7 @@ import {
 } from './newtab-drawer-state.js';
 import { hasRenderableWarmCache, upsertListPages } from './warm-cache-list-store.js';
 import { togglePagePrivacy } from './newtab-privacy.js';
+import { isOptimisticPage } from './pending-saves.js';
 
 export function createDrawerDataController({
   api,
@@ -416,7 +417,7 @@ export function createDrawerDataController({
     // IDs like "optimistic:<url>". There's no backend doc to delete — just clear
     // the pending-save record and drop the tile locally. Calling the API with a
     // synthetic ID would fail silently and leave the tile behind.
-    if (id.startsWith('optimistic:')) {
+    if (isOptimisticPage({ id })) {
       const browserApi = globalThis.browser ?? globalThis.chrome;
       // Clear the pending-save record BEFORE removing the tile. removePage
       // emits a store change that can trigger syncPendingSaves via the storage
@@ -457,6 +458,13 @@ export function createDrawerDataController({
       return;
     }
 
+    // Defense-in-depth alongside the renderer's disabled button: a pending
+    // save's synthetic id ("optimistic:<url>") is not a valid Firestore path,
+    // so pinning it would 400 at the backend. No-op until the real doc lands.
+    if (isOptimisticPage(page)) {
+      return;
+    }
+
     const nextPinnedState = !page.pinned;
     updateDrawerPageCollections(state, id, entry => ({ ...entry, pinned: nextPinnedState }));
     void savedPagesView.persistAllPages();
@@ -485,6 +493,12 @@ export function createDrawerDataController({
       return;
     }
 
+    // See handleDrawerPin: a pending save's synthetic id can't reach the
+    // backend. No-op until enrichment replaces the tile.
+    if (isOptimisticPage(page)) {
+      return;
+    }
+
     const nextPrivateState = !page.private;
     updateDrawerPageCollections(state, id, entry => ({ ...entry, private: nextPrivateState }));
     void savedPagesView.persistAllPages();
@@ -504,7 +518,15 @@ export function createDrawerDataController({
   }
 
   function handleDrawerEditStart(id) {
-    if (!findDrawerPage(id)) {
+    const page = findDrawerPage(id);
+    if (!page) {
+      return;
+    }
+
+    // The edit form's Save calls api.updatePage(id, ...), which hits the same
+    // invalid-Firestore-path failure for a pending save's synthetic id. Don't
+    // open the form on an optimistic tile.
+    if (isOptimisticPage(page)) {
       return;
     }
 
@@ -525,6 +547,13 @@ export function createDrawerDataController({
   async function handleDrawerUpdate(id, updates = {}) {
     const page = findDrawerPage(id);
     if (!page) {
+      return;
+    }
+
+    // Same guard as handleDrawerEditStart: the synthetic id can't be sent to
+    // /updatePage. This covers the case where the user opened the edit form
+    // and the tile went optimistic again before Save was pressed.
+    if (isOptimisticPage(page)) {
       return;
     }
 

@@ -158,3 +158,18 @@ export function buildOptimisticPage(record, { projectId = null } = {}) {
     optimistic: true
   };
 }
+
+// Detect an optimistic (not-yet-enriched) tile. Two equivalent signals exist:
+// the `optimistic: true` flag stamped by buildOptimisticPage, and the
+// `optimistic:` id prefix used by the store and sync observers. Check both so
+// callers don't have to remember which signal a given code path set — and so a
+// tile built before the flag was added still counts.
+//
+// Why this matters: an optimistic id is `optimistic:<normalized-url>`, and the
+// URL's protocol leaves `//` in the id (e.g. `optimistic:https://...`). That
+// makes the id an invalid Firestore document path, so any action that sends it
+// to the backend (pin, edit, privacy, project toggles) crashes. Guard callers
+// with this instead of letting those actions fire.
+export function isOptimisticPage(page) {
+  return page?.optimistic === true || String(page?.id || '').startsWith('optimistic:');
+}

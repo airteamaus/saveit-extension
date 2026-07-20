@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { createDrawerRenderer } from '../../src/newtab-drawer-renderer.js';
+import { createDrawerRenderer, renderDrawerCardMarkup } from '../../src/newtab-drawer-renderer.js';
 
 // Minimal renderer harness: a real results container and a no-op renderChrome
 // so renderLoadingState can be exercised in isolation. The loading state is a
@@ -195,5 +195,89 @@ describe('newtab drawer renderer pinned shelf', () => {
 
     renderer.clearPinnedShelf();
     expect(resultsContainer.querySelector('[data-section="pinned"]')).toBeNull();
+  });
+});
+
+describe('renderDrawerCardMarkup optimistic-tile action buttons', () => {
+  // Regression (Sentry 7621707108): an optimistic tile's synthetic id
+  // ("optimistic:https://...") contains "//", which Firestore rejects as a
+  // document path. Actions that POST that id (pin/edit/privacy/projects) must
+  // render disabled so the user can't trigger the failing call. Delete stays
+  // enabled — it cancels the pending save client-side.
+  function actionsFor(page) {
+    const html = renderDrawerCardMarkup(page, {
+      getProjectPills: () => [],
+      projectsUnavailable: false
+    });
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const get = (action) => container.querySelector(`[data-action="${action}"]`);
+    return { container, get };
+  }
+
+  it('disables pin, edit, privacy, and projects on an optimistic tile', () => {
+    const { get } = actionsFor({
+      id: 'optimistic:https://chrome.google.com/webstore/devconsole/x',
+      optimistic: true,
+      url: 'https://chrome.google.com/webstore/devconsole/x',
+      title: 'Store Listing',
+      domain: 'chrome.google.com'
+    });
+
+    for (const action of ['pin', 'edit', 'toggle-privacy', 'projects']) {
+      const btn = get(action);
+      expect(btn, `expected ${action} button to exist`).not.toBeNull();
+      expect(btn.hasAttribute('disabled'), `${action} should be disabled`).toBe(true);
+      expect(btn.getAttribute('title')).toBe('Saving…');
+    }
+  });
+
+  it('keeps the delete button enabled on an optimistic tile (cancels the pending save)', () => {
+    const { get } = actionsFor({
+      id: 'optimistic:https://x.example',
+      optimistic: true,
+      url: 'https://x.example',
+      title: 'Pending'
+    });
+
+    const deleteBtn = get('delete');
+    expect(deleteBtn).not.toBeNull();
+    expect(deleteBtn.hasAttribute('disabled')).toBe(false);
+  });
+
+  it('leaves all actions enabled on a real (enriched) page', () => {
+    const { get } = actionsFor({
+      id: 'user1_abc1234567890def',
+      url: 'https://example.com/article',
+      title: 'Real article',
+      domain: 'example.com'
+    });
+
+    for (const action of ['pin', 'edit', 'toggle-privacy', 'projects', 'delete']) {
+      const btn = get(action);
+      expect(btn, `expected ${action} button to exist`).not.toBeNull();
+      expect(btn.hasAttribute('disabled'), `${action} should NOT be disabled`).toBe(false);
+    }
+  });
+
+  it('disables the remove-project pill button on an optimistic tile', () => {
+    const html = renderDrawerCardMarkup(
+      {
+        id: 'optimistic:https://x.example',
+        optimistic: true,
+        url: 'https://x.example',
+        title: 'Pending',
+        project_ids: ['proj-1']
+      },
+      {
+        getProjectPills: () => [{ id: 'proj-1', name: 'Research' }],
+        projectsUnavailable: false
+      }
+    );
+    const container = document.createElement('div');
+    container.innerHTML = html;
+    const removeBtn = container.querySelector('[data-action="remove-project"]');
+    expect(removeBtn).not.toBeNull();
+    expect(removeBtn.hasAttribute('disabled')).toBe(true);
   });
 });

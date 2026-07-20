@@ -1330,6 +1330,55 @@ describe('newtab modules', () => {
      consoleErrorSpy.mockRestore();
    });
 
+   // Regression (Sentry 7621707108): a pending-save tile's synthetic id
+   // ("optimistic:https://...") contains "//", which Firestore rejects. The
+   // renderer disables the buttons, but as defense-in-depth the handler must
+   // also no-op on an optimistic id so a stale-DOM click never reaches the API.
+   it('handleDrawerPin is a no-op on an optimistic tile and never calls the API', async () => {
+     const { controller, api, state } = createDrawerDataHarness({
+       state: {
+         pages: [{ id: 'optimistic:https://x.example', pinned: false, optimistic: true }],
+         allPages: [{ id: 'optimistic:https://x.example', pinned: false, optimistic: true }]
+       }
+     });
+
+     await controller.handleDrawerPin('optimistic:https://x.example');
+
+     expect(api.pinPage).not.toHaveBeenCalled();
+     // State is untouched — no optimistic flip, no re-render side effects.
+     expect(state.allPages[0].pinned).toBe(false);
+   });
+
+   it('handleDrawerTogglePrivacy is a no-op on an optimistic tile', async () => {
+     const { controller, api } = createDrawerDataHarness({
+       state: {
+         pages: [{ id: 'optimistic:https://x.example', private: false, optimistic: true }],
+         allPages: [{ id: 'optimistic:https://x.example', private: false, optimistic: true }]
+       }
+     });
+
+     await controller.handleDrawerTogglePrivacy('optimistic:https://x.example');
+
+     // togglePagePrivacy would call api.updatePage under the hood; pinPage here
+     // stands in as a proxy that no backend mutation fires. The contract is
+     // "no API call", which we assert via updatePage.
+     expect(api.updatePage).not.toHaveBeenCalled();
+   });
+
+   it('handleDrawerEditStart does not open the edit form on an optimistic tile', async () => {
+     const { controller, state } = createDrawerDataHarness({
+       state: {
+         pages: [{ id: 'optimistic:https://x.example', optimistic: true }],
+         allPages: [{ id: 'optimistic:https://x.example', optimistic: true }]
+       }
+     });
+
+     controller.handleDrawerEditStart('optimistic:https://x.example');
+
+     // Harness doesn't seed editingPageId; the contract is "still not set".
+     expect(state.editingPageId).toBeFalsy();
+   });
+
    it('hydrates saved pages from warm cache bootstrap before auth restoration completes', async () => {
      const snapshot = {
        allPages: [{ id: 'page-1', title: 'Cached page' }],

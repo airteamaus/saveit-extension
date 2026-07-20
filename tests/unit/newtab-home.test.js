@@ -38,5 +38,22 @@ describe('newtab home selectors', () => {
 
       expect(getPinnedPages(pages)).toHaveLength(8);
     });
+
+    // Regression: a race that flips `pinned` on an optimistic tile (before the
+    // real doc arrives) would otherwise surface a synthetic-id tile on the
+    // Pinned shelf, whose click/navigation could reach the backend with an
+    // invalid Firestore path.
+    it('excludes optimistic (not-yet-enriched) tiles even if pinned', () => {
+      const pages = [
+        { id: 'real_abc1234567890def', pinned: true },
+        { id: 'optimistic:https://example.com/path', pinned: true, optimistic: true },
+        { id: 'real_0011223344556677', pinned: true }
+      ];
+
+      expect(getPinnedPages(pages).map(p => p.id)).toEqual([
+        'real_abc1234567890def',
+        'real_0011223344556677'
+      ]);
+    });
   });
 });

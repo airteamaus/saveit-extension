@@ -6,7 +6,8 @@ import {
   addPendingSaves,
   getPendingSaves,
   clearPendingSave,
-  buildOptimisticPage
+  buildOptimisticPage,
+  isOptimisticPage
 } from '../../src/pending-saves.js';
 
 // Minimal storage.local mock. Each test gets a fresh store.
@@ -221,5 +222,37 @@ describe('buildOptimisticPage', () => {
   it('omits project_ids (empty array) when no projectId', () => {
     const page = buildOptimisticPage({ url: 'https://example.com/x', saved_at: '2026-07-09T10:00:00.000Z' });
     expect(page.project_ids).toEqual([]);
+  });
+});
+
+describe('isOptimisticPage', () => {
+  // Regression: the synthetic id `optimistic:<url>` contains `//` (from the
+  // URL protocol), which makes it an invalid Firestore document path. Callers
+  // use this helper to avoid sending that id to the backend.
+  it('returns true for a page with the optimistic flag', () => {
+    expect(isOptimisticPage({ id: 'real_abc', optimistic: true })).toBe(true);
+  });
+
+  it('returns true for a page whose id has the optimistic: prefix', () => {
+    // Covers tiles built before the flag existed, and direct id checks.
+    expect(isOptimisticPage({ id: 'optimistic:https://example.com/x' })).toBe(true);
+    expect(isOptimisticPage({ id: 'optimistic:https://chrome.google.com/y' })).toBe(true);
+  });
+
+  it('returns true for buildOptimisticPage output (both signals present)', () => {
+    const page = buildOptimisticPage({ url: 'https://example.com/x', saved_at: '2026-07-09T10:00:00.000Z' });
+    expect(isOptimisticPage(page)).toBe(true);
+  });
+
+  it('returns false for a real (enriched) page', () => {
+    expect(isOptimisticPage({ id: 'user1_abc1234567890def' })).toBe(false);
+    expect(isOptimisticPage({ id: 'a1b2c3d4-5678-4abc-9def-1234567890ab' })).toBe(false);
+  });
+
+  it('returns false for missing/empty/invalid input rather than throwing', () => {
+    expect(isOptimisticPage(undefined)).toBe(false);
+    expect(isOptimisticPage(null)).toBe(false);
+    expect(isOptimisticPage({})).toBe(false);
+    expect(isOptimisticPage({ id: '' })).toBe(false);
   });
 });
