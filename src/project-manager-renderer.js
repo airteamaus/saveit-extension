@@ -338,7 +338,7 @@ export function renderProjectSidebar(container, {
   // Domains section: distinct domains with counts, scoped client-side on click.
   const domains = Array.isArray(dashboard.domains) ? dashboard.domains : [];
   if (domains.length) {
-    nav.append(createSectionLabel(documentObj, 'Domains', 'var(--color-primary)'));
+    nav.append(createSectionLabel(documentObj, 'By Category', 'var(--color-primary)'));
     domains.forEach(({ domain, count }) => {
       const domainId = `domain:${domain}`;
       nav.append(createSidebarRow(documentObj, {
