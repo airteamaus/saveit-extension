@@ -256,46 +256,4 @@ export class CacheManager {
       window.SentryHelpers?.captureError(error, { context: 'cache-invalidate' });
     }
   }
-
-  /**
-   * Clear all cached data (for debugging)
-   */
-  async clearAllCache() {
-    try {
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      await storage.clear();
-      debugLog('[clearAllCache] All cache cleared');
-    } catch (error) {
-      console.error('[clearAllCache] Failed to clear cache:', error);
-      window.SentryHelpers?.captureError(error, { context: 'cache-clear-all' });
-    }
-  }
-
-  /**
-   * Clean up legacy cache (migration helper)
-   * Removes old global cache key that wasn't user-isolated
-   * Called once on extension upgrade to v0.13.5+
-   */
-  async cleanupLegacyCache() {
-    try {
-      const userId = await this.resolveWriteUserId();
-      const storage = this.getStorage();
-      if (!storage) return;
-
-      // Remove old global cache key
-      const legacyKey = SAVED_PAGES_CACHE_PREFIX;
-      const keysToRemove = [legacyKey];
-      if (userId) {
-        keysToRemove.push(`${this.CACHE_KEY_PREFIX}_${userId}`);
-      }
-
-      await storage.remove(keysToRemove);
-      debugLog('[cleanupLegacyCache] Removed legacy global cache');
-    } catch (error) {
-      console.error('[cleanupLegacyCache] Failed to cleanup legacy cache:', error);
-      window.SentryHelpers?.captureError(error, { context: 'cache-cleanup-legacy' });
-    }
-  }
 }

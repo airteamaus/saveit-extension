@@ -368,16 +368,6 @@ export function applyApiCore(API, dependencies = {}) {
       return await this.cacheManager.invalidateCache(scope);
     },
 
-    async clearAllCache() {
-      if (!this.isExtension) return;
-      return await this.cacheManager.clearAllCache();
-    },
-
-    async cleanupLegacyCache() {
-      if (!this.isExtension) return;
-      return await this.cacheManager.cleanupLegacyCache();
-    },
-
     // --- projects surface cache (own prefix: PROJECTS_CACHE_PREFIX) ---
     async getProjectsCachedPages(scope = {}, options = {}) {
       if (!this.isExtension) return null;

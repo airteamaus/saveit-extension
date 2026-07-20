@@ -386,62 +386,6 @@ describe('CacheManager', () => {
     });
   });
 
-  describe('clearAllCache', () => {
-    it('should not clear when storage is not available', async () => {
-      getStorage.mockReturnValue(null);
-
-      await cacheManager.clearAllCache();
-      expect(mockStorage.clear).not.toHaveBeenCalled();
-    });
-
-    it('should clear entire storage', async () => {
-      mockStorage._testData[cacheManager.getCacheKey('user-123')] = { response: {} };
-      mockStorage._testData['other_key'] = { data: 'test' };
-
-      await cacheManager.clearAllCache();
-      expect(mockStorage.clear).toHaveBeenCalled();
-    });
-
-    it('should log error on storage failure', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockStorage.clear.mockRejectedValue(new Error('Storage error'));
-
-      await cacheManager.clearAllCache();
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
-
-  describe('cleanupLegacyCache', () => {
-    it('should not cleanup when storage is not available', async () => {
-      getStorage.mockReturnValue(null);
-
-      await cacheManager.cleanupLegacyCache();
-      expect(mockStorage.remove).not.toHaveBeenCalled();
-    });
-
-    it('should remove legacy global cache key', async () => {
-      mockStorage._testData['savedPages_cache'] = { response: {} };
-
-      await cacheManager.cleanupLegacyCache();
-      expect(mockStorage.remove).toHaveBeenCalledWith([
-        'savedPages_cache',
-        cacheManager.getCacheKey('user-123', {}).replace('_default', '')
-      ]);
-    });
-
-    it('should log error on storage failure', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockStorage.remove.mockRejectedValue(new Error('Storage error'));
-
-      await cacheManager.cleanupLegacyCache();
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
-    });
-  });
-
   describe('Cache Isolation', () => {
     it('should isolate cache between users', async () => {
       // User 1 sets cache

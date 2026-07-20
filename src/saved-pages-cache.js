@@ -1,10 +1,9 @@
 import { SAVED_PAGES_CACHE_PREFIX, DOMAINS_CACHE_PREFIX } from './cache-keys.js';
 
-export function getSavedPagesCacheKeys(storageEntries = {}) {
-  return Object.keys(storageEntries).filter(key => (
-    key === SAVED_PAGES_CACHE_PREFIX || key.startsWith(`${SAVED_PAGES_CACHE_PREFIX}_`)
-  ));
-}
+// All cache surfaces share the same storage.local key shape:
+// `<prefix>` or `<prefix>_<userId>_<serializedScope>`. These helpers take a
+// prefix and operate on every key that matches it, so adding a new surface is
+// just a new prefix constant — no per-surface duplication.
 
 function getCacheKeysForPrefix(storageEntries, prefix) {
   return Object.keys(storageEntries).filter(key => (
@@ -12,13 +11,21 @@ function getCacheKeysForPrefix(storageEntries, prefix) {
   ));
 }
 
-export async function invalidateSavedPagesCacheStorage(storage) {
+export function getSavedPagesCacheKeys(storageEntries = {}) {
+  return getCacheKeysForPrefix(storageEntries, SAVED_PAGES_CACHE_PREFIX);
+}
+
+// Hard-remove every key for a prefix. Used by callers that genuinely need to
+// drop the data: sign-out, forceReload, imports. The toolbar save + realtime
+// relay paths use markCacheStale instead so they don't destroy the warm cache
+// (see markCacheStale for why).
+async function removeCacheKeysForPrefix(storage, prefix) {
   if (!storage?.get || !storage?.remove) {
     return 0;
   }
 
   const storageEntries = await storage.get(null);
-  const cacheKeys = getSavedPagesCacheKeys(storageEntries);
+  const cacheKeys = getCacheKeysForPrefix(storageEntries, prefix);
   if (cacheKeys.length > 0) {
     await storage.remove(cacheKeys);
   }
@@ -26,7 +33,8 @@ export async function invalidateSavedPagesCacheStorage(storage) {
   return cacheKeys.length;
 }
 
-// Mark every savedPages_cache_* entry stale without deleting the cached pages.
+// Mark every entry for a prefix stale without deleting the cached pages.
+//
 // The toolbar save path used to hard-remove these keys, which destroyed the
 // warm cache (often hundreds of pages, lazily grown via scroll-driven loadMore)
 // whenever no newtab was open to observe the invalidation. The next newtab
@@ -37,16 +45,14 @@ export async function invalidateSavedPagesCacheStorage(storage) {
 // (ageMs >> CACHE_MAX_AGE_MS) while keeping `response.pages` intact. The
 // warm-cache reader passes allowExpired: true, so the next newtab paints the
 // full cached list instantly and runs refreshInitial() to reconcile in the
-// background. The hard-remove path (invalidateSavedPagesCacheStorage) stays
-// available for callers that genuinely need to drop the data (sign-out,
-// forceReload, imports).
-export async function markSavedPagesCacheStale(storage) {
+// background.
+async function markCacheStaleForPrefix(storage, prefix) {
   if (!storage?.get || !storage?.set) {
     return 0;
   }
 
   const storageEntries = await storage.get(null);
-  const cacheKeys = getSavedPagesCacheKeys(storageEntries);
+  const cacheKeys = getCacheKeysForPrefix(storageEntries, prefix);
   if (cacheKeys.length === 0) {
     return 0;
   }
@@ -67,61 +73,22 @@ export async function markSavedPagesCacheStale(storage) {
   return Object.keys(patch).length;
 }
 
-// Storage-direct invalidation for the domains surface. The toolbar save path
-// (background.js) doesn't load the full API facade, so it can't call
-// API.invalidateDomainsCache(); this helper gives it the same narrow-scope
-// eviction via storage.local directly. A new save can shift domain counts, so
-// the toolbar save and realtime-enrichment relay invalidate both surfaces.
-export async function invalidateDomainsCacheStorage(storage) {
-  if (!storage?.get || !storage?.remove) {
-    return 0;
-  }
+// Public surface-specific wrappers. Kept as named exports so callers read
+// clearly at the call site ("mark the saved-pages cache stale") rather than
+// passing a prefix string.
+export const invalidateSavedPagesCacheStorage = storage =>
+  removeCacheKeysForPrefix(storage, SAVED_PAGES_CACHE_PREFIX);
 
-  const storageEntries = await storage.get(null);
-  const cacheKeys = getCacheKeysForPrefix(storageEntries, DOMAINS_CACHE_PREFIX);
-  if (cacheKeys.length > 0) {
-    await storage.remove(cacheKeys);
-  }
+export const markSavedPagesCacheStale = storage =>
+  markCacheStaleForPrefix(storage, SAVED_PAGES_CACHE_PREFIX);
 
-  return cacheKeys.length;
-}
-
-// Mark every domains_cache_* entry stale without deleting the cached data.
-// Mirrors markSavedPagesCacheStale for the domains surface — a save can shift
-// domain counts, but the existing list is still useful as a fast first paint
-// until the background refresh reconciles.
-export async function markDomainsCacheStale(storage) {
-  if (!storage?.get || !storage?.set) {
-    return 0;
-  }
-
-  const storageEntries = await storage.get(null);
-  const cacheKeys = getCacheKeysForPrefix(storageEntries, DOMAINS_CACHE_PREFIX);
-  if (cacheKeys.length === 0) {
-    return 0;
-  }
-
-  const patch = {};
-  for (const key of cacheKeys) {
-    const entry = storageEntries[key];
-    if (entry && typeof entry === 'object' && 'response' in entry) {
-      patch[key] = { ...entry, timestamp: 0 };
-    }
-  }
-
-  if (Object.keys(patch).length > 0) {
-    await storage.set(patch);
-  }
-  return Object.keys(patch).length;
-}
+export const markDomainsCacheStale = storage =>
+  markCacheStaleForPrefix(storage, DOMAINS_CACHE_PREFIX);
 
 // Mark every surface cache the toolbar save path can affect stale, without
 // deleting the cached data. Use this on the common save + realtime-enrichment
 // relay paths so a save between newtab sessions doesn't destroy the warm cache
 // (which forces the next newtab to repaint from a 50-page initial fetch).
-// Hard-remove callers (sign-out, forceReload, imports) use the surface-specific
-// invalidateSavedPagesCacheStorage / invalidateDomainsCacheStorage helpers
-// directly, since they need to drop the data rather than mark it stale.
 // Returns the total number of keys marked stale.
 export async function markToolbarSaveCachesStale(storage) {
   const [savedPagesCount, domainsCount] = await Promise.all([
