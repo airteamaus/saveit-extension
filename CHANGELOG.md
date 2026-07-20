@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### ✨ Features
+
+- **realtime:** auto-reconnect with backoff + projects catch-up (4e2f3b6)
+
+### 🐛 Bug Fixes
+
+- **realtime:** catch-up refreshInitial on SSE (re)connect (2a3df36)
+- **drawer:** disable backend-bound actions on optimistic pending-save tiles (29d63c4)
+
+### ✅ Tests
+
+- **e2e:** update sidebar label assertion from Domains to By Category (28aa809)
+
+## [1.26.1] - 2026-07-20
+
 ### 🐛 Bug Fixes
 
 - **ui:** clicking pinned shelf cards now opens the page (319de18)
@@ -133,33 +148,6 @@ No notable changes.
 - **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
 - **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
 - **realtime:** RealtimeEventBus typed pub/sub (8efa830)
-
-### 🐛 Bug Fixes
-
-- refresh-cache button now force-reloads the open project from server (b18af09)
-- **realtime:** surface errors with context instead of masking (34a42c9)
-- **realtime:** inject event-line type into dispatched object + test malformed-JSON skip (a4772e7)
-- **deploy:** deploy-staging must use numeric versions for Firefox (#27) (6f45e75)
-
-### 📝 Other Improvements
-
-- fix tests, wire bus.clear(), fix heartbeat parsing, reduce noise (bf6e0d7)
-- point realtimeFunctionUrl at dedicated saveit-realtime function (a83d342)
-
-### 📚 Documentation
-
-- implementation plan for realtime push feature (e74a3f8)
-- realtime push design spec for shared projects (28ce3ec)
-
-### ✅ Tests
-
-- **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
-- **realtime:** assert failing subscriber does not break others (d4c4167)
-
-## [1.21.1] - 2026-07-10
-
-### ✨ Features
-
 - **capture:** fall back to innerText when Readability finds no article (41ce98d)
 - **ui:** remove card summary line-clamp; cap at 290 chars (4b520d0)
 - **layout:** keep sidebar to 700px, hamburger below, more summary lines (75cb3fc)
@@ -239,6 +227,10 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- refresh-cache button now force-reloads the open project from server (b18af09)
+- **realtime:** surface errors with context instead of masking (34a42c9)
+- **realtime:** inject event-line type into dispatched object + test malformed-JSON skip (a4772e7)
+- **deploy:** deploy-staging must use numeric versions for Firefox (#27) (6f45e75)
 - **cache:** prependOptimisticPage must not persist to warm cache (a022f74)
 - **cache:** clear stale pending-save records when real doc exists (9a57c82)
 - **sidebar:** bind synchronous current user so ownership resolves (abeb051)
@@ -378,6 +370,8 @@ No notable changes.
 
 ### 📝 Other Improvements
 
+- fix tests, wire bus.clear(), fix heartbeat parsing, reduce noise (bf6e0d7)
+- point realtimeFunctionUrl at dedicated saveit-realtime function (a83d342)
 - 1.21.0-beta.1 (a40862e)
 - Validated technical-debt cleanup (3 phases) (#26) (710791d)
 - Cancel duplicate release runs per tag via concurrency group (73e0407)
@@ -569,6 +563,8 @@ No notable changes.
 
 ### 📚 Documentation
 
+- implementation plan for realtime push feature (e74a3f8)
+- realtime push design spec for shared projects (28ce3ec)
 - client-side page capture implementation plan (b701619)
 - correct content-storage mechanism in capture design (a60e32e)
 - drop hard-coded page count from capture design (2273ae3)
@@ -586,6 +582,8 @@ No notable changes.
 
 ### ✅ Tests
 
+- **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
+- **realtime:** assert failing subscriber does not break others (d4c4167)
 - improve coverage from 22% to 33% with 90 new tests (84c893b)
 - add newtab-minimal tests and adjust coverage thresholds (3a3ce5a)
 - improve coverage from 17.5% to 29.14% (67% increase) (ebf0758)
