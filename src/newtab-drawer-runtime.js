@@ -296,17 +296,40 @@ export function createSavedPagesDrawerController({
     }
   }
 
+  // Catch-up refresh run when the realtime SSE stream (re)connects. SSE has no
+  // replay buffer, so events that fired during a disconnect are lost; this
+  // re-pulls each open surface so the standard update-check reconciles them.
+  // Mirrors the three realtime subscribers (page_updated, project_page_changed,
+  // project_metadata_changed) without needing an event payload. Safe to call
+  // when no project scope is open — the project-store branch is skipped.
+  async function refreshOpenScopes() {
+    try {
+      await savedPagesStore.refreshInitial();
+      // If a project scope is open, refresh its store too — a missed
+      // project_page_changed for the open project would otherwise leave its
+      // warm cache stale until the user closes and re-opens the scope.
+      if (state.selectedProjectId && state.selectedProjectId !== PINNED_PAGES_SCOPE_ID) {
+        const projectStore = dataController.getProjectSavedPagesStore?.(state.selectedProjectId);
+        await projectStore?.refreshInitial();
+      }
+      await projectsStore.refreshInitial();
+    } catch (err) {
+      console.error('[realtime] refreshOpenScopes failed:', err);
+    }
+  }
+
   return {
     close: shellController.closeSavedPagesDrawer,
     forceReload,
     handleRealtimeProjectEvent,
-    handleSignedIn,
     handleSignedOut,
+    handleSignedIn,
     init,
     load: shellController.openSavedPagesDrawer,
     loadSummary: syncCoordinator.loadSummary,
     open: shellController.openSavedPagesDrawer,
     preloadProjects: dataController.ensureDrawerProjectsLoaded,
+    refreshOpenScopes,
     // Exposed so sibling surfaces (Sharing centre, Refresh) can read the live
     // view state — projects list and current user — without duplicating it.
     getSavedPagesView: () => savedPagesView,

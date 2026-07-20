@@ -77,7 +77,7 @@ The author runs the extension for local development in **Brave** (Chromium), loa
 - `src/cache-keys.js` - per-surface cache prefixes (`savedPages_cache`, `projects_cache`, `domains_cache`) and one-time key migrations
 - `src/warm-cache-list-store.js` - local-first paginated list syncing
 - `src/projects-store.js` - `WarmCacheListStore` subclass for projects (routes its warm cache through the projects surface)
-- `src/realtime-client.js` - single SSE connection per open new-tab page (idempotent `connect()`, no auto-reconnect; bfcache restore reconnects via `pageshow`)
+- `src/realtime-client.js` - single SSE connection per open new-tab page (idempotent `connect()`; auto-reconnect with exponential backoff; `onConnect` catch-up refresh; bfcache restore reconnects via `pageshow`)
 - `src/background.js` - toolbar save and auth integration (composes `api-transport.js`; its own `CacheManager` instance for the toolbar's projects warm cache)
 - `src/data-sync-centre.js` - consolidated Import / Export / Browser-sync modal
 - `src/bookmark-import.js` / `src/bookmark-export.js` - pure CSV/HTML/JSON parsers and serializers
@@ -101,7 +101,7 @@ The cached-read flow (`API._getCachedOrFreshList`) is shared across all three su
 
 ### Realtime lifecycle
 
-One SSE stream per open new-tab page. `RealtimeClient.connect()` is idempotent (a second call while a stream is open is a no-op, so a bfcache `pageshow` reconnect can't orphan the existing `AbortController`). There is **no mid-stream token refresh** and **no auto-reconnect** — a dropped stream toasts once and the user refreshes to re-establish. The newtab page registers persistent `pagehide`/`pageshow` listeners (not `once`) so a bfcache restore reconnects the stream and a second navigation away still tears it down.
+One SSE stream per open new-tab page. `RealtimeClient.connect()` is idempotent (a second call while a stream is open is a no-op, so a bfcache `pageshow` reconnect can't orphan the existing `AbortController`). There is **no mid-stream token refresh**. An unintentional drop (server 15-min timeout, network error, bad response) triggers **auto-reconnect with exponential backoff** (1s → 2s → 4s → … capped at 30s, up to 10 attempts). Each successful (re)connection fires the `onConnect` callback, which runs `drawerController.refreshOpenScopes()` — a catch-up that re-pulls saved pages, the open project scope if any, and the projects list, since SSE has **no replay buffer** and events that fire during a disconnect are otherwise lost. If all reconnect attempts exhaust, the client gives up and toasts "Refresh to pick up changes" once. Intentional teardown via `disconnect()` (pagehide) cancels the reconnect timer and never toasts. The newtab page registers persistent `pagehide`/`pageshow` listeners (not `once`) so a bfcache restore reconnects the stream and a second navigation away still tears it down.
 
 ### Two-repo note
 

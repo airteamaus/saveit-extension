@@ -26,13 +26,50 @@ describe('RealtimeClient', () => {
     global.fetch = mockFetch;
   });
 
-  function makeClient() {
+  function makeClient(overrides = {}) {
     return new RealtimeClient({
       bus,
       notify,
       getToken: async () => 'test-token',
-      url: 'https://example.test/events/stream'
+      url: 'https://example.test/events/stream',
+      // Default to real timers so existing tests that don't care about
+      // reconnect still work. Tests that exercise backoff inject fakes.
+      scheduleTimer: (fn, ms) => setTimeout(fn, ms),
+      cancelTimer: id => clearTimeout(id),
+      ...overrides
     });
+  }
+
+  // A fake scheduler that captures scheduled callbacks without running them,
+  // so backoff tests can assert exactly which delays were requested and fire
+  // them on demand. `flushMicrotasks` lets an async attemptConnection settle
+  // between ticks.
+  function makeFakeScheduler() {
+    const scheduled = [];
+    const scheduleTimer = (fn, ms) => {
+      const id = scheduled.length;
+      scheduled.push({ fn, ms, id, fired: false });
+      return id;
+    };
+    const cancelTimer = id => {
+      if (scheduled[id]) scheduled[id].cancelled = true;
+    };
+    const fire = async (id) => {
+      const entry = scheduled[id];
+      if (!entry || entry.cancelled || entry.fired) return;
+      entry.fired = true;
+      entry.fn();
+      // Let the async attemptConnection settle.
+      await new Promise(r => setTimeout(r, 0));
+    };
+    const fireAll = async () => {
+      // Fire in order, skipping cancelled. New entries scheduled by fires are
+      // picked up on the next loop iteration.
+      for (let i = 0; i < scheduled.length; i++) {
+        await fire(i);
+      }
+    };
+    return { scheduled, scheduleTimer, cancelTimer, fire, fireAll };
   }
 
   test('connect sets Authorization header and calls fetch', async () => {
@@ -90,28 +127,153 @@ describe('RealtimeClient', () => {
     expect(bus.dispatch).not.toHaveBeenCalled();
   });
 
-  test('on stream close, shows toast once and does not reconnect', async () => {
+  test('on stream close, schedules a reconnect with backoff (no toast)', async () => {
+    // The server closes the stream (15-min timeout). The client must reconnect
+    // silently rather than toast — toasting on every periodic server-side close
+    // would be noise. Toast only fires after all attempts are exhausted.
     mockFetch.mockResolvedValue({
       ok: true,
       status: 200,
       body: makeReadableStream([]),  // immediately closes
       headers: new Map()
     });
-    const client = makeClient();
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler });
     await client.connect();
-    await new Promise(r => setTimeout(r, 10));
-    expect(notify).toHaveBeenCalledWith('Refresh to pick up changes', {});
-    // No second fetch (no reconnect).
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(scheduler.scheduled).toHaveLength(1);
+    expect(scheduler.scheduled[0].ms).toBe(1000);  // initial backoff
   });
 
-  test('on fetch error, shows toast and does not reconnect', async () => {
+  test('on fetch error, schedules a reconnect with backoff (no toast)', async () => {
     mockFetch.mockRejectedValue(new Error('network'));
-    const client = makeClient();
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler });
     await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(notify).not.toHaveBeenCalled();
+    expect(scheduler.scheduled).toHaveLength(1);
+    expect(scheduler.scheduled[0].ms).toBe(1000);
+  });
+
+  test('reconnect succeeds and fires onConnect again (catch-up on every reconnect)', async () => {
+    // First stream closes immediately; the scheduled reconnect opens a second
+    // stream that delivers an event. onConnect must fire on both.
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([]),
+      headers: new Map()
+    });
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([
+        'event: page_updated\n',
+        'data: {"type":"page_updated","change":"enriched","pageId":"p1"}\n\n'
+      ]),
+      headers: new Map()
+    });
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler, onConnect });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    expect(scheduler.scheduled).toHaveLength(1);
+
+    // Fire the scheduled reconnect.
+    await scheduler.fire(0);
+
+    expect(mockFetch).toHaveBeenCalledTimes(2);
     await new Promise(r => setTimeout(r, 10));
+    expect(onConnect).toHaveBeenCalledTimes(2);
+    expect(bus.dispatch).toHaveBeenCalledWith({
+      type: 'page_updated',
+      change: 'enriched',
+      pageId: 'p1'
+    });
+  });
+
+  test('backoff doubles across attempts and caps at maxBackoffMs', async () => {
+    mockFetch.mockRejectedValue(new Error('network'));  // every attempt fails
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({
+      ...scheduler,
+      maxReconnectAttempts: 6,
+      maxBackoffMs: 5000
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    // Fire each scheduled reconnect in turn; collect the delays.
+    const delays = [];
+    for (let i = 0; i < scheduler.scheduled.length; i++) {
+      delays.push(scheduler.scheduled[i].ms);
+      await scheduler.fire(i);
+    }
+
+    // 1s, 2s, 4s, 5s (capped), 5s, 5s — six attempts then give-up.
+    expect(delays).toEqual([1000, 2000, 4000, 5000, 5000, 5000]);
+  });
+
+  test('toasts once and stops reconnecting after maxReconnectAttempts', async () => {
+    mockFetch.mockRejectedValue(new Error('network'));
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler, maxReconnectAttempts: 3 });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    // Drain the whole attempt chain.
+    await scheduler.fireAll();
+
+    expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith('Refresh to pick up changes', {});
-    expect(mockFetch).toHaveBeenCalledTimes(1);
+    // No further reconnect scheduled after giving up.
+    expect(scheduler.scheduled.filter(s => !s.cancelled)).toHaveLength(3);
+  });
+
+  test('a successful stream resets the backoff counter for the next drop', async () => {
+    // Initial connect fails, first retry fails, second retry succeeds, then the
+    // stream closes. The drop AFTER the success should start from the initial
+    // backoff (1s), not continue the prior chain (which would be 4s).
+    mockFetch
+      .mockRejectedValueOnce(new Error('net'))   // initial connect → backoff 1s
+      .mockRejectedValueOnce(new Error('net'))   // retry 0 → backoff 2s
+      .mockResolvedValueOnce({                    // retry 1 → success, reset
+        ok: true, status: 200, body: makeReadableStream([]), headers: new Map()
+      });                                         // stream closes → backoff 1s again
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    await scheduler.fire(0);  // retry 0 fails
+    await scheduler.fire(1);  // retry 1 succeeds, stream closes
+    // Let the successful stream read, close, and schedule its reconnect.
+    await new Promise(r => setTimeout(r, 10));
+
+    // The post-success reconnect should be back at the initial 1s backoff,
+    // proving the success reset the counter.
+    const lastScheduled = scheduler.scheduled[scheduler.scheduled.length - 1];
+    expect(lastScheduled.ms).toBe(1000);
+  });
+
+  test('disconnect cancels the pending reconnect timer', async () => {
+    mockFetch.mockRejectedValue(new Error('network'));
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(scheduler.scheduled).toHaveLength(1);
+    client.disconnect();
+    expect(scheduler.scheduled[0].cancelled).toBe(true);
+    expect(notify).not.toHaveBeenCalled();
   });
 
   test('skips a malformed JSON frame and continues the stream', async () => {
@@ -202,21 +364,28 @@ describe('RealtimeClient', () => {
     expect(mockFetch).toHaveBeenCalledTimes(1);
   });
 
-  test('after disconnect, connect reopens the stream and re-arms the disconnect toast', async () => {
-    // First connect: stream closes immediately → toast fires.
+  test('after disconnect, a manual connect reopens the stream and resets backoff', async () => {
+    // First connect: stream closes immediately → reconnect is scheduled
+    // (silent, no toast under the new contract).
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
       body: makeReadableStream([]),
       headers: new Map()
     });
-    const client = makeClient();
+    const scheduler = makeFakeScheduler();
+    const client = makeClient({ ...scheduler });
     await client.connect();
     await new Promise(r => setTimeout(r, 10));
-    expect(notify).toHaveBeenCalledTimes(1);
+    expect(notify).not.toHaveBeenCalled();
+    expect(scheduler.scheduled).toHaveLength(1);
 
-    // The stream has ended and disconnected; reconnect must succeed and the
-    // toast must fire again when the second stream also closes.
+    // User navigates away (pagehide) then comes back. The pending reconnect
+    // timer is cancelled by disconnect(); a fresh connect() reopens the stream
+    // and starts a new backoff chain.
+    client.disconnect();
+    expect(scheduler.scheduled[0].cancelled).toBe(true);
+
     mockFetch.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -226,13 +395,18 @@ describe('RealtimeClient', () => {
     await client.connect();
     await new Promise(r => setTimeout(r, 10));
     expect(mockFetch).toHaveBeenCalledTimes(2);
-    expect(notify).toHaveBeenCalledTimes(2);  // re-armed after the reconnect
+    // The fresh connect schedules a new reconnect from initial backoff. The
+    // pre-disconnect timer was cancelled, so exactly one live timer remains.
+    const liveTimers = scheduler.scheduled.filter(s => !s.cancelled);
+    expect(liveTimers).toHaveLength(1);
+    expect(liveTimers[0].ms).toBe(1000);
   });
 
-  // Regression: SSE has no replay buffer and the client doesn't auto-reconnect,
-  // so events that fire during a disconnect are lost. The onConnect callback
-  // lets the newtab page run a catch-up refreshInitial each time the stream
-  // (re)establishes, picking up missed updates via the standard update-check.
+  // Regression: SSE has no replay buffer, so events that fire during a
+  // disconnect are lost. The onConnect callback lets the newtab page run a
+  // catch-up refreshOpenScopes each time the stream (re)establishes, picking up
+  // missed updates via the standard update-check. Auto-reconnect fires onConnect
+  // on every successful (re)connection, not just the first.
   test('fires onConnect once when the stream establishes successfully', async () => {
     const onConnect = vi.fn().mockResolvedValue(undefined);
     mockFetch.mockResolvedValue({

@@ -55,7 +55,8 @@ describe('newtab app factory', () => {
     const drawerController = {
       load: vi.fn(),
       handleSignedIn: vi.fn().mockResolvedValue(undefined),
-      handleSignedOut: vi.fn()
+      handleSignedOut: vi.fn(),
+      refreshOpenScopes: vi.fn().mockResolvedValue(undefined)
     };
     const authController = { id: 'auth-controller' };
     const bindNewtabEventHandlersFn = vi.fn();
@@ -140,5 +141,13 @@ describe('newtab app factory', () => {
       authController,
       realtimeClient: expect.objectContaining({ bus: expect.any(Object) })
     });
+
+    // Regression: the realtime client's onConnect catch-up must refresh every
+    // open surface (saved pages + the open project scope + projects list) so
+    // events missed during a stream disconnect are reconciled on reconnect.
+    const realtimeClient = startNewtabPageFn.mock.calls[0][0].realtimeClient;
+    expect(typeof realtimeClient.onConnect).toBe('function');
+    await realtimeClient.onConnect();
+    expect(drawerController.refreshOpenScopes).toHaveBeenCalledTimes(1);
   });
 });

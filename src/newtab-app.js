@@ -235,12 +235,12 @@ export function createNewtabApp({
     getToken: getSessionToken,
     url: `${CONFIG.realtimeFunctionUrl}/events/stream`,
     // SSE has no replay buffer: events that fire while the stream is down are
-    // gone, and this client doesn't auto-reconnect. On each (re)connect, run a
-    // catch-up refresh so the store reconciles anything missed — the standard
-    // update-check (HEAD newerThanId) detects and incremental-syncs the new
-    // pages. Without this, a stream drop between save-enrichment and reconnect
-    // leaves new pages invisible until the user manually reloads.
-    onConnect: () => { void savedPagesStore.refreshInitial(); }
+    // gone. On each (re)connect, run a catch-up refresh across every open
+    // surface (saved pages, the open project scope if any, and the projects
+    // list) so the standard update-check reconciles anything missed. Without
+    // this, a stream drop between a save/project event and reconnect leaves the
+    // change invisible until the user manually reloads.
+    onConnect: () => { void drawerController.refreshOpenScopes(); }
   });
 
   const authLifecycle = createNewtabAuthLifecycleFn({
