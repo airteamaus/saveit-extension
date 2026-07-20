@@ -434,8 +434,8 @@ test.describe('Standalone Mode', () => {
   test('renders a Domains section in the sidebar and scopes on click', async ({ page }) => {
     await showAllPages(page);
 
-    // The Domains section appears after Shared projects.
-    await expect(page.locator('#project-sidebar')).toContainText('Domains');
+    // The "By Category" section (formerly "Domains") appears after Shared projects.
+    await expect(page.locator('#project-sidebar')).toContainText('By Category');
 
     // Domain rows use the domain: prefix on data-project-id.
     const domainRows = page.locator('.project-nav-row[data-project-id^="domain:"]');
