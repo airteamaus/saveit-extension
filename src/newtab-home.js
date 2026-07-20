@@ -3,11 +3,24 @@
 
 import { isOptimisticPage } from './pending-saves.js';
 
+// Sort key for a pinned shelf card. Matches the card renderer's heading
+// fallback (title || domain || 'Untitled') so the shelf order matches what the
+// user reads. Case-insensitive so "apple" and "Banana" interleave naturally.
+function pinnedShelfSortKey(page) {
+  const domain = page?.domain || '';
+  const key = (page?.title || domain || 'Untitled').trim().toLowerCase();
+  return key || 'untitled';
+}
+
 /**
- * The newest pinned saved pages, for the Pinned shelf shown above the browse
- * list when idle. The full list stays available via the sidebar Pinned scope;
- * this is the sparse presentation slice. The store already sorts newest-first
- * (saved-pages-store, sort: 'newest'), so this is a presentation slice.
+ * The pinned saved pages, for the Pinned shelf shown above the browse list when
+ * idle. The full list stays available via the sidebar Pinned scope; this is the
+ * sparse presentation slice.
+ *
+ * Sorted alphabetically by title (case-insensitive, with the same
+ * title/domain/'Untitled' fallback the card heading uses) so the shelf reads as
+ * a stable, scannable index rather than shifting around as new pages are pinned
+ * or as the store's newest-first order changes. Sliced to `limit` after sort.
  *
  * Optimistic (not-yet-enriched) tiles are excluded: their synthetic id is not a
  * real doc, so showing one on the shelf would let the user click into a card
@@ -19,5 +32,14 @@ export function getPinnedPages(allPages, limit = 8) {
   if (!Array.isArray(allPages)) {
     return [];
   }
-  return allPages.filter(page => page?.pinned && !isOptimisticPage(page)).slice(0, limit);
+  return allPages
+    .filter(page => page?.pinned && !isOptimisticPage(page))
+    .sort((a, b) => {
+      const ka = pinnedShelfSortKey(a);
+      const kb = pinnedShelfSortKey(b);
+      if (ka < kb) return -1;
+      if (ka > kb) return 1;
+      return 0;
+    })
+    .slice(0, limit);
 }
