@@ -4,7 +4,7 @@ import { createBackgroundAuth } from './background-auth.js';
 import { getCurrentUserId as getSessionUserId } from './session-store.js';
 import { CacheManager } from './cache-manager.js';
 import { ProjectsStore } from './projects-store.js';
-import { invalidateToolbarSaveCaches } from './saved-pages-cache.js';
+import { markToolbarSaveCachesStale } from './saved-pages-cache.js';
 import { reconcile, mirrorSavedPage, removeMirror } from './bookmark-mirror.js';
 import { getMirrorState, setMirrorEnabled } from './bookmark-mirror-settings.js';
 import { createLogger, getSafePageContext } from './telemetry.js';
@@ -440,12 +440,18 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
   }
 
   try {
-    const cacheKeysRemoved = await invalidateToolbarSaveCaches(browserApi.storage.local);
-    logger.log('Cache invalidated after save', {
-      cacheKeysRemoved
+    // Mark caches stale rather than removing them. Removing the keys destroys
+    // the warm cache (lazily grown via scroll-driven loadMore, often hundreds
+    // of pages); with no newtab open to observe the invalidation, the next
+    // newtab falls through to the network path and writes back only the
+    // 50-page initial batch. Marking stale keeps the cached pages so the next
+    // newtab paints them instantly and refreshes in the background.
+    const cacheKeysMarkedStale = await markToolbarSaveCachesStale(browserApi.storage.local);
+    logger.log('Cache marked stale after save', {
+      cacheKeysMarkedStale
     });
   } catch (cacheError) {
-    logger.error('Failed to invalidate cache', cacheError);
+    logger.error('Failed to mark cache stale', cacheError);
   }
 
   // Write a pending-save record so newtab can render an optimistic tile
@@ -622,22 +628,23 @@ browserApi.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'realtimePageEnriched') {
     // The realtime SSE stream signaled enrichment completion (or a new page).
     // The event carries a pageId, not a URL, so we cannot key clearPendingSave
-    // by URL. Instead, invalidate the saved-pages cache so newtab refetches;
-    // WarmCacheListStore.reconcilePages drops the optimistic tile when the real
-    // doc arrives. The pending-save record lingers but is harmless — the next
-    // reconciliation or newtab reload clears it via onOptimisticReconciled.
+    // by URL. The originating newtab already called refreshInitial() before
+    // relaying here, so this marks the saved-pages/domains caches stale so any
+    // OTHER open newtabs reconcile on their next read — without destroying the
+    // warm cache (which a hard remove would truncate to the 50-page initial
+    // batch on the next hydrate).
     (async () => {
       try {
-        // Invalidate saved-pages and domains: enrichment writes the real doc
-        // (saved-pages surface) and may assign a domain classification
-        // (domains surface). Projects are unaffected by enrichment.
-        const keysRemoved = await invalidateToolbarSaveCaches(browserApi.storage.local);
-        logger.log('Realtime enrichment relay; invalidated caches', {
+        // saved-pages + domains: enrichment writes the real doc (saved-pages
+        // surface) and may assign a domain classification (domains surface).
+        // Projects are unaffected by enrichment.
+        const keysMarkedStale = await markToolbarSaveCachesStale(browserApi.storage.local);
+        logger.log('Realtime enrichment relay; marked caches stale', {
           pageId: message.pageId || null,
-          keysRemoved
+          keysMarkedStale
         });
       } catch (error) {
-        logger.error('Failed to invalidate cache on realtime relay', error);
+        logger.error('Failed to mark cache stale on realtime relay', error);
       }
     })();
     return false; // no async response needed

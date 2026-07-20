@@ -267,6 +267,37 @@ describe('CacheManager', () => {
 
       consoleErrorSpy.mockRestore();
     });
+
+    // Regression guard for the "cache truncates to 50 after every save" bug.
+    // The fix marks cache entries stale via timestamp: 0 instead of removing
+    // them, so the warm cache must survive with all its pages and read back as
+    // stale-but-usable when allowExpired is true (the warm-cache reader path).
+    it('reads back the full cached list as stale-but-usable after a mark-stale write', async () => {
+      const manyPages = Array.from({ length: 250 }, (_, i) => ({ id: `p${i}`, title: `Page ${i}` }));
+      const fullResponse = {
+        pages: manyPages,
+        pagination: { total: 250, hasNextPage: false, nextCursor: null }
+      };
+      const cacheKey = cacheManager.getCacheKey('user-123');
+      mockStorage._testData[cacheKey] = {
+        userId: 'user-123',
+        response: fullResponse,
+        timestamp: Date.now()
+      };
+
+      // Simulate markSavedPagesCacheStale: an external writer (background SW
+      // on toolbar save) bumps timestamp to 0 without touching response.
+      mockStorage._testData[cacheKey].timestamp = 0;
+
+      // The warm-cache reader passes allowExpired: true.
+      const state = await cacheManager.getCachedPagesState({}, { allowExpired: true });
+
+      expect(state.status).toBe('stale');
+      expect(state.usable).toBe(true);
+      expect(state.reason).toBe('expired');
+      expect(state.response.pages).toHaveLength(250);
+      expect(state.response.pagination.total).toBe(250);
+    });
   });
 
   describe('setCachedPages', () => {
