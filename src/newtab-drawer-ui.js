@@ -1,5 +1,5 @@
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
-import { getRecentPages, getTopicCounts } from './newtab-home.js';
+import { getPinnedPages } from './newtab-home.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
 export function getDrawerProjectScopeLabel(projectManager, savedPagesView) {
@@ -90,6 +90,7 @@ export function createDrawerUiController({
     // and the warming subscriber route through here, so they can never paint
     // conflicting phases (the race that caused cards-flash-then-dog-stuck).
     if (state.warmUpInProgress) {
+      drawerRenderer.clearPinnedShelf();
       drawerRenderer.renderWarmingState(state.warmUpProgress);
       return;
     }
@@ -100,6 +101,7 @@ export function createDrawerUiController({
     // While a semantic search is loading, the dog takes over the full pane:
     // hide all saved-page cards and show only the centered illustration.
     if (state.semanticLoading) {
+      drawerRenderer.clearPinnedShelf();
       drawerRenderer.renderSemanticLoadingState();
       return;
     }
@@ -108,6 +110,7 @@ export function createDrawerUiController({
     // semantic results return they own the full pane — no separate local card
     // list. (A query always yields at least the card the tag was clicked from.)
     if (hasQuery) {
+      drawerRenderer.clearPinnedShelf();
       if ((state.semanticResults?.length ?? 0) > 0) {
         drawerRenderer.clearPagesSection();
         drawerRenderer.renderSemanticResults(state.semanticResults, {
@@ -126,18 +129,20 @@ export function createDrawerUiController({
       return;
     }
 
-    // No query: show the sparse home view when idle (no scope selected), or
-    // fall through to the browse list once the user takes any intent action.
+    // No query: render the browse list as the default. When idle (no scope
+    // selected) and the user has pinned pages, show the Pinned shelf as a
+    // header row above the list. Any query or scope hides the shelf.
     const hasScope = Boolean(state.selectedProjectId) || Boolean(state.selectedDomainId);
-    if (state.view === 'home' && !hasScope && state.allPages.length) {
-      drawerRenderer.renderHomeView({
-        recentPages: getRecentPages(state.allPages),
-        topics: getTopicCounts(state.allPages)
-      });
-      return;
+    const allPages = Array.isArray(state.allPages) ? state.allPages : [];
+    const pinnedPages = (!hasScope && allPages.length)
+      ? getPinnedPages(allPages)
+      : [];
+    if (pinnedPages.length) {
+      drawerRenderer.renderPinnedShelf(pinnedPages);
+    } else {
+      drawerRenderer.clearPinnedShelf();
     }
 
-    // No query with a scope selected, or browse mode: the saved-page list.
     if (!state.pages.length) {
       // A project always contains at least one page, so an empty list while
       // loading means the API fetch is still in flight — show the digging dog

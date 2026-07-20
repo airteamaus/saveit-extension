@@ -19,7 +19,6 @@ import {
   setDrawerLoadedScopePages,
   setDrawerProjectsAvailability,
   setDrawerSemantic,
-  setDrawerView,
   updateDrawerPageCollections,
   updateDrawerWarming
 } from '../../src/newtab-drawer-state.js';
@@ -116,14 +115,6 @@ describe('drawer state mutation functions', () => {
     expect(state.loadedProjectPages).toEqual([{ id: 'p1' }]);
     setDrawerLoadedScopePages(state, 'nope');
     expect(state.loadedProjectPages).toBeNull();
-  });
-
-  it('setDrawerView clamps to browse|home', () => {
-    const state = createInitialDrawerState();
-    setDrawerView(state, 'browse');
-    expect(state.view).toBe('browse');
-    setDrawerView(state, 'something-else');
-    expect(state.view).toBe('home');
   });
 
   it('selectDrawerProject / selectDrawerDomain coerce falsy to null', () => {
