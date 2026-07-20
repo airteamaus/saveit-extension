@@ -9,6 +9,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✨ Features
 
+- **ui:** sort Pinned shelf alphabetically by title (4bc9485)
+
+## [1.27.0] - 2026-07-20
+
+### ✨ Features
+
 - **realtime:** auto-reconnect with backoff + projects catch-up (4e2f3b6)
 
 ### 🐛 Bug Fixes
@@ -136,15 +142,6 @@ No notable changes.
 ### ✨ Features
 
 - Data & sync overhaul — consolidated import/export/sync modal (9a47088)
-
-### 📚 Documentation
-
-- fix outdated/misleading info across user-facing docs (7a3f3d5)
-
-## [1.22.0] - 2026-07-14
-
-### ✨ Features
-
 - **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
 - **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
 - **realtime:** RealtimeEventBus typed pub/sub (8efa830)
@@ -563,6 +560,7 @@ No notable changes.
 
 ### 📚 Documentation
 
+- fix outdated/misleading info across user-facing docs (7a3f3d5)
 - implementation plan for realtime push feature (e74a3f8)
 - realtime push design spec for shared projects (28ce3ec)
 - client-side page capture implementation plan (b701619)
