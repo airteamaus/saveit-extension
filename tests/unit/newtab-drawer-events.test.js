@@ -173,3 +173,77 @@ describe('privacy toggle click delegation', () => {
     expect(handlers.handleDrawerTogglePrivacy).toHaveBeenCalledWith('page-7');
   });
 });
+
+describe('pinned shelf card navigation', () => {
+  // Regression: the pinned shelf renders cards with class
+  // .saved-pages-home-pinned-card, but the click delegation only matched
+  // .saved-pages-drawer-card, so clicking a pinned card did nothing.
+  function buildMinimalHarness() {
+    document.body.innerHTML = `
+      <div id="results">
+        <article class="saved-pages-home-pinned-card" data-page-id="pin-1" data-url="https://example.com/pinned" role="link" tabindex="0">
+          <h3>Pinned One</h3>
+        </article>
+      </div>
+    `;
+    const handlers = {
+      navigateDrawerCard: vi.fn(),
+      handleDrawerEditCancel: vi.fn(),
+      handleDrawerTogglePrivacy: vi.fn(),
+      handleDrawerUpdate: vi.fn()
+    };
+    const noop = () => {};
+    initSavedPagesDrawerEvents({
+      savedPagesDrawerSearchForm: null,
+      savedPagesDrawerSearchInput: null,
+      savedPagesDrawerClearBtn: null,
+      savedPagesDrawerResults: document.getElementById('results'),
+      projectSidebar: null,
+      projectEditorBackdrop: null,
+      projectEditorDialog: null,
+      projectManager: {},
+      savedPagesView: {},
+      openSavedPagesDrawer: noop,
+      closeSavedPagesDrawer: noop,
+      loadDrawerResults: noop,
+      loadDrawerDomainPages: noop,
+      navigateDrawerCard: handlers.navigateDrawerCard,
+      handleDrawerEditCancel: handlers.handleDrawerEditCancel,
+      handleDrawerEditStart: noop,
+      handleDrawerPin: noop,
+      handleDrawerTogglePrivacy: handlers.handleDrawerTogglePrivacy,
+      handleDrawerUpdate: handlers.handleDrawerUpdate,
+      handleDrawerDelete: noop,
+      handleDrawerScrollNearEnd: noop,
+      setDrawerSearchValue: noop,
+      setDrawerToggleState: noop,
+      isDrawerOpen: () => true,
+      windowObj: window,
+      documentObj: document
+    });
+    return handlers;
+  }
+
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('clicking a pinned shelf card routes to navigateDrawerCard with the card', () => {
+    const { navigateDrawerCard } = buildMinimalHarness();
+    const card = document.querySelector('.saved-pages-home-pinned-card');
+    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(navigateDrawerCard).toHaveBeenCalledTimes(1);
+    // The routed element is the pinned card itself, carrying data-url.
+    expect(navigateDrawerCard.mock.calls[0][0]).toBe(card);
+  });
+
+  it('Enter on a focused pinned card routes to navigateDrawerCard', () => {
+    const { navigateDrawerCard } = buildMinimalHarness();
+    const card = document.querySelector('.saved-pages-home-pinned-card');
+    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    expect(navigateDrawerCard).toHaveBeenCalledTimes(1);
+    expect(navigateDrawerCard.mock.calls[0][0]).toBe(card);
+  });
+});

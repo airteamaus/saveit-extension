@@ -96,7 +96,7 @@ export function initSavedPagesDrawerEvents({
       if (event.target.closest('.saved-pages-drawer-edit-form')) {
         return;
       }
-      const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+      const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
       if (!card) {
         return;
       }
@@ -153,7 +153,7 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+    const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
     if (!card) {
       return;
     }
@@ -202,7 +202,7 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    const card = event.target.closest('.saved-pages-drawer-card[data-url]');
+    const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
     if (!card) {
       return;
     }
