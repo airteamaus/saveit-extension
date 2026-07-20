@@ -7,11 +7,16 @@
 import { debugWarn } from './config.js';
 
 export class RealtimeClient {
-  constructor({ bus, notify, getToken, url }) {
+  constructor({ bus, notify, getToken, url, onConnect = null }) {
     this.bus = bus;
     this.notify = notify || (() => {});
     this.getToken = getToken;
     this.url = url;
+    // Fired once per successful stream establishment. The newtab page uses it
+    // to run a catch-up refreshInitial: SSE has no replay buffer, so events
+    // that fired during a disconnect (this client has no auto-reconnect) are
+    // lost unless we re-pull on connect. See newtab-app.js wiring.
+    this.onConnect = onConnect;
     this.controller = null;
     this.disconnected = false;
     this.buffer = '';
@@ -62,6 +67,18 @@ export class RealtimeClient {
         console.warn('[realtime-client] stream rejected:', response.status, response.ok ? 'no body' : '');
         this.handleDisconnect();
         return;
+      }
+
+      // Stream is up. SSE has no replay — any event that fired between a prior
+      // disconnect and this connect is gone. Kick off the catch-up refresh so
+      // the store reconciles missed updates, but don't await it: the refresh is
+      // a network round-trip and awaiting would delay delivery of events that
+      // arrive while it's in flight. Guarded so a refresh failure (auth
+      // expired, network blip) never tears down the live stream.
+      if (this.onConnect) {
+        Promise.resolve(this.onConnect()).catch(err => {
+          console.warn('[realtime-client] onConnect callback failed:', err?.message || err);
+        });
       }
 
       await this.readStream(response.body);

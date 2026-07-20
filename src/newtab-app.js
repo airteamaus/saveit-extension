@@ -233,7 +233,14 @@ export function createNewtabApp({
     bus: realtimeBus,
     notify: toast.show,
     getToken: getSessionToken,
-    url: `${CONFIG.realtimeFunctionUrl}/events/stream`
+    url: `${CONFIG.realtimeFunctionUrl}/events/stream`,
+    // SSE has no replay buffer: events that fire while the stream is down are
+    // gone, and this client doesn't auto-reconnect. On each (re)connect, run a
+    // catch-up refresh so the store reconciles anything missed — the standard
+    // update-check (HEAD newerThanId) detects and incremental-syncs the new
+    // pages. Without this, a stream drop between save-enrichment and reconnect
+    // leaves new pages invisible until the user manually reloads.
+    onConnect: () => { void savedPagesStore.refreshInitial(); }
   });
 
   const authLifecycle = createNewtabAuthLifecycleFn({

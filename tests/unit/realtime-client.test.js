@@ -228,4 +228,104 @@ describe('RealtimeClient', () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(notify).toHaveBeenCalledTimes(2);  // re-armed after the reconnect
   });
+
+  // Regression: SSE has no replay buffer and the client doesn't auto-reconnect,
+  // so events that fire during a disconnect are lost. The onConnect callback
+  // lets the newtab page run a catch-up refreshInitial each time the stream
+  // (re)establishes, picking up missed updates via the standard update-check.
+  test('fires onConnect once when the stream establishes successfully', async () => {
+    const onConnect = vi.fn().mockResolvedValue(undefined);
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([]),
+      headers: new Map()
+    });
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => 'test-token',
+      url: 'https://example.test/events/stream',
+      onConnect
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(onConnect).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not fire onConnect when the stream is rejected (no body / non-ok)', async () => {
+    const onConnect = vi.fn();
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      body: null,
+      headers: new Map()
+    });
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => 'test-token',
+      url: 'https://example.test/events/stream',
+      onConnect
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  test('does not fire onConnect when there is no session token', async () => {
+    // Anonymous users (no token) never open the stream, so no catch-up needed.
+    const onConnect = vi.fn();
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([]),
+      headers: new Map()
+    });
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => null,
+      url: 'https://example.test/events/stream',
+      onConnect
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(onConnect).not.toHaveBeenCalled();
+  });
+
+  test('a throwing onConnect does not break the stream or prevent events', async () => {
+    // The catch-up refresh must never tear down the live stream.
+    const onConnect = vi.fn().mockRejectedValue(new Error('refresh failed'));
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      body: makeReadableStream([
+        'event: page_updated\n',
+        'data: {"type":"page_updated","change":"enriched","pageId":"p1"}\n\n'
+      ]),
+      headers: new Map()
+    });
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => 'test-token',
+      url: 'https://example.test/events/stream',
+      onConnect
+    });
+    await client.connect();
+    await new Promise(r => setTimeout(r, 10));
+
+    expect(onConnect).toHaveBeenCalledTimes(1);
+    // The stream still delivered the event despite the catch-up rejection.
+    expect(bus.dispatch).toHaveBeenCalledWith({
+      type: 'page_updated',
+      change: 'enriched',
+      pageId: 'p1'
+    });
+  });
 });
