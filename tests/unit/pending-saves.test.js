@@ -5,6 +5,7 @@ import {
   addPendingSave,
   addPendingSaves,
   getPendingSaves,
+  evictExpiredPendingSaves,
   clearPendingSave,
   buildOptimisticPage,
   isOptimisticPage
@@ -254,5 +255,121 @@ describe('isOptimisticPage', () => {
     expect(isOptimisticPage(null)).toBe(false);
     expect(isOptimisticPage({})).toBe(false);
     expect(isOptimisticPage({ id: '' })).toBe(false);
+  });
+});
+
+describe('URL normalization (cross-surface dedup agreement)', () => {
+  let storage;
+  beforeEach(() => { storage = createMemoryStorage(); });
+
+  // Regression: pending-saves used to ship a private normalizer that only
+  // lowercased the host and stripped a single trailing slash. bookmark-reader
+  // and bookmark-mirror used a stricter one (lowercase everything, strip all
+  // trailing slashes). The disagreement leaked optimistic tiles when cleanup
+  // matched against the snapshot. pending-saves now uses the shared normalizer.
+  it('collapses case variants of the same URL (not just host case)', async () => {
+    await addPendingSave(storage, {
+      url: 'https://Example.com/Article',
+      title: 'First',
+      saved_at: '2026-07-09T10:00:00.000Z'
+    });
+    await addPendingSave(storage, {
+      url: 'https://example.com/article',
+      title: 'Second',
+      saved_at: '2026-07-09T10:00:01.000Z'
+    });
+
+    const records = await getPendingSaves(storage);
+    expect(Object.keys(records)).toHaveLength(1);
+    expect(Object.values(records)[0].title).toBe('Second');
+  });
+
+  it('strips all trailing slashes, not just one', async () => {
+    await addPendingSave(storage, {
+      url: 'https://example.com/a/',
+      title: 'One',
+      saved_at: '2026-07-09T10:00:00.000Z'
+    });
+    await addPendingSave(storage, {
+      url: 'https://example.com/a//',
+      title: 'Two',
+      saved_at: '2026-07-09T10:00:01.000Z'
+    });
+
+    const records = await getPendingSaves(storage);
+    expect(Object.keys(records)).toHaveLength(1);
+    expect(Object.values(records)[0].title).toBe('Two');
+  });
+});
+
+describe('evictExpiredPendingSaves', () => {
+  let storage;
+  beforeEach(() => { storage = createMemoryStorage(); });
+
+  it('drops records older than the TTL and keeps fresh ones', async () => {
+    const now = Date.parse('2026-07-09T12:00:00.000Z');
+    const ttlMs = 10 * 60 * 1000; // 10 min
+    await addPendingSave(storage, {
+      // Fresh: 1 minute old — keep
+      url: 'https://fresh.example',
+      saved_at: new Date(now - 60 * 1000).toISOString()
+    });
+    await addPendingSave(storage, {
+      // Stale: 15 minutes old — evict
+      url: 'https://stale.example',
+      saved_at: new Date(now - 15 * 60 * 1000).toISOString()
+    });
+
+    const evicted = await evictExpiredPendingSaves(storage, { now, ttlMs });
+
+    expect(evicted).toBe(1);
+    const remaining = await getPendingSaves(storage);
+    expect(Object.keys(remaining)).toEqual(['https://fresh.example']);
+  });
+
+  it('removes the PENDING_SAVES_KEY entirely when all records are expired', async () => {
+    const now = Date.parse('2026-07-09T12:00:00.000Z');
+    await addPendingSave(storage, {
+      url: 'https://stale.example',
+      saved_at: new Date(now - 60 * 60 * 1000).toISOString()
+    });
+
+    await evictExpiredPendingSaves(storage, { now, ttlMs: 60 * 1000 });
+
+    expect(PENDING_SAVES_KEY in storage.store).toBe(false);
+  });
+
+  it('returns 0 and does no write when nothing is expired', async () => {
+    const now = Date.parse('2026-07-09T12:00:00.000Z');
+    await addPendingSave(storage, {
+      url: 'https://fresh.example',
+      saved_at: new Date(now - 10 * 1000).toISOString()
+    });
+    // Capture the call count AFTER setup so the assertion only covers the
+    // eviction call itself.
+    const setCallsBefore = storage.set.mock.calls.length;
+
+    const evicted = await evictExpiredPendingSaves(storage, { now, ttlMs: 60 * 1000 });
+
+    expect(evicted).toBe(0);
+    expect(storage.set.mock.calls.length).toBe(setCallsBefore);
+  });
+
+  it('treats an unparseable saved_at as expired (no tile pinned forever by corrupt data)', async () => {
+    const now = Date.parse('2026-07-09T12:00:00.000Z');
+    // Manually plant a record with garbage saved_at.
+    storage.store[PENDING_SAVES_KEY] = {
+      'https://broken.example': { url: 'https://broken.example', saved_at: 'not-a-date' }
+    };
+
+    const evicted = await evictExpiredPendingSaves(storage, { now, ttlMs: 60 * 60 * 1000 });
+
+    expect(evicted).toBe(1);
+    expect(await getPendingSaves(storage)).toEqual({});
+  });
+
+  it('is a no-op when storage is unavailable', async () => {
+    const evicted = await evictExpiredPendingSaves(null);
+    expect(evicted).toBe(0);
   });
 });

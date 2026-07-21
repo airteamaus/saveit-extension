@@ -10,27 +10,19 @@
 // the real doc and the tile is replaced.
 //
 // Records are keyed by normalized URL so a re-save of the same URL collapses
-// into one pending entry rather than stacking tiles.
+// into one pending entry rather than stacking tiles. The normalizer is shared
+// with bookmark-reader and bookmark-mirror so dedup agrees across surfaces —
+// a previous private normalizer here disagreed on case and trailing slashes,
+// which leaked optimistic tiles when cleanup matched against the snapshot.
+
+import { normalizeUrl } from './bookmark-reader.js';
 
 export const PENDING_SAVES_KEY = 'saveit_pendingSaves';
 
-// Normalize a URL for use as a pending-record key. Lowercases the host and
-// strips a trailing slash so "https://X/y" and "https://X/y/" collapse. Kept
-// intentionally simple — this only needs to match the same URL across a
-// re-save, not to canonicalize every possible URL form.
-export function normalizePendingUrl(url) {
-  if (!url || typeof url !== 'string') {
-    return '';
-  }
-  try {
-    const u = new URL(url);
-    const host = u.host.toLowerCase();
-    const path = u.pathname.replace(/\/$/, '');
-    return `${u.protocol}//${host}${path}${u.search}`;
-  } catch {
-    return url.trim();
-  }
-}
+// Records older than this are dropped on read. Enrichment normally takes ~28s;
+// this covers retries and blips without letting a silently-failed enrichment
+// leak an optimistic tile forever.
+export const PENDING_SAVE_TTL_MS = 10 * 60 * 1000; // 10 min
 
 function deriveDomain(url) {
   try {
@@ -54,6 +46,40 @@ export async function getPendingSaves(storage) {
   return records;
 }
 
+// Drop records older than the TTL. Enrichment normally completes in ~28s; a
+// record still pending past the TTL means enrichment silently failed (or the
+// realtime 'page_enriched' event was missed), and without eviction the
+// optimistic tile would render on every newtab open forever. Called by the
+// sync observer before it renders tiles, so eviction runs on newtab load and
+// on every pending-saves storage change. No-op when there's nothing to evict.
+export async function evictExpiredPendingSaves(storage, { now = Date.now(), ttlMs = PENDING_SAVE_TTL_MS } = {}) {
+  if (!storage?.get) {
+    return 0;
+  }
+  const records = await getPendingSaves(storage);
+  const liveRecords = {};
+  let evicted = 0;
+  for (const [key, record] of Object.entries(records)) {
+    const savedAt = Date.parse(record?.saved_at || '');
+    // An unparseable saved_at is treated as expired — a corrupt timestamp
+    // shouldn't pin a tile forever.
+    if (Number.isNaN(savedAt) || (now - savedAt) > ttlMs) {
+      evicted += 1;
+      continue;
+    }
+    liveRecords[key] = record;
+  }
+  if (evicted === 0) {
+    return 0;
+  }
+  if (Object.keys(liveRecords).length === 0) {
+    await storage.remove?.(PENDING_SAVES_KEY);
+  } else {
+    await storage.set?.({ [PENDING_SAVES_KEY]: liveRecords });
+  }
+  return evicted;
+}
+
 // Write (or overwrite) a pending save record. The record should carry the
 // fields needed to render an optimistic tile: url, title, description, image,
 // saved_at, and optionally project_ids / projectId.
@@ -64,7 +90,7 @@ export async function addPendingSave(storage, record) {
   if (!record?.url) {
     return;
   }
-  const key = normalizePendingUrl(record.url);
+  const key = normalizeUrl(record.url);
   if (!key) {
     return;
   }
@@ -91,7 +117,7 @@ export async function addPendingSaves(storage, records) {
   const existing = await getPendingSaves(storage);
   for (const record of records) {
     if (!record?.url) continue;
-    const key = normalizePendingUrl(record.url);
+    const key = normalizeUrl(record.url);
     if (!key) continue;
     existing[key] = {
       url: record.url,
@@ -110,7 +136,7 @@ export async function clearPendingSave(storage, url) {
   if (!storage?.get || !storage?.remove) {
     return;
   }
-  const key = normalizePendingUrl(url);
+  const key = normalizeUrl(url);
   if (!key) {
     return;
   }
@@ -134,7 +160,7 @@ export async function clearPendingSave(storage, url) {
 // (a synthetic id must never become the incremental-sync anchor).
 export function buildOptimisticPage(record, { projectId = null } = {}) {
   const url = record?.url || '';
-  const normalized = normalizePendingUrl(url);
+  const normalized = normalizeUrl(url);
   const projectIds = Array.isArray(record?.project_ids) && record.project_ids.length > 0
     ? record.project_ids
     : (projectId ? [projectId] : []);
@@ -172,4 +198,21 @@ export function buildOptimisticPage(record, { projectId = null } = {}) {
 // with this instead of letting those actions fire.
 export function isOptimisticPage(page) {
   return page?.optimistic === true || String(page?.id || '').startsWith('optimistic:');
+}
+
+// Throw if `id` is an optimistic (not-yet-enriched) tile id. Optimistic ids
+// are `optimistic:<normalized-url>`, and the URL's protocol leaves `//` in the
+// id — which makes it an invalid Firestore document path. Any API method that
+// sends a page id to the backend (deletePage, updatePage, pinPage,
+// addPageToProject, removePageFromProject) must call this first; otherwise a
+// UI bug that lets an action fire on an optimistic tile crashes the backend
+// call with a Firestore path error. The renderer disables these actions on
+// optimistic tiles, but defense-in-depth: the API boundary is the last gate.
+export function assertRealPageId(id) {
+  if (typeof id === 'string' && id.startsWith('optimistic:')) {
+    throw new Error(
+      `Cannot call this action on an optimistic (not-yet-enriched) tile: ${id}. ` +
+      'Wait for enrichment to complete, or cancel the pending save instead.'
+    );
+  }
 }

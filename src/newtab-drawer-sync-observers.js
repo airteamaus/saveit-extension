@@ -10,6 +10,7 @@ import {
 import {
   PENDING_SAVES_KEY,
   getPendingSaves,
+  evictExpiredPendingSaves,
   clearPendingSave,
   buildOptimisticPage
 } from './pending-saves.js';
@@ -155,6 +156,10 @@ export function createDrawerCacheInvalidationObserver({
     if (!browserApi?.storage?.local) {
       return;
     }
+    // Evict records whose enrichment never arrived (silent worker failure,
+    // missed realtime event) before rendering them as tiles. Without this a
+    // pending record would render on every newtab open forever.
+    await evictExpiredPendingSaves(browserApi.storage.local);
     const records = await getPendingSaves(browserApi.storage.local);
     const snapshot = savedPagesStore.getSnapshot();
     const existingUrls = new Set(

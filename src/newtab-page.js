@@ -9,8 +9,6 @@ export function getNewtabElements(documentObj = document) {
     sharingBtn: documentObj.getElementById('hero-sharing-btn'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
     projectEditorDialog: documentObj.getElementById('project-editor-dialog'),
-    importPanelBackdrop: documentObj.getElementById('import-panel-backdrop'),
-    importPanelDialog: documentObj.getElementById('import-panel-dialog'),
     sharingCentreBackdrop: documentObj.getElementById('sharing-centre-backdrop'),
     sharingCentreDialog: documentObj.getElementById('sharing-centre-dialog'),
     dataSyncCentreBackdrop: documentObj.getElementById('data-sync-centre-backdrop'),

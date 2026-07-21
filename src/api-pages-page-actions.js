@@ -3,10 +3,12 @@ import {
   pinStandalonePage,
   updateStandalonePage
 } from './api-pages-standalone.js';
+import { assertRealPageId } from './pending-saves.js';
 
 export function applyApiPageActions(API) {
   Object.assign(API, {
     async deletePage(id) {
+      assertRealPageId(id);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
@@ -31,6 +33,7 @@ export function applyApiPageActions(API) {
     },
 
     async updatePage(id, updates) {
+      assertRealPageId(id);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
@@ -59,6 +62,7 @@ export function applyApiPageActions(API) {
     },
 
     async pinPage(id, pinned) {
+      assertRealPageId(id);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {

@@ -1,5 +1,4 @@
 import { createNewtabAuthController } from './newtab-auth.js';
-import { createImportPanel } from './import-panel.js';
 import { createSharingCentre } from './sharing-centre.js';
 import { createDataSyncCentre } from './data-sync-centre.js';
 import { createToastRegion } from './toast.js';
@@ -258,21 +257,6 @@ export function createNewtabApp({
     onInteractiveSignIn: () => savedPagesStore.setLazy(false)
   });
 
-  const importPanel = createImportPanel({
-    api: API,
-    documentObj,
-    // After a successful import, force the drawer to reload from the server so
-    // the new pages appear without relying on the storage-change observer
-    // (which can miss the event if the drawer's local snapshot shadows it).
-    onImportComplete: () => {
-      try {
-        drawerController.load();
-      } catch {
-        /* drawer not initialised yet — a manual reload will pick it up */
-      }
-    }
-  });
-
   const sharingCentre = createSharingCentre({
     api: API,
     documentObj,
@@ -317,7 +301,6 @@ export function createNewtabApp({
     authController,
     drawerController,
     elements,
-    importPanel,
     projectManager,
     projectsStore,
     realtimeClient,

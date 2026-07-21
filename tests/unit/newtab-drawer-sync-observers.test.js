@@ -856,7 +856,8 @@ describe('drawer sync observers', () => {
         pendingRecords: {
           'https://docs.google.com/document/d/abc/edit?tab=t.0': {
             url: realPageUrl,
-            title: 'Real Doc'
+            title: 'Real Doc',
+            saved_at: new Date().toISOString()
           }
         }
       });
@@ -876,7 +877,8 @@ describe('drawer sync observers', () => {
         pendingRecords: {
           'https://example.com/pending': {
             url: pendingUrl,
-            title: 'Pending Page'
+            title: 'Pending Page',
+            saved_at: new Date().toISOString()
           }
         }
       });
@@ -897,7 +899,8 @@ describe('drawer sync observers', () => {
         pendingRecords: {
           'https://example.com/still-pending': {
             url: pendingUrl,
-            title: 'Still Pending'
+            title: 'Still Pending',
+            saved_at: new Date().toISOString()
           }
         }
       });

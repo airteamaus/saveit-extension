@@ -15,6 +15,8 @@
 //   - tags are comma-separated, quoted: "tag1, tag2"
 //   - created accepts a Unix timestamp (seconds) OR ISO 8601
 
+import { ACCEPTED_BACKUP_FORMATS } from './backup-format.js';
+
 // --- CSV parsing ----------------------------------------------------------
 // RFC-4180-ish: double-quoted fields may contain commas, quotes (escaped as "")
 // and newlines. Implemented by hand rather than pulling in PapaParse — the
@@ -288,12 +290,12 @@ export function parseNetscapeHtml(htmlText) {
 
 // --- Newtab JSON backup parsing -------------------------------------------
 
-// The writer always emits 'newtab-backup'. The reader accepts the prior
-// 'buckleys-backup' format string too, so .json backups exported before the
-// rebrand keep importing unchanged (AGENTS.md rule #7: additive compatibility
-// at API boundaries). The presence of a `pages` array is still the real
-// schema gate, so very old backups with no `format` field still import.
-const ACCEPTED_BACKUP_FORMATS = ['newtab-backup', 'buckleys-backup'];
+// The writer always emits the current format string (BACKUP_FORMAT in
+// backup-format.js). The reader accepts the prior 'buckleys-backup' format
+// string too, so .json backups exported before the rebrand keep importing
+// unchanged (AGENTS.md rule #7: additive compatibility at API boundaries).
+// The presence of a `pages` array is still the real schema gate, so very old
+// backups with no `format` field still import.
 
 /**
  * Parse a Newtab JSON backup (produced by bookmark-export.js toJsonBackup).

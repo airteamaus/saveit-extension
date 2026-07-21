@@ -295,6 +295,12 @@ export function createSavedPagesDrawerController({
       }
       if (event?.projectId && event.projectId === state.selectedProjectId) {
         await savedPagesStore.refreshInitial();
+        // Also refresh the open project's own store — the all-pages store
+        // refresh above won't reconcile the project-scoped tile list, so
+        // without this the open project view stays stale until something
+        // else forces it. Mirrors refreshOpenScopes' project-store branch.
+        const projectStore = dataController.getProjectSavedPagesStore?.(state.selectedProjectId);
+        await projectStore?.refreshInitial();
       }
       await projectsStore.refreshInitial();
     } catch (err) {

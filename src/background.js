@@ -427,6 +427,14 @@ async function savePageFromTab(tab, { projectId = null } = {}) {
     body: pageData
   });
 
+  // The save endpoint returns { success, request_id } on success. A null here
+  // means the response body failed to parse as JSON (truncated, gateway HTML,
+  // etc.) — treat that as a failure rather than toasting "Page saved!" and
+  // writing a pending-save tile for a save the backend may never have accepted.
+  if (!data) {
+    throw new Error('Save failed: the server returned an empty or unparseable response.');
+  }
+
   logger.log('Page saved successfully');
 
   if (data?.request_id) {

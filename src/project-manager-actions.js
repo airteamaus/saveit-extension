@@ -215,13 +215,19 @@ export function createProjectManagerActions({
 
     async selectProject(dashboard, projectId) {
       dashboard.selectedProjectId = projectId || null;
-      dashboard.currentFilter.projectId = dashboard.selectedProjectId;
-      dashboard.currentFilter.cursor = null;
-      dashboard.tagInteractionManager.clearSelection();
-      dashboard.discoveryManager.exit();
+      // Guard currentFilter: some dashboard call sites construct the object
+      // lazily, so it may be undefined on a fresh controller. archiveProject
+      // (same file) guards the same way; selectProject previously dereferenced
+      // unconditionally and NPE'd.
+      if (dashboard.currentFilter) {
+        dashboard.currentFilter.projectId = dashboard.selectedProjectId;
+        dashboard.currentFilter.cursor = null;
+      }
+      dashboard.tagInteractionManager?.clearSelection();
+      dashboard.discoveryManager?.exit();
       closeEditor(dashboard);
-      dashboard.showLoading();
-      await dashboard.loadPages();
+      dashboard.showLoading?.();
+      await dashboard.loadPages?.();
       await dashboard.handleFilterChange();
     },
 

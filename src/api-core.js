@@ -464,13 +464,11 @@ export function applyApiCore(API, dependencies = {}) {
         body: options.body,
         headers: options.headers,
         getIdToken: () => this.getIdToken(),
-        onRotation: (response) => this._applySessionRotation(response),
+        // No logger: the facade stays silent on rotation (the request already
+        // succeeded). background.js calls applySessionRotation with a logger.
+        onRotation: (response) => applySessionRotation(response),
         parseError: (response) => this.parseErrorResponse(response)
       });
-    },
-
-    async _applySessionRotation(response) {
-      await applySessionRotation(response);
     },
 
     async _fetchWithAuth(endpoint, params = null, options = {}) {

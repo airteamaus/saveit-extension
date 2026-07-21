@@ -146,3 +146,41 @@ describe('toNetscapeHtml', () => {
     expect(example.createdAt).toBe('2021-08-26T14:28:45.000Z');
   });
 });
+
+// Regression: escapeHtmlAttr neutralizes <>&" but NOT the URL scheme. A
+// javascript: saved page would otherwise survive export as a script-URL
+// bookmark that runs on click in any browser that imports the file. All
+// three formats must filter non-http(s) URLs — matches the importer's
+// isImportableUrl gate so the round-trip stays safe.
+describe('non-http(s) URL filtering', () => {
+  const MIXED = [
+    { url: 'https://safe.example', title: 'Safe' },
+    { url: 'javascript:alert(1)', title: 'Script' },
+    { url: 'data:text/html,<script>alert(1)</script>', title: 'Data' },
+    { url: 'file:///etc/passwd', title: 'File' },
+    { url: '', title: 'Empty' },
+    { url: null, title: 'Null' }
+  ];
+
+  it('toRaindropCsv omits non-http(s) URLs', () => {
+    const csv = toRaindropCsv(MIXED);
+    expect(csv).toContain('https://safe.example');
+    expect(csv).not.toContain('javascript:');
+    expect(csv).not.toContain('data:');
+    expect(csv).not.toContain('file:');
+  });
+
+  it('toJsonBackup omits non-http(s) URLs', () => {
+    const json = JSON.parse(toJsonBackup(MIXED));
+    expect(json.pages).toHaveLength(1);
+    expect(json.pages[0].url).toBe('https://safe.example');
+  });
+
+  it('toNetscapeHtml omits non-http(s) URLs (no script-URL bookmarks)', () => {
+    const html = toNetscapeHtml(MIXED);
+    expect(html).toContain('https://safe.example');
+    expect(html).not.toContain('javascript:');
+    expect(html).not.toContain('data:');
+    expect(html).not.toContain('file:');
+  });
+});

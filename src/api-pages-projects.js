@@ -5,6 +5,7 @@ import {
   removeStandalonePageFromProject,
   updateStandaloneProject
 } from './api-pages-standalone.js';
+import { assertRealPageId } from './pending-saves.js';
 
 function createProjectsUnsupportedError() {
   const error = new Error('Project collections are not supported by the connected backend yet.');
@@ -147,6 +148,7 @@ export function applyApiProjects(API) {
     },
 
     async addPageToProject(projectId, pageId) {
+      assertRealPageId(pageId);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {
@@ -175,6 +177,7 @@ export function applyApiProjects(API) {
     },
 
     async removePageFromProject(projectId, pageId) {
+      assertRealPageId(pageId);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
           async () => {

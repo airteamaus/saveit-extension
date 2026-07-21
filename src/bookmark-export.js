@@ -11,6 +11,8 @@
 // Project names are resolved by the caller and passed as a Map so the
 // serializer stays pure and testable.
 
+import { BACKUP_FORMAT, BACKUP_VERSION } from './backup-format.js';
+
 // --- CSV helpers (shared with the import-side parser philosophy) -----------
 // Escape a single CSV field per RFC-4180: wrap in quotes if it contains a
 // comma, quote, newline, or leading/trailing space; double any inner quotes.
@@ -24,6 +26,24 @@ function csvField(value) {
 
 function csvRow(fields) {
   return fields.map(csvField).join(',');
+}
+
+// Reject non-http(s) URLs from exports. escapeHtmlAttr neutralizes <>&" but
+// not the URL scheme, so a `javascript:` saved page would survive export as
+// a script-URL bookmark that runs on click in any browser that imports it.
+// The importer already rejects non-http(s); this filters on export too so
+// the exported file is safe regardless of how it's consumed. Matches the
+// importer's isImportableUrl in bookmark-reader.js.
+function isExportableUrl(url) {
+  if (typeof url !== 'string' || url === '') {
+    return false;
+  }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -40,7 +60,7 @@ export function toRaindropCsv(pages, projectNameById = new Map()) {
   const lines = [header];
 
   for (const page of pages || []) {
-    if (!page?.url) continue;
+    if (!isExportableUrl(page?.url)) continue;
 
     // A page may belong to several projects; use the first project name as the
     // folder (Raindrop's folder is single-valued). No project → blank folder.
@@ -83,11 +103,11 @@ function toUnixSeconds(isoOrMs) {
  */
 export function toJsonBackup(pages, projects = []) {
   const backup = {
-    format: 'newtab-backup',
-    version: 1,
+    format: BACKUP_FORMAT,
+    version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     pages: (pages || [])
-      .filter((page) => page?.url)
+      .filter((page) => isExportableUrl(page?.url))
       .map((page) => ({
         url: page.url,
         title: page.title || '',
@@ -143,7 +163,7 @@ export function toNetscapeHtml(pages) {
   ];
 
   for (const page of pages || []) {
-    if (!page?.url) continue;
+    if (!isExportableUrl(page?.url)) continue;
     const addDate = page.saved_at ? toUnixSeconds(page.saved_at) : '';
     const title = page.title || page.url;
     lines.push(

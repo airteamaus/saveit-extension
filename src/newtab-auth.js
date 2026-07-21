@@ -1,16 +1,5 @@
 import { getCurrentUser } from './session-store.js';
-
-function getBrowserRuntime() {
-  if (typeof browser !== 'undefined' && browser.runtime) {
-    return browser.runtime;
-  }
-
-  if (typeof chrome !== 'undefined' && chrome.runtime) {
-    return chrome.runtime;
-  }
-
-  return null;
-}
+import { getBrowserRuntime } from './config.js';
 
 export function applyAuthUI(user, {
   AuthMenu,

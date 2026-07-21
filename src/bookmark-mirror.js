@@ -14,6 +14,7 @@
 //   mirrorSavedPage() — fast create on the toolbar save path (no diff)
 
 import { normalizeUrl } from './bookmark-reader.js';
+import { fetchAllSavedPages } from './fetch-all-saved-pages.js';
 import {
   getMirrorState,
   setMirrorState
@@ -33,7 +34,6 @@ const GENERAL_SUBBUCKET_TITLE = 'General'; // sub-folder for pages with no AI do
 const OTHER_DOMAIN_KEY = '__other__';
 // Above this count a project/domain folder is split into per-subdomain child folders.
 const SUBBUCKET_THRESHOLD = 10;
-const RECONCILE_PAGE_SIZE = 100;
 // Re-fetch the whole collection if the last full reconcile is older than this.
 // Within the window the HEAD freshness check can short-circuit a reconcile.
 const FULL_RECONCILE_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6h
@@ -591,35 +591,11 @@ async function readFolderChildrenByFolderId(bookmarksApi, folderIds) {
 
 // --- orchestration ---------------------------------------------------------
 
-// Fetch the entire saved-page set, paging through cursors. Bypasses the
-// WarmCacheListStore (which is UI-windowed) — the mirror wants the whole set.
-// When projectId is given, scopes to that project (used to pull cross-user
-// pages for shared company projects).
-async function fetchAllPages(api, { projectId } = {}) {
-  const all = [];
-  let cursor = null;
-  do {
-    const res = await api.getSavedPages({
-      limit: RECONCILE_PAGE_SIZE,
-      sort: 'newest',
-      cursor,
-      skipCache: true,
-      ...(projectId ? { projectId } : {})
-    });
-    // Require the expected { pages, pagination } shape. Previously a non-
-    // conforming response (e.g. a request that returned the wrong shape) was
-    // silently coerced to [], which made reconcile create zero bookmarks with
-    // no error — the bug that hid the GET-body-vs-query-string mismatch in
-    // background.js for the whole v1.17 cycle. Throw so miswired calls fail
-    // loudly instead.
-    if (!res || !Array.isArray(res.pages)) {
-      throw new Error('Saved pages response was missing the expected { pages } shape');
-    }
-    all.push(...res.pages);
-    cursor = res?.pagination?.hasNextPage ? res.pagination.nextCursor : null;
-  } while (cursor);
-  return all;
-}
+// Fetch the entire saved-page set for the reconcile. The shared helper
+// (fetch-all-saved-pages.js) pages through cursors until the server reports
+// no next page and throws on a non-conforming response shape. When projectId
+// is given, scopes to that project (used to pull cross-user pages for shared
+// company projects).
 
 // Decide whether a HEAD freshness check is worth doing before a full fetch.
 // Within the reconcile window, the HEAD can short-circuit a no-op reconcile.
@@ -765,7 +741,7 @@ export async function reconcile({
   }
 
   const [pages, projectsResult] = await Promise.all([
-    fetchAllPages(api),
+    fetchAllSavedPages(api),
     typeof api.getProjects === 'function' ? api.getProjects() : []
   ]);
   const projects = Array.isArray(projectsResult) ? projectsResult : [];
@@ -784,7 +760,7 @@ export async function reconcile({
   );
   if (sharedProjects.length > 0) {
     const sharedPages = await Promise.all(
-      sharedProjects.map((p) => fetchAllPages(api, { projectId: p.id }).catch((error) => {
+      sharedProjects.map((p) => fetchAllSavedPages(api, { projectId: p.id }).catch((error) => {
         onWarn?.(`shared project fetch failed for ${p.id}: ${error?.message || error}`);
         return [];
       }))

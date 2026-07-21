@@ -12,15 +12,16 @@
 //   §2 Export   — download your data (CSV/JSON/HTML)
 //   §3 Sync     — see your pages in the browser's bookmarks (the mirror)
 //
-// Import reuses the existing import-panel flow (readAllBookmarks +
-// api.bulkImportBookmarks) for the browser source; file sources route through
-// the pure parsers in bookmark-import.js. Export pages through getSavedPages
-// (the same paginated read the mirror uses) and serialize via bookmark-export.js.
-// Sync reads/writes the existing getBookmarkMirrorState / setBookmarkMirrorEnabled
-// runtime messages.
+// Import reuses the readAllBookmarks + api.bulkImportBookmarks helpers for
+// the browser source; file sources route through the pure parsers in
+// bookmark-import.js. Export pages through getSavedPages (the same paginated
+// read the mirror uses) and serialize via bookmark-export.js. Sync reads/writes
+// the existing getBookmarkMirrorState / setBookmarkMirrorEnabled runtime
+// messages.
 
 import { readAllBookmarks } from './bookmark-reader.js';
 import { invalidateSavedPagesCacheStorage } from './saved-pages-cache.js';
+import { fetchAllSavedPages } from './fetch-all-saved-pages.js';
 import { addPendingSaves } from './pending-saves.js';
 import { createDialogLifecycle } from './dialog-lifecycle.js';
 import { createEl, createQueryId } from './shared-ui-helpers.js';
@@ -69,22 +70,6 @@ export function createDataSyncCentre({
     state.message = message;
     state.error = isError ? message : null;
     render();
-  }
-
-  // Fetch every saved page by paging through cursors. Mirrors the mirror's
-  // fetchAllPages pattern — export wants the whole set, not the UI window.
-  async function fetchAllSavedPages() {
-    const all = [];
-    let cursor = null;
-    do {
-      const res = await api.getSavedPages({ limit: 100, sort: 'newest', cursor, skipCache: true });
-      if (!res || !Array.isArray(res.pages)) {
-        throw new Error('Saved pages response was missing the expected { pages } shape');
-      }
-      all.push(...res.pages);
-      cursor = res?.pagination?.hasNextPage ? res.pagination.nextCursor : null;
-    } while (cursor);
-    return all;
   }
 
   // Trigger a browser download of text content. Creates a transient anchor
@@ -143,14 +128,25 @@ export function createDataSyncCentre({
       // so without these drafts the pages would be invisible until enrichment
       // completes AND a later refresh runs. The realtime relay replaces each
       // draft with the real doc once enrichment lands.
-      const pendingRecords = bookmarks.map((b) => ({
-        url: b.url,
-        title: b.title || '',
-        description: b.notes || null,
-        saved_at: b.createdAt || new Date().toISOString(),
-        project_ids: b.projectId ? [b.projectId] : []
-      }));
-      await addPendingSaves(browserStorage, pendingRecords).catch(() => {});
+      //
+      // Only write tiles when the server accepted everything. The bulk-import
+      // result is `{ imported, skipped }` counts (no per-URL breakdown), so
+      // when anything is skipped we can't tell WHICH URLs were rejected as
+      // duplicates/invalid — writing tiles for all of them would leak
+      // optimistic tiles for the rejected ones forever (their URLs may already
+      // match existing pages and reconcile, or may never match and linger
+      // until the 10-min pending TTL evicts them). The cache invalidation
+      // below still fires, so the accepted pages appear on the next refresh.
+      if (result && result.skipped === 0) {
+        const pendingRecords = bookmarks.map((b) => ({
+          url: b.url,
+          title: b.title || '',
+          description: b.notes || null,
+          saved_at: b.createdAt || new Date().toISOString(),
+          project_ids: b.projectId ? [b.projectId] : []
+        }));
+        await addPendingSaves(browserStorage, pendingRecords).catch(() => {});
+      }
 
       await invalidateSavedPagesCacheStorage(browserStorage).catch(() => {});
       onImportComplete(result);
@@ -250,7 +246,7 @@ export function createDataSyncCentre({
     setStatus('Gathering your saved pages…');
     try {
       const [pages, projectsResult] = await Promise.all([
-        fetchAllSavedPages(),
+        fetchAllSavedPages(api),
         typeof api.getProjects === 'function' ? api.getProjects({ skipCache: true }) : []
       ]);
       const projects = Array.isArray(projectsResult) ? projectsResult : [];

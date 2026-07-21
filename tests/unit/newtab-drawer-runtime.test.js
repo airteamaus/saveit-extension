@@ -297,4 +297,213 @@ describe('newtab drawer runtime', () => {
     controller.handleSignedOut();
     expect(viewGetCurrentUser()).toBeNull();
   });
+
+  // Regression: handleRealtimeProjectEvent refreshed only savedPagesStore when
+  // a project_page_changed event arrived for the open project — the open
+  // project's own scoped store was missed, leaving its tile list stale until
+  // something else forced a refresh. Mirrors refreshOpenScopes' project-store
+  // branch.
+  it('refreshes the open project store too on a project_page_changed event', async () => {
+    const state = { hasInitialized: true };
+    const savedPagesRefresh = vi.fn(async () => {});
+    const projectScopeRefresh = vi.fn(async () => {});
+    const projectsStoreRefresh = vi.fn(async () => {});
+    const savedPagesStore = {
+      subscribe: vi.fn(),
+      reset: vi.fn(),
+      getSnapshot: () => ({}),
+      refreshInitial: savedPagesRefresh
+    };
+    const projectSidebar = document.createElement('div');
+
+    const controller = createSavedPagesDrawerController({
+      api: { isExtension: true },
+      savedPagesStore,
+      projectsStore: {
+        subscribe: vi.fn(),
+        reset: vi.fn(),
+        getSnapshot: () => ({}),
+        refreshInitial: projectsStoreRefresh
+      },
+      projectManager: {
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn(),
+        getScopedPages: vi.fn(() => []),
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        refreshProjectCounts: vi.fn()
+      },
+      elements: {
+        savedPagesToggleBtn: document.createElement('button'),
+        savedPagesDrawer: document.createElement('div'),
+        savedPagesDrawerBackdrop: document.createElement('div'),
+        savedPagesDrawerCloseBtn: document.createElement('button'),
+        savedPagesDrawerSearchForm: document.createElement('form'),
+        savedPagesDrawerSearchInput: document.createElement('input'),
+        savedPagesDrawerClearBtn: document.createElement('button'),
+        savedPagesDrawerResults: document.createElement('div'),
+        projectSidebar,
+        projectEditorBackdrop: document.createElement('div'),
+        projectEditorDialog: document.createElement('div')
+      },
+      onSavedPagesTotalChange: vi.fn(),
+      refreshFavorites: vi.fn(),
+      notify: vi.fn(),
+      windowObj: { setTimeout, clearTimeout },
+      documentObj: document,
+      dependencies: {
+        createDrawerDataControllerFn: vi.fn(() => ({
+          ensureDrawerProjectsLoaded: vi.fn(),
+          handleDrawerDelete: vi.fn(),
+          handleDrawerPin: vi.fn(),
+          handleDrawerUpdate: vi.fn(),
+          loadDrawerBasePages: vi.fn(),
+          loadDrawerDomainPages: vi.fn(),
+          loadDrawerProjectPages: vi.fn(),
+          loadDrawerResults: vi.fn(),
+          handleDrawerEditStart: vi.fn(),
+          handleDrawerEditCancel: vi.fn(),
+          handleDrawerScrollNearEnd: vi.fn(),
+          // The fix: when the open project matches, the handler reaches here
+          // to refresh the project-scoped store too.
+          getProjectSavedPagesStore: (projectId) => ({
+            refreshInitial: projectId === 'project-open' ? projectScopeRefresh : vi.fn()
+          })
+        })),
+        createDrawerShellControllerFn: vi.fn(() => ({
+          closeSavedPagesDrawer: vi.fn(),
+          getSearchQuery: vi.fn(() => ''),
+          isDrawerOpen: vi.fn(() => true),
+          navigateDrawerCard: vi.fn(),
+          openSavedPagesDrawer: vi.fn(),
+          setDrawerSearchValue: vi.fn(),
+          setDrawerToggleState: vi.fn(),
+          updateDrawerUrl: vi.fn()
+        })),
+        createDrawerUiControllerFn: vi.fn(() => ({
+          renderDrawerChrome: vi.fn(),
+          renderErrorState: vi.fn(),
+          renderLoadingState: vi.fn(),
+          renderProjectSidebar: vi.fn(),
+          refreshDrawerCard: vi.fn(),
+          renderResults: vi.fn(),
+          renderSignInState: vi.fn()
+        })),
+        createInitialDrawerStateFn: vi.fn(() => state),
+        createSavedPagesViewFn: vi.fn(() => ({})),
+        getDrawerCurrentUserFn: vi.fn(() => ({ uid: 'user-1' })),
+        initSavedPagesDrawerEventsFn: vi.fn()
+      }
+    });
+
+    await controller.init();
+    // Select the project whose event will arrive.
+    state.selectedProjectId = 'project-open';
+
+    await controller.handleRealtimeProjectEvent({ projectId: 'project-open' });
+
+    // Both the all-pages store AND the open project's scoped store refreshed.
+    expect(savedPagesRefresh).toHaveBeenCalledTimes(1);
+    expect(projectScopeRefresh).toHaveBeenCalledTimes(1);
+    expect(projectsStoreRefresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not refresh a project scope when the event is for a different project', async () => {
+    const state = { hasInitialized: true };
+    const savedPagesRefresh = vi.fn(async () => {});
+    const projectScopeRefresh = vi.fn(async () => {});
+    const projectsStoreRefresh = vi.fn(async () => {});
+    const savedPagesStore = {
+      subscribe: vi.fn(),
+      reset: vi.fn(),
+      getSnapshot: () => ({}),
+      refreshInitial: savedPagesRefresh
+    };
+    const controller = createSavedPagesDrawerController({
+      api: { isExtension: true },
+      savedPagesStore,
+      projectsStore: {
+        subscribe: vi.fn(),
+        reset: vi.fn(),
+        getSnapshot: () => ({}),
+        refreshInitial: projectsStoreRefresh
+      },
+      projectManager: {
+        renderSidebar: vi.fn(),
+        renderEditor: vi.fn(),
+        getScopedPages: vi.fn(() => []),
+        getSelectedProject: vi.fn(() => null),
+        getProjectPills: vi.fn(() => []),
+        refreshProjectCounts: vi.fn()
+      },
+      elements: {
+        savedPagesToggleBtn: document.createElement('button'),
+        savedPagesDrawer: document.createElement('div'),
+        savedPagesDrawerBackdrop: document.createElement('div'),
+        savedPagesDrawerCloseBtn: document.createElement('button'),
+        savedPagesDrawerSearchForm: document.createElement('form'),
+        savedPagesDrawerSearchInput: document.createElement('input'),
+        savedPagesDrawerClearBtn: document.createElement('button'),
+        savedPagesDrawerResults: document.createElement('div'),
+        projectSidebar: document.createElement('div'),
+        projectEditorBackdrop: document.createElement('div'),
+        projectEditorDialog: document.createElement('div')
+      },
+      onSavedPagesTotalChange: vi.fn(),
+      refreshFavorites: vi.fn(),
+      notify: vi.fn(),
+      windowObj: { setTimeout, clearTimeout },
+      documentObj: document,
+      dependencies: {
+        createDrawerDataControllerFn: vi.fn(() => ({
+          ensureDrawerProjectsLoaded: vi.fn(),
+          handleDrawerDelete: vi.fn(),
+          handleDrawerPin: vi.fn(),
+          handleDrawerUpdate: vi.fn(),
+          loadDrawerBasePages: vi.fn(),
+          loadDrawerDomainPages: vi.fn(),
+          loadDrawerProjectPages: vi.fn(),
+          loadDrawerResults: vi.fn(),
+          handleDrawerEditStart: vi.fn(),
+          handleDrawerEditCancel: vi.fn(),
+          handleDrawerScrollNearEnd: vi.fn(),
+          getProjectSavedPagesStore: () => ({ refreshInitial: projectScopeRefresh })
+        })),
+        createDrawerShellControllerFn: vi.fn(() => ({
+          closeSavedPagesDrawer: vi.fn(),
+          getSearchQuery: vi.fn(() => ''),
+          isDrawerOpen: vi.fn(() => true),
+          navigateDrawerCard: vi.fn(),
+          openSavedPagesDrawer: vi.fn(),
+          setDrawerSearchValue: vi.fn(),
+          setDrawerToggleState: vi.fn(),
+          updateDrawerUrl: vi.fn()
+        })),
+        createDrawerUiControllerFn: vi.fn(() => ({
+          renderDrawerChrome: vi.fn(),
+          renderErrorState: vi.fn(),
+          renderLoadingState: vi.fn(),
+          renderProjectSidebar: vi.fn(),
+          refreshDrawerCard: vi.fn(),
+          renderResults: vi.fn(),
+          renderSignInState: vi.fn()
+        })),
+        createInitialDrawerStateFn: vi.fn(() => state),
+        createSavedPagesViewFn: vi.fn(() => ({})),
+        getDrawerCurrentUserFn: vi.fn(() => ({ uid: 'user-1' })),
+        initSavedPagesDrawerEventsFn: vi.fn()
+      }
+    });
+
+    await controller.init();
+    state.selectedProjectId = 'project-open';
+
+    // Event for a DIFFERENT project — must not touch the open scope.
+    await controller.handleRealtimeProjectEvent({ projectId: 'project-other' });
+
+    expect(savedPagesRefresh).not.toHaveBeenCalled();
+    expect(projectScopeRefresh).not.toHaveBeenCalled();
+    // The projects list always refreshes (page counts may have changed).
+    expect(projectsStoreRefresh).toHaveBeenCalledTimes(1);
+  });
 });

@@ -470,4 +470,87 @@ describe('background startup', () => {
       expect(sendResponse).toHaveBeenCalledWith({ success: true });
     });
   });
+
+  // Regression: fetchBackgroundApi returns null when the response body fails
+  // to parse as JSON (truncated, gateway HTML, empty 200). savePageFromTab
+  // previously treated null as success and toasted "Page saved!", leaving the
+  // user to discover later that the save never landed. Now it throws so
+  // handleSaveError surfaces a real error notification instead.
+  it('treats an unparseable save response as a failure, not a silent success', async () => {
+    const onMessageAddListener = vi.fn();
+    const onClickedAddListener = vi.fn();
+    const notificationsCreate = vi.fn();
+    const tabsQuery = vi.fn(async () => [{
+      url: 'https://example.edu/article',
+      title: 'Example article'
+    }]);
+    // ok: true but body isn't valid JSON → fetchBackgroundApi resolves null.
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: vi.fn(async () => { throw new SyntaxError('Unexpected token < in JSON'); })
+    });
+
+    vi.resetModules();
+    vi.doMock('../../src/background-auth.js', () => ({
+      createBackgroundAuth: () => ({
+        signIn: vi.fn(async () => ({
+          user: { uid: 'user-123' },
+          idToken: 'token-123'
+        })),
+        signOut: vi.fn()
+      })
+    }));
+    vi.doMock('../../src/sentry.js', () => ({
+      initSentry: vi.fn(),
+      setUser: vi.fn(),
+      setRequestId: vi.fn(),
+      captureError: vi.fn(),
+      captureMessage: vi.fn(),
+      flush: vi.fn(async () => true),
+      clearUser: vi.fn()
+    }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    globalThis.browser = {
+      runtime: {
+        id: 'test-extension',
+        getManifest: vi.fn(() => ({ version: '1.10.12', name: 'Newtab Bookmarks' })),
+        onMessage: { addListener: onMessageAddListener }
+      },
+      action: {
+        onClicked: { addListener: onClickedAddListener },
+        setBadgeText: vi.fn(),
+        setBadgeBackgroundColor: vi.fn()
+      },
+      identity: {
+        getRedirectURL: vi.fn(() => 'https://extension-id.extensions.allizom.org/'),
+        launchWebAuthFlow: vi.fn()
+      },
+      notifications: { create: notificationsCreate },
+      storage: { local: { get: vi.fn(async () => ({})), remove: vi.fn() } },
+      tabs: { query: tabsQuery }
+    };
+
+    await import('../../src/background.js?save-null-response');
+
+    const listener = onMessageAddListener.mock.calls[0][0];
+    const sendResponse = vi.fn();
+    expect(listener({ action: 'saveCurrentPage' }, {}, sendResponse)).toBe(true);
+
+    await vi.waitFor(() => {
+      // Error path ran: the Newtab - Error notification fired, NOT the
+      // success "Page saved!" notification.
+      expect(notificationsCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: expect.stringContaining('Error')
+        })
+      );
+      const messages = notificationsCreate.mock.calls.map(c => c[0]?.message);
+      expect(messages).not.toContain('Page saved!');
+      expect(sendResponse).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false })
+      );
+    });
+  });
 });
