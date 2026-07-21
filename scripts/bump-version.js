@@ -124,21 +124,13 @@ try {
    process.exit(1);
 }
 
-// Update CHANGELOG.md. This amends the version-bump commit, so it MUST happen
-// before tagging — otherwise the tag points at the pre-amend commit and gets
-// orphaned (the tag would reference a commit no longer on the branch).
-try {
-  console.log('Updating CHANGELOG.md...');
-  execSync('node scripts/generate-changelog.js', { stdio: 'inherit' });
-  execSync('git add CHANGELOG.md', { stdio: 'inherit' });
-  execSync(`git commit --amend --no-edit`, { stdio: 'inherit' });
-  console.log('✓ Updated CHANGELOG.md');
-} catch (err) {
-  console.warn('Warning: Failed to update CHANGELOG.md:', err.message);
-  console.warn('You can manually run: node scripts/generate-changelog.js');
-}
-
-// Git tag — created AFTER the changelog amend so it points at the final commit.
+// Create the tag BEFORE generating the CHANGELOG so the generator sees
+// v<newVersion> as the newest tag and promotes the new commits out of
+// [Unreleased] into a [v<newVersion>] - <date> section. Without this ordering
+// the generator runs while no v<newVersion> tag exists, so it files everything
+// since the previous tag under [Unreleased] - TBD — the changelog then lags
+// by one release (the just-shipped entries only get their version heading on
+// the NEXT bump).
 try {
   execSync(`git tag v${newVersion}`, { stdio: 'inherit' });
   console.log(`✓ Created tag v${newVersion}`);
@@ -146,6 +138,22 @@ try {
   console.error('Error creating tag:', err.message);
   console.error('Hint: If tag already exists, delete it with: git tag -d v' + newVersion);
   process.exit(1);
+}
+
+// Update CHANGELOG.md and amend it into the version-bump commit. The tag
+// created above points at the pre-amend commit; the amend creates a new commit
+// hash, so force-move the tag to the amended commit afterwards. The author date
+// is preserved across --amend, so getTagDate (which reads %ai) stays stable.
+try {
+  console.log('Updating CHANGELOG.md...');
+  execSync('node scripts/generate-changelog.js', { stdio: 'inherit' });
+  execSync('git add CHANGELOG.md', { stdio: 'inherit' });
+  execSync(`git commit --amend --no-edit`, { stdio: 'inherit' });
+  execSync(`git tag -f v${newVersion}`, { stdio: 'inherit' });
+  console.log('✓ Updated CHANGELOG.md and re-pointed tag at the amended commit');
+} catch (err) {
+  console.warn('Warning: Failed to update CHANGELOG.md:', err.message);
+  console.warn('You can manually run: node scripts/generate-changelog.js');
 }
 
 // Ask if user wants to push immediately

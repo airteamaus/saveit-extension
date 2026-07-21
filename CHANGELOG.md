@@ -5,7 +5,7 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] - TBD
+## [1.28.0] - 2026-07-21
 
 ### 🐛 Bug Fixes
 
@@ -115,13 +115,6 @@ No notable changes.
 
 ## [1.24.0] - 2026-07-17
 
-### 🐛 Bug Fixes
-
-- **release:** fall back to signing when AMO's signed file is not downloadable (cb1f1db)
-- **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (6c4c9a5)
-
-## [1.23.1] - 2026-07-16
-
 ### ✨ Features
 
 - Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
@@ -207,6 +200,8 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- **release:** fall back to signing when AMO's signed file is not downloadable (cb1f1db)
+- **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (6c4c9a5)
 - guard el() helpers against setAttribute(key, null) (3b6aac5)
 - refresh-cache button now force-reloads the open project from server (b18af09)
 - **realtime:** surface errors with context instead of masking (34a42c9)
