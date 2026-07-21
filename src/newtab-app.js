@@ -4,7 +4,7 @@ import { createDataSyncCentre } from './data-sync-centre.js';
 import { createToastRegion } from './toast.js';
 import { clearPendingSave } from './pending-saves.js';
 import { CONFIG } from './config.js';
-import { getSessionToken } from './session-store.js';
+import { getSessionToken, getCurrentUserId } from './session-store.js';
 import { RealtimeClient } from './realtime-client.js';
 import { RealtimeEventBus } from './realtime-event-bus.js';
 import { sendRuntimeMessage } from './send-runtime-message.js';
@@ -232,6 +232,12 @@ export function createNewtabApp({
     bus: realtimeBus,
     notify: toast.show,
     getToken: getSessionToken,
+    // Distinguishes a genuinely signed-out user (null → don't reconnect) from
+    // a signed-in user whose token getter returned null mid-session (session
+    // rotation race, transient storage failure → DO reconnect). Without this,
+    // a stream drop followed by a single null-token reconnect attempt leaves
+    // the stream silently dead and optimistic tiles stuck forever.
+    getUserId: getCurrentUserId,
     url: `${CONFIG.realtimeFunctionUrl}/events/stream`,
     // SSE has no replay buffer: events that fire while the stream is down are
     // gone. On each (re)connect, run a catch-up refresh across every open

@@ -57,6 +57,50 @@ export function createDrawerCacheInvalidationObserver({
 }) {
   let savedPagesCacheRefreshTimer = null;
 
+  // Fallback poll for missed realtime events. Realtime SSE has no replay
+  // buffer, so a stream drop during the ~28s enrichment window (QUIC blip,
+  // token race during reconnect, 15-min server timeout) means the page_updated
+  // event is lost and the optimistic tile never reconciles until a manual
+  // refresh. While pending records exist, syncPendingSaves arms this timer to
+  // periodically refreshInitial the store — the enriched doc arrives via the
+  // normal fetch path and onOptimisticReconciled fires to clear the tile. The
+  // 10-min pending TTL (evictExpiredPendingSaves) guarantees termination even
+  // if enrichment never completes. The timer is cleared at the top of every
+  // syncPendingSaves run, so a new sync (fired by the pending-saves
+  // storage.onChanged listener on clearPendingSave) resets the cycle.
+  const PENDING_POLL_INTERVAL_MS = 30_000;
+  let pendingPollTimer = null;
+
+  function clearPendingPoll() {
+    if (pendingPollTimer !== null) {
+      windowObj.clearTimeout(pendingPollTimer);
+      pendingPollTimer = null;
+    }
+  }
+
+  function armPendingPoll() {
+    // Replace any in-flight poll rather than stacking — a fresh syncPendingSaves
+    // run means the prior poll's promise is moot.
+    clearPendingPoll();
+    pendingPollTimer = windowObj.setTimeout(() => {
+      pendingPollTimer = null;
+      // Pull any docs that arrived via non-realtime paths. refreshInitial is
+      // the standard reconciliation method the realtime subscriber uses; the
+      // store's reconcilePages then fires onOptimisticReconciled, which clears
+      // the pending record and re-triggers syncPendingSaves via storage.onChanged.
+      // Re-run syncPendingSaves afterward so the poll re-arms if records remain
+      // (refreshInitial is network-backed and may not have cleared them yet).
+      void (async () => {
+        try {
+          await savedPagesStore.refreshInitial?.();
+        } catch (err) {
+          console.warn('[pending-save poll] refreshInitial failed:', err?.message || err);
+        }
+        await syncPendingSaves();
+      })();
+    }, PENDING_POLL_INTERVAL_MS);
+  }
+
   function syncSavedPagesAfterCacheInvalidation() {
     windowObj.clearTimeout(savedPagesCacheRefreshTimer);
     savedPagesCacheRefreshTimer = windowObj.setTimeout(() => {
@@ -149,6 +193,10 @@ export function createDrawerCacheInvalidationObserver({
   // different path) — if the real doc is already in the store, clear the
   // stale record instead of re-adding a ghost tile.
   async function syncPendingSaves() {
+    // A fresh sync run resets the poll cycle — either we'll re-arm below
+    // (records remain) or we're done (no records) and the prior poll is moot.
+    clearPendingPoll();
+
     if (!getCurrentUser()) {
       return;
     }
@@ -174,6 +222,14 @@ export function createDrawerCacheInvalidationObserver({
       } else {
         await savedPagesStore.prependOptimisticPage(buildOptimisticPage(record));
       }
+    }
+
+    // If records remain (or were re-added because their docs haven't arrived
+    // yet), arm the fallback poll. This is the recovery path for a missed
+    // realtime event — see armPendingPoll for the full rationale.
+    const remaining = Object.keys(await getPendingSaves(browserApi.storage.local));
+    if (remaining.length > 0) {
+      armPendingPoll();
     }
   }
 

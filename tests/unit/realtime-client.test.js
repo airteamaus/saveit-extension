@@ -472,6 +472,77 @@ describe('RealtimeClient', () => {
     expect(onConnect).not.toHaveBeenCalled();
   });
 
+  // Regression for the "placeholder stuck forever" chain: when the SSE stream
+  // drops mid-session and the reconnect attempt lands during a brief token-
+  // getter blip (session rotation race, storage read failure), the client used
+  // to bail silently with no further reconnect — treating the signed-in user
+  // as anonymous. The backend log "Authentication failed: Missing Authorization
+  // header" was the symptom. Now, when getUserId reports a signed-in user, a
+  // null token schedules a reconnect instead of giving up.
+  test('schedules a reconnect when token is null but the user is signed in', async () => {
+    const scheduled = [];
+    const scheduleTimer = (fn, ms) => {
+      scheduled.push({ fn, ms });
+      return scheduled.length;
+    };
+    const cancelTimer = vi.fn();
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => null,
+      getUserId: async () => 'user-1',
+      url: 'https://example.test/events/stream',
+      scheduleTimer,
+      cancelTimer
+    });
+
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    // Did not bail silently — scheduled a reconnect.
+    expect(scheduled.length).toBe(1);
+    expect(scheduled[0].ms).toBe(1000); // initial backoff
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  test('does NOT schedule a reconnect when token is null and no signed-in user', async () => {
+    // Genuinely signed-out (anonymous): preserve the no-hammer behavior.
+    const scheduled = [];
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => null,
+      getUserId: async () => null,
+      url: 'https://example.test/events/stream',
+      scheduleTimer: (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; },
+      cancelTimer: vi.fn()
+    });
+
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(scheduled.length).toBe(0);
+  });
+
+  test('does NOT schedule a reconnect when getUserId is not provided (legacy contract)', async () => {
+    // Backward compat: callers that don't pass getUserId get the original
+    // "null token is terminal" behavior — don't hammer the server.
+    const scheduled = [];
+    const client = new RealtimeClient({
+      bus,
+      notify,
+      getToken: async () => null,
+      url: 'https://example.test/events/stream',
+      scheduleTimer: (fn, ms) => { scheduled.push({ fn, ms }); return scheduled.length; },
+      cancelTimer: vi.fn()
+    });
+
+    await client.connect();
+    await new Promise(r => setTimeout(r, 0));
+
+    expect(scheduled.length).toBe(0);
+  });
+
   test('a throwing onConnect does not break the stream or prevent events', async () => {
     // The catch-up refresh must never tear down the live stream.
     const onConnect = vi.fn().mockRejectedValue(new Error('refresh failed'));

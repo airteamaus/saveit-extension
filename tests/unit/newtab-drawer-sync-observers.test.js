@@ -874,7 +874,7 @@ describe('drawer sync observers', () => {
       };
     }
 
-    function createHarness({ existingPages = [], pendingRecords = {} }) {
+    function createHarness({ existingPages = [], pendingRecords = {}, savedPagesStore: storeOverrides = {} } = {}) {
       const storage = createMemoryStorage();
       storage.store[PENDING_SAVES_KEY] = pendingRecords;
 
@@ -883,7 +883,9 @@ describe('drawer sync observers', () => {
       const prependOptimisticPage = vi.fn(async () => ({}));
       const savedPagesStore = {
         prependOptimisticPage,
-        getSnapshot: () => ({ allPages: existingPages })
+        getSnapshot: () => ({ allPages: existingPages }),
+        refreshInitial: vi.fn(async () => ({})),
+        ...storeOverrides
       };
 
       const observer = createDrawerCacheInvalidationObserver({
@@ -963,6 +965,148 @@ describe('drawer sync observers', () => {
 
       // Tile IS prepended — the existing entry was optimistic, not a real doc
       expect(prependOptimisticPage).toHaveBeenCalledTimes(1);
+    });
+
+    // Regression for the "placeholder stuck forever" bug: realtime SSE has no
+    // replay buffer, so a stream drop during the ~28s enrichment window means
+    // the page_updated event is lost and the optimistic tile never reconciles
+    // until a manual refresh. syncPendingSaves now arms a bounded periodic
+    // refresh while pending records exist, so the store re-pulls and
+    // onOptimisticReconciled fires to clear the tile. The 10-min pending TTL
+    // guarantees termination even if enrichment never completes.
+    describe('fallback poll for missed realtime events', () => {
+      function createPollHarness({ pendingRecords, existingPages = [] }) {
+        // A fake window whose setTimeout fires synchronously on a tick we
+        // control. The poll arms itself via windowObj.setTimeout; capturing
+        // the callback lets us advance the timer deterministically.
+        let pendingCallback = null;
+        const windowObj = {
+          setTimeout: vi.fn((cb) => {
+            pendingCallback = cb;
+            return 1;
+          }),
+          clearTimeout: vi.fn(() => {
+            pendingCallback = null;
+          }),
+          drain: () => {
+            const cb = pendingCallback;
+            pendingCallback = null;
+            if (cb) cb();
+            return Boolean(cb);
+          }
+        };
+
+        const storage = createMemoryStorage();
+        storage.store[PENDING_SAVES_KEY] = pendingRecords;
+        globalThis.browser = { storage: { local: storage } };
+
+        const savedPagesStore = {
+          prependOptimisticPage: vi.fn(async () => ({})),
+          getSnapshot: () => ({ allPages: existingPages }),
+          refreshInitial: vi.fn(async () => ({}))
+        };
+
+        const observer = createDrawerCacheInvalidationObserver({
+          state: {},
+          savedPagesStore,
+          projectsStore: {},
+          getCurrentUser: () => ({ uid: 'u1' }),
+          getSearchQuery: () => '',
+          isDrawerOpen: () => false,
+          refreshFavorites: vi.fn(),
+          loadDrawerBasePages: vi.fn(),
+          loadDrawerProjectPages: vi.fn(),
+          windowObj
+        });
+
+        return { observer, storage, savedPagesStore, windowObj };
+      }
+
+      it('arms a periodic refresh when pending records exist', async () => {
+        const { observer, savedPagesStore, windowObj } = createPollHarness({
+          pendingRecords: {
+            'https://example.com/pending': {
+              url: 'https://example.com/pending',
+              title: 'Pending',
+              saved_at: new Date().toISOString()
+            }
+          }
+        });
+
+        await observer.syncPendingSaves();
+
+        // The poll armed a timer.
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(1);
+        // Firing the timer pulls the store — this is the recovery path for a
+        // missed realtime event.
+        expect(savedPagesStore.refreshInitial).not.toHaveBeenCalled();
+        windowObj.drain();
+        expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
+      });
+
+      it('does NOT arm the poll when there are no pending records', async () => {
+        const { observer, windowObj } = createPollHarness({ pendingRecords: {} });
+
+        await observer.syncPendingSaves();
+
+        expect(windowObj.setTimeout).not.toHaveBeenCalled();
+      });
+
+      it('disarms the poll once pending records clear', async () => {
+        const { observer, savedPagesStore, windowObj } = createPollHarness({
+          pendingRecords: {
+            'https://example.com/pending': {
+              url: 'https://example.com/pending',
+              title: 'Pending',
+              saved_at: new Date().toISOString()
+            }
+          }
+        });
+
+        await observer.syncPendingSaves();
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(1);
+
+        // Simulate the doc arriving via the refresh: clear the pending record,
+        // then run syncPendingSaves again (as the storage.onChanged listener
+        // would on the clearPendingSave write).
+        observer.storage = observer.storage; // noop for clarity
+        delete globalThis.browser.storage.local.store[PENDING_SAVES_KEY];
+        await observer.syncPendingSaves();
+
+        // A second poll was NOT armed — no pending records to recover.
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(1);
+        expect(savedPagesStore.refreshInitial).not.toHaveBeenCalled();
+      });
+
+      it('keeps polling while pending records remain', async () => {
+        const { observer, savedPagesStore, windowObj } = createPollHarness({
+          pendingRecords: {
+            'https://example.com/pending': {
+              url: 'https://example.com/pending',
+              title: 'Pending',
+              saved_at: new Date().toISOString()
+            }
+          }
+        });
+
+        await observer.syncPendingSaves();
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(1);
+
+        // First tick: refresh runs but the doc hasn't arrived yet (pending
+        // record still present). The poll should re-arm. The poll callback is
+        // async (refreshInitial then syncPendingSaves), so await a microtask
+        // flush after draining before asserting on the re-arm.
+        windowObj.drain();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(2);
+
+        // Second tick: still pending, still re-arming.
+        windowObj.drain();
+        await new Promise((resolve) => setTimeout(resolve, 0));
+        expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(2);
+        expect(windowObj.setTimeout).toHaveBeenCalledTimes(3);
+      });
     });
   });
 

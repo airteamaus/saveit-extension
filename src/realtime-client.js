@@ -11,8 +11,6 @@
 // changes". Intentional teardown via disconnect() cancels the reconnect timer
 // and never toasts.
 
-import { debugWarn } from './config.js';
-
 const INITIAL_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
 const MAX_RECONNECT_ATTEMPTS = 10;
@@ -24,6 +22,13 @@ export class RealtimeClient {
     getToken,
     url,
     onConnect = null,
+    // Distinguishes a genuinely signed-out user (null → don't reconnect, the
+    // anonymous path) from a signed-in user whose token getter returned null
+    // (session-rotation race, transient storage read failure → DO reconnect,
+    // otherwise the stream silently dies and missed events leave optimistic
+    // tiles stuck forever). Optional — callers that omit it get the legacy
+    // "null token is terminal" behavior.
+    getUserId = null,
     // Test seams for the scheduler. Production uses real setTimeout/clearTimeout.
     scheduleTimer = (fn, ms) => setTimeout(fn, ms),
     cancelTimer = id => clearTimeout(id),
@@ -34,6 +39,7 @@ export class RealtimeClient {
     this.bus = bus;
     this.notify = notify || (() => {});
     this.getToken = getToken;
+    this.getUserId = getUserId;
     this.url = url;
     // Fired once per successful stream establishment. The newtab page uses it
     // to run a catch-up refresh: SSE has no replay buffer, so events that fired
@@ -91,10 +97,36 @@ export class RealtimeClient {
     try {
       const token = await this.getToken();
       if (!token) {
-        // Not signed in. This is the expected path for anonymous users, not a
-        // transient failure — don't hammer the server with reconnects. Gated
-        // behind debugWarn so it doesn't spam the console on every newtab open.
-        debugWarn('[realtime-client] no session token; realtime stream skipped');
+        // No token. Two cases:
+        //   - Genuinely signed out (anonymous user): the expected path, don't
+        //     hammer the server with reconnects.
+        //   - Signed in but the token getter returned null (session-rotation
+        //     race, transient storage read failure): treat as a recoverable
+        //     drop and schedule a reconnect — otherwise the stream silently
+        //     dies and optimistic tiles stick forever when the next realtime
+        //     event is missed.
+        // getUserId (when provided) tells them apart. When it's not provided,
+        // preserve the legacy "null token is terminal" behavior for back-compat.
+        let signedIn = false;
+        if (typeof this.getUserId === 'function') {
+          try {
+            signedIn = Boolean(await this.getUserId());
+          } catch (err) {
+            // If the user-id read also fails, assume transient and retry.
+            console.warn('[realtime-client] getUserId threw alongside null token; treating as recoverable:', err?.message || err);
+            signedIn = true;
+          }
+        }
+        if (signedIn) {
+          console.warn('[realtime-client] session token unavailable; user is signed in — will retry');
+          this.handleUnintentionalDisconnect();
+        } else {
+          // Anonymous users (no token, no signed-in user) never open the stream.
+          // Promoted from debugWarn to console.warn so this path stays visible
+          // when it's NOT expected (e.g. a sign-in bug that clears the session
+          // mid-stream). A single line on cold open is acceptable noise.
+          console.warn('[realtime-client] no session token and no signed-in user; realtime stream skipped');
+        }
         return;
       }
 
