@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - TBD
 
+### 🐛 Bug Fixes
+
+- **cache:** observe stale-marks so toolbar saves reconcile in open newtabs (8f644d0)
+- **review:** correctness bugs, security, dead code, and test gaps (143d601)
+- **drawer,auth:** close three blockers from code review + dead-code sweep (6fde982)
+
+## [1.27.1] - 2026-07-20
+
 ### ✨ Features
 
 - **ui:** sort Pinned shelf alphabetically by title (4bc9485)
@@ -117,31 +125,6 @@ No notable changes.
 ### ✨ Features
 
 - Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
-
-### 🐛 Bug Fixes
-
-- guard el() helpers against setAttribute(key, null) (3b6aac5)
-
-### ♻️ Refactoring
-
-- dedup cross-surface helpers (el, queryId, session rotation, sendRuntime) (389d525)
-- **drawer:** merge three drifted load paths; delete dead re-export; slim DI seam (754e01c)
-- **drawer:** make newtab-drawer-state.js the single mutation owner (a8b010d)
-
-### 📚 Documentation
-
-- update AGENTS.md + README for v1.23.0 (Data & sync, backend overview, known debt) (9ed7ad6)
-- fix outdated/misleading info across user-facing docs (babbc4f)
-
-### ✅ Tests
-
-- enforce every configured backend host is in manifest host_permissions (3f12688)
-
-## [1.23.0] - 2026-07-16
-
-### ✨ Features
-
-- Data & sync overhaul — consolidated import/export/sync modal (9a47088)
 - **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
 - **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
 - **realtime:** RealtimeEventBus typed pub/sub (8efa830)
@@ -224,6 +207,7 @@ No notable changes.
 
 ### 🐛 Bug Fixes
 
+- guard el() helpers against setAttribute(key, null) (3b6aac5)
 - refresh-cache button now force-reloads the open project from server (b18af09)
 - **realtime:** surface errors with context instead of masking (34a42c9)
 - **realtime:** inject event-line type into dispatched object + test malformed-JSON skip (a4772e7)
@@ -323,6 +307,9 @@ No notable changes.
 
 ### ♻️ Refactoring
 
+- dedup cross-surface helpers (el, queryId, session rotation, sendRuntime) (389d525)
+- **drawer:** merge three drifted load paths; delete dead re-export; slim DI seam (754e01c)
+- **drawer:** make newtab-drawer-state.js the single mutation owner (a8b010d)
 - **cache:** clean up optimistic tile lifecycle (a5f4708)
 - **capture:** switch injector to files-based bundle with real Readability (112f41c)
 - **auth:** centralise the first-auth-state race (f0b5092)
@@ -560,7 +547,8 @@ No notable changes.
 
 ### 📚 Documentation
 
-- fix outdated/misleading info across user-facing docs (7a3f3d5)
+- update AGENTS.md + README for v1.23.0 (Data & sync, backend overview, known debt) (9ed7ad6)
+- fix outdated/misleading info across user-facing docs (babbc4f)
 - implementation plan for realtime push feature (e74a3f8)
 - realtime push design spec for shared projects (28ce3ec)
 - client-side page capture implementation plan (b701619)
@@ -580,6 +568,7 @@ No notable changes.
 
 ### ✅ Tests
 
+- enforce every configured backend host is in manifest host_permissions (3f12688)
 - **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
 - **realtime:** assert failing subscriber does not break others (d4c4167)
 - improve coverage from 22% to 33% with 90 new tests (84c893b)
