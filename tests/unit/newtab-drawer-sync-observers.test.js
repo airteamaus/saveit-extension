@@ -165,6 +165,60 @@ describe('drawer sync observers', () => {
     expect(loadDrawerProjectPages).not.toHaveBeenCalled();
   });
 
+  // Regression for "toolbar save doesn't update an open newtab's list until
+  // manual refresh." The toolbar-save path (background.js) marks the cache
+  // stale via markToolbarSaveCachesStale, which writes timestamp: 0 without
+  // removing the cached pages. The observer's storage.onChanged filter must
+  // recognize that stale-mark as an invalidation and reconcile — previously
+  // the filter only matched removals (newValue === undefined), so the save
+  // never reached the open newtab.
+  it('reconciles when the toolbar-save path marks the cache stale (not just on removal)', () => {
+    let listener;
+    globalThis.browser = {
+      storage: {
+        onChanged: {
+          addListener: vi.fn((callback) => { listener = callback; })
+        }
+      }
+    };
+    const windowObj = {
+      clearTimeout: vi.fn(),
+      setTimeout: vi.fn((callback) => { callback(); return 1; })
+    };
+    const refreshFavorites = vi.fn();
+    const projectsStore = { hydrate: vi.fn() };
+    const savedPagesStore = { hydrate: vi.fn() };
+    const loadDrawerBasePages = vi.fn();
+    const loadDrawerProjectPages = vi.fn();
+    const observer = createDrawerCacheInvalidationObserver({
+      state: { hasInitialized: true, selectedProjectId: null },
+      savedPagesStore,
+      projectsStore,
+      getCurrentUser: () => ({ uid: 'user-1' }),
+      getSearchQuery: vi.fn(() => 'alpha'),
+      isDrawerOpen: vi.fn(() => true),
+      refreshFavorites,
+      loadDrawerBasePages,
+      loadDrawerProjectPages,
+      windowObj
+    });
+
+    observer.initSavedPagesCacheSync();
+    // Simulate the storage.onChanged event that markToolbarSaveCachesStale
+    // produces: the cache key is updated (not removed) with timestamp: 0.
+    listener(
+      {
+        'savedPages_cache_user-1_surface%3Ddashboard': {
+          oldValue: { response: { pages: [] }, timestamp: 1700000000000 },
+          newValue: { response: { pages: [] }, timestamp: 0 }
+        }
+      },
+      'local'
+    );
+
+    expect(loadDrawerBasePages).toHaveBeenCalledWith({ query: 'alpha', syncUrl: false });
+  });
+
   it('skips its own reload when forceReload armed the self-invalidation token', () => {
     let listener;
     globalThis.browser = {

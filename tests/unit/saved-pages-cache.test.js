@@ -20,15 +20,36 @@ describe('saved-pages cache sync', () => {
     expect(isSavedPagesCacheInvalidation(changes, 'local')).toBe(true);
   });
 
-  it('ignores saved pages cache writes', () => {
+  it('ignores ordinary saved pages cache writes (with a real timestamp)', () => {
     const changes = {
       'savedPages_cache_user123_surface%3Ddashboard': {
         oldValue: undefined,
-        newValue: { response: { pages: [] } }
+        // A normal cache write carries a real timestamp — NOT the sentinel 0
+        // that markCacheStaleForPrefix uses. The observer must ignore these so
+        // it doesn't reconcile on its own cache writes (which would loop).
+        newValue: { response: { pages: [] }, timestamp: Date.now() }
       }
     };
 
     expect(isSavedPagesCacheInvalidation(changes, 'local')).toBe(false);
+  });
+
+  it('detects saved-pages cache stale-marks (timestamp === 0)', () => {
+    // Regression: the toolbar-save path marks the cache stale via
+    // markToolbarSaveCachesStale (which sets timestamp: 0 without removing the
+    // cached pages). The open newtab's storage.onChanged observer must
+    // recognize this as an invalidation so it reconciles — otherwise a save
+    // from the toolbar never appears in an already-open newtab until a manual
+    // "refresh cache". The sentinel `timestamp: 0` is what distinguishes a
+    // stale-mark from an ordinary cache write.
+    const changes = {
+      'savedPages_cache_user123_surface%3Ddashboard': {
+        oldValue: { response: { pages: [] }, timestamp: 1700000000000 },
+        newValue: { response: { pages: [] }, timestamp: 0 }
+      }
+    };
+
+    expect(isSavedPagesCacheInvalidation(changes, 'local')).toBe(true);
   });
 
   it('ignores unrelated storage changes', () => {
@@ -189,12 +210,16 @@ describe('saved-pages cache sync', () => {
       expect(allPatchedKeys.has('domains_cache_user123_surface%3Ddomains')).toBe(true);
     });
 
-    // Critical regression guard: the observer must NOT match a staleness-write.
-    // isSavedPagesCacheInvalidation returns true only when newValue is undefined
-    // (a hard remove). A staleness-write has newValue set, so the observer
-    // ignores it — which is exactly why mark-stale avoids the truncating
-    // hydrate() that a hard remove triggers in open newtabs.
-    it('a staleness-write does not satisfy isSavedPagesCacheInvalidation', async () => {
+    // Regression guard for the "save doesn't update open newtab" bug. The
+    // toolbar-save path marks the cache stale (preserving the warm pages via
+    // timestamp: 0); the open newtab's storage.onChanged observer must
+    // recognize that stale-mark as an invalidation and reconcile. hydrate()
+    // reads the stale-but-intact warm cache with allowExpired: true and paints
+    // the full list, then refreshInitial() reconciles in the background — no
+    // truncation. (The original "staleness-write must NOT fire the observer"
+    // guard predates the warm-cache-first hydrate path, which made that fear
+    // obsolete.)
+    it('a staleness-write satisfies isSavedPagesCacheInvalidation', async () => {
       const stored = {
         'savedPages_cache_user123_surface%3Dsaved-pages-drawer': {
           userId: 'user123',
@@ -207,7 +232,7 @@ describe('saved-pages cache sync', () => {
         get: async () => ({ ...stored }),
         set: async (patch) => { latestSnapshot = { ...stored, ...patch }; },
         // Simulate storage.onChanged firing after the set: the change record
-        // carries newValue (a write), not undefined (a remove).
+        // carries the patched entry (with timestamp: 0).
         onChangedFires: () => {
           const key = 'savedPages_cache_user123_surface%3Dsaved-pages-drawer';
           const newValue = latestSnapshot?.[key];
@@ -217,7 +242,7 @@ describe('saved-pages cache sync', () => {
       };
 
       await markSavedPagesCacheStale(storage);
-      expect(storage.onChangedFires()).toBe(false);
+      expect(storage.onChangedFires()).toBe(true);
     });
   });
 });

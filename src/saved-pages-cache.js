@@ -98,6 +98,20 @@ export async function markToolbarSaveCachesStale(storage) {
   return savedPagesCount + domainsCount;
 }
 
+// Detect a saved-pages cache change the open newtab must reconcile on. Two
+// shapes qualify:
+//   - removal (newValue === undefined): hard-invalidate (sign-out, forceReload,
+//     imports). The cached data is gone, so the newtab must re-fetch.
+//   - stale-mark (newValue.timestamp === 0): the toolbar-save + realtime-relay
+//     paths reset the timestamp without deleting the cached pages, so the
+//     warm-cache reader can still paint them instantly while refreshInitial()
+//     reconciles in the background. The open newtab MUST reconcile on this
+//     signal too — otherwise a save from the toolbar never reaches the open
+//     newtab's list until a manual "refresh cache" (the bug this branch fixes).
+//
+// `timestamp: 0` is a dedicated sentinel — markCacheStaleForPrefix is the only
+// writer that sets it — so matching on it doesn't over-trigger on ordinary
+// cache writes (which carry a real timestamp).
 export function isSavedPagesCacheInvalidation(changes, areaName) {
   if (areaName !== 'local' || !changes || typeof changes !== 'object') {
     return false;
@@ -108,6 +122,16 @@ export function isSavedPagesCacheInvalidation(changes, areaName) {
       return false;
     }
 
-    return change?.newValue === undefined;
+    // Removal: cached data is gone.
+    if (change?.newValue === undefined) {
+      return true;
+    }
+
+    // Stale-mark: data preserved but flagged non-authoritative.
+    if (change?.newValue && typeof change.newValue === 'object' && change.newValue.timestamp === 0) {
+      return true;
+    }
+
+    return false;
   });
 }
