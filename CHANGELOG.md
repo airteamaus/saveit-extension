@@ -5,6 +5,13 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.1] - 2026-07-21
+
+### 🐛 Bug Fixes
+
+- **realtime,pending:** recover missed enrichment events so tiles don't stick (6b5a3d5)
+- **release:** regenerate v1.28.0 changelog + fix bump-script tag ordering (c050f28)
+
 ## [1.28.0] - 2026-07-21
 
 ### 🐛 Bug Fixes
@@ -110,10 +117,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **agents:** document per-surface cache architecture, shared transport, realtime lifecycle (18d8f89)
 
 ## [1.24.1] - 2026-07-17
-
-No notable changes.
-
-## [1.24.0] - 2026-07-17
 
 ### ✨ Features
 
