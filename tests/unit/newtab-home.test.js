@@ -4,7 +4,7 @@ import { getPinnedPages } from '../../src/newtab-home.js';
 
 describe('newtab home selectors', () => {
   describe('getPinnedPages', () => {
-    it('returns only pinned pages, up to the limit', () => {
+    it('returns only pinned pages, sorted alphabetically', () => {
       const pages = [
         { id: '1', title: 'Apple', pinned: true },
         { id: '2', title: 'Other' },
@@ -12,8 +12,8 @@ describe('newtab home selectors', () => {
         { id: '4', title: 'Cherry', pinned: true }
       ];
 
-      // Alphabetical by title, sliced to the limit.
-      expect(getPinnedPages(pages, 2).map(p => p.id)).toEqual(['1', '3']);
+      // All pinned pages returned, alphabetical by title. Non-pinned excluded.
+      expect(getPinnedPages(pages).map(p => p.id)).toEqual(['1', '3', '4']);
     });
 
     it('sorts alphabetically by title (case-insensitive)', () => {
@@ -57,21 +57,21 @@ describe('newtab home selectors', () => {
       expect(getPinnedPages(undefined)).toEqual([]);
     });
 
-    it('respects the default limit of 8, slicing after the alphabetical sort', () => {
+    it('returns all pinned pages with no cap', () => {
+      // Regression: the shelf used to cap at 8 items. There must be no limit —
+      // every pinned page renders, however many there are.
       const pages = Array.from({ length: 20 }, (_, i) => ({
         id: String(i),
-        // Titles in reverse so sort reorders them; slice must take the first 8
-        // alphabetically, not the first 8 by store order.
+        // Titles in reverse so sort reorders them; all 20 must be returned.
         title: `zz${String(19 - i).padStart(2, '0')}`,
         pinned: true
       }));
 
       const result = getPinnedPages(pages);
-      expect(result).toHaveLength(8);
-      // First 8 alphabetically are the ones with the smallest titles.
-      expect(result.map(p => p.title)).toEqual([
-        'zz00', 'zz01', 'zz02', 'zz03', 'zz04', 'zz05', 'zz06', 'zz07'
-      ]);
+      expect(result).toHaveLength(20);
+      // Sorted alphabetically (smallest titles first), not by store order.
+      expect(result[0].title).toBe('zz00');
+      expect(result[19].title).toBe('zz19');
     });
 
     // Regression: a race that flips `pinned` on an optimistic tile (before the

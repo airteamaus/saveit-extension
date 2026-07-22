@@ -14,13 +14,12 @@ function pinnedShelfSortKey(page) {
 
 /**
  * The pinned saved pages, for the Pinned shelf shown above the browse list when
- * idle. The full list stays available via the sidebar Pinned scope; this is the
- * sparse presentation slice.
+ * idle. No cap — every pinned page renders on the shelf, however many there are.
  *
  * Sorted alphabetically by title (case-insensitive, with the same
  * title/domain/'Untitled' fallback the card heading uses) so the shelf reads as
  * a stable, scannable index rather than shifting around as new pages are pinned
- * or as the store's newest-first order changes. Sliced to `limit` after sort.
+ * or as the store's newest-first order changes.
  *
  * Optimistic (not-yet-enriched) tiles are excluded: their synthetic id is not a
  * real doc, so showing one on the shelf would let the user click into a card
@@ -28,7 +27,7 @@ function pinnedShelfSortKey(page) {
  * flips `pinned` on a tile before the real doc arrives; this filter is the
  * last line of defense behind the renderer's disabled pin button.
  */
-export function getPinnedPages(allPages, limit = 8) {
+export function getPinnedPages(allPages) {
   if (!Array.isArray(allPages)) {
     return [];
   }
@@ -40,6 +39,5 @@ export function getPinnedPages(allPages, limit = 8) {
       if (ka < kb) return -1;
       if (ka > kb) return 1;
       return 0;
-    })
-    .slice(0, limit);
+    });
 }
