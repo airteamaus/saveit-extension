@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.28.2] - 2026-07-22
+
+### 🐛 Bug Fixes
+
+- **ui:** remove 8-item cap on Pinned shelf (79c058a)
+
 ## [1.28.1] - 2026-07-21
 
 ### 🐛 Bug Fixes
@@ -102,22 +108,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.24.2] - 2026-07-17
 
-### 🐛 Bug Fixes
-
-- **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
-
-### 📝 Other Improvements
-
-- **api:** unify cache-metadata decorators and cached-read flow (7daa706)
-- **transport:** share one authenticated fetch between facade and background (37a0082)
-- **cache:** per-surface CacheManagers with scoped invalidation (aca0c05)
-
-### 📚 Documentation
-
-- **agents:** document per-surface cache architecture, shared transport, realtime lifecycle (18d8f89)
-
-## [1.24.1] - 2026-07-17
-
 ### ✨ Features
 
 - Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
@@ -203,6 +193,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
 - **release:** fall back to signing when AMO's signed file is not downloadable (cb1f1db)
 - **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (6c4c9a5)
 - guard el() helpers against setAttribute(key, null) (3b6aac5)
@@ -352,6 +343,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- **api:** unify cache-metadata decorators and cached-read flow (7daa706)
+- **transport:** share one authenticated fetch between facade and background (37a0082)
+- **cache:** per-surface CacheManagers with scoped invalidation (aca0c05)
 - fix tests, wire bus.clear(), fix heartbeat parsing, reduce noise (bf6e0d7)
 - point realtimeFunctionUrl at dedicated saveit-realtime function (a83d342)
 - 1.21.0-beta.1 (a40862e)
@@ -545,6 +539,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Documentation
 
+- **agents:** document per-surface cache architecture, shared transport, realtime lifecycle (18d8f89)
 - update AGENTS.md + README for v1.23.0 (Data & sync, backend overview, known debt) (9ed7ad6)
 - fix outdated/misleading info across user-facing docs (babbc4f)
 - implementation plan for realtime push feature (e74a3f8)
