@@ -191,9 +191,6 @@ body {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  /* Align the first card row with the "All pages" nav row. Compensates for the
-     cards' 0.5em top margin so the title lines up with the sidebar nav text. */
-  padding-top: 14px;
 }
 
 .saved-pages-page-results {
@@ -1078,7 +1075,7 @@ body {
    padding); the shelf row fills the available width and scrolls horizontally
    only when cards overflow. */
 .saved-pages-pinned-shelf {
-  margin: var(--spacing-sm) 0 var(--spacing-md);
+  margin: 0;
 }
 
 /* Pinned shelf row — compact cards that wrap across the available width so
