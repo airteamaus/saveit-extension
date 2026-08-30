@@ -1,4 +1,5 @@
 import { createNewtabAuthController } from './newtab-auth.js';
+import { createFeedController } from './newtab-feed.js';
 import { createSharingCentre } from './sharing-centre.js';
 import { createDataSyncCentre } from './data-sync-centre.js';
 import { createToastRegion } from './toast.js';
@@ -170,6 +171,19 @@ export function createNewtabApp({
     versionIndicator: elements.versionIndicator,
     updateStatsDisplay: updateStatsDisplayFn
   });
+  // Org feed: the idle desk index is the organisation feed; the drawer
+  // (search/manage) stays personal. Falls back to the personal list while
+  // the backend lacks /feed (deploy-order bridge). Created before the
+  // drawer controller so it can be threaded through as a dependency.
+  const feedController = createFeedController({
+    api: API,
+    documentObj,
+    resultsContainer: elements.savedPagesDrawerResults,
+    kickerSlotEl: elements.feedScopeKickerSlot,
+    disclosureSlotEl: elements.feedDisclosureSlot,
+    notify: toast.show
+  });
+
   const drawerController = createSavedPagesDrawerControllerFn({
     api: API,
     savedPagesStore,
@@ -178,7 +192,8 @@ export function createNewtabApp({
     elements: getDrawerControllerElements(elements),
     onSavedPagesTotalChange: updateSavedPagesFooter,
     refreshFavorites: undefined,
-    notify: toast.show
+    notify: toast.show,
+    feedController
   });
 
   // --- realtime push -------------------------------------------------------
@@ -195,6 +210,12 @@ export function createNewtabApp({
     void (async () => {
       try {
         await savedPagesStore.refreshInitial();
+        // The SSE server only forwards an event to clients whose scope keys
+        // intersect, so any org: key on a received event means *my* org —
+        // refresh the feed without client-side domain knowledge.
+        if ((event.scopeKeys || []).some((key) => key.startsWith('org:'))) {
+          void feedController.refresh();
+        }
         if (event.change === 'enriched' || event.change === 'added') {
           // Clear the optimistic pending-save tile — replaces the enrichment poll.
           // The background SW owns pending-saves; relay via a runtime message.
@@ -250,7 +271,10 @@ export function createNewtabApp({
     // list) so the standard update-check reconciles anything missed. Without
     // this, a stream drop between a save/project event and reconnect leaves the
     // change invisible until the user manually reloads.
-    onConnect: () => { void drawerController.refreshOpenScopes(); }
+    onConnect: () => {
+      void drawerController.refreshOpenScopes();
+      void feedController.refresh();
+    }
   });
 
   const authLifecycle = createNewtabAuthLifecycleFn({
@@ -371,6 +395,7 @@ export function createNewtabApp({
         versionNumberEl: elements.versionNumberEl,
         updateVersionIndicator: updateVersionIndicatorFn,
         drawerController,
+        feedController,
         authController,
         realtimeClient
       });

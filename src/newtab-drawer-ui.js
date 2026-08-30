@@ -31,7 +31,8 @@ export function createDrawerUiController({
   launchStripContainer,
   datelineEl,
   getSavedPagesView,
-  documentObj = document
+  documentObj = document,
+  feedController = null
 }) {
   function getSavedPagesViewOrThrow() {
     return getSavedPagesView();
@@ -125,6 +126,12 @@ export function createDrawerUiController({
     const trimmedQuery = (state.query || '').trim();
     const hasQuery = Boolean(trimmedQuery);
 
+    // Any drawer activity (search, project/domain scope) retires the feed
+    // surface until the desk is idle again.
+    if (hasQuery || state.selectedProjectId || state.selectedDomainId) {
+      feedController?.hide();
+    }
+
     // While a semantic search is loading, the dog takes over the full pane:
     // hide all saved-page cards and show only the centered illustration.
     if (state.semanticLoading) {
@@ -168,6 +175,13 @@ export function createDrawerUiController({
       drawerRenderer.renderLaunchStrip(pinnedPages);
     } else {
       drawerRenderer.clearLaunchStrip();
+    }
+
+    // Idle desk: the org feed owns the index. renderIdle() returning false
+    // means the feed is unavailable (old backend / signed out / not loaded)
+    // — fall through to the personal list exactly as before the feed.
+    if (!hasScope && feedController?.renderIdle()) {
+      return;
     }
 
     if (!state.pages.length) {

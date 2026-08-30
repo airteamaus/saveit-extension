@@ -27,6 +27,7 @@ export function initSavedPagesDrawerEvents({
   handleDrawerEditCancel,
   handleDrawerEditStart,
   handleDrawerPin,
+  handleDrawerVote,
   handleDrawerTogglePrivacy,
   handleDrawerUpdate,
   handleDrawerDelete,
@@ -105,6 +106,11 @@ export function initSavedPagesDrawerEvents({
     const { action, id } = actionButton.dataset;
     if (action === 'pin') {
       void handleDrawerPin(id);
+      return;
+    }
+
+    if (action === 'vote') {
+      void handleDrawerVote(id);
       return;
     }
 

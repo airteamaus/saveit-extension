@@ -83,7 +83,9 @@ describe('newtab app factory', () => {
     }
 
     const app = createNewtabApp({
-      API: { id: 'api' },
+      // getFeed resolves empty so the onConnect feed refresh (real
+      // createFeedController — not dependency-injected) stays silent.
+      API: { id: 'api', getFeed: vi.fn().mockResolvedValue({ pages: [] }) },
       AuthMenu: { id: 'auth-menu' },
       ProjectManager: FakeProjectManager,
       ThemeManager: { id: 'theme-manager' },
@@ -138,6 +140,7 @@ describe('newtab app factory', () => {
       versionNumberEl: elements.versionNumberEl,
       updateVersionIndicator: updateVersionIndicatorFn,
       drawerController,
+      feedController: expect.any(Object),
       authController,
       realtimeClient: expect.objectContaining({ bus: expect.any(Object) })
     });
