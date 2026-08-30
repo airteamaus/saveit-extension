@@ -639,7 +639,7 @@ body {
 .index-row-tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   margin-left: auto;
 }
 

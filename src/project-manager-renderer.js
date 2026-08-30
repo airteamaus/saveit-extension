@@ -189,6 +189,10 @@ function createEditorHeader(documentObj, title) {
   return header;
 }
 
+// The projects dropdown body: the complete channel-rail list (All pages,
+// Pinned, ownership-split projects, archived, domains). Always the full
+// list — the pills row is the convenience surface, this is the truth
+// (DESIGN.md "component language").
 export function renderProjectSidebar(container, {
   dashboard,
   htmlUtils: _htmlUtils,

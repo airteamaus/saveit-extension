@@ -167,7 +167,7 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
 
       // After the 100% completion pause, cards must render and the pane must go.
       await expect(
-        page.locator('.saved-pages-drawer-card').first()
+        page.locator('.index-row').first()
       ).toBeVisible({ timeout: 10000 });
       await expect(page.locator('.saved-pages-warming-pane')).toHaveCount(0);
     } finally {
@@ -266,7 +266,7 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
       for (let s = 0; s < 40; s++) {
         const dom = await page.evaluate(() => ({
           warming: !!document.querySelector('.saved-pages-warming-pane'),
-          cards: document.querySelectorAll('.saved-pages-drawer-card').length
+          cards: document.querySelectorAll('.index-row').length
         }));
         if (dom.cards > 0) sawCards = true;
         if (sawCards && dom.warming) flickeredBackToWarming = true;
@@ -276,7 +276,7 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
       expect(flickeredBackToWarming, 'cards must never be overwritten by the warming pane').toBe(false);
 
       // ...then hand off to cards.
-      await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 10000 });
+      await expect(page.locator('.index-row').first()).toBeVisible({ timeout: 10000 });
       await expect(page.locator('.saved-pages-warming-pane')).toHaveCount(0);
     } finally {
       await context.close();
@@ -345,7 +345,7 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
         for (let s = 0; s < 10; s++) {
           const dom = await page.evaluate(() => ({
             warmingPane: !!document.querySelector('.saved-pages-warming-pane'),
-            cards: document.querySelectorAll('.saved-pages-drawer-card').length
+            cards: document.querySelectorAll('.index-row').length
           }));
           if (dom.warmingPane) sawWarmingPane = true;
           if (dom.cards > 0) break;
@@ -354,7 +354,7 @@ test.describe('post-login cache warming (real extension, Chromium)', () => {
 
         const finalDom = await page.evaluate(() => ({
           warmingPane: !!document.querySelector('.saved-pages-warming-pane'),
-          cards: document.querySelectorAll('.saved-pages-drawer-card').length
+          cards: document.querySelectorAll('.index-row').length
         }));
 
         results.push({ tab: i + 1, sawWarmingPane, finalDom });
