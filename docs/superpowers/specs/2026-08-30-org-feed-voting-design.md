@@ -27,6 +27,8 @@ scheduler, no write amplification; scores are always fresh.
 | Vote rules | One vote per org-mate per save; click again to unvote (toggle); no votes on your own saves |
 | Ranking | HN gravity formula, read-time, over a bounded 30-day window |
 | Points display | Mono count beside an always-visible chevron button on each feed row |
+| Free email domains | Shared public orgs — gmail.com (including googlemail.com), outlook.com, yahoo.com, etc. follow the same domain-is-your-org rule as company domains |
+| Scope clarity | The feed header always labels the audience — "Everyone at acme.com" for company orgs, "Everyone using Gmail — public" for free-provider orgs, "Your saves only" for un-domainable addresses — plus a one-time disclosure for public feeds |
 
 ## Ranking algorithm
 
@@ -57,16 +59,16 @@ count sensitivity, tie-breaks.
 
 `things/{id}` gains three fields:
 
-- `company_domain` — lowercase org key derived from the owner's email.
-  **The feed's derivation excludes free email providers** (a small shared
-  blocklist: gmail.com, googlemail.com, outlook.com, hotmail.com, yahoo.com,
-  icloud.com, proton.me, …): `deriveCompanyDomain` in `shared/company-domain.js`
-  returns `gmail.com` as a domain, and reusing it verbatim would make every
-  Gmail user an org-mate of every other. The feed therefore uses an
-  org-domain helper that returns `null` for free providers; the existing
-  `deriveCompanyDomain` and its callers (shared projects, Slack search) are
-  unchanged. Written at save/enrich time; a one-off backfill sets it on
-  existing docs.
+- `company_domain` — lowercase org key derived from the owner's email via the
+  existing `deriveCompanyDomain` rule (`shared/company-domain.js`) — the same
+  rule shared projects and Slack search already use. **Free email providers
+  are not excluded**: gmail.com is an org like acme.com, deliberately
+  (approved by Rich 2026-08-30), with the clarity requirements below. One
+  addition: the derivation canonicalizes `googlemail.com` → `gmail.com` so
+  Gmail's alias domain forms a single org. This canonicalization lives in
+  `deriveCompanyDomain` itself, which also unifies shared-project visibility
+  for googlemail/gmail users — a deliberate, stated change, not a hidden one.
+  Written at save/enrich time; a one-off backfill sets it on existing docs.
 - `private` normalized to explicit `false` where absent. Firestore equality
   filters skip docs missing a field, so the org query (`private == false`)
   requires the value materialized. The privacy toggle already writes
@@ -96,7 +98,7 @@ query (`company_domain`, `private`, `saved_at DESC`), the own-private query
 1. Pull the 30-day window with two queries: org-visible
    (`company_domain == caller's, private == false, saved_at >= window,
    orderBy saved_at DESC`) and the caller's own private saves, stitched in.
-   Callers with a null org domain (free email providers) get a single
+   Callers with a null org domain (no usable email domain) get a single
    own-saves query (`user_id == caller`) instead — the feed degenerates to
    today's personal list, and their saves carry `company_domain: null` so no
    one else's org query can match them.
@@ -108,6 +110,14 @@ query (`company_domain`, `private`, `saved_at DESC`), the own-private query
 4. The caller's `voted` flags come from one extra collection-group query
    (`votes where uid == caller, created_at >= window start`), not per-doc
    lookups.
+5. The response carries a `scope` object: `{ type: 'org', domain,
+   public: boolean }` or `{ type: 'personal' }`. The server owns the rule, so
+   the client renders exactly the scope the server computed — never a locally
+   derived guess at the domain. `public` is true for well-known free-provider
+   domains (gmail.com, outlook.com, hotmail.com, yahoo.com, icloud.com,
+   proton.me, …) from a small server-side list. The list only drives wording,
+   never gating — an unknown free provider just gets the standard
+   "Everyone at <domain>" label, which is still true.
 
 Offset pagination is within the computed ranking; pages can drift slightly as
 votes change the ranking between fetches (acceptable — HN pages drift too).
@@ -124,6 +134,10 @@ feeds reorder live and new saves appear live. The extension's existing
 Verification item for the implementation plan: confirm the realtime fan-out
 reaches org-mates, not just the doc owner (current routing is built around
 per-user accessible-projects). If owner-scoped, extend routing additively.
+This check is **mandatory before launch**, not optional polish: gmail.com is
+now a single org spanning every Gmail user of the product, so a vote on a
+Gmail user's save must fan out to a potentially very large connected
+population — the routing path has to stay cheap and correct at that scale.
 
 ### Ops
 
@@ -139,6 +153,22 @@ onto all things docs.
 - Idle desk index (no query, no scope): renders the org feed.
 - Drawer opened for search/manage: renders the personal list exactly as
   today. The launch strip stays personal.
+
+### Scope label (always visible)
+
+The desk-index header carries a persistent mono kicker labelling the feed's
+audience, driven by the server's `scope` object: "Everyone at acme.com" for
+company orgs, "Everyone using Gmail — public" for free-provider orgs, "Your
+saves only" for null-domain callers. It is plain text in the header — not a
+tooltip, not hover-revealed — so who can see these saves is never ambiguous.
+The feed's empty state echoes the same scope ("No saves from acme.com yet" /
+"No saves yet").
+
+Because free-provider orgs are effectively public, clarity goes one step
+further for them: the first time a `public` feed renders, a one-time
+disclosure callout states plainly that saves from this feed are visible to
+everyone using that email provider, and that "Hide from organisation" makes a
+save private. Dismissed once, remembered locally, never shown again.
 
 ### Data layer
 
@@ -192,10 +222,14 @@ the backend is deployed and the feed 404 path is covered by a test.
 - **Backend units:** score function (unvoted recency order,
   vote-outranks-unvoted, decay over time, count sensitivity, tie-breaks);
   `/vote` authz matrix (self-vote, cross-org, private, toggle idempotency);
-  `/feed` (org scoping, private stitching, `voted` flags, window cutoff);
+  `/feed` (org scoping, private stitching, `voted` flags, window cutoff,
+  `scope` object for company-org / public-org / personal callers);
+  `deriveCompanyDomain` canonicalization (googlemail.com → gmail.com);
   backfill idempotency.
 - **Extension units:** feed caching; optimistic vote + revert; row states
-  (own-row disabled chevron, mono count, "Only you"); the `/feed`-404 bridge.
+  (own-row disabled chevron, mono count, "Only you"); scope label rendering
+  for all scope variants; the one-time public-feed disclosure (shows once for
+  `public` scopes, never for company/personal); the `/feed`-404 bridge.
 - **E2E:** vote on an org-mate's save → count increments → reorder after
   refresh; unvote; own-save chevron disabled.
 - **Local bar:** `just check` green before wrap-up.
@@ -216,10 +250,7 @@ the backend is deployed and the feed 404 path is covered by a test.
 
 - Voting from Slack (`/links`) — the vote surface is the extension feed only.
 - Downvotes, comment threads, vote aging beyond the gravity formula.
-- Explicit org entities / invitations. Email domain remains the org boundary.
-  The feed's free-provider exclusion (see data model) prevents
-  gmail.com-scale pseudo-orgs; personal-email users get a feed scoped to
-  their own saves. (Observed while designing, not changed here: Slack's
-  org-scoped search reuses `deriveCompanyDomain` without the free-provider
-  exclusion, so it has the same pseudo-org exposure — flagged for a separate
-  decision.)
+- Explicit org entities / invitations. Email domain remains the org boundary,
+  free providers included — gmail.com is one public org by design, and the
+  clarity mechanisms above (scope label, one-time disclosure) are how that
+  is communicated, not a gating rule.
