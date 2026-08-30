@@ -101,10 +101,10 @@ describe('project manager renderer helpers', () => {
     expect(hashes.length).toBe(names.length);
     expect(hashes.every(h => h === '#')).toBe(true);
 
-    // Section dots: primary for "Projects", shared-green for both shared sections.
+    // Section dots: accent for "Projects", accent-ink for both shared sections.
     const dotColors = [...container.querySelectorAll('.project-nav-section-dot')].map(el => el.style.background);
-    expect(dotColors).toContain('var(--color-primary)');
-    expect(dotColors).toContain('var(--color-shared)');
+    expect(dotColors).toContain('var(--color-accent)');
+    expect(dotColors).toContain('var(--color-accent-ink)');
   });
 
   it('renders the editor unavailable state and can clear missing pages', () => {

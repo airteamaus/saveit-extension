@@ -35,7 +35,7 @@ body {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 #hero-version-indicator {
@@ -43,13 +43,13 @@ body {
 }
 
 .minimal-footer a {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .minimal-footer a:hover {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .saved-pages-page {
@@ -71,16 +71,12 @@ body {
      via an inline rule. Hover/active states retain a faint tint for feedback. */
   --saved-pages-panel-bg: transparent;
   --saved-pages-panel-bg-strong: transparent;
-  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-accent) 5%, transparent);
   --saved-pages-panel-border: transparent;
   --saved-pages-panel-border-strong: transparent;
-  --saved-pages-panel-border-active: color-mix(
-    in srgb,
-    var(--color-primary) 34%,
-    var(--color-border)
-  );
+  --saved-pages-panel-border-active: color-mix(in srgb, var(--color-accent) 34%, var(--color-line));
   --saved-pages-control-bg: transparent;
-  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-accent) 6%, transparent);
   --saved-pages-chip-bg: transparent;
 }
 
@@ -110,7 +106,7 @@ body {
 
 .saved-pages-page-search-input {
   padding: 3px 40px 3px 44px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 94%, transparent);
   font-size: var(--font-size-md);
 }
 
@@ -140,9 +136,9 @@ body {
   height: 36px;
   align-items: center;
   justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
   color: inherit;
   cursor: pointer;
 }
@@ -181,9 +177,9 @@ body {
   flex-shrink: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-paper-raised) 50%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-line) 50%, transparent);
 }
 
 .saved-pages-page-content {
@@ -215,12 +211,12 @@ body {
   gap: 6px;
   margin: var(--spacing-sm) 0;
   padding: 10px 12px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   /* Cards read as discrete objects at rest via a faint surface fill and a
      visible soft border, rather than only resolving on hover. Hover then
      elevates an already-legible object. */
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -231,13 +227,12 @@ body {
 }
 
 .saved-pages-drawer-card:hover {
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, transparent);
   border-color: var(--saved-pages-panel-border-active);
-  box-shadow: var(--shadow-sm);
 }
 
 .saved-pages-drawer-card:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 58%, transparent);
   outline-offset: 2px;
 }
 
@@ -269,7 +264,7 @@ body {
   font-size: var(--font-size-lg);
   font-weight: 600;
   line-height: 1.25;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .saved-pages-drawer-card-actions {
@@ -288,7 +283,7 @@ body {
   border-radius: var(--radius-full);
   border: 1px solid var(--saved-pages-panel-border);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   cursor: pointer;
   transition:
     background-color 0.18s ease,
@@ -297,7 +292,7 @@ body {
 }
 
 .saved-pages-drawer-action-btn:hover {
-  color: var(--color-text);
+  color: var(--color-ink);
   border-color: var(--saved-pages-panel-border-active);
   background: var(--saved-pages-control-bg-hover);
 }
@@ -308,18 +303,18 @@ body {
 }
 
 .saved-pages-drawer-pin-btn.is-active {
-  color: var(--color-primary);
+  color: var(--color-accent);
   border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-privacy-btn.is-active {
-  color: var(--color-primary);
+  color: var(--color-accent);
   border-color: var(--saved-pages-panel-border-active);
 }
 
 .saved-pages-drawer-delete-btn:hover {
-  color: var(--color-danger, #dc2626);
-  border-color: color-mix(in srgb, #dc2626 32%, var(--color-border));
+  color: var(--color-rust, #dc2626);
+  border-color: color-mix(in srgb, #dc2626 32%, var(--color-line));
   background: color-mix(in srgb, #dc2626 5%, transparent);
 }
 
@@ -333,7 +328,7 @@ body {
   background: color-mix(in srgb, var(--color-paper) 70%, transparent);
   font-size: var(--font-size-md);
   line-height: 1.35;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .saved-pages-drawer-edit-form {
@@ -351,7 +346,7 @@ body {
 .saved-pages-drawer-edit-label {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -362,7 +357,7 @@ body {
   border: 1px solid var(--saved-pages-panel-border);
   border-radius: var(--radius-lg);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   padding: 10px 12px;
   font: inherit;
 }
@@ -377,14 +372,14 @@ body {
    palette — warm = "your own writing". Distinct from the title input's sage
    focus, so the two fields read as different kinds of content. */
 .saved-pages-drawer-edit-textarea:focus {
-  background: var(--notes-bg);
-  border-color: var(--notes-border);
-  color: var(--notes-text);
+  background: var(--color-accent-wash);
+  border-color: var(--color-line-strong);
+  color: var(--color-accent-ink);
 }
 
 .saved-pages-drawer-edit-input:focus,
 .saved-pages-drawer-edit-textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 38%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
   outline-offset: 1px;
   border-color: var(--saved-pages-panel-border-active);
 }
@@ -401,7 +396,7 @@ body {
   border-radius: var(--radius-full);
   border: 1px solid var(--saved-pages-panel-border);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   font: inherit;
   cursor: pointer;
   transition:
@@ -412,13 +407,13 @@ body {
 
 .saved-pages-drawer-edit-save {
   border-color: var(--saved-pages-panel-border-active);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .saved-pages-drawer-edit-save:hover,
 .saved-pages-drawer-edit-cancel:hover {
   border-color: var(--saved-pages-panel-border-active);
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .saved-pages-drawer-edit-save:disabled,
@@ -452,7 +447,7 @@ body {
   flex-wrap: wrap;
   gap: 4px;
   align-items: center;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
 }
 
@@ -471,7 +466,7 @@ body {
 .project-editor-eyebrow {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -484,10 +479,10 @@ body {
   gap: 6px;
   margin-top: 8px;
   padding: 6px 4px 4px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-line);
   font-size: var(--font-size-xs);
   font-weight: 400;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -502,7 +497,7 @@ body {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-circle);
-  background: var(--color-text-light);
+  background: var(--color-ink-soft);
 }
 
 .project-nav-section-text {
@@ -523,7 +518,7 @@ body {
   margin: 0;
   font-size: var(--font-size-xl);
   line-height: 1.3;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .project-sidebar-create,
@@ -533,7 +528,7 @@ body {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   line-height: 1.2;
   cursor: pointer;
@@ -562,7 +557,7 @@ body {
   width: 24px;
   height: 24px;
   /* Sage green so the create icon reads as the primary action. */
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .saved-pages-drawer-projects-btn svg {
@@ -573,8 +568,8 @@ body {
 .project-sidebar-create:hover,
 .project-editor-create:hover,
 .btn-projects:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .project-nav {
@@ -597,7 +592,7 @@ body {
   top: 4px;
   bottom: 4px;
   width: 1px;
-  background: color-mix(in srgb, var(--color-text-light) 30%, transparent);
+  background: color-mix(in srgb, var(--color-ink-soft) 30%, transparent);
 }
 
 .project-nav-row {
@@ -622,7 +617,7 @@ body {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -642,7 +637,7 @@ body {
 /* Selection state: the active channel takes the primary accent, with a
    brighter segment of the rail behind it. Hover/focus get only a tint. */
 .project-nav-row.is-active {
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .project-nav-row.is-active::before {
@@ -653,22 +648,22 @@ body {
   bottom: 0;
   width: 2px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
+  background: var(--color-accent);
 }
 
 .project-nav-row.is-active .project-nav-item,
 .project-nav-row.is-active .project-nav-hash {
-  color: var(--color-primary);
+  color: var(--color-accent);
   opacity: 1;
 }
 
 .project-nav-row:hover,
 .project-nav-row:focus-within {
-  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
 }
 
 .project-nav-row:hover .project-nav-item {
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .project-nav-name-group {
@@ -681,7 +676,7 @@ body {
   display: block;
   font-weight: 400;
   line-height: 1.25;
-  color: var(--color-text);
+  color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -692,7 +687,7 @@ body {
    projects the viewer doesn't own, so it never clutters owned rows. */
 .project-nav-subtitle {
   font-size: var(--font-size-2xs);
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -705,14 +700,14 @@ body {
 .project-editor-empty-inline,
 .project-editor-empty {
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .project-nav-count {
   padding: 1px 6px;
   border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-2xs);
   flex-shrink: 0;
   transition: opacity 0.18s ease;
@@ -743,7 +738,7 @@ body {
   background: transparent;
   /* Actions are hidden until hover, so they don't need de-emphasis at rest;
      the lighter tone was disappearing against the hovered row tint. */
-  color: var(--color-text);
+  color: var(--color-ink);
   cursor: pointer;
   transition:
     background-color 0.18s ease,
@@ -769,14 +764,14 @@ body {
 .project-nav-action:hover {
   /* chip-bg is transparent in the subtle theme, so give the icon a real
      backing tint so it stays visible over the hovered row. */
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-ink);
   border-color: var(--saved-pages-panel-border-active);
 }
 
 .project-action-archive:hover {
-  color: var(--color-danger, #dc2626);
-  border-color: color-mix(in srgb, #dc2626 28%, var(--color-border));
+  color: var(--color-rust, #dc2626);
+  border-color: color-mix(in srgb, #dc2626 28%, var(--color-line));
 }
 
 .project-pill,
@@ -787,15 +782,15 @@ body {
   padding: 4px 10px;
   border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
 }
 
 /* Card project pills take the highlighted-row tint (same as the selected
    sidebar collection) so they read as tags rather than plain text. */
 .project-pill {
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  color: var(--color-ink);
 }
 
 .project-pill-remove {
@@ -808,7 +803,7 @@ body {
 }
 
 .project-pill-remove:hover {
-  color: var(--color-danger, #dc2626);
+  color: var(--color-rust, #dc2626);
 }
 
 .project-editor-backdrop {
@@ -830,9 +825,9 @@ body {
   max-height: min(80vh, 720px);
   overflow: auto;
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-raised);
   box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
 }
 
@@ -847,7 +842,7 @@ body {
 .project-editor-close {
   border: none;
   background: transparent;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   cursor: pointer;
 }
 
@@ -871,7 +866,7 @@ body {
 
 .project-editor-search-label {
   font-size: var(--font-size-md);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .project-editor-create {
@@ -904,7 +899,7 @@ body {
 
 .project-editor-option-name {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .saved-pages-drawer-card-tags .tag {
@@ -936,7 +931,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .saved-pages-semantic-list {
@@ -976,7 +971,7 @@ body {
   max-width: 75%;
   height: auto;
   /* SVG strokes use currentColor, so the illustration follows the active theme. */
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 /* Post-login warming state: the digging dog plus a determinate progress bar.
@@ -988,7 +983,7 @@ body {
 }
 
 .saved-pages-warming-copy {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-xl);
   margin-top: var(--spacing-sm);
 }
@@ -997,7 +992,7 @@ body {
   width: 320px;
   max-width: 80%;
   height: 6px;
-  background: var(--color-border);
+  background: var(--color-line);
   border-radius: var(--radius-full);
   overflow: hidden;
   margin-top: var(--spacing-md);
@@ -1006,13 +1001,13 @@ body {
 
 .saved-pages-warming-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--color-accent);
   border-radius: var(--radius-full);
   transition: width 0.4s ease;
 }
 
 .saved-pages-warming-percent {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-md);
   margin-top: var(--spacing-xs);
   font-variant-numeric: tabular-nums;
@@ -1022,7 +1017,7 @@ body {
    server hasn't returned a total yet. Disabled under reduced-motion. */
 .saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
   width: 40% !important;
-  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--color-accent) 50%, transparent 100%);
   animation: saved-pages-warming-shimmer 1.2s ease-in-out infinite;
 }
 
@@ -1033,7 +1028,7 @@ body {
 
   .saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
     animation: none;
-    background: var(--color-primary);
+    background: var(--color-accent);
     opacity: 0.5;
   }
 }
@@ -1098,11 +1093,11 @@ body {
      across the whole row. "As wide as it needs to be, but no wider." */
   max-width: 360px;
   padding: 10px 12px;
-  border-radius: var(--radius-xl);
+  border-radius: var(--radius-md);
   /* Same surface recipe as .saved-pages-drawer-card so the compact card reads
      as a sibling object, just sized for a horizontal row. */
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
@@ -1113,13 +1108,12 @@ body {
 }
 
 .saved-pages-home-pinned-card:hover {
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, transparent);
   border-color: var(--saved-pages-panel-border-active);
-  box-shadow: var(--shadow-sm);
 }
 
 .saved-pages-home-pinned-card:focus-visible {
-  outline: 2px solid var(--color-primary);
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
@@ -1206,11 +1200,11 @@ body {
     width: 256px;
     max-height: none;
     z-index: 46;
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-dialog);
     /* The resting sidebar is semi-transparent (fine next to the page), but as
        an overlay it sits on top of the cards — make it opaque so the menu text
        stays fully readable. The backdrop behind it provides the separation. */
-    background: var(--color-surface);
+    background: var(--color-paper-raised);
   }
 
   .saved-pages-sidebar-backdrop {
@@ -1237,7 +1231,7 @@ body {
 
 .sharing-centre-intro {
   margin: 0 0 var(--spacing-md);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-md);
   line-height: 1.5;
 }
@@ -1250,11 +1244,11 @@ body {
 }
 
 .sharing-centre-warn {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .sharing-centre-error {
-  color: var(--color-danger);
+  color: var(--color-rust);
 }
 
 .sharing-centre-section {
@@ -1269,12 +1263,12 @@ body {
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .sharing-centre-section-hint {
   margin: var(--spacing-xs) 0 0;
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
   font-size: var(--font-size-sm);
 }
 
@@ -1284,11 +1278,11 @@ body {
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: light-dark(
-    var(--color-surface),
-    color-mix(in srgb, var(--color-surface) 85%, var(--color-border))
+    var(--color-paper-raised),
+    color-mix(in srgb, var(--color-paper-raised) 85%, var(--color-line))
   );
 }
 
@@ -1305,7 +1299,7 @@ body {
 
 .sharing-centre-row-name {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1315,22 +1309,22 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
 }
 
 /* The audience phrase is the key clarity signal: "Visible to everyone at …". */
 .sharing-centre-audience {
-  color: var(--color-shared);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
 .sharing-centre-dot {
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
 }
 
 .sharing-centre-row-owner {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-2xs);
 }
 
@@ -1338,18 +1332,18 @@ body {
   flex-shrink: 0;
   align-self: center;
   padding: 6px 10px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .sharing-centre-toggle:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .sharing-centre-toggle:disabled {
@@ -1362,22 +1356,22 @@ body {
   justify-content: flex-end;
   margin-top: var(--spacing-md);
   padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-line);
 }
 
 .sharing-centre-refresh {
   padding: 6px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
 .sharing-centre-refresh:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* ───────────────────────────────────────────────────────────────────────
@@ -1418,12 +1412,12 @@ body {
 }
 
 .data-sync-dialog .btn-primary {
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: #fff;
 }
 
 .data-sync-dialog .btn-primary:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-accent-ink);
 }
 
 .data-sync-dialog .btn-primary:disabled,
@@ -1433,20 +1427,20 @@ body {
 }
 
 .data-sync-dialog .btn-secondary {
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
-  border-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
+  border-color: var(--color-line);
 }
 
 .data-sync-dialog .btn-secondary:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .data-sync-hint {
   margin: var(--spacing-sm) 0 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .data-sync-row {
@@ -1489,11 +1483,11 @@ body {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--color-line);
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-dialog);
   opacity: 0;
   transform: translateX(12px);
   transition:
@@ -1509,29 +1503,29 @@ body {
 /* Accent border keyed to the toast type. Success uses the shared-green token
    that the rest of the UI associates with confirmed/active state. */
 .toast--success {
-  border-color: color-mix(in srgb, var(--color-shared) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-accent-ink) 60%, var(--color-line));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .toast--success .toast-icon {
-  color: var(--color-shared);
+  color: var(--color-accent-ink);
   flex-shrink: 0;
 }
 
 .toast--warning {
-  border-color: color-mix(in srgb, var(--color-notes-border, #e0a800) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-accent-ink, #e0a800) 60%, var(--color-line));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .toast--warning .toast-icon {
-  color: var(--color-notes-border, #e0a800);
+  color: var(--color-accent-ink, #e0a800);
   flex-shrink: 0;
 }
 
 .toast--error {
-  border-color: color-mix(in srgb, var(--color-danger) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-rust) 60%, var(--color-line));
 }

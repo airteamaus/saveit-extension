@@ -20,8 +20,8 @@ body {
   margin: 0;
   padding: 0;
   min-width: 320px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   line-height: 1.4;
@@ -41,7 +41,7 @@ body {
 
 .toolbar-popup-eyebrow {
   margin: 0 0 4px;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -57,9 +57,9 @@ body {
 .toolbar-popup-save-btn,
 .toolbar-popup-project-btn {
   width: 100%;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  background: var(--color-paper-raised);
   color: inherit;
   cursor: pointer;
   font: inherit;
@@ -73,8 +73,8 @@ body {
 .toolbar-popup-save-btn {
   margin-bottom: 10px;
   padding: 10px 12px;
-  border-color: var(--color-primary);
-  background: var(--color-primary);
+  border-color: var(--color-accent);
+  background: var(--color-accent);
   color: #ffffff;
   font-weight: 600;
 }
@@ -89,12 +89,12 @@ body {
 }
 
 .toolbar-popup-save-btn:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-accent-ink);
 }
 
 .toolbar-popup-project-btn:hover {
-  border-color: var(--color-text-lighter);
-  background: var(--color-bg);
+  border-color: var(--color-ink-faint);
+  background: var(--color-paper);
 }
 
 .toolbar-popup-save-btn:disabled,
@@ -110,7 +110,7 @@ body {
 
 .toolbar-popup-section-title {
   margin: 0 0 6px;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -128,7 +128,7 @@ body {
 .toolbar-popup-empty,
 .toolbar-popup-status {
   margin: 0;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .toolbar-popup-status {
@@ -137,5 +137,5 @@ body {
 }
 
 .toolbar-popup-status[data-state="error"] {
-  color: var(--color-danger-hover);
+  color: var(--color-rust);
 }
