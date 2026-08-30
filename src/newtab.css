@@ -229,6 +229,48 @@ body {
   justify-content: center;
 }
 
+/* Mono lowercase pills; selected = accent wash (DESIGN.md "project pills"). */
+.project-pill-tab {
+  padding: 3px 11px;
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.project-pill-tab:hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+}
+
+.project-pill-tab.is-active {
+  background: var(--color-accent-wash);
+  border-color: var(--color-line-strong);
+  color: var(--color-accent-ink);
+}
+
+.project-pill-more {
+  border-style: dashed;
+}
+
+.project-pill-new {
+  padding: 3px 6px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.project-pill-new:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 /* ── The index ──────────────────────────────────────────────────── */
 
 .desk-index {
@@ -773,10 +815,10 @@ body {
   text-align: center;
 }
 
-/* Selection state: the active channel takes the primary accent, with a
-   brighter segment of the rail behind it. Hover/focus get only a tint. */
+/* Selection state: the active channel takes the accent wash, with a brighter
+   segment of the rail behind it. Hover/focus get only a tint. */
 .project-nav-row.is-active {
-  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  background: var(--color-accent-wash);
 }
 
 .project-nav-row.is-active::before {
@@ -792,13 +834,13 @@ body {
 
 .project-nav-row.is-active .project-nav-item,
 .project-nav-row.is-active .project-nav-hash {
-  color: var(--color-accent);
+  color: var(--color-accent-ink);
   opacity: 1;
 }
 
 .project-nav-row:hover,
 .project-nav-row:focus-within {
-  background: color-mix(in srgb, var(--color-accent) 5%, transparent);
+  background: color-mix(in srgb, var(--color-accent-wash) 55%, transparent);
 }
 
 .project-nav-row:hover .project-nav-item {

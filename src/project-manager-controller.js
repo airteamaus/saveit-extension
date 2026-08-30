@@ -66,7 +66,8 @@ export function createProjectManagerController({
     isProjectsUnavailable: dashboard => controller.isProjectsUnavailable(dashboard),
     getProjectsUnavailableMessage: dashboard => controller.getProjectsUnavailableMessage(dashboard),
     getSelectedProject: dashboard => controller.getSelectedProject(dashboard),
-    getProjectPills: (page, dashboard) => controller.getProjectPills(page, dashboard)
+    getProjectPills: (page, dashboard) => controller.getProjectPills(page, dashboard),
+    getScopedPages: (dashboard, pages) => controller.getScopedPages(dashboard, pages)
   });
   const actions = createProjectManagerActions({
     api,

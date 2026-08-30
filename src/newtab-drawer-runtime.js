@@ -47,6 +47,8 @@ export function createSavedPagesDrawerController({
     datelineEl,
     deskSort,
     projectSidebar,
+    projectPills,
+    deskIndexTitle,
     projectEditorBackdrop,
     projectEditorDialog
   } = elements;
@@ -185,6 +187,8 @@ export function createSavedPagesDrawerController({
       savedPagesDrawerResults,
       launchStrip,
       projectSidebar,
+      projectPills,
+      deskIndexTitle,
       projectEditorBackdrop,
       projectEditorDialog,
       projectManager,

@@ -39,6 +39,8 @@ export function getDrawerControllerElements(elements) {
     launchStrip: elements.launchStrip,
     datelineEl: elements.datelineEl,
     deskSort: elements.deskSort,
+    projectPills: elements.projectPills,
+    deskIndexTitle: elements.deskIndexTitle,
     savedPagesDrawerSearchForm: elements.savedPagesDrawerSearchForm || elements.searchForm,
     savedPagesDrawerSearchInput: elements.savedPagesDrawerSearchInput,
     savedPagesToggleBtn: elements.savedPagesToggleBtn

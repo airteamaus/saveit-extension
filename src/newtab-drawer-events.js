@@ -15,6 +15,8 @@ export function initSavedPagesDrawerEvents({
   savedPagesDrawerResults,
   launchStrip,
   projectSidebar,
+  projectPills,
+  deskIndexTitle,
   projectEditorBackdrop,
   projectEditorDialog,
   projectManager,
@@ -310,6 +312,22 @@ export function initSavedPagesDrawerEvents({
     navigateDrawerCard(chip, event);
   });
 
+  // Shared scope selection for the dropdown rows and the pills row: domain
+  // ids route to domain scoping, everything else to project selection (empty
+  // id = All pages, which also clears any domain scope).
+  function handleScopeSelection(scopeId) {
+    if (scopeId.startsWith('domain:')) {
+      const domain = scopeId.slice('domain:'.length);
+      savedPagesView.selectedDomainId = scopeId;
+      savedPagesView.selectedProjectId = null;
+      void loadDrawerDomainPages?.(domain);
+      return;
+    }
+
+    savedPagesView.selectedDomainId = null;
+    void projectManager.selectProject(savedPagesView, scopeId || null);
+  }
+
   projectSidebar?.addEventListener('click', (event) => {
     const createButton = event.target.closest('.project-sidebar-create');
     if (createButton) {
@@ -338,22 +356,40 @@ export function initSavedPagesDrawerEvents({
     const projectRow = event.target.closest('.project-nav-row[data-project-id]');
     if (projectRow) {
       event.preventDefault();
-      const scopeId = projectRow.dataset.projectId || '';
-
-      // Domain rows use a "domain:" prefix; route them to domain scoping
-      // rather than the project selection path.
-      if (scopeId.startsWith('domain:')) {
-        const domain = scopeId.slice('domain:'.length);
-        savedPagesView.selectedDomainId = scopeId;
-        savedPagesView.selectedProjectId = null;
-        void loadDrawerDomainPages?.(domain);
-        return;
-      }
-
-      // Selecting a project (or All pages / Pinned) clears any domain scope.
-      savedPagesView.selectedDomainId = null;
-      void projectManager.selectProject(savedPagesView, scopeId || null);
+      handleScopeSelection(projectRow.dataset.projectId || '');
     }
+  });
+
+  // Pills row: project pills select scopes; +N more opens the dropdown;
+  // + New starts the create flow.
+  projectPills?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-action]');
+    if (actionButton) {
+      event.preventDefault();
+      if (actionButton.dataset.action === 'open-projects-menu') {
+        documentObj.getElementById('saved-pages-sidebar-toggle-btn')?.click();
+      } else if (actionButton.dataset.action === 'create-project') {
+        void projectManager.promptCreateProject(savedPagesView);
+      }
+      return;
+    }
+
+    const pill = event.target.closest('.project-pill-tab[data-project-id]');
+    if (pill) {
+      event.preventDefault();
+      handleScopeSelection(pill.dataset.projectId || '');
+    }
+  });
+
+  // Breadcrumb back: clears the scope by selecting All pages.
+  deskIndexTitle?.addEventListener('click', (event) => {
+    const backButton = event.target.closest('[data-action="breadcrumb-back"]');
+    if (!backButton) {
+      return;
+    }
+
+    event.preventDefault();
+    handleScopeSelection('');
   });
 
   projectEditorBackdrop?.addEventListener('click', () => {
