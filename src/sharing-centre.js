@@ -139,7 +139,10 @@ export function createSharingCentre({
     const notShared = projects.filter(project => isOwnedProject(dashboard, project) && project.visibility !== 'company');
 
     const header = el('div', { className: 'sharing-centre-header', children: [
-      el('h2', { className: 'project-editor-title', text: 'Sharing', attrs: { id: 'sharing-centre-title' } }),
+      el('div', { children: [
+        el('p', { className: 'project-editor-eyebrow', text: 'SaveIt' }),
+        el('h2', { className: 'project-editor-title', text: 'Sharing', attrs: { id: 'sharing-centre-title' } })
+      ] }),
       el('button', { className: 'project-editor-close', text: '✕', attrs: { 'aria-label': 'Close' }, onClick: close })
     ] });
 

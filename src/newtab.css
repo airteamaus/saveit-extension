@@ -643,13 +643,15 @@ body {
   margin-left: auto;
 }
 
+/* Modal kicker (DESIGN.md "modal standard"): mono uppercase. */
 .project-sidebar-eyebrow,
 .project-editor-eyebrow {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
   color: var(--color-ink-soft);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
 }
 
 /* Sidebar section labels (e.g. "Projects") carry a colored dot that ties
@@ -697,7 +699,9 @@ body {
 
 .project-editor-title {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
   line-height: 1.3;
   color: var(--color-ink);
 }
@@ -987,13 +991,13 @@ body {
   color: var(--color-rust, #dc2626);
 }
 
+/* Modal standard (DESIGN.md): warm scrim without blur, raised paper, the one
+   shadow, mono kicker + serif title. */
 .project-editor-backdrop {
   position: fixed;
   inset: 0;
   z-index: 45;
-  background: rgba(9, 9, 11, 0.32);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: light-dark(rgb(41 37 36 / 0.3), rgb(0 0 0 / 0.55));
 }
 
 .project-editor-dialog {
@@ -1006,10 +1010,10 @@ body {
   max-height: min(80vh, 720px);
   overflow: auto;
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-line);
+  border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-lg);
   background: var(--color-paper-raised);
-  box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
+  box-shadow: var(--shadow-dialog);
 }
 
 .project-editor-header {
@@ -1021,10 +1025,17 @@ body {
 }
 
 .project-editor-close {
-  border: none;
+  padding: 4px 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
   background: transparent;
   color: var(--color-ink-soft);
+  font-size: var(--font-size-md);
   cursor: pointer;
+}
+
+.project-editor-close:hover {
+  color: var(--color-ink);
 }
 
 .project-editor-assigned,
