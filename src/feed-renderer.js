@@ -129,12 +129,14 @@ export function renderFeedRowMarkup(row) {
 export function createFeedRenderer({ documentObj = document, resultsContainer }) {
   // The feed owns its own section beside the drawer's "pages" section so
   // each surface can reconcile without wiping the other; renderFeed clears
-  // the pages section because the two lists never show at the same time.
+  // the pages and semantic sections because those surfaces never show at the
+  // same time as the feed (search/scoped views retire it first).
   function ensureFeedSection() {
     if (!resultsContainer) {
       return null;
     }
     resultsContainer.querySelector('[data-section="pages"]')?.remove();
+    resultsContainer.querySelector('[data-section="semantic"]')?.remove();
     let section = resultsContainer.querySelector('[data-section="feed"]');
     if (!section) {
       section = createElementFromHtml('<div data-section="feed"></div>', documentObj);

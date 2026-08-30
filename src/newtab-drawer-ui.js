@@ -181,6 +181,11 @@ export function createDrawerUiController({
     // means the feed is unavailable (old backend / signed out / not loaded)
     // — fall through to the personal list exactly as before the feed.
     if (!hasScope && feedController?.renderIdle()) {
+      // Every other render branch paints the chrome (sidebar/dateline) as a
+      // side effect of drawerRenderer's renders; the feed renders its own
+      // rows, so paint the chrome explicitly — otherwise the sidebar never
+      // shows loaded projects when the feed owns the idle desk.
+      renderDrawerChrome();
       return;
     }
 

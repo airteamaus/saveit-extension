@@ -70,6 +70,18 @@ async function showAllPages(page) {
   await page.waitForSelector('.index-row');
 }
 
+// The org feed owns the idle desk now. Specs that exercise the personal
+// list's idle behaviours (row actions, render windowing, scoping) boot with
+// the feed seam disabled — standing in for an old backend without /feed,
+// which is exactly the deploy-order bridge the drawer must survive.
+async function openStandaloneNewtabWithoutFeed(page) {
+  await page.addInitScript(() => {
+    globalThis.MOCK_FEED_UNAVAILABLE = true;
+  });
+  await openStandaloneNewtab(page);
+  await page.waitForSelector('.index-row');
+}
+
 test.describe('Standalone Mode', () => {
   test.beforeEach(async ({ page }) => {
     await openStandaloneNewtab(page);
@@ -174,7 +186,7 @@ test.describe('Standalone Mode', () => {
   });
 
   test('should create and assign a project from the page editor', async ({ page }) => {
-    await showAllPages(page);
+    await openStandaloneNewtabWithoutFeed(page);
 
     // Row actions are pointer-transparent at rest; hovering the row reveals
     // them (that's the real user path — see the index-row overlay design).
@@ -203,7 +215,7 @@ test.describe('Standalone Mode', () => {
   });
 
   test('should edit a page title and summary inline', async ({ page }) => {
-    await showAllPages(page);
+    await openStandaloneNewtabWithoutFeed(page);
 
     // Cards are editable from the unfiltered browse view (search hides them
     // behind the semantic pane).
@@ -244,7 +256,9 @@ test.describe('Standalone Mode', () => {
   });
 
   test('renders a windowed slice and grows the list on scroll (lazy render)', async ({ page }) => {
-    await showAllPages(page);
+    // Windowing only applies to the idle unscoped browse list, which is the
+    // feed's slot now — so this spec runs against the feed-unavailable desk.
+    await openStandaloneNewtabWithoutFeed(page);
 
     const cards = page.locator('.index-row');
     // First paint renders only the initial window; the mock dataset is much
@@ -292,7 +306,7 @@ test.describe('Standalone Mode', () => {
   });
 
   test('hovering a card action button does not change its size or offset', async ({ page }) => {
-    await showAllPages(page);
+    await openStandaloneNewtabWithoutFeed(page);
     const card = page.locator('.index-row').first();
     const pinBtn = card.locator('.index-row-pin-btn');
 
@@ -455,7 +469,7 @@ test.describe('Standalone Mode', () => {
   });
 
   test('renders a Domains section in the sidebar and scopes on click', async ({ page }) => {
-    await showAllPages(page);
+    await openStandaloneNewtabWithoutFeed(page);
 
     // The "By Category" section (formerly "Domains") appears after Shared projects.
     await expect(page.locator('#project-sidebar')).toContainText('By Category');

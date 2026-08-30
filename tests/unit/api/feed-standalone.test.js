@@ -35,6 +35,15 @@ describe('getMockFeed', () => {
     expect(page2.pages).toHaveLength(1);
     expect(page2.pagination.has_more).toBe(false);
   });
+
+  it('throws when the unavailable seam is set, standing in for a backend without /feed', () => {
+    globalThis.MOCK_FEED_UNAVAILABLE = true;
+    try {
+      expect(() => getMockFeed()).toThrow('mock feed unavailable');
+    } finally {
+      delete globalThis.MOCK_FEED_UNAVAILABLE;
+    }
+  });
 });
 
 describe('voteStandaloneFeedPage', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  createFeedRenderer,
   renderFeedRowMarkup,
   feedScopeKickerMarkup,
   feedDisclosureMarkup,
@@ -96,5 +97,30 @@ describe('feedProviderLabel', () => {
     expect(feedProviderLabel('gmail.com')).toBe('Gmail');
     expect(feedProviderLabel('outlook.com')).toBe('Outlook');
     expect(feedProviderLabel('acme.com')).toBe('acme.com');
+  });
+});
+
+describe('createFeedRenderer', () => {
+  it('retires stale pages and semantic sections when the feed takes the pane', () => {
+    const container = document.createElement('div');
+    // Leftovers from a cleared search (semantic) and the personal list
+    // (pages) must not linger beside the feed section.
+    container.innerHTML = '<div data-section="pages"></div><div data-section="semantic"></div>';
+
+    const renderer = createFeedRenderer({ documentObj: document, resultsContainer: container });
+    renderer.renderFeed([ROW]);
+
+    expect(container.querySelector('[data-section="pages"]')).toBeNull();
+    expect(container.querySelector('[data-section="semantic"]')).toBeNull();
+    expect(container.querySelector('[data-section="feed"] .feed-row')).not.toBeNull();
+  });
+
+  it('clear() removes the feed section only', () => {
+    const container = document.createElement('div');
+    const renderer = createFeedRenderer({ documentObj: document, resultsContainer: container });
+    renderer.renderFeed([ROW]);
+    renderer.clear();
+
+    expect(container.querySelector('[data-section="feed"]')).toBeNull();
   });
 });

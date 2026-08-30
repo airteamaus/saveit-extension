@@ -34,6 +34,12 @@ function savedByLabel(userEmail) {
 }
 
 export function getMockFeed(options = {}) {
+  // Test seam for the deploy-order bridge: an old backend without /feed must
+  // leave the desk on the personal list. E2E specs set this flag to exercise
+  // that fallback in standalone mode.
+  if (globalThis.MOCK_FEED_UNAVAILABLE) {
+    throw new Error('mock feed unavailable');
+  }
   const rows = buildMockFeedRows();
   const limit = options.limit || DEFAULT_FEED_LIMIT;
   const offset = options.offset || 0;
