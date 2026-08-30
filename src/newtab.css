@@ -1678,8 +1678,8 @@ body {
   transform: translateX(0);
 }
 
-/* Accent border keyed to the toast type. Success uses the shared-green token
-   that the rest of the UI associates with confirmed/active state. */
+/* Accent border keyed to the toast type (DESIGN.md): amber family for
+   success/warning, rust for errors. */
 .toast--success {
   border-color: color-mix(in srgb, var(--color-accent-ink) 60%, var(--color-line));
   display: inline-flex;
@@ -1693,14 +1693,14 @@ body {
 }
 
 .toast--warning {
-  border-color: color-mix(in srgb, var(--color-accent-ink, #e0a800) 60%, var(--color-line));
+  border-color: color-mix(in srgb, var(--color-accent-ink) 60%, var(--color-line));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .toast--warning .toast-icon {
-  color: var(--color-accent-ink, #e0a800);
+  color: var(--color-accent-ink);
   flex-shrink: 0;
 }
 
