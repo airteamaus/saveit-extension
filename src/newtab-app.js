@@ -267,10 +267,10 @@ export function createNewtabApp({
     url: `${CONFIG.realtimeFunctionUrl}/events/stream`,
     // SSE has no replay buffer: events that fire while the stream is down are
     // gone. On each (re)connect, run a catch-up refresh across every open
-    // surface (saved pages, the open project scope if any, and the projects
-    // list) so the standard update-check reconciles anything missed. Without
-    // this, a stream drop between a save/project event and reconnect leaves the
-    // change invisible until the user manually reloads.
+    // surface (saved pages, the open project scope if any, the projects list,
+    // and the org feed) so the standard update-check reconciles anything
+    // missed. Without this, a stream drop between a save/project event and
+    // reconnect leaves the change invisible until the user manually reloads.
     onConnect: () => {
       void drawerController.refreshOpenScopes();
       void feedController.refresh();

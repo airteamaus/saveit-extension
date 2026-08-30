@@ -48,6 +48,7 @@ export function createFeedController({
     try {
       return storage.getItem(DISCLOSURE_DISMISSED_KEY) === '1';
     } catch {
+      // Same policy as unreachable storage: a failing read must not nag.
       return true;
     }
   }

@@ -11,6 +11,14 @@ The new tab includes project collections so saved pages can be grouped without c
 - Toggle a project between private and company-shared from the new tab
 - Archive projects when they are no longer active
 
+## Organisation feed
+
+The new tab's "Recently saved" index shows saves from everyone sharing your email domain, not just your own.
+
+- Saves are upvotable and ranked by votes and age over a rolling 30-day window
+- Free email providers (Gmail, Outlook, …) form public feeds visible to all users of that provider
+- "Hide from organisation" on a save keeps it private to you
+
 ## Files
 
 - `manifest.json` - Extension metadata and permissions (manifest v3)
