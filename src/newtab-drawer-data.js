@@ -558,7 +558,11 @@ export function createDrawerDataController({
     }
 
     const nextTitle = (updates.title || '').trim();
-    const nextAiSummaryBrief = (updates.ai_summary_brief || '').trim();
+    // undefined means "keep the existing summary" — the launch-strip rename
+    // sends title only; the edit form always sends both fields explicitly.
+    const nextAiSummaryBrief = updates.ai_summary_brief === undefined
+      ? (page.ai_summary_brief || '')
+      : updates.ai_summary_brief.trim();
     if (!nextTitle) {
       reportFailure('Title is required.');
       return;

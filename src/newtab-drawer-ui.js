@@ -1,5 +1,6 @@
 import { createDrawerRenderer } from './newtab-drawer-renderer.js';
 import { getPinnedPages } from './newtab-home.js';
+import { formatDeskDateline } from './newtab-shared.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 
 export function getDrawerProjectScopeLabel(projectManager, savedPagesView) {
@@ -11,10 +12,24 @@ export function getDrawerProjectScopeLabel(projectManager, savedPagesView) {
   return selectedProject ? selectedProject.name : 'All pages';
 }
 
+// Display-order toggle for the index. 'newest' is the server's order (the
+// warm cache is keyed to it); 'oldest' reverses by saved_at client-side at
+// render time only, so the store's cursor pipeline is untouched.
+export function sortPagesForIndex(pages, indexSort) {
+  if (indexSort !== 'oldest' || !Array.isArray(pages)) {
+    return pages;
+  }
+
+  return [...pages].sort((a, b) =>
+    String(a.saved_at || '').localeCompare(String(b.saved_at || '')));
+}
+
 export function createDrawerUiController({
   state,
   projectManager,
   resultsContainer,
+  launchStripContainer,
+  datelineEl,
   getSavedPagesView,
   documentObj = document
 }) {
@@ -37,11 +52,23 @@ export function createDrawerUiController({
   function renderDrawerChrome() {
     renderProjectSidebar();
     renderProjectEditor();
+    updateDateline();
+  }
+
+  // The dateline rides the chrome render so it refreshes with the data it
+  // counts. Signed-out renders keep the date alone (count of zero).
+  function updateDateline() {
+    if (!datelineEl) {
+      return;
+    }
+    const allPages = Array.isArray(state.allPages) ? state.allPages : [];
+    datelineEl.textContent = formatDeskDateline(new Date(), allPages.length);
   }
 
   const drawerRenderer = createDrawerRenderer({
     documentObj,
     resultsContainer,
+    launchStripContainer,
     getEditingPageId: () => state.editingPageId,
     getSavingEditPageId: () => state.savingEditPageId,
     // Render-window cap (All-pages browse view only); grown on scroll. Scoped
@@ -90,7 +117,7 @@ export function createDrawerUiController({
     // and the warming subscriber route through here, so they can never paint
     // conflicting phases (the race that caused cards-flash-then-dog-stuck).
     if (state.warmUpInProgress) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       drawerRenderer.renderWarmingState(state.warmUpProgress);
       return;
     }
@@ -101,7 +128,7 @@ export function createDrawerUiController({
     // While a semantic search is loading, the dog takes over the full pane:
     // hide all saved-page cards and show only the centered illustration.
     if (state.semanticLoading) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       drawerRenderer.renderSemanticLoadingState();
       return;
     }
@@ -110,7 +137,7 @@ export function createDrawerUiController({
     // semantic results return they own the full pane — no separate local card
     // list. (A query always yields at least the card the tag was clicked from.)
     if (hasQuery) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       if ((state.semanticResults?.length ?? 0) > 0) {
         drawerRenderer.clearPagesSection();
         drawerRenderer.renderSemanticResults(state.semanticResults, {
@@ -138,9 +165,9 @@ export function createDrawerUiController({
       ? getPinnedPages(allPages)
       : [];
     if (pinnedPages.length) {
-      drawerRenderer.renderPinnedShelf(pinnedPages);
+      drawerRenderer.renderLaunchStrip(pinnedPages);
     } else {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
     }
 
     if (!state.pages.length) {
@@ -155,7 +182,7 @@ export function createDrawerUiController({
       return;
     }
 
-    drawerRenderer.renderResults(state.pages);
+    drawerRenderer.renderResults(sortPagesForIndex(state.pages, state.indexSort));
     drawerRenderer.renderSemanticResults(state.semanticResults, {
       loading: state.semanticLoading,
       query: state.semanticQuery

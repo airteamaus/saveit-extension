@@ -1,6 +1,6 @@
 /* newtab.css - Saved pages new tab */
 
-/* Page shell */
+/* Page shell — the Reading Room (DESIGN.md "Surfaces & rhythm") */
 
 html,
 body {
@@ -16,17 +16,6 @@ body {
   overflow: hidden;
 }
 
-.logo-hero {
-  font-size: var(--font-size-4xl);
-  font-weight: 700;
-  user-select: none;
-}
-
-.logo-hero svg {
-  width: 22px;
-  height: 22px;
-}
-
 .minimal-footer {
   position: static;
   margin: 0 16px 10px;
@@ -35,7 +24,7 @@ body {
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 #hero-version-indicator {
@@ -43,297 +32,476 @@ body {
 }
 
 .minimal-footer a {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-decoration: none;
   transition: color 0.2s;
 }
 
 .minimal-footer a:hover {
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
-.saved-pages-page {
+/* One centered column; content zones constrain to 720px inside it. */
+.desk-page {
   position: relative;
   z-index: 1;
   flex: 1;
   min-height: 0;
-  padding: 12px 16px 8px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 20px 8px;
   overflow: hidden;
-}
-
-.saved-pages-page-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  gap: 14px;
   /* Subtle UI: panels, cards, and controls are transparent (outlined only),
-     so fills don't compete with content. The search box keeps its own fill
-     via an inline rule. Hover/active states retain a faint tint for feedback. */
+     so fills don't compete with content. Hover/active states keep a faint tint. */
   --saved-pages-panel-bg: transparent;
   --saved-pages-panel-bg-strong: transparent;
-  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-accent) 5%, transparent);
   --saved-pages-panel-border: transparent;
   --saved-pages-panel-border-strong: transparent;
-  --saved-pages-panel-border-active: color-mix(
-    in srgb,
-    var(--color-primary) 34%,
-    var(--color-border)
-  );
+  --saved-pages-panel-border-active: color-mix(in srgb, var(--color-accent) 34%, var(--color-line));
   --saved-pages-control-bg: transparent;
-  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-primary) 6%, transparent);
+  --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-accent) 6%, transparent);
   --saved-pages-chip-bg: transparent;
 }
 
-.saved-pages-page-header {
+/* ── Utility row ────────────────────────────────────────────────── */
+
+.desk-utility-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.desk-utility-left,
+.desk-utility-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* Indent the header to line up with the cards/results, which sit inside the
-     results container's 16px horizontal padding. */
-  padding: 0 16px 12px;
+  gap: 14px;
 }
 
-.saved-pages-page-logo {
-  flex-shrink: 0;
+.projects-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
 }
 
-.saved-pages-page-search {
-  flex: 1;
-  max-width: none;
-  margin-inline: 10px 14px;
+.projects-menu-trigger:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.saved-pages-page-search .search-icon svg {
+.desk-utility-link {
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.desk-utility-link:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Masthead ───────────────────────────────────────────────────── */
+
+.desk-masthead {
+  text-align: center;
+  padding-top: 6px;
+}
+
+.desk-masthead-wordmark {
+  font-family: var(--font-display);
+  font-size: var(--font-size-7xl);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.desk-dateline {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+
+/* Newspaper double rule: 2px + 1px ink. */
+.desk-rule-double {
+  margin-top: 12px;
+  border-top: 2px solid var(--color-ink);
+}
+
+.desk-rule-double::after {
+  content: "";
+  display: block;
+  margin-top: 2px;
+  border-top: 1px solid var(--color-ink);
+}
+
+/* ── Search hero ────────────────────────────────────────────────── */
+
+.desk-search-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  width: 100%;
+  margin: 4px auto 0;
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  padding: 6px 6px 6px 14px;
+}
+
+.desk-search-hero .search-icon {
+  position: static;
+  transform: none;
+  color: var(--color-ink-faint);
+}
+
+.desk-search-hero .search-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.saved-pages-page-search-input {
-  padding: 3px 40px 3px 44px;
-  background: color-mix(in srgb, var(--color-surface) 94%, transparent);
-  font-size: var(--font-size-md);
+.desk-search-input {
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
 }
 
-.saved-pages-page-actions {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
+.desk-search-input:focus {
+  box-shadow: none;
 }
 
-.saved-pages-page-actions .user-avatar-btn {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.desk-search-input::placeholder {
+  font-style: italic;
+  color: var(--color-ink-faint);
 }
 
-/* Hamburger toggle for the project sidebar. Hidden above 700px; the 700px
-   breakpoint sets it to display: inline-flex. Mirrors the avatar button's
-   sizing so it lines up with the other header actions. */
-.saved-pages-sidebar-toggle {
-  display: none;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+.desk-search-find {
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  color: inherit;
+  font-weight: 600;
+  font-size: var(--font-size-md);
   cursor: pointer;
 }
 
-.saved-pages-sidebar-toggle svg {
-  width: 18px;
-  height: 18px;
+.desk-search-find:hover {
+  background: var(--color-accent-ink);
 }
 
-/* Backdrop for the sidebar overlay. Hidden by default via the .hidden class
-   (added in the HTML); the 700px breakpoint styles it when shown. */
-.saved-pages-sidebar-backdrop.hidden {
+/* ── Launch strip + project pills ───────────────────────────────── */
+
+.launch-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.project-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+}
+
+/* Mono lowercase pills; selected = accent wash (DESIGN.md "project pills"). */
+.project-pill-tab {
+  padding: 3px 11px;
+  background: none;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-full);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.project-pill-tab:hover {
+  border-color: var(--color-line-strong);
+  color: var(--color-ink);
+}
+
+.project-pill-tab.is-active {
+  background: var(--color-accent-wash);
+  border-color: var(--color-line-strong);
+  color: var(--color-accent-ink);
+}
+
+.project-pill-more {
+  border-style: dashed;
+}
+
+.project-pill-new {
+  padding: 3px 6px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.project-pill-new:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── The index ──────────────────────────────────────────────────── */
+
+.desk-index {
+  margin-top: 10px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.desk-index-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.desk-index-title {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.desk-sort-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+
+.desk-sort {
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.desk-sort option {
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+}
+
+.desk-index-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 2px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.desk-breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.desk-breadcrumb-back {
+  padding: 2px 0;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.desk-breadcrumb-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.desk-breadcrumb-title {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* ── Projects dropdown panel ────────────────────────────────────── */
+/* Filled by renderProjectSidebar; shown when JS adds .is-overlay-open. */
+
+.projects-menu-panel {
   display: none;
-}
-
-.saved-pages-page-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-  padding-top: 0;
-  overflow: hidden;
-}
-
-.project-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  /* Align the first nav row ("All pages") with the first card. */
-  padding: 6px 10px 10px;
-}
-
-.saved-pages-page-sidebar {
-  width: 256px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 52px;
+  left: 12px;
+  width: 300px;
+  max-height: min(70vh, 560px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  border-radius: var(--radius-xl);
-  background: color-mix(in srgb, var(--color-surface) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 50%, transparent);
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-dialog);
+  padding: 10px;
+  z-index: 46;
 }
 
-.saved-pages-page-content {
-  flex: 1;
-  min-width: 0;
+.projects-menu-panel.is-overlay-open {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.saved-pages-page-results {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  /* Match the page's horizontal margin so cards have breathing room on the
-     right edge that lines up with the left margin of the page. */
-  padding: 0 16px 8px;
-  display: flex;
-  flex-direction: column;
+.projects-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(41 37 36 / 0.18);
 }
 
 .saved-pages-drawer-state {
   min-height: 100%;
 }
 
-.saved-pages-drawer-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: var(--spacing-sm) 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-xl);
-  /* Cards read as discrete objects at rest via a faint surface fill and a
-     visible soft border, rather than only resolving on hover. Hover then
-     elevates an already-legible object. */
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+/* Index rows — table-of-contents entries separated by hairlines, not boxes
+   (DESIGN.md "index row"). */
+.index-row {
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--color-line);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
 }
 
-.saved-pages-drawer-card:hover {
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
-  border-color: var(--saved-pages-panel-border-active);
-  box-shadow: var(--shadow-sm);
-}
-
-.saved-pages-drawer-card:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 58%, transparent);
+.index-row:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 58%, transparent);
   outline-offset: 2px;
 }
 
-.saved-pages-drawer-card-header {
+.index-row-main {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: baseline;
+  gap: 12px;
   min-width: 0;
 }
 
-.saved-pages-drawer-card-heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1;
-}
-
-.saved-pages-drawer-card-favicon {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
-}
-
-.saved-pages-drawer-card-title {
+.index-row-title {
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  line-height: 1.25;
-  color: var(--color-text);
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--color-ink);
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.saved-pages-drawer-card-actions {
+/* The mono date yields its slot to the action icons on hover/focus. */
+.index-row-date {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  transition: opacity 0.15s ease;
+}
+
+.index-row-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 2px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-.saved-pages-drawer-action-btn {
+.index-row:hover .index-row-actions,
+.index-row:focus-within .index-row-actions {
+  opacity: 1;
+}
+
+.index-row:hover .index-row-date,
+.index-row:focus-within .index-row-date {
+  opacity: 0;
+}
+
+.index-row-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--saved-pages-panel-border);
-  background: var(--saved-pages-control-bg);
-  color: var(--color-text-light);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-ink-soft);
   cursor: pointer;
   transition:
     background-color 0.18s ease,
-    border-color 0.18s ease,
     color 0.18s ease;
 }
 
-.saved-pages-drawer-action-btn:hover {
-  color: var(--color-text);
-  border-color: var(--saved-pages-panel-border-active);
-  background: var(--saved-pages-control-bg-hover);
+.index-row-action svg {
+  width: 15px;
+  height: 15px;
 }
 
-.saved-pages-drawer-action-btn svg {
-  width: 13px;
-  height: 13px;
+.index-row-action:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
 }
 
-.saved-pages-drawer-pin-btn.is-active {
-  color: var(--color-primary);
-  border-color: var(--saved-pages-panel-border-active);
+.index-row-pin-btn.is-active,
+.index-row-privacy-btn.is-active {
+  color: var(--color-accent-ink);
 }
 
-.saved-pages-drawer-privacy-btn.is-active {
-  color: var(--color-primary);
-  border-color: var(--saved-pages-panel-border-active);
+.index-row-delete-btn:hover {
+  background: color-mix(in srgb, var(--color-rust) 10%, transparent);
+  color: var(--color-rust);
 }
 
-.saved-pages-drawer-delete-btn:hover {
-  color: var(--color-danger, #dc2626);
-  border-color: color-mix(in srgb, #dc2626 32%, var(--color-border));
-  background: color-mix(in srgb, #dc2626 5%, transparent);
-}
-
-.saved-pages-drawer-card-summary {
-  /* Indent to line up with the title text, past the 16px favicon + 6px gap.
-     The padding-left keeps the text aligned; the paper backing makes a card
-     with a summary read as a richer content zone than a bare card. */
-  margin: 0 0 0 22px;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-paper) 70%, transparent);
+.index-row-summary {
+  margin: 4px 0 0;
   font-size: var(--font-size-md);
-  line-height: 1.35;
-  color: var(--color-text-light);
+  line-height: 1.55;
+  color: var(--color-ink-soft);
+  max-width: 68ch;
 }
 
 .saved-pages-drawer-edit-form {
@@ -351,7 +519,7 @@ body {
 .saved-pages-drawer-edit-label {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -362,7 +530,7 @@ body {
   border: 1px solid var(--saved-pages-panel-border);
   border-radius: var(--radius-lg);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   padding: 10px 12px;
   font: inherit;
 }
@@ -377,14 +545,14 @@ body {
    palette — warm = "your own writing". Distinct from the title input's sage
    focus, so the two fields read as different kinds of content. */
 .saved-pages-drawer-edit-textarea:focus {
-  background: var(--notes-bg);
-  border-color: var(--notes-border);
-  color: var(--notes-text);
+  background: var(--color-accent-wash);
+  border-color: var(--color-line-strong);
+  color: var(--color-accent-ink);
 }
 
 .saved-pages-drawer-edit-input:focus,
 .saved-pages-drawer-edit-textarea:focus {
-  outline: 2px solid color-mix(in srgb, var(--color-primary) 38%, transparent);
+  outline: 2px solid color-mix(in srgb, var(--color-accent) 38%, transparent);
   outline-offset: 1px;
   border-color: var(--saved-pages-panel-border-active);
 }
@@ -401,7 +569,7 @@ body {
   border-radius: var(--radius-full);
   border: 1px solid var(--saved-pages-panel-border);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   font: inherit;
   cursor: pointer;
   transition:
@@ -412,13 +580,13 @@ body {
 
 .saved-pages-drawer-edit-save {
   border-color: var(--saved-pages-panel-border-active);
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .saved-pages-drawer-edit-save:hover,
 .saved-pages-drawer-edit-cancel:hover {
   border-color: var(--saved-pages-panel-border-active);
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
 .saved-pages-drawer-edit-save:disabled,
@@ -429,51 +597,61 @@ body {
   cursor: default;
 }
 
-.saved-pages-drawer-card-projects {
+.index-row-projects {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  /* Push project pills to the right edge of the card. */
+  margin-top: 7px;
+  /* Push project pills to the right edge of the row. */
   justify-content: flex-end;
 }
 
-.saved-pages-drawer-card-footer {
+.index-row-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
   gap: 6px 10px;
+  margin-top: 7px;
 }
 
-.saved-pages-drawer-card-meta {
-  /* Indent to line up with the title text, past the 16px favicon + 6px gap. */
-  margin-left: 22px;
+.index-row-meta {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 7px;
   align-items: center;
-  color: var(--color-text-light);
-  font-size: var(--font-size-sm);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
 }
 
-.saved-pages-drawer-meta-separator {
+.index-row-favicon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.index-row-meta-sep {
   opacity: 0.6;
 }
 
-.saved-pages-drawer-card-tags {
+.index-row-tags {
   display: inline-flex;
   flex-wrap: wrap;
   gap: 6px;
   margin-left: auto;
 }
 
+/* Modal kicker (DESIGN.md "modal standard"): mono uppercase. */
 .project-sidebar-eyebrow,
 .project-editor-eyebrow {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-text-light);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  color: var(--color-ink-soft);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.14em;
 }
 
 /* Sidebar section labels (e.g. "Projects") carry a colored dot that ties
@@ -484,10 +662,10 @@ body {
   gap: 6px;
   margin-top: 8px;
   padding: 6px 4px 4px;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-line);
   font-size: var(--font-size-xs);
   font-weight: 400;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
@@ -502,7 +680,7 @@ body {
   width: 7px;
   height: 7px;
   border-radius: var(--radius-circle);
-  background: var(--color-text-light);
+  background: var(--color-ink-soft);
 }
 
 .project-nav-section-text {
@@ -521,9 +699,11 @@ body {
 
 .project-editor-title {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 500;
   line-height: 1.3;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .project-sidebar-create,
@@ -533,7 +713,7 @@ body {
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   background: var(--saved-pages-control-bg);
-  color: var(--color-text);
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   line-height: 1.2;
   cursor: pointer;
@@ -543,7 +723,7 @@ body {
     color 0.2s ease;
 }
 
-.saved-pages-drawer-card .btn-projects {
+.index-row .btn-projects {
   padding: 0;
 }
 
@@ -562,10 +742,10 @@ body {
   width: 24px;
   height: 24px;
   /* Sage green so the create icon reads as the primary action. */
-  color: var(--color-primary);
+  color: var(--color-accent);
 }
 
-.saved-pages-drawer-projects-btn svg {
+.index-row-projects-btn svg {
   width: 13px;
   height: 13px;
 }
@@ -573,8 +753,8 @@ body {
 .project-sidebar-create:hover,
 .project-editor-create:hover,
 .btn-projects:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .project-nav {
@@ -597,7 +777,7 @@ body {
   top: 4px;
   bottom: 4px;
   width: 1px;
-  background: color-mix(in srgb, var(--color-text-light) 30%, transparent);
+  background: color-mix(in srgb, var(--color-ink-soft) 30%, transparent);
 }
 
 .project-nav-row {
@@ -622,7 +802,7 @@ body {
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   text-align: left;
   cursor: pointer;
   overflow: hidden;
@@ -639,10 +819,10 @@ body {
   text-align: center;
 }
 
-/* Selection state: the active channel takes the primary accent, with a
-   brighter segment of the rail behind it. Hover/focus get only a tint. */
+/* Selection state: the active channel takes the accent wash, with a brighter
+   segment of the rail behind it. Hover/focus get only a tint. */
 .project-nav-row.is-active {
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+  background: var(--color-accent-wash);
 }
 
 .project-nav-row.is-active::before {
@@ -653,22 +833,22 @@ body {
   bottom: 0;
   width: 2px;
   border-radius: var(--radius-sm);
-  background: var(--color-primary);
+  background: var(--color-accent);
 }
 
 .project-nav-row.is-active .project-nav-item,
 .project-nav-row.is-active .project-nav-hash {
-  color: var(--color-primary);
+  color: var(--color-accent-ink);
   opacity: 1;
 }
 
 .project-nav-row:hover,
 .project-nav-row:focus-within {
-  background: color-mix(in srgb, var(--color-primary) 5%, transparent);
+  background: color-mix(in srgb, var(--color-accent-wash) 55%, transparent);
 }
 
 .project-nav-row:hover .project-nav-item {
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .project-nav-name-group {
@@ -681,7 +861,7 @@ body {
   display: block;
   font-weight: 400;
   line-height: 1.25;
-  color: var(--color-text);
+  color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -692,7 +872,7 @@ body {
    projects the viewer doesn't own, so it never clutters owned rows. */
 .project-nav-subtitle {
   font-size: var(--font-size-2xs);
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -705,14 +885,14 @@ body {
 .project-editor-empty-inline,
 .project-editor-empty {
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .project-nav-count {
   padding: 1px 6px;
   border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-2xs);
   flex-shrink: 0;
   transition: opacity 0.18s ease;
@@ -743,7 +923,7 @@ body {
   background: transparent;
   /* Actions are hidden until hover, so they don't need de-emphasis at rest;
      the lighter tone was disappearing against the hovered row tint. */
-  color: var(--color-text);
+  color: var(--color-ink);
   cursor: pointer;
   transition:
     background-color 0.18s ease,
@@ -769,14 +949,14 @@ body {
 .project-nav-action:hover {
   /* chip-bg is transparent in the subtle theme, so give the icon a real
      backing tint so it stays visible over the hovered row. */
-  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+  color: var(--color-ink);
   border-color: var(--saved-pages-panel-border-active);
 }
 
 .project-action-archive:hover {
-  color: var(--color-danger, #dc2626);
-  border-color: color-mix(in srgb, #dc2626 28%, var(--color-border));
+  color: var(--color-rust, #dc2626);
+  border-color: color-mix(in srgb, #dc2626 28%, var(--color-line));
 }
 
 .project-pill,
@@ -787,15 +967,15 @@ body {
   padding: 4px 10px;
   border-radius: var(--radius-full);
   background: var(--saved-pages-chip-bg);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
 }
 
 /* Card project pills take the highlighted-row tint (same as the selected
    sidebar collection) so they read as tags rather than plain text. */
 .project-pill {
-  background: color-mix(in srgb, var(--color-primary) 8%, transparent);
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  color: var(--color-ink);
 }
 
 .project-pill-remove {
@@ -808,16 +988,16 @@ body {
 }
 
 .project-pill-remove:hover {
-  color: var(--color-danger, #dc2626);
+  color: var(--color-rust, #dc2626);
 }
 
+/* Modal standard (DESIGN.md): warm scrim without blur, raised paper, the one
+   shadow, mono kicker + serif title. */
 .project-editor-backdrop {
   position: fixed;
   inset: 0;
   z-index: 45;
-  background: rgba(9, 9, 11, 0.32);
-  backdrop-filter: blur(2px);
-  -webkit-backdrop-filter: blur(2px);
+  background: light-dark(rgb(41 37 36 / 0.3), rgb(0 0 0 / 0.55));
 }
 
 .project-editor-dialog {
@@ -830,10 +1010,10 @@ body {
   max-height: min(80vh, 720px);
   overflow: auto;
   padding: var(--spacing-lg);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-2xl);
-  background: var(--color-surface);
-  box-shadow: 0 24px 60px rgba(9, 9, 11, 0.24);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-paper-raised);
+  box-shadow: var(--shadow-dialog);
 }
 
 .project-editor-header {
@@ -845,10 +1025,17 @@ body {
 }
 
 .project-editor-close {
-  border: none;
+  padding: 4px 10px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
   background: transparent;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-md);
   cursor: pointer;
+}
+
+.project-editor-close:hover {
+  color: var(--color-ink);
 }
 
 .project-editor-assigned,
@@ -871,7 +1058,7 @@ body {
 
 .project-editor-search-label {
   font-size: var(--font-size-md);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .project-editor-create {
@@ -904,15 +1091,18 @@ body {
 
 .project-editor-option-name {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
-.saved-pages-drawer-card-tags .tag {
-  font-size: var(--font-size-sm);
-  line-height: 1.2;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  text-decoration-thickness: 1px;
+/* Tag pills on index rows: mono lowercase on the accent wash (DESIGN.md). */
+.index-row-tags .tag {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  line-height: 1.4;
+  color: var(--color-accent-ink);
+  background: var(--color-accent-wash);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
 }
 
 .tag-search-link {
@@ -936,7 +1126,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .saved-pages-semantic-list {
@@ -976,7 +1166,7 @@ body {
   max-width: 75%;
   height: auto;
   /* SVG strokes use currentColor, so the illustration follows the active theme. */
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 /* Post-login warming state: the digging dog plus a determinate progress bar.
@@ -988,7 +1178,7 @@ body {
 }
 
 .saved-pages-warming-copy {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-xl);
   margin-top: var(--spacing-sm);
 }
@@ -997,7 +1187,7 @@ body {
   width: 320px;
   max-width: 80%;
   height: 6px;
-  background: var(--color-border);
+  background: var(--color-line);
   border-radius: var(--radius-full);
   overflow: hidden;
   margin-top: var(--spacing-md);
@@ -1006,13 +1196,13 @@ body {
 
 .saved-pages-warming-bar-fill {
   height: 100%;
-  background: var(--color-primary);
+  background: var(--color-accent);
   border-radius: var(--radius-full);
   transition: width 0.4s ease;
 }
 
 .saved-pages-warming-percent {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-md);
   margin-top: var(--spacing-xs);
   font-variant-numeric: tabular-nums;
@@ -1022,7 +1212,7 @@ body {
    server hasn't returned a total yet. Disabled under reduced-motion. */
 .saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
   width: 40% !important;
-  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, var(--color-accent) 50%, transparent 100%);
   animation: saved-pages-warming-shimmer 1.2s ease-in-out infinite;
 }
 
@@ -1033,7 +1223,7 @@ body {
 
   .saved-pages-warming-bar-indeterminate .saved-pages-warming-bar-fill {
     animation: none;
-    background: var(--color-primary);
+    background: var(--color-accent);
     opacity: 0.5;
   }
 }
@@ -1069,85 +1259,89 @@ body {
   }
 }
 
-/* Pinned shelf — header row above the browse list, shown when idle (no query,
-   no scope) and the user has pinned pages. Full-width to match the browse
-   list (the parent .saved-pages-page-results already provides 16px horizontal
-   padding); the shelf row fills the available width and scrolls horizontally
-   only when cards overflow. */
-.saved-pages-pinned-shelf {
-  margin: 0;
-}
-
-/* Pinned shelf row — compact cards that wrap across the available width so
-   all pinned pages are visible without scrolling. Reuses the drawer card's
-   surface treatment so the cards read as the same kind of object. */
-.saved-pages-home-pinned {
-  display: flex;
-  flex-flow: row wrap;
-  gap: var(--spacing-md);
-  /* Room for the focus ring so keyboard focus doesn't clip at the edges. */
-  padding: 2px var(--spacing-xs) 0;
-}
-
-.saved-pages-home-pinned-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  flex: 0 1 auto;
-  /* Size to content with a cap so a very long title doesn't stretch a card
-     across the whole row. "As wide as it needs to be, but no wider." */
-  max-width: 360px;
-  padding: 10px 12px;
-  border-radius: var(--radius-xl);
-  /* Same surface recipe as .saved-pages-drawer-card so the compact card reads
-     as a sibling object, just sized for a horizontal row. */
-  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-border) 55%, transparent);
+/* Launch strip — pinned utilities as launcher chips under the search hero
+   (DESIGN.md "launch chip"). Labels come from the page title and are never
+   truncated: the user retitles, chips grow, the row wraps. */
+.launch-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 260px;
+  padding: 5px 8px 5px 11px;
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
 }
 
-.saved-pages-home-pinned-card:hover {
-  background: color-mix(in srgb, var(--color-surface) 80%, transparent);
-  border-color: var(--saved-pages-panel-border-active);
-  box-shadow: var(--shadow-sm);
+.launch-chip:hover {
+  border-color: var(--color-line-strong);
 }
 
-.saved-pages-home-pinned-card:focus-visible {
-  outline: 2px solid var(--color-primary);
+.launch-chip:focus-visible {
+  outline: 2px solid var(--color-accent);
   outline-offset: 2px;
 }
 
-.saved-pages-home-pinned-card-heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
+.launch-chip-favicon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
 }
 
-.saved-pages-home-pinned-card-favicon {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  border-radius: 2px;
-}
-
-.saved-pages-home-pinned-card-title {
-  margin: 0;
-  font-size: var(--font-size-md);
-  font-weight: 500;
-  line-height: 1.3;
-  /* Single-line ellipsis so the card is exactly as wide as its (truncated)
-     title needs, never wider. Content-sized cards with wrapping titles would
-     defeat the "as wide as it needs to be" intent. */
+.launch-chip-label {
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-ink);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  /* No ellipsis: the fix for a long label is retitling, not truncation. */
+  text-overflow: clip;
+}
+
+.launch-chip-action {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  flex: none;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.launch-chip-action svg {
+  width: 12px;
+  height: 12px;
+}
+
+.launch-chip:hover .launch-chip-action,
+.launch-chip:focus-within .launch-chip-action {
+  display: inline-flex;
+}
+
+.launch-chip-action:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
+}
+
+.launch-chip-rename-input {
+  width: 150px;
+  padding: 1px 4px;
+  border: none;
+  border-bottom: 1px solid var(--color-accent);
+  background: transparent;
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  font-weight: 600;
+  color: var(--color-ink);
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -1178,47 +1372,25 @@ body {
 }
 
 @media (max-width: 700px) {
-  /* Narrow viewport: the sidebar moves behind a hamburger overlay so the cards
-     can take the full page width. The sidebar toggle button (hidden above
-     700px) becomes visible here. */
-  /* Show the hamburger button (hidden by default in the base rule). */
-  .saved-pages-sidebar-toggle {
-    display: inline-flex;
+  /* The Reading Room is already a single column; narrow viewports just
+     tighten spacing. The projects dropdown keeps the same mechanics. */
+  .desk-page {
+    padding: 14px 14px 8px;
+    gap: 11px;
   }
 
-  /* The sidebar is no longer a left flex child: hide it until the user opens
-     the overlay. display:none keeps it out of the flow so .saved-pages-page-content
-     expands to full width. */
-  .saved-pages-page-sidebar {
-    display: none;
+  .desk-masthead-wordmark {
+    font-size: var(--font-size-6xl);
   }
 
-  /* Overlay state (toggled via the .is-overlay-open class from JS). Sits above
-     the cards as a left-anchored drawer; the backdrop covers the rest. z-index
-     mirrors the dialog convention (backdrop 45, dialog 46) and stays below
-     toasts (60). */
-  .saved-pages-page-sidebar.is-overlay-open {
-    display: flex;
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 256px;
-    max-height: none;
-    z-index: 46;
-    box-shadow: var(--shadow-lg);
-    /* The resting sidebar is semi-transparent (fine next to the page), but as
-       an overlay it sits on top of the cards — make it opaque so the menu text
-       stays fully readable. The backdrop behind it provides the separation. */
-    background: var(--color-surface);
+  .desk-search-hero {
+    max-width: none;
   }
 
-  .saved-pages-sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 45;
-    background: rgba(9, 9, 11, 0.32);
-    backdrop-filter: blur(2px);
+  .projects-menu-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
   }
 }
 
@@ -1237,7 +1409,7 @@ body {
 
 .sharing-centre-intro {
   margin: 0 0 var(--spacing-md);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-md);
   line-height: 1.5;
 }
@@ -1250,11 +1422,11 @@ body {
 }
 
 .sharing-centre-warn {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .sharing-centre-error {
-  color: var(--color-danger);
+  color: var(--color-rust);
 }
 
 .sharing-centre-section {
@@ -1269,12 +1441,12 @@ body {
   margin: 0;
   font-size: var(--font-size-lg);
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
 }
 
 .sharing-centre-section-hint {
   margin: var(--spacing-xs) 0 0;
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
   font-size: var(--font-size-sm);
 }
 
@@ -1284,11 +1456,11 @@ body {
   justify-content: space-between;
   gap: var(--spacing-md);
   padding: var(--spacing-sm) var(--spacing-md);
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
   background: light-dark(
-    var(--color-surface),
-    color-mix(in srgb, var(--color-surface) 85%, var(--color-border))
+    var(--color-paper-raised),
+    color-mix(in srgb, var(--color-paper-raised) 85%, var(--color-line))
   );
 }
 
@@ -1305,7 +1477,7 @@ body {
 
 .sharing-centre-row-name {
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1315,22 +1487,22 @@ body {
   display: flex;
   align-items: center;
   gap: var(--spacing-xs);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-sm);
 }
 
 /* The audience phrase is the key clarity signal: "Visible to everyone at …". */
 .sharing-centre-audience {
-  color: var(--color-shared);
+  color: var(--color-accent-ink);
   font-weight: 500;
 }
 
 .sharing-centre-dot {
-  color: var(--color-text-lighter);
+  color: var(--color-ink-faint);
 }
 
 .sharing-centre-row-owner {
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
   font-size: var(--font-size-2xs);
 }
 
@@ -1338,18 +1510,18 @@ body {
   flex-shrink: 0;
   align-self: center;
   padding: 6px 10px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   cursor: pointer;
   white-space: nowrap;
 }
 
 .sharing-centre-toggle:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .sharing-centre-toggle:disabled {
@@ -1362,22 +1534,22 @@ body {
   justify-content: flex-end;
   margin-top: var(--spacing-md);
   padding-top: var(--spacing-md);
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-line);
 }
 
 .sharing-centre-refresh {
   padding: 6px 12px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-line);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
   cursor: pointer;
 }
 
 .sharing-centre-refresh:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 /* ───────────────────────────────────────────────────────────────────────
@@ -1418,12 +1590,12 @@ body {
 }
 
 .data-sync-dialog .btn-primary {
-  background: var(--color-primary);
+  background: var(--color-accent);
   color: #fff;
 }
 
 .data-sync-dialog .btn-primary:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-accent-ink);
 }
 
 .data-sync-dialog .btn-primary:disabled,
@@ -1433,20 +1605,20 @@ body {
 }
 
 .data-sync-dialog .btn-secondary {
-  background: color-mix(in srgb, var(--color-surface) 80%, var(--color-border));
-  color: var(--color-text);
-  border-color: var(--color-border);
+  background: color-mix(in srgb, var(--color-paper-raised) 80%, var(--color-line));
+  color: var(--color-ink);
+  border-color: var(--color-line);
 }
 
 .data-sync-dialog .btn-secondary:hover {
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  border-color: var(--color-accent);
+  color: var(--color-accent);
 }
 
 .data-sync-hint {
   margin: var(--spacing-sm) 0 0;
   font-size: var(--font-size-sm);
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .data-sync-row {
@@ -1489,11 +1661,11 @@ body {
   max-width: min(420px, calc(100vw - 32px));
   padding: 10px 16px;
   border-radius: var(--radius-full);
-  border: 1px solid var(--color-border);
-  background: var(--color-surface);
-  color: var(--color-text);
+  border: 1px solid var(--color-line);
+  background: var(--color-paper-raised);
+  color: var(--color-ink);
   font-size: var(--font-size-sm);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--shadow-dialog);
   opacity: 0;
   transform: translateX(12px);
   transition:
@@ -1506,32 +1678,32 @@ body {
   transform: translateX(0);
 }
 
-/* Accent border keyed to the toast type. Success uses the shared-green token
-   that the rest of the UI associates with confirmed/active state. */
+/* Accent border keyed to the toast type (DESIGN.md): amber family for
+   success/warning, rust for errors. */
 .toast--success {
-  border-color: color-mix(in srgb, var(--color-shared) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-accent-ink) 60%, var(--color-line));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .toast--success .toast-icon {
-  color: var(--color-shared);
+  color: var(--color-accent-ink);
   flex-shrink: 0;
 }
 
 .toast--warning {
-  border-color: color-mix(in srgb, var(--color-notes-border, #e0a800) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-accent-ink) 60%, var(--color-line));
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
 }
 
 .toast--warning .toast-icon {
-  color: var(--color-notes-border, #e0a800);
+  color: var(--color-accent-ink);
   flex-shrink: 0;
 }
 
 .toast--error {
-  border-color: color-mix(in srgb, var(--color-danger) 60%, var(--color-border));
+  border-color: color-mix(in srgb, var(--color-rust) 60%, var(--color-line));
 }

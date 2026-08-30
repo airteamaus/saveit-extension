@@ -13,7 +13,10 @@ export function initSavedPagesDrawerEvents({
   savedPagesDrawerSearchInput,
   savedPagesDrawerClearBtn,
   savedPagesDrawerResults,
+  launchStrip,
   projectSidebar,
+  projectPills,
+  deskIndexTitle,
   projectEditorBackdrop,
   projectEditorDialog,
   projectManager,
@@ -87,7 +90,7 @@ export function initSavedPagesDrawerEvents({
       if (event.target.closest('.saved-pages-drawer-edit-form')) {
         return;
       }
-      const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
+      const card = event.target.closest('.index-row[data-url], .launch-chip[data-url]');
       if (!card) {
         return;
       }
@@ -144,7 +147,7 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
+    const card = event.target.closest('.index-row[data-url], .launch-chip[data-url]');
     if (!card) {
       return;
     }
@@ -193,7 +196,7 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    const card = event.target.closest('.saved-pages-drawer-card[data-url], .saved-pages-home-pinned-card[data-url]');
+    const card = event.target.closest('.index-row[data-url], .launch-chip[data-url]');
     if (!card) {
       return;
     }
@@ -215,6 +218,115 @@ export function initSavedPagesDrawerEvents({
       ai_summary_brief: formData.get('ai_summary_brief') || ''
     });
   });
+
+  // Launch strip: its own container outside the results pane, so it carries
+  // its own delegation. Chips navigate like rows; unpin reuses the pin
+  // handler; rename swaps the label for an inline input that commits through
+  // the same update path as the edit form.
+  launchStrip?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-action]');
+    if (!actionButton) {
+      const chip = event.target.closest('.launch-chip[data-url]');
+      if (chip) {
+        navigateDrawerCard(chip, event);
+      }
+      return;
+    }
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    const { action, id } = actionButton.dataset;
+    if (action === 'pin') {
+      void handleDrawerPin(id);
+      return;
+    }
+
+    if (action === 'chip-rename') {
+      const chip = actionButton.closest('.launch-chip');
+      const label = chip?.querySelector('.launch-chip-label');
+      if (!chip || !label || chip.querySelector('.launch-chip-rename-input')) {
+        return;
+      }
+
+      const original = label.textContent.trim();
+      const input = documentObj.createElement('input');
+      input.className = 'launch-chip-rename-input';
+      input.type = 'text';
+      input.value = original;
+      input.setAttribute('aria-label', 'Rename pinned page');
+      label.replaceWith(input);
+      input.focus();
+      input.select();
+
+      let settled = false;
+      const restore = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        input.replaceWith(label);
+      };
+      const commit = () => {
+        if (settled) {
+          return;
+        }
+        const next = input.value.trim();
+        if (!next || next === original) {
+          restore();
+          return;
+        }
+        settled = true;
+        // Title-only update: ai_summary_brief undefined means "keep existing"
+        // in handleDrawerUpdate (the edit form always sends both fields).
+        void handleDrawerUpdate(id, { title: next });
+      };
+      input.addEventListener('keydown', (keydownEvent) => {
+        if (keydownEvent.key === 'Enter') {
+          keydownEvent.preventDefault();
+          commit();
+        } else if (keydownEvent.key === 'Escape') {
+          keydownEvent.preventDefault();
+          restore();
+        }
+      });
+      input.addEventListener('blur', () => {
+        // Give Enter/Escape a tick to settle first; a blur caused by the
+        // strip re-rendering (commit succeeded) must not restore a stale node.
+        windowObj.setTimeout(() => restore(), 0);
+      });
+    }
+  });
+
+  launchStrip?.addEventListener('keydown', (event) => {
+    if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
+      return;
+    }
+
+    const chip = event.target.closest('.launch-chip[data-url]');
+    if (!chip) {
+      return;
+    }
+
+    event.preventDefault();
+    navigateDrawerCard(chip, event);
+  });
+
+  // Shared scope selection for the dropdown rows and the pills row: domain
+  // ids route to domain scoping, everything else to project selection (empty
+  // id = All pages, which also clears any domain scope).
+  function handleScopeSelection(scopeId) {
+    if (scopeId.startsWith('domain:')) {
+      const domain = scopeId.slice('domain:'.length);
+      savedPagesView.selectedDomainId = scopeId;
+      savedPagesView.selectedProjectId = null;
+      void loadDrawerDomainPages?.(domain);
+      return;
+    }
+
+    savedPagesView.selectedDomainId = null;
+    void projectManager.selectProject(savedPagesView, scopeId || null);
+  }
 
   projectSidebar?.addEventListener('click', (event) => {
     const createButton = event.target.closest('.project-sidebar-create');
@@ -244,22 +356,40 @@ export function initSavedPagesDrawerEvents({
     const projectRow = event.target.closest('.project-nav-row[data-project-id]');
     if (projectRow) {
       event.preventDefault();
-      const scopeId = projectRow.dataset.projectId || '';
-
-      // Domain rows use a "domain:" prefix; route them to domain scoping
-      // rather than the project selection path.
-      if (scopeId.startsWith('domain:')) {
-        const domain = scopeId.slice('domain:'.length);
-        savedPagesView.selectedDomainId = scopeId;
-        savedPagesView.selectedProjectId = null;
-        void loadDrawerDomainPages?.(domain);
-        return;
-      }
-
-      // Selecting a project (or All pages / Pinned) clears any domain scope.
-      savedPagesView.selectedDomainId = null;
-      void projectManager.selectProject(savedPagesView, scopeId || null);
+      handleScopeSelection(projectRow.dataset.projectId || '');
     }
+  });
+
+  // Pills row: project pills select scopes; +N more opens the dropdown;
+  // + New starts the create flow.
+  projectPills?.addEventListener('click', (event) => {
+    const actionButton = event.target.closest('[data-action]');
+    if (actionButton) {
+      event.preventDefault();
+      if (actionButton.dataset.action === 'open-projects-menu') {
+        documentObj.getElementById('saved-pages-sidebar-toggle-btn')?.click();
+      } else if (actionButton.dataset.action === 'create-project') {
+        void projectManager.promptCreateProject(savedPagesView);
+      }
+      return;
+    }
+
+    const pill = event.target.closest('.project-pill-tab[data-project-id]');
+    if (pill) {
+      event.preventDefault();
+      handleScopeSelection(pill.dataset.projectId || '');
+    }
+  });
+
+  // Breadcrumb back: clears the scope by selecting All pages.
+  deskIndexTitle?.addEventListener('click', (event) => {
+    const backButton = event.target.closest('[data-action="breadcrumb-back"]');
+    if (!backButton) {
+      return;
+    }
+
+    event.preventDefault();
+    handleScopeSelection('');
   });
 
   projectEditorBackdrop?.addEventListener('click', () => {

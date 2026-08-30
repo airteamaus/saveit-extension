@@ -189,6 +189,10 @@ function createEditorHeader(documentObj, title) {
   return header;
 }
 
+// The projects dropdown body: the complete channel-rail list (All pages,
+// Pinned, ownership-split projects, archived, domains). Always the full
+// list — the pills row is the convenience surface, this is the truth
+// (DESIGN.md "component language").
 export function renderProjectSidebar(container, {
   dashboard,
   htmlUtils: _htmlUtils,
@@ -297,38 +301,55 @@ export function renderProjectSidebar(container, {
   const hasOwnProjects = myPrivateProjects.length || mySharedProjects.length;
 
   if (myPrivateProjects.length) {
-    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-primary)', createButton));
+    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-accent)', createButton));
     myPrivateProjects.forEach(project => nav.append(createProjectRow(project)));
   }
   if (mySharedProjects.length) {
     // Ride the create button here if there are no private projects.
     const label = !myPrivateProjects.length
-      ? createSectionLabel(documentObj, 'Shared by you', 'var(--color-shared)', createButton)
-      : createSectionLabel(documentObj, 'Shared by you', 'var(--color-shared)');
+      ? createSectionLabel(documentObj, 'Shared by you', 'var(--color-accent-ink)', createButton)
+      : createSectionLabel(documentObj, 'Shared by you', 'var(--color-accent-ink)');
     nav.append(label);
     mySharedProjects.forEach(project => nav.append(createProjectRow(project)));
   }
   if (sharedWithMe.length) {
     const label = !hasOwnProjects
-      ? createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)', createButton)
-      : createSectionLabel(documentObj, 'Shared with me', 'var(--color-shared)');
+      ? createSectionLabel(documentObj, 'Shared with me', 'var(--color-accent-ink)', createButton)
+      : createSectionLabel(documentObj, 'Shared with me', 'var(--color-accent-ink)');
     nav.append(label);
     sharedWithMe.forEach(project => nav.append(createProjectRow(project)));
   }
   if (!hasOwnProjects && !sharedWithMe.length) {
     // No projects at all: still show the "Projects" label so the create
     // button is reachable, plus the empty hint.
-    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-primary)', createButton));
+    nav.append(createSectionLabel(documentObj, 'Projects', 'var(--color-accent)', createButton));
     nav.append(createElement(documentObj, 'p', {
       className: 'project-sidebar-empty',
       text: 'No projects yet. Create one to group related pages.'
     }));
   }
 
+  // Archived projects: listed for scope navigation, no per-row actions (no
+  // unarchive API exists — do not invent UI for it).
+  const archivedProjects = (dashboard.projects || [])
+    .filter(project => project.archived)
+    .sort((a, b) => a.name.localeCompare(b.name));
+  if (archivedProjects.length) {
+    nav.append(createSectionLabel(documentObj, 'Archived', 'var(--color-ink-faint)'));
+    archivedProjects.forEach(project => {
+      nav.append(createSidebarRow(documentObj, {
+        projectId: project.id,
+        name: project.name,
+        count: project.page_count || 0,
+        isActive: project.id === dashboard.selectedProjectId
+      }));
+    });
+  }
+
   // Domains section: distinct domains with counts, scoped client-side on click.
   const domains = Array.isArray(dashboard.domains) ? dashboard.domains : [];
   if (domains.length) {
-    nav.append(createSectionLabel(documentObj, 'By Category', 'var(--color-primary)'));
+    nav.append(createSectionLabel(documentObj, 'By Category', 'var(--color-accent)'));
     domains.forEach(({ domain, count }) => {
       const domainId = `domain:${domain}`;
       nav.append(createSidebarRow(documentObj, {
@@ -341,6 +362,94 @@ export function renderProjectSidebar(container, {
   }
 
   container.replaceChildren(nav);
+}
+
+// Pills row (DESIGN.md "project pills"): All pages + the 4 most recently
+// active projects + a +N overflow pill that opens the dropdown + New. The
+// dropdown (renderProjectSidebar) is always the complete list, so the row is
+// a convenience surface, not the source of truth.
+export function renderProjectPills(container, { dashboard, documentObj = container?.ownerDocument || document }) {
+  if (!container) {
+    return;
+  }
+
+  const selectedProjectId = dashboard.selectedProjectId || '';
+  const activeProjects = (dashboard.projects || [])
+    .filter(project => !project.archived)
+    .sort((a, b) =>
+      String(b.updated_at || '').localeCompare(String(a.updated_at || '')) ||
+      a.name.localeCompare(b.name));
+  const visible = activeProjects.slice(0, 4);
+  const overflow = activeProjects.length - visible.length;
+
+  const makePill = (projectId, label, isActive) => createElement(documentObj, 'button', {
+    className: `project-pill-tab${isActive ? ' is-active' : ''}`,
+    text: label,
+    attributes: { type: 'button', 'data-project-id': projectId }
+  });
+
+  container.replaceChildren(
+    makePill('', 'All pages', !selectedProjectId && !dashboard.selectedDomainId)
+  );
+  visible.forEach(project => {
+    container.append(makePill(
+      project.id,
+      `${project.name} · ${project.page_count || 0}`,
+      project.id === selectedProjectId
+    ));
+  });
+  if (overflow > 0) {
+    container.append(createElement(documentObj, 'button', {
+      className: 'project-pill-tab project-pill-more',
+      text: `+${overflow} more`,
+      attributes: { type: 'button', 'data-action': 'open-projects-menu' }
+    }));
+  }
+  container.append(createElement(documentObj, 'button', {
+    className: 'project-pill-new',
+    text: '+ New',
+    attributes: { type: 'button', 'data-action': 'create-project' }
+  }));
+}
+
+// Index-header scope label: the breadcrumb shown in place of "Recently
+// saved" while a project / pinned / domain scope is active.
+export function renderIndexHeaderScope(titleEl, { dashboard, getSelectedProject, getScopedPages, documentObj = titleEl?.ownerDocument || document }) {
+  if (!titleEl) {
+    return;
+  }
+
+  const scopeId = dashboard.selectedProjectId || dashboard.selectedDomainId;
+  if (!scopeId) {
+    titleEl.textContent = 'Recently saved';
+    titleEl.classList.remove('desk-breadcrumb');
+    return;
+  }
+
+  let label;
+  if (dashboard.selectedDomainId) {
+    label = dashboard.selectedDomainId.slice('domain:'.length);
+  } else if (scopeId === PINNED_PAGES_SCOPE_ID) {
+    label = 'Pinned';
+  } else {
+    label = getSelectedProject(dashboard)?.name || 'Project';
+  }
+
+  const count = getScopedPages(dashboard, Array.isArray(dashboard.allPages) ? dashboard.allPages : []).length;
+  const breadcrumb = createElement(documentObj, 'span', { className: 'desk-breadcrumb' });
+  breadcrumb.append(
+    createElement(documentObj, 'button', {
+      className: 'desk-breadcrumb-back',
+      text: '‹ Back to all',
+      attributes: { type: 'button', 'data-action': 'breadcrumb-back' }
+    }),
+    createElement(documentObj, 'span', {
+      className: 'desk-breadcrumb-title',
+      text: `# ${label} — ${count} page${count === 1 ? '' : 's'}`
+    })
+  );
+  titleEl.classList.add('desk-breadcrumb');
+  titleEl.replaceChildren(breadcrumb);
 }
 
 export function renderProjectEditor(backdrop, dialog, {

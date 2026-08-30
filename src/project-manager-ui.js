@@ -1,5 +1,7 @@
 import {
+  renderIndexHeaderScope,
   renderProjectEditor,
+  renderProjectPills,
   renderProjectSidebar
 } from './project-manager-renderer.js';
 
@@ -20,7 +22,8 @@ export function createProjectManagerUi({
   isProjectsUnavailable,
   getProjectsUnavailableMessage,
   getSelectedProject,
-  getProjectPills
+  getProjectPills,
+  getScopedPages
 }) {
   const renderSidebar = dashboard => {
     const container = documentObj.getElementById('project-sidebar');
@@ -30,6 +33,15 @@ export function createProjectManagerUi({
       isProjectsUnavailable,
       getProjectsUnavailableMessage,
       getSelectedProject
+    });
+
+    // Pills row + index-header breadcrumb ride the same render so every
+    // scope change refreshes navigation in one pass.
+    renderProjectPills(documentObj.getElementById('project-pills'), { dashboard });
+    renderIndexHeaderScope(documentObj.getElementById('desk-index-title'), {
+      dashboard,
+      getSelectedProject,
+      getScopedPages
     });
   };
 

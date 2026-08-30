@@ -20,8 +20,8 @@ body {
   margin: 0;
   padding: 0;
   min-width: 320px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-paper);
+  color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--font-size-lg);
   line-height: 1.4;
@@ -32,76 +32,57 @@ body {
 }
 
 .toolbar-popup-shell {
-  padding: 12px;
+  padding: 14px;
 }
 
 .toolbar-popup-header {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
+/* Mono kicker (DESIGN.md "modal standard" applies here too). */
 .toolbar-popup-eyebrow {
   margin: 0 0 4px;
-  color: var(--color-text-light);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .toolbar-popup-title {
   margin: 0;
-  font-size: var(--font-size-3xl);
+  font-family: var(--font-display);
+  font-size: var(--font-size-4xl);
+  font-weight: 500;
   line-height: 1.2;
 }
 
-.toolbar-popup-save-btn,
-.toolbar-popup-project-btn {
-  width: 100%;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
-  color: inherit;
-  cursor: pointer;
-  font: inherit;
-  text-align: left;
-  transition:
-    background 120ms ease,
-    border-color 120ms ease,
-    transform 120ms ease;
-}
-
+/* Primary action: filled amber with on-accent text (flips to espresso in
+   dark). No hover hop — quiet buttons don't move. */
 .toolbar-popup-save-btn {
-  margin-bottom: 10px;
+  width: 100%;
+  margin-bottom: 12px;
   padding: 10px 12px;
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: #ffffff;
+  min-height: 40px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
   font-weight: 600;
-}
-
-.toolbar-popup-project-btn {
-  padding: 8px 10px;
-}
-
-.toolbar-popup-save-btn:hover,
-.toolbar-popup-project-btn:hover {
-  transform: translateY(-1px);
+  cursor: pointer;
+  text-align: center;
+  transition: background-color 120ms ease;
 }
 
 .toolbar-popup-save-btn:hover {
-  background: var(--color-primary-hover);
+  background: var(--color-accent-ink);
 }
 
-.toolbar-popup-project-btn:hover {
-  border-color: var(--color-text-lighter);
-  background: var(--color-bg);
-}
-
-.toolbar-popup-save-btn:disabled,
-.toolbar-popup-project-btn:disabled {
+.toolbar-popup-save-btn:disabled {
   cursor: wait;
   opacity: 0.65;
-  transform: none;
 }
 
 .toolbar-popup-section {
@@ -110,25 +91,56 @@ body {
 
 .toolbar-popup-section-title {
   margin: 0 0 6px;
-  color: var(--color-text-light);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  color: var(--color-ink-soft);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .toolbar-popup-project-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   max-height: 300px;
   overflow-y: auto;
+}
+
+/* Project quick-add rows: hairline-separated index rows, not boxes. */
+.toolbar-popup-project-btn {
+  width: 100%;
+  padding: 8px 2px;
+  border: none;
+  border-bottom: 1px solid var(--color-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--color-ink);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.toolbar-popup-project-btn:first-child {
+  border-top: 1px solid var(--color-line);
+}
+
+.toolbar-popup-project-btn:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
+}
+
+.toolbar-popup-project-btn:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .toolbar-popup-empty,
 .toolbar-popup-status {
   margin: 0;
-  color: var(--color-text-light);
+  color: var(--color-ink-soft);
 }
 
 .toolbar-popup-status {
@@ -137,5 +149,5 @@ body {
 }
 
 .toolbar-popup-status[data-state="error"] {
-  color: var(--color-danger-hover);
+  color: var(--color-rust);
 }

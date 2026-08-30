@@ -50,14 +50,24 @@ const newtabPath = path.resolve(__dirname, '../../src/newtab.html');
 
 async function openStandaloneNewtab(page) {
   await page.goto(`file://${newtabPath}`);
-  await page.waitForSelector('#project-sidebar');
+  // The projects nav is a dropdown panel now: wait for it to be attached
+  // (populated), not visible — it only opens on demand.
+  await page.waitForSelector('#project-sidebar .project-nav', { state: 'attached' });
   await page.waitForSelector('#saved-pages-results');
 }
 
+// Most specs interact with dropdown rows (select, hover actions, domains),
+// so open the menu up front. Specs that don't need it simply leave it open.
+async function openProjectsMenu(page) {
+  await page.locator('#saved-pages-sidebar-toggle-btn').click();
+  await expect(page.locator('#project-sidebar')).toBeVisible();
+}
+
 async function showAllPages(page) {
+  await openProjectsMenu(page);
   await page.locator('.project-nav-item[data-project-id=""]').click();
   await expect(page.locator('.project-nav-item[data-project-id=""]')).toHaveClass(/is-active/);
-  await page.waitForSelector('.saved-pages-drawer-card');
+  await page.waitForSelector('.index-row');
 }
 
 test.describe('Standalone Mode', () => {
@@ -72,7 +82,7 @@ test.describe('Standalone Mode', () => {
     await expect(page.locator('#project-sidebar')).toContainText('All pages');
     await expect(page.locator('.project-nav-item[data-project-id=""]')).toHaveClass(/is-active/);
     // All pages is the default scope, so the mock pages render as cards.
-    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible();
+    await expect(page.locator('.index-row').first()).toBeVisible();
 
     // The "Collections" heading is gone; every nav row carries a # channel prefix.
     await expect(page.locator('.project-sidebar-title')).toHaveCount(0);
@@ -95,7 +105,7 @@ test.describe('Standalone Mode', () => {
     const semanticSection = page.locator('[data-section="semantic"]');
     await expect(semanticSection).toBeVisible({ timeout: 5000 });
     await expect(page.locator('[data-section="pages"]')).toHaveCount(0, { timeout: 5000 });
-    await expect(semanticSection.locator('.saved-pages-drawer-card').first()).toContainText('JavaScript');
+    await expect(semanticSection.locator('.index-row').first()).toContainText('JavaScript');
   });
 
   test('should render an inline semantic results section when searching', async ({ page }) => {
@@ -121,7 +131,7 @@ test.describe('Standalone Mode', () => {
     await showAllPages(page);
 
     // Before searching, local saved-page cards are visible.
-    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible();
+    await expect(page.locator('.index-row').first()).toBeVisible();
 
     // Clicking a tag runs a semantic search.
     await page.locator('.tag-search-link').first().click();
@@ -166,7 +176,7 @@ test.describe('Standalone Mode', () => {
   test('should create and assign a project from the page editor', async ({ page }) => {
     await showAllPages(page);
 
-    const firstCard = page.locator('.saved-pages-drawer-card').first();
+    const firstCard = page.locator('.index-row').first();
     await firstCard.locator('.btn-projects').click();
     await expect(page.locator('#project-editor-dialog')).not.toHaveClass(/hidden/);
 
@@ -174,17 +184,19 @@ test.describe('Standalone Mode', () => {
     await page.getByRole('button', { name: 'Create "Playwright project"' }).click();
 
     await expect(page.locator('#project-sidebar')).toContainText('Playwright project');
-    await expect(firstCard.locator('.saved-pages-drawer-card-projects')).toContainText('Playwright project');
+    await expect(firstCard.locator('.index-row-projects')).toContainText('Playwright project');
   });
 
   test('should scope results when selecting a project', async ({ page }) => {
     await showAllPages(page);
 
+    // showAllPages' selection closed the dropdown; reopen for row clicks.
+    await openProjectsMenu(page);
     const projectButton = page.locator('.project-nav-item[data-project-id="project-saveit-product"]');
     await projectButton.click();
 
     await expect(projectButton).toHaveClass(/is-active/);
-    await expect(page.locator('.saved-pages-drawer-card').first()).toContainText("Newtab product");
+    await expect(page.locator('.index-row').first()).toContainText("Newtab product");
   });
 
   test('should edit a page title and summary inline', async ({ page }) => {
@@ -192,9 +204,9 @@ test.describe('Standalone Mode', () => {
 
     // Cards are editable from the unfiltered browse view (search hides them
     // behind the semantic pane).
-    const card = page.locator('.saved-pages-drawer-card').first();
-    const originalTitle = await card.locator('.saved-pages-drawer-card-title').textContent();
-    await card.locator('.saved-pages-drawer-edit-btn').click();
+    const card = page.locator('.index-row').first();
+    const originalTitle = await card.locator('.index-row-title').textContent();
+    await card.locator('.index-row-edit-btn').click();
 
     await card.locator('input[name="title"]').fill('Edited Himalayan Journey');
     await card.locator('textarea[name="ai_summary_brief"]').fill('Updated summary from Playwright.');
@@ -202,12 +214,12 @@ test.describe('Standalone Mode', () => {
 
     // The edited card is still in the unfiltered list with its new values.
     const editedCard = page
-      .locator('.saved-pages-drawer-card')
+      .locator('.index-row')
       .filter({ hasText: 'Edited Himalayan Journey' })
       .first();
     await expect(editedCard).toBeVisible();
-    await expect(editedCard.locator('.saved-pages-drawer-card-title')).toContainText('Edited Himalayan Journey');
-    await expect(editedCard.locator('.saved-pages-drawer-card-summary')).toContainText('Updated summary from Playwright.');
+    await expect(editedCard.locator('.index-row-title')).toContainText('Edited Himalayan Journey');
+    await expect(editedCard.locator('.index-row-summary')).toContainText('Updated summary from Playwright.');
 
     void originalTitle;
   });
@@ -229,7 +241,7 @@ test.describe('Standalone Mode', () => {
   test('renders a windowed slice and grows the list on scroll (lazy render)', async ({ page }) => {
     await showAllPages(page);
 
-    const cards = page.locator('.saved-pages-drawer-card');
+    const cards = page.locator('.index-row');
     // First paint renders only the initial window; the mock dataset is much
     // larger (~176 items), so this proves the list is windowed, not full.
     await expect(cards).toHaveCount(10, { timeout: 5000 });
@@ -262,12 +274,12 @@ test.describe('Standalone Mode', () => {
     // Find a card that actually renders multiple tags (item 5 in mock data
     // has 2 topic tags + 3 manual tags), then read the flex gap from CSS.
     const card = page
-      .locator('.saved-pages-drawer-card')
+      .locator('.index-row')
       .filter({ hasText: 'Large Language Models' })
       .first();
     await expect(card).toBeVisible();
 
-    const gap = await card.locator('.saved-pages-drawer-card-tags').evaluate(el =>
+    const gap = await card.locator('.index-row-tags').evaluate(el =>
       parseFloat(getComputedStyle(el).gap || getComputedStyle(el).columnGap || '0')
     );
     // Bumped from 4px to 6px so there is ~1ch of breathing room.
@@ -276,8 +288,8 @@ test.describe('Standalone Mode', () => {
 
   test('hovering a card action button does not change its size or offset', async ({ page }) => {
     await showAllPages(page);
-    const card = page.locator('.saved-pages-drawer-card').first();
-    const pinBtn = card.locator('.saved-pages-drawer-pin-btn');
+    const card = page.locator('.index-row').first();
+    const pinBtn = card.locator('.index-row-pin-btn');
 
     const before = await pinBtn.boundingBox();
     await pinBtn.hover();
@@ -294,6 +306,7 @@ test.describe('Standalone Mode', () => {
 
   test('collection action icons are visible against the row when hovered', async ({ page }) => {
     await openStandaloneNewtab(page);
+    await openProjectsMenu(page);
     // A collection row that carries the per-row actions (rename/share/archive).
     const row = page.locator('.project-nav-row.has-actions').first();
     await expect(row).toBeVisible();
@@ -334,6 +347,7 @@ test.describe('Standalone Mode', () => {
 
   test('collection icons render as currentColor masks and theming follows the button', async ({ page }) => {
     await openStandaloneNewtab(page);
+    await openProjectsMenu(page);
     const row = page.locator('.project-nav-row.has-actions').first();
     await row.hover();
     const renameIcon = row.locator('.project-action-icon--rename');
@@ -411,7 +425,7 @@ test.describe('Standalone Mode', () => {
       document.getElementById('hero-user-menu')?.classList.remove('hidden');
       document.getElementById('hero-user-dropdown')?.classList.remove('hidden');
     });
-    await page.locator('#hero-data-sync-btn').click();
+    await page.locator('#desk-data-sync-link').click();
 
     // The modal opens with its three sections (Import / Export / Browser sync).
     const dialog = page.locator('#data-sync-centre-dialog');
@@ -442,7 +456,9 @@ test.describe('Standalone Mode', () => {
     const count = await domainRows.count();
     expect(count).toBeGreaterThan(0);
 
-    // Clicking a domain scopes the list to that domain.
+    // Clicking a domain scopes the list to that domain. The menu closes on
+    // selection, so reopen it for row interactions.
+    await openProjectsMenu(page);
     const firstDomain = domainRows.first();
     await firstDomain.click();
 
@@ -451,16 +467,17 @@ test.describe('Standalone Mode', () => {
 
     // Cards render for the scoped domain — proving the list was actually
     // filtered to that domain (scoped views are not render-windowed).
-    await expect(page.locator('.saved-pages-drawer-card').first()).toBeVisible({ timeout: 5000 });
-    const scopedCount = await page.locator('.saved-pages-drawer-card').count();
+    await expect(page.locator('.index-row').first()).toBeVisible({ timeout: 5000 });
+    const scopedCount = await page.locator('.index-row').count();
     expect(scopedCount).toBeGreaterThan(0);
 
-    // Switch back to All pages. The unscoped list is render-windowed (first 10),
-    // so comparing raw counts no longer proves re-filtering. Instead, scroll to
-    // grow the All-pages window and confirm the unscoped set is larger than the
-    // scoped slice — i.e. the domain filter was removed.
-    await page.locator('.project-nav-item[data-project-id=""]').click();
-    await expect(page.locator('.saved-pages-drawer-card')).toHaveCount(10, { timeout: 5000 });
+    // Switch back to All pages via the pill (the dropdown closed on the
+    // domain selection). The unscoped list is render-windowed (first 10),
+    // so comparing raw counts no longer proves re-filtering. Instead, scroll
+    // to grow the All-pages window and confirm the unscoped set is larger
+    // than the scoped slice — i.e. the domain filter was removed.
+    await page.locator('.project-pill-tab[data-project-id=""]').click();
+    await expect(page.locator('.index-row')).toHaveCount(10, { timeout: 5000 });
 
     const results = page.locator('#saved-pages-results');
     await results.evaluate(el => {
@@ -472,7 +489,7 @@ test.describe('Standalone Mode', () => {
     });
 
     await expect(async () => {
-      const allCount = await page.locator('.saved-pages-drawer-card').count();
+      const allCount = await page.locator('.index-row').count();
       expect(allCount).toBeGreaterThan(scopedCount);
     }).toPass({ timeout: 5000 });
   });
@@ -506,29 +523,23 @@ test.describe('Standalone Mode', () => {
 
     await openStandaloneNewtab(page);
 
+    const strip = page.locator('#desk-launch-strip');
     const results = page.locator('#saved-pages-results');
 
-    // The shelf renders seven compact cards above the browse list.
-    const pinnedCards = results.locator('.saved-pages-home-pinned-card');
-    await expect(pinnedCards).toHaveCount(7);
+    // The strip renders seven chips above the browse list, outside the
+    // results pane.
+    const chips = strip.locator('.launch-chip');
+    await expect(chips).toHaveCount(7);
 
-    // The shelf sits as a header above the browse list (data-section="pinned"
-    // precedes data-section="pages" in DOM order).
-    const sections = await results.locator('[data-section]').evaluateAll(els =>
-      els.map(e => e.dataset.section)
-    );
-    expect(sections.indexOf('pinned')).toBeGreaterThan(-1);
-    expect(sections.indexOf('pages')).toBeGreaterThan(-1);
-    expect(sections.indexOf('pinned')).toBeLessThan(sections.indexOf('pages'));
+    // Browse list rows render below the strip.
+    await expect(results.locator('.index-row').first()).toBeVisible();
 
-    // Browse list cards render below the shelf.
-    await expect(results.locator('.saved-pages-drawer-card').first()).toBeVisible();
-
-    // Each compact card carries the nav attrs so existing click delegation
-    // handles open-URL with no new event wiring. (Unpinning happens from the
-    // drawer card below; the shelf card carries no pin button.)
-    const firstCard = pinnedCards.first();
-    await expect(firstCard).toHaveAttribute('role', 'link');
+    // Each chip carries the nav attrs so the strip's click delegation
+    // handles open-URL, plus rename and unpin actions.
+    const firstChip = chips.first();
+    await expect(firstChip).toHaveAttribute('role', 'link');
+    await expect(firstChip.locator('[data-action="pin"]')).toHaveCount(1);
+    await expect(firstChip.locator('[data-action="chip-rename"]')).toHaveCount(1);
   });
 
   test('hides the Pinned shelf when a query is typed', async ({ page }) => {
@@ -548,16 +559,15 @@ test.describe('Standalone Mode', () => {
     });
 
     await openStandaloneNewtab(page);
-    const results = page.locator('#saved-pages-results');
+    const strip = page.locator('#desk-launch-strip');
 
-    // Shelf present on idle load.
-    await expect(results.locator('.saved-pages-home-pinned-card')).toHaveCount(7);
+    // Strip present on idle load.
+    await expect(strip.locator('.launch-chip')).toHaveCount(7);
 
-    // Typing a query hides the shelf — it only shows when idle.
+    // Typing a query hides the strip — it only shows when idle.
     await page.locator('#saved-pages-search-input').fill('github');
     await page.locator('#saved-pages-search-input').press('Enter');
 
-    await expect(results.locator('[data-section="pinned"]')).toHaveCount(0);
-    await expect(results.locator('.saved-pages-home-pinned-card')).toHaveCount(0);
+    await expect(strip.locator('.launch-chip')).toHaveCount(0);
   });
 });
