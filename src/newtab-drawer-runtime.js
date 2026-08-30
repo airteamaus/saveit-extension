@@ -8,7 +8,7 @@ import {
 import { initSavedPagesDrawerEvents } from './newtab-drawer-events.js';
 import { createDrawerShellController } from './newtab-drawer-shell.js';
 import { createDrawerSyncCoordinator } from './newtab-drawer-sync.js';
-import { createInitialDrawerState, resetDrawerState, setDrawerInitialized } from './newtab-drawer-state.js';
+import { createInitialDrawerState, resetDrawerState, setDrawerIndexSort, setDrawerInitialized } from './newtab-drawer-state.js';
 import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 import { createDrawerUiController } from './newtab-drawer-ui.js';
 import { createSavedPagesView } from './newtab-drawer-view.js';
@@ -44,6 +44,8 @@ export function createSavedPagesDrawerController({
     savedPagesDrawerClearBtn,
     savedPagesDrawerResults,
     launchStrip,
+    datelineEl,
+    deskSort,
     projectSidebar,
     projectEditorBackdrop,
     projectEditorDialog
@@ -90,9 +92,26 @@ export function createSavedPagesDrawerController({
     projectManager,
     resultsContainer: savedPagesDrawerResults,
     launchStripContainer: launchStrip,
+    datelineEl,
     getSavedPagesView: () => savedPagesView,
     documentObj
   });
+
+  // Index sort control: a display-order toggle. Sets the mode on state,
+  // persists it, and re-renders — the store's cursor pipeline is untouched.
+  deskSort?.addEventListener('change', () => {
+    const mode = deskSort.value === 'oldest' ? 'oldest' : 'newest';
+    setDrawerIndexSort(state, mode);
+    try {
+      windowObj.localStorage.setItem('desk-index-sort', mode);
+    } catch {
+      // Persistence is a convenience; in-memory mode still applies.
+    }
+    uiController.renderResults();
+  });
+  if (deskSort && state.indexSort === 'oldest') {
+    deskSort.value = 'oldest';
+  }
 
   const renderDrawerLoadingState = (...args) => uiController.renderLoadingState(...args);
   const renderDrawerErrorState = (...args) => uiController.renderErrorState(...args);

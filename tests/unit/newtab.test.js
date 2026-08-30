@@ -36,6 +36,7 @@ import {
 } from '../../src/newtab-auth.js';
 import {
   createBookmarkIconElement,
+  formatDeskDateline,
   getFaviconUrl,
   renderPageTags,
   updateStatsDisplay
@@ -45,6 +46,7 @@ import {
   createProjectsStore,
   createSavedPagesStore
 } from '../../src/newtab-drawer.js';
+import { sortPagesForIndex } from '../../src/newtab-drawer-ui.js';
 import { getCurrentUser } from '../../src/session-store.js';
 
 describe('newtab modules', () => {
@@ -67,6 +69,44 @@ describe('newtab modules', () => {
       expect(icon.tagName.toLowerCase()).toBe('svg');
       expect(icon.getAttribute('viewBox')).toBe('0 0 24 24');
       expect(icon.querySelector('path')?.getAttribute('d')).toBe('M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z');
+    });
+  });
+
+  describe('formatDeskDateline', () => {
+    it('formats date and page count for the masthead', () => {
+      const date = new Date('2026-08-30T12:00:00');
+      const text = formatDeskDateline(date, 1284);
+      // The date part is the runtime locale's formatting of the same options
+      // the implementation uses, so the assertion is locale-agnostic.
+      const datePart = new Intl.DateTimeFormat(undefined, {
+        weekday: 'long',
+        day: 'numeric',
+        month: 'long'
+      }).format(date);
+      expect(text).toBe(`${datePart} · ${(1284).toLocaleString()} pages on your desk`);
+    });
+
+    it('uses the singular for one page and drops the count entirely for zero', () => {
+      expect(formatDeskDateline(new Date('2026-08-30T12:00:00'), 1)).toContain('1 page on your desk');
+      expect(formatDeskDateline(new Date('2026-08-30T12:00:00'), 0)).not.toMatch(/desk/);
+    });
+  });
+
+  describe('sortPagesForIndex', () => {
+    const pages = [
+      { id: 'a', saved_at: '2026-08-28T10:00:00Z' },
+      { id: 'b', saved_at: '2026-08-30T10:00:00Z' },
+      { id: 'c', saved_at: '2026-08-29T10:00:00Z' }
+    ];
+
+    it('returns the server order for newest (and leaves the input untouched)', () => {
+      expect(sortPagesForIndex(pages, 'newest')).toBe(pages);
+    });
+
+    it('reverses by saved_at for oldest without mutating the input', () => {
+      const sorted = sortPagesForIndex(pages, 'oldest');
+      expect(sorted.map(p => p.id)).toEqual(['a', 'c', 'b']);
+      expect(pages.map(p => p.id)).toEqual(['a', 'b', 'c']);
     });
   });
 

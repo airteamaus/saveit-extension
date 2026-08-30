@@ -28,6 +28,20 @@ export function getPageDomain(page = {}) {
   }
 }
 
+// Masthead dateline under the wordmark: "Sunday, 30 August · 1,284 pages on
+// your desk". A null/zero count drops to the date alone (signed-out view).
+export function formatDeskDateline(date, pageCount) {
+  const datePart = new Intl.DateTimeFormat(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(date);
+  if (typeof pageCount !== 'number' || pageCount <= 0) {
+    return datePart;
+  }
+  return `${datePart} · ${pageCount.toLocaleString()} page${pageCount === 1 ? '' : 's'} on your desk`;
+}
+
 export function formatSavedDate(savedAt, options = {}) {
   if (!savedAt) return '';
 

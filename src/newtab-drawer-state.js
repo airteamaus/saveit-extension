@@ -5,11 +5,23 @@ import { PINNED_PAGES_SCOPE_ID } from './project-manager-state.js';
 export const INITIAL_RENDER_LIMIT = 10;
 export const RENDER_LIMIT_INCREMENT = 100;
 
+// localStorage is unreachable in some test environments; default to newest.
+function readPersistedIndexSort() {
+  try {
+    return globalThis.localStorage?.getItem('desk-index-sort') === 'oldest' ? 'oldest' : 'newest';
+  } catch {
+    return 'newest';
+  }
+}
+
 export function createInitialDrawerState() {
   return {
     hasInitialized: false,
     isLoading: false,
     query: '',
+    // Index display order: 'newest' (server order) or 'oldest' (client-side
+    // reversal by saved_at). Persisted in localStorage['desk-index-sort'].
+    indexSort: readPersistedIndexSort(),
     currentFilter: {
       search: '',
       projectId: null,
@@ -154,6 +166,10 @@ export function setDrawerEditingPage(state, id) {
 
 export function setDrawerSavingEdit(state, id) {
   state.savingEditPageId = id || null;
+}
+
+export function setDrawerIndexSort(state, mode) {
+  state.indexSort = mode === 'oldest' ? 'oldest' : 'newest';
 }
 
 // --- Render window ---------------------------------------------------------
