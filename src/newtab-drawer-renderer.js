@@ -237,30 +237,53 @@ export function renderDrawerCardMarkup(page, {
   `;
 }
 
-// Compact card for the home-view Pinned shelf. Denser than the drawer card —
-// favicon + title + domain + an always-visible unpin button — so a row of
-// pinned pages scans at a glance. Reuses the drawer card's pin-button markup
-// (same data-action/data-id/class) so the existing click delegation routes
-// unpin through handleDrawerPin with no new event wiring, and the same
-// data-url/role/tabindex nav attrs so card-click opens the page.
-export function renderHomePinnedCardMarkup(page) {
+// Launch chip for the pinned strip. Pinned pages are usually utilities
+// (Gmail, Calendar, Jira): the chip is a launcher, so it shows favicon +
+// full user-retitled label — never truncated (DESIGN.md "launch chip").
+// Unpin reuses the drawer pin button contract (data-action="pin") so the
+// existing click delegation handles it with no new wiring; rename carries
+// its own action, handled alongside the edit form's update path.
+export function renderLaunchChipMarkup(page) {
   const domain = getPageDomain(page);
   const url = page.url || '';
   const navigationAttrs = url
     ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
     : '';
   const faviconHtml = domain
-    ? `<img class="saved-pages-home-pinned-card-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="16" height="16">`
+    ? `<img class="launch-chip-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="14" height="14">`
     : '';
+  const label = page.title || domain || 'Untitled';
 
-  // Pin/unpin happens from the drawer card below; the shelf card is a compact
-  // launch surface, so it carries only the favicon + title.
   return `
-    <article class="saved-pages-home-pinned-card" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
-      <div class="saved-pages-home-pinned-card-heading">
-        ${faviconHtml}
-        <h3 class="saved-pages-home-pinned-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
-      </div>
+    <article class="launch-chip" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
+      ${faviconHtml}
+      <span class="launch-chip-label">${escapeHtml(label)}</span>
+      <button
+        class="launch-chip-action"
+        type="button"
+        data-action="chip-rename"
+        data-id="${escapeHtml(page.id)}"
+        title="Rename"
+        aria-label="Rename ${escapeHtml(label)}"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path d="M12 20h9"></path>
+          <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+        </svg>
+      </button>
+      <button
+        class="launch-chip-action"
+        type="button"
+        data-action="pin"
+        data-id="${escapeHtml(page.id)}"
+        title="Unpin"
+        aria-label="Unpin ${escapeHtml(label)}"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </article>
   `;
 }
@@ -279,6 +302,7 @@ export function getDrawerEmptyStateContent({ query = '', scopeLabel, hasSelected
 export function createDrawerRenderer({
   documentObj = document,
   resultsContainer,
+  launchStripContainer,
   getEditingPageId,
   getSavingEditPageId,
   getRenderLimit,
@@ -294,10 +318,6 @@ export function createDrawerRenderer({
       getProjectPills,
       projectsUnavailable: isProjectsUnavailable()
     }), documentObj);
-  }
-
-  function createHomePinnedCardElement(page) {
-    return createElementFromHtml(renderHomePinnedCardMarkup(page), documentObj);
   }
 
   function getDrawerCardElement(pageId) {
@@ -569,71 +589,33 @@ export function createDrawerRenderer({
     existingCard.replaceWith(nextCard);
   }
 
-  // Pinned shelf: a horizontal row of compact cards shown above the browse
-  // list when idle (no query, no scope) and the user has pinned pages. Lives in
-  // its own data-section="pinned" sibling, ordered before data-section="pages"
-  // so it reads as a header. Compact cards reuse the drawer pin button so the
-  // existing click delegation handles unpin with no new event wiring.
-  function renderPinnedShelf(pinnedPages = []) {
-    if (!resultsContainer) {
+  // Launch strip: pinned utilities shown under the search hero when idle
+  // (no query, no scope). Writes into its own container outside the results
+  // pane, so it never competes with the index sections. Chips reuse the
+  // drawer pin button contract for unpin (data-action="pin").
+  function renderLaunchStrip(pinnedPages = []) {
+    if (!launchStripContainer) {
       return;
     }
 
-    const shelfSection = ensureSection('pinned');
-    if (!shelfSection) {
-      renderChrome();
-      return;
-    }
-
-    // The shelf reads as a header above the browse list, so keep it before the
-    // pages section in DOM order. ensureSection appends; reorder if needed.
-    const pagesSection = resultsContainer.querySelector('[data-section="pages"]');
-    if (pagesSection && pagesSection.previousElementSibling !== shelfSection) {
-      resultsContainer.insertBefore(shelfSection, pagesSection);
-    }
-
-    const pinnedSlotsHtml = pinnedPages.length
-      ? pinnedPages.map(() => '<div class="saved-pages-home-pinned-slot"></div>').join('')
-      : '';
-
-    replaceElementHtml(shelfSection, `
-      <div class="saved-pages-pinned-shelf">
-        <div class="saved-pages-home-pinned">
-          ${pinnedSlotsHtml}
-        </div>
-      </div>
-    `);
-
-    // Compact cards are real DOM nodes; slot them into the placeholders after
-    // setting the HTML shell.
-    const pinnedSlots = shelfSection.querySelectorAll('.saved-pages-home-pinned-slot');
-    pinnedPages.forEach((page, index) => {
-      const slot = pinnedSlots[index];
-      if (slot) {
-        slot.replaceWith(createHomePinnedCardElement(page));
-      }
-    });
-
-    renderChrome();
+    launchStripContainer.replaceChildren(
+      ...pinnedPages.map(page => createElementFromHtml(renderLaunchChipMarkup(page), documentObj))
+    );
   }
 
-  // Hide the shelf when a query or scope is active. Removes the section so the
-  // browse list owns the full pane.
-  function clearPinnedShelf() {
-    if (!resultsContainer) {
-      return;
-    }
-    resultsContainer.querySelector('[data-section="pinned"]')?.remove();
+  // Hide the strip when a query or scope is active.
+  function clearLaunchStrip() {
+    launchStripContainer?.replaceChildren();
   }
 
   return {
+    clearLaunchStrip,
     clearPagesSection,
-    clearPinnedShelf,
     refreshCard,
     renderEmptyState,
     renderErrorState,
+    renderLaunchStrip,
     renderLoadingState,
-    renderPinnedShelf,
     renderResults,
     renderSemanticLoadingState,
     renderSemanticResults,

@@ -15,6 +15,7 @@ export function createDrawerUiController({
   state,
   projectManager,
   resultsContainer,
+  launchStripContainer,
   getSavedPagesView,
   documentObj = document
 }) {
@@ -42,6 +43,7 @@ export function createDrawerUiController({
   const drawerRenderer = createDrawerRenderer({
     documentObj,
     resultsContainer,
+    launchStripContainer,
     getEditingPageId: () => state.editingPageId,
     getSavingEditPageId: () => state.savingEditPageId,
     // Render-window cap (All-pages browse view only); grown on scroll. Scoped
@@ -90,7 +92,7 @@ export function createDrawerUiController({
     // and the warming subscriber route through here, so they can never paint
     // conflicting phases (the race that caused cards-flash-then-dog-stuck).
     if (state.warmUpInProgress) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       drawerRenderer.renderWarmingState(state.warmUpProgress);
       return;
     }
@@ -101,7 +103,7 @@ export function createDrawerUiController({
     // While a semantic search is loading, the dog takes over the full pane:
     // hide all saved-page cards and show only the centered illustration.
     if (state.semanticLoading) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       drawerRenderer.renderSemanticLoadingState();
       return;
     }
@@ -110,7 +112,7 @@ export function createDrawerUiController({
     // semantic results return they own the full pane — no separate local card
     // list. (A query always yields at least the card the tag was clicked from.)
     if (hasQuery) {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
       if ((state.semanticResults?.length ?? 0) > 0) {
         drawerRenderer.clearPagesSection();
         drawerRenderer.renderSemanticResults(state.semanticResults, {
@@ -138,9 +140,9 @@ export function createDrawerUiController({
       ? getPinnedPages(allPages)
       : [];
     if (pinnedPages.length) {
-      drawerRenderer.renderPinnedShelf(pinnedPages);
+      drawerRenderer.renderLaunchStrip(pinnedPages);
     } else {
-      drawerRenderer.clearPinnedShelf();
+      drawerRenderer.clearLaunchStrip();
     }
 
     if (!state.pages.length) {

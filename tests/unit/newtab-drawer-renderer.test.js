@@ -2,16 +2,18 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { createDrawerRenderer, renderDrawerCardMarkup } from '../../src/newtab-drawer-renderer.js';
 
-// Minimal renderer harness: a real results container and a no-op renderChrome
-// so renderLoadingState can be exercised in isolation. The loading state is a
-// full-pane swap of the results container, so we only need the container.
+// Minimal renderer harness: real results + launch-strip containers and a
+// no-op renderChrome so renderLoadingState can be exercised in isolation.
 function createRenderer() {
   const resultsContainer = document.createElement('div');
+  const launchStripContainer = document.createElement('div');
   return {
     resultsContainer,
+    launchStripContainer,
     renderer: createDrawerRenderer({
       documentObj: document,
       resultsContainer,
+      launchStripContainer,
       getEditingPageId: () => null,
       getSavingEditPageId: () => null,
       getRenderLimit: () => Number.POSITIVE_INFINITY,
@@ -147,54 +149,48 @@ describe('newtab drawer renderer warming state', () => {
   });
 });
 
-describe('newtab drawer renderer pinned shelf', () => {
-  it('renders a Pinned shelf with a compact card per pinned page', () => {
-    const { resultsContainer, renderer } = createRenderer();
+describe('newtab drawer renderer launch strip', () => {
+  it('renders a launch chip per pinned page with rename and unpin actions', () => {
+    const { launchStripContainer, renderer } = createRenderer();
 
-    renderer.renderPinnedShelf([
+    renderer.renderLaunchStrip([
       { id: 'p1', title: 'Pinned One', url: 'https://a.example', domain: 'a.example', pinned: true },
       { id: 'p2', title: 'Pinned Two', url: 'https://b.example', domain: 'b.example', pinned: true }
     ]);
 
-    expect(resultsContainer.querySelectorAll('.saved-pages-home-pinned-card')).toHaveLength(2);
-    // The compact card carries the same nav attrs as the drawer card so
-    // existing click delegation handles open-URL unchanged. Unpinning happens
-    // from the drawer card below; the shelf card carries no pin button.
-    const firstCard = resultsContainer.querySelector('.saved-pages-home-pinned-card');
-    expect(firstCard.getAttribute('data-url')).toBe('https://a.example');
-    expect(firstCard.getAttribute('role')).toBe('link');
-    expect(firstCard.querySelector('[data-action="pin"]')).toBeNull();
-    // Favicon + title render.
-    expect(firstCard.querySelector('.saved-pages-home-pinned-card-favicon')).not.toBeNull();
-    expect(firstCard.querySelector('.saved-pages-home-pinned-card-title').textContent).toBe('Pinned One');
+    const chips = launchStripContainer.querySelectorAll('.launch-chip');
+    expect(chips).toHaveLength(2);
+    // The chip carries the same nav attrs as the index row so the strip's
+    // click delegation handles open-URL unchanged; unpin reuses the shared
+    // pin contract; rename carries its own action.
+    const firstChip = chips[0];
+    expect(firstChip.getAttribute('data-url')).toBe('https://a.example');
+    expect(firstChip.getAttribute('role')).toBe('link');
+    expect(firstChip.querySelector('[data-action="pin"]')).not.toBeNull();
+    expect(firstChip.querySelector('[data-action="chip-rename"]')).not.toBeNull();
+    // Favicon + full label render (labels are never truncated).
+    expect(firstChip.querySelector('.launch-chip-favicon')).not.toBeNull();
+    expect(firstChip.querySelector('.launch-chip-label').textContent).toBe('Pinned One');
   });
 
-  it('orders the pinned section before the pages section in the DOM', () => {
-    // The shelf reads as a header above the browse list, so it must precede
-    // data-section="pages" when both are present.
-    const { resultsContainer, renderer } = createRenderer();
+  it('renders the strip outside the results pane so it never competes with the index sections', () => {
+    const { resultsContainer, launchStripContainer, renderer } = createRenderer();
 
-    // Render the browse list first (creates data-section="pages"), then the
-    // shelf — the shelf must move itself before pages.
     renderer.renderResults([{ id: 'r1', title: 'Recent', url: 'https://c.example', domain: 'c.example' }]);
-    renderer.renderPinnedShelf([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
+    renderer.renderLaunchStrip([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
 
-    const sections = [...resultsContainer.querySelectorAll('[data-section]')].map(s => s.dataset.section);
-    const pinnedIdx = sections.indexOf('pinned');
-    const pagesIdx = sections.indexOf('pages');
-    expect(pinnedIdx).toBeGreaterThan(-1);
-    expect(pagesIdx).toBeGreaterThan(-1);
-    expect(pinnedIdx).toBeLessThan(pagesIdx);
+    expect(launchStripContainer.querySelectorAll('.launch-chip')).toHaveLength(1);
+    expect(resultsContainer.querySelectorAll('.launch-chip')).toHaveLength(0);
   });
 
-  it('clearPinnedShelf removes the shelf section so the browse list owns the pane', () => {
-    const { resultsContainer, renderer } = createRenderer();
+  it('clearLaunchStrip empties the strip container', () => {
+    const { launchStripContainer, renderer } = createRenderer();
 
-    renderer.renderPinnedShelf([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
-    expect(resultsContainer.querySelector('[data-section="pinned"]')).not.toBeNull();
+    renderer.renderLaunchStrip([{ id: 'p1', title: 'Pinned', url: 'https://a.example', pinned: true }]);
+    expect(launchStripContainer.querySelectorAll('.launch-chip')).toHaveLength(1);
 
-    renderer.clearPinnedShelf();
-    expect(resultsContainer.querySelector('[data-section="pinned"]')).toBeNull();
+    renderer.clearLaunchStrip();
+    expect(launchStripContainer.children).toHaveLength(0);
   });
 });
 

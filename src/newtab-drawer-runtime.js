@@ -43,6 +43,7 @@ export function createSavedPagesDrawerController({
     savedPagesDrawerSearchInput,
     savedPagesDrawerClearBtn,
     savedPagesDrawerResults,
+    launchStrip,
     projectSidebar,
     projectEditorBackdrop,
     projectEditorDialog
@@ -88,6 +89,7 @@ export function createSavedPagesDrawerController({
     state,
     projectManager,
     resultsContainer: savedPagesDrawerResults,
+    launchStripContainer: launchStrip,
     getSavedPagesView: () => savedPagesView,
     documentObj
   });
@@ -162,6 +164,7 @@ export function createSavedPagesDrawerController({
       savedPagesDrawerSearchInput,
       savedPagesDrawerClearBtn,
       savedPagesDrawerResults,
+      launchStrip,
       projectSidebar,
       projectEditorBackdrop,
       projectEditorDialog,

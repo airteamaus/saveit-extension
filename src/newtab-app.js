@@ -36,6 +36,7 @@ export function getDrawerControllerElements(elements) {
     savedPagesDrawer: elements.savedPagesDrawer,
     savedPagesDrawerClearBtn: elements.savedPagesDrawerClearBtn,
     savedPagesDrawerResults: elements.savedPagesDrawerResults,
+    launchStrip: elements.launchStrip,
     savedPagesDrawerSearchForm: elements.savedPagesDrawerSearchForm || elements.searchForm,
     savedPagesDrawerSearchInput: elements.savedPagesDrawerSearchInput,
     savedPagesToggleBtn: elements.savedPagesToggleBtn

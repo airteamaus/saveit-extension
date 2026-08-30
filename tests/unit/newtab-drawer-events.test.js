@@ -41,7 +41,7 @@ function buildHarness() {
     projectSidebar: document.getElementById('sidebar'),
     projectEditorBackdrop: document.getElementById('editor-backdrop'),
     projectEditorDialog: document.getElementById('editor-dialog'),
-    projectManager: {},
+    projectManager: { closeEditor: vi.fn() },
     savedPagesView: {},
     loadDrawerResults: noop,
     loadDrawerDomainPages: noop,
@@ -142,7 +142,7 @@ describe('privacy toggle click delegation', () => {
       projectSidebar: null,
       projectEditorBackdrop: null,
       projectEditorDialog: null,
-      projectManager: {},
+      projectManager: { closeEditor: vi.fn() },
       savedPagesView: {},
       openSavedPagesDrawer: noop,
       closeSavedPagesDrawer: noop,
@@ -171,15 +171,17 @@ describe('privacy toggle click delegation', () => {
   });
 });
 
-describe('pinned shelf card navigation', () => {
-  // Regression: the pinned shelf renders cards with class
-  // .saved-pages-home-pinned-card, but the click delegation only matched
-  // .index-row, so clicking a pinned card did nothing.
+describe('launch chip navigation and rename', () => {
+  // The launch strip renders chips in their own container outside the results
+  // pane, so the strip's delegation must route navigation, unpin, and rename.
   function buildMinimalHarness() {
     document.body.innerHTML = `
-      <div id="results">
-        <article class="saved-pages-home-pinned-card" data-page-id="pin-1" data-url="https://example.com/pinned" role="link" tabindex="0">
-          <h3>Pinned One</h3>
+      <div id="results"></div>
+      <div id="strip">
+        <article class="launch-chip" data-page-id="pin-1" data-url="https://example.com/pinned" role="link" tabindex="0">
+          <span class="launch-chip-label">Pinned One</span>
+          <button class="launch-chip-action" type="button" data-action="chip-rename" data-id="pin-1">Rename</button>
+          <button class="launch-chip-action" type="button" data-action="pin" data-id="pin-1">Unpin</button>
         </article>
       </div>
     `;
@@ -187,7 +189,8 @@ describe('pinned shelf card navigation', () => {
       navigateDrawerCard: vi.fn(),
       handleDrawerEditCancel: vi.fn(),
       handleDrawerTogglePrivacy: vi.fn(),
-      handleDrawerUpdate: vi.fn()
+      handleDrawerUpdate: vi.fn(),
+      handleDrawerPin: vi.fn()
     };
     const noop = () => {};
     initSavedPagesDrawerEvents({
@@ -195,10 +198,12 @@ describe('pinned shelf card navigation', () => {
       savedPagesDrawerSearchInput: null,
       savedPagesDrawerClearBtn: null,
       savedPagesDrawerResults: document.getElementById('results'),
+      launchStrip: document.getElementById('strip'),
       projectSidebar: null,
       projectEditorBackdrop: null,
       projectEditorDialog: null,
-      projectManager: {},
+      // Escape bubbles to the document-level editor-close handler; stub it.
+      projectManager: { closeEditor: vi.fn() },
       savedPagesView: {},
       openSavedPagesDrawer: noop,
       closeSavedPagesDrawer: noop,
@@ -207,7 +212,7 @@ describe('pinned shelf card navigation', () => {
       navigateDrawerCard: handlers.navigateDrawerCard,
       handleDrawerEditCancel: handlers.handleDrawerEditCancel,
       handleDrawerEditStart: noop,
-      handleDrawerPin: noop,
+      handleDrawerPin: handlers.handleDrawerPin,
       handleDrawerTogglePrivacy: handlers.handleDrawerTogglePrivacy,
       handleDrawerUpdate: handlers.handleDrawerUpdate,
       handleDrawerDelete: noop,
@@ -225,22 +230,58 @@ describe('pinned shelf card navigation', () => {
     document.body.innerHTML = '';
   });
 
-  it('clicking a pinned shelf card routes to navigateDrawerCard with the card', () => {
+  it('clicking a chip routes to navigateDrawerCard with the chip', () => {
     const { navigateDrawerCard } = buildMinimalHarness();
-    const card = document.querySelector('.saved-pages-home-pinned-card');
-    card.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const chip = document.querySelector('.launch-chip');
+    chip.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(navigateDrawerCard).toHaveBeenCalledTimes(1);
-    // The routed element is the pinned card itself, carrying data-url.
-    expect(navigateDrawerCard.mock.calls[0][0]).toBe(card);
+    // The routed element is the chip itself, carrying data-url.
+    expect(navigateDrawerCard.mock.calls[0][0]).toBe(chip);
   });
 
-  it('Enter on a focused pinned card routes to navigateDrawerCard', () => {
+  it('Enter on a focused chip routes to navigateDrawerCard', () => {
     const { navigateDrawerCard } = buildMinimalHarness();
-    const card = document.querySelector('.saved-pages-home-pinned-card');
-    card.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+    const chip = document.querySelector('.launch-chip');
+    chip.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
 
     expect(navigateDrawerCard).toHaveBeenCalledTimes(1);
-    expect(navigateDrawerCard.mock.calls[0][0]).toBe(card);
+    expect(navigateDrawerCard.mock.calls[0][0]).toBe(chip);
+  });
+
+  it('unpin routes through the shared pin handler', () => {
+    const { handleDrawerPin } = buildMinimalHarness();
+    document.querySelector('[data-action="pin"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    expect(handleDrawerPin).toHaveBeenCalledWith('pin-1');
+  });
+
+  it('rename swaps the label for an input and commits a title-only update on Enter', () => {
+    const { handleDrawerUpdate } = buildMinimalHarness();
+    document.querySelector('[data-action="chip-rename"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const input = document.querySelector('.launch-chip-rename-input');
+    expect(input).not.toBeNull();
+    expect(input.value).toBe('Pinned One');
+
+    input.value = 'Mail';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+
+    // Title-only: undefined ai_summary_brief means "keep existing" in
+    // handleDrawerUpdate.
+    expect(handleDrawerUpdate).toHaveBeenCalledWith('pin-1', { title: 'Mail' });
+  });
+
+  it('Escape cancels the rename and restores the label', () => {
+    const { handleDrawerUpdate } = buildMinimalHarness();
+    document.querySelector('[data-action="chip-rename"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+
+    const input = document.querySelector('.launch-chip-rename-input');
+    input.value = 'Changed';
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+
+    expect(handleDrawerUpdate).not.toHaveBeenCalled();
+    expect(document.querySelector('.launch-chip-label')).not.toBeNull();
+    expect(document.querySelector('.launch-chip-rename-input')).toBeNull();
   });
 });
