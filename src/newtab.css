@@ -1,6 +1,6 @@
 /* newtab.css - Saved pages new tab */
 
-/* Page shell */
+/* Page shell — the Reading Room (DESIGN.md "Surfaces & rhythm") */
 
 html,
 body {
@@ -14,17 +14,6 @@ body {
   justify-content: flex-start;
   min-height: 100vh;
   overflow: hidden;
-}
-
-.logo-hero {
-  font-size: var(--font-size-4xl);
-  font-weight: 700;
-  user-select: none;
-}
-
-.logo-hero svg {
-  width: 22px;
-  height: 22px;
 }
 
 .minimal-footer {
@@ -52,23 +41,22 @@ body {
   color: var(--color-accent);
 }
 
-.saved-pages-page {
+/* One centered column; content zones constrain to 720px inside it. */
+.desk-page {
   position: relative;
   z-index: 1;
   flex: 1;
   min-height: 0;
-  padding: 12px 16px 8px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 20px 20px 8px;
   overflow: hidden;
-}
-
-.saved-pages-page-shell {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 0;
+  gap: 14px;
   /* Subtle UI: panels, cards, and controls are transparent (outlined only),
-     so fills don't compete with content. The search box keeps its own fill
-     via an inline rule. Hover/active states retain a faint tint for feedback. */
+     so fills don't compete with content. Hover/active states keep a faint tint. */
   --saved-pages-panel-bg: transparent;
   --saved-pages-panel-bg-strong: transparent;
   --saved-pages-panel-bg-hover: color-mix(in srgb, var(--color-accent) 5%, transparent);
@@ -80,125 +68,288 @@ body {
   --saved-pages-chip-bg: transparent;
 }
 
-.saved-pages-page-header {
+/* ── Utility row ────────────────────────────────────────────────── */
+
+.desk-utility-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  min-height: 32px;
+}
+
+.desk-utility-left,
+.desk-utility-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  /* Indent the header to line up with the cards/results, which sit inside the
-     results container's 16px horizontal padding. */
-  padding: 0 16px 12px;
+  gap: 14px;
 }
 
-.saved-pages-page-logo {
-  flex-shrink: 0;
+.projects-menu-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
 }
 
-.saved-pages-page-search {
-  flex: 1;
-  max-width: none;
-  margin-inline: 10px 14px;
+.projects-menu-trigger:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.saved-pages-page-search .search-icon svg {
+.desk-utility-link {
+  padding: 4px 2px;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  cursor: pointer;
+}
+
+.desk-utility-link:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* ── Masthead ───────────────────────────────────────────────────── */
+
+.desk-masthead {
+  text-align: center;
+  padding-top: 6px;
+}
+
+.desk-masthead-wordmark {
+  font-family: var(--font-display);
+  font-size: var(--font-size-7xl);
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.desk-dateline {
+  margin-top: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+
+/* Newspaper double rule: 2px + 1px ink. */
+.desk-rule-double {
+  margin-top: 12px;
+  border-top: 2px solid var(--color-ink);
+}
+
+.desk-rule-double::after {
+  content: "";
+  display: block;
+  margin-top: 2px;
+  border-top: 1px solid var(--color-ink);
+}
+
+/* ── Search hero ────────────────────────────────────────────────── */
+
+.desk-search-hero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 640px;
+  width: 100%;
+  margin: 4px auto 0;
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-md);
+  padding: 6px 6px 6px 14px;
+}
+
+.desk-search-hero .search-icon {
+  position: static;
+  transform: none;
+  color: var(--color-ink-faint);
+}
+
+.desk-search-hero .search-icon svg {
   width: 16px;
   height: 16px;
 }
 
-.saved-pages-page-search-input {
-  padding: 3px 40px 3px 44px;
-  background: color-mix(in srgb, var(--color-paper-raised) 94%, transparent);
-  font-size: var(--font-size-md);
+.desk-search-input {
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
 }
 
-.saved-pages-page-actions {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
+.desk-search-input:focus {
+  box-shadow: none;
 }
 
-.saved-pages-page-actions .user-avatar-btn {
-  width: 36px;
-  height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+.desk-search-input::placeholder {
+  font-style: italic;
+  color: var(--color-ink-faint);
 }
 
-/* Hamburger toggle for the project sidebar. Hidden above 700px; the 700px
-   breakpoint sets it to display: inline-flex. Mirrors the avatar button's
-   sizing so it lines up with the other header actions. */
-.saved-pages-sidebar-toggle {
-  display: none;
-  flex-shrink: 0;
-  width: 36px;
-  height: 36px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
+.desk-search-find {
+  padding: 8px 16px;
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  border: none;
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
-  color: inherit;
+  font-weight: 600;
+  font-size: var(--font-size-md);
   cursor: pointer;
 }
 
-.saved-pages-sidebar-toggle svg {
-  width: 18px;
-  height: 18px;
+.desk-search-find:hover {
+  background: var(--color-accent-ink);
 }
 
-/* Backdrop for the sidebar overlay. Hidden by default via the .hidden class
-   (added in the HTML); the 700px breakpoint styles it when shown. */
-.saved-pages-sidebar-backdrop.hidden {
+/* ── Launch strip + project pills ───────────────────────────────── */
+
+.launch-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.project-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: center;
+}
+
+/* ── The index ──────────────────────────────────────────────────── */
+
+.desk-index {
+  margin-top: 10px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.desk-index-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding-bottom: 6px;
+}
+
+.desk-index-title {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+.desk-sort-label {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+}
+
+.desk-sort {
+  border: none;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.desk-sort option {
+  color: var(--color-ink);
+  background: var(--color-paper-raised);
+}
+
+.desk-index-results {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 2px 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.desk-breadcrumb {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.desk-breadcrumb-back {
+  padding: 2px 0;
+  background: none;
+  border: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-accent-ink);
+  cursor: pointer;
+}
+
+.desk-breadcrumb-back:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.desk-breadcrumb-title {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* ── Projects dropdown panel ────────────────────────────────────── */
+/* Filled by renderProjectSidebar; shown when JS adds .is-overlay-open. */
+
+.projects-menu-panel {
   display: none;
-}
-
-.saved-pages-page-body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  align-items: stretch;
-  gap: 16px;
-  padding-top: 0;
-  overflow: hidden;
-}
-
-.project-sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  /* Align the first nav row ("All pages") with the first card. */
-  padding: 6px 10px 10px;
-}
-
-.saved-pages-page-sidebar {
-  width: 256px;
-  flex-shrink: 0;
+  position: absolute;
+  top: 52px;
+  left: 12px;
+  width: 300px;
+  max-height: min(70vh, 560px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-paper-raised) 50%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-line) 50%, transparent);
+  box-shadow: var(--shadow-dialog);
+  padding: 10px;
+  z-index: 46;
 }
 
-.saved-pages-page-content {
-  flex: 1;
-  min-width: 0;
+.projects-menu-panel.is-overlay-open {
   display: flex;
   flex-direction: column;
+  gap: 6px;
 }
 
-.saved-pages-page-results {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  /* Match the page's horizontal margin so cards have breathing room on the
-     right edge that lines up with the left margin of the page. */
-  padding: 0 16px 8px;
-  display: flex;
-  flex-direction: column;
+.projects-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: rgb(41 37 36 / 0.18);
 }
 
 .saved-pages-drawer-state {
@@ -1172,47 +1323,25 @@ body {
 }
 
 @media (max-width: 700px) {
-  /* Narrow viewport: the sidebar moves behind a hamburger overlay so the cards
-     can take the full page width. The sidebar toggle button (hidden above
-     700px) becomes visible here. */
-  /* Show the hamburger button (hidden by default in the base rule). */
-  .saved-pages-sidebar-toggle {
-    display: inline-flex;
+  /* The Reading Room is already a single column; narrow viewports just
+     tighten spacing. The projects dropdown keeps the same mechanics. */
+  .desk-page {
+    padding: 14px 14px 8px;
+    gap: 11px;
   }
 
-  /* The sidebar is no longer a left flex child: hide it until the user opens
-     the overlay. display:none keeps it out of the flow so .saved-pages-page-content
-     expands to full width. */
-  .saved-pages-page-sidebar {
-    display: none;
+  .desk-masthead-wordmark {
+    font-size: var(--font-size-6xl);
   }
 
-  /* Overlay state (toggled via the .is-overlay-open class from JS). Sits above
-     the cards as a left-anchored drawer; the backdrop covers the rest. z-index
-     mirrors the dialog convention (backdrop 45, dialog 46) and stays below
-     toasts (60). */
-  .saved-pages-page-sidebar.is-overlay-open {
-    display: flex;
-    position: fixed;
-    left: 0;
-    top: 0;
-    height: 100%;
-    width: 256px;
-    max-height: none;
-    z-index: 46;
-    box-shadow: var(--shadow-dialog);
-    /* The resting sidebar is semi-transparent (fine next to the page), but as
-       an overlay it sits on top of the cards — make it opaque so the menu text
-       stays fully readable. The backdrop behind it provides the separation. */
-    background: var(--color-paper-raised);
+  .desk-search-hero {
+    max-width: none;
   }
 
-  .saved-pages-sidebar-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 45;
-    background: rgba(9, 9, 11, 0.32);
-    backdrop-filter: blur(2px);
+  .projects-menu-panel {
+    left: 8px;
+    right: 8px;
+    width: auto;
   }
 }
 

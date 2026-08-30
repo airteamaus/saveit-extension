@@ -156,8 +156,12 @@ describe('newtab modules', () => {
 
     it('collects newtab DOM elements by their expected ids', () => {
       document.body.innerHTML = `
-        <section id="saved-pages-page-shell"></section>
-        <div id="saved-pages-page-header"></div>
+        <p id="desk-dateline"></p>
+        <button id="desk-data-sync-link"></button>
+        <div id="desk-launch-strip"></div>
+        <nav id="project-pills"></nav>
+        <h2 id="desk-index-title"></h2>
+        <select id="desk-sort"></select>
         <aside id="project-sidebar"></aside>
         <button id="saved-pages-sidebar-toggle-btn"></button>
         <div id="saved-pages-sidebar-backdrop"></div>
@@ -172,8 +176,12 @@ describe('newtab modules', () => {
       expect(elements.searchForm?.id).toBe('search-form');
       expect(elements.searchInput?.id).toBe('search-input');
       expect(elements.signInBtn?.id).toBe('hero-sign-in-btn');
-      expect(elements.savedPagesPageShell?.id).toBe('saved-pages-page-shell');
-      expect(elements.savedPagesPageHeader?.id).toBe('saved-pages-page-header');
+      expect(elements.dataSyncBtn?.id).toBe('desk-data-sync-link');
+      expect(elements.datelineEl?.id).toBe('desk-dateline');
+      expect(elements.launchStrip?.id).toBe('desk-launch-strip');
+      expect(elements.projectPills?.id).toBe('project-pills');
+      expect(elements.deskIndexTitle?.id).toBe('desk-index-title');
+      expect(elements.deskSort?.id).toBe('desk-sort');
       expect(elements.versionIndicator?.id).toBe('hero-version-indicator');
       expect(elements.projectSidebar?.id).toBe('project-sidebar');
       expect(elements.sidebarToggleBtn?.id).toBe('saved-pages-sidebar-toggle-btn');

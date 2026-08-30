@@ -52,12 +52,12 @@ export function getAuthControllerElements(elements) {
   };
 }
 
-// Wire the responsive sidebar overlay (the hamburger, shown ≤700px). Extracted
-// from bind() so the toggle contract is unit-testable against real DOM without
-// constructing the whole app. Toggling adds .is-overlay-open to the sidebar
-// (NOT .hidden, which is owned by the auth flow) and reveals the backdrop.
-// Closes on Escape, on backdrop click, and after a sidebar nav selection so
-// tapping a project dismisses the overlay. No-ops when the sidebar is
+// Wire the projects dropdown (the "Projects ▾" trigger in the utility row).
+// Extracted from bind() so the toggle contract is unit-testable against real
+// DOM without constructing the whole app. Toggling adds .is-overlay-open to
+// the panel (NOT .hidden, which is owned by the auth flow) and reveals the
+// backdrop. Closes on Escape, on backdrop click, and after a nav selection so
+// tapping a project dismisses the dropdown. No-ops when the panel is
 // auth-hidden (signed out) so it never fights the auth class.
 export function initSidebarOverlay({ sidebar, toggleBtn, backdrop, documentObj = document } = {}) {
   if (!sidebar || !toggleBtn) {

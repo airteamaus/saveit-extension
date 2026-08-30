@@ -411,7 +411,7 @@ test.describe('Standalone Mode', () => {
       document.getElementById('hero-user-menu')?.classList.remove('hidden');
       document.getElementById('hero-user-dropdown')?.classList.remove('hidden');
     });
-    await page.locator('#hero-data-sync-btn').click();
+    await page.locator('#desk-data-sync-link').click();
 
     // The modal opens with its three sections (Import / Export / Browser sync).
     const dialog = page.locator('#data-sync-centre-dialog');

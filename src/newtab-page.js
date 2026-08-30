@@ -4,7 +4,7 @@ export function getSubmittedSearchQuery(searchInput) {
 
 export function getNewtabElements(documentObj = document) {
   return {
-    dataSyncBtn: documentObj.getElementById('hero-data-sync-btn'),
+    dataSyncBtn: documentObj.getElementById('desk-data-sync-link'),
     refreshBtn: documentObj.getElementById('hero-refresh-btn'),
     sharingBtn: documentObj.getElementById('hero-sharing-btn'),
     projectEditorBackdrop: documentObj.getElementById('project-editor-backdrop'),
@@ -14,8 +14,11 @@ export function getNewtabElements(documentObj = document) {
     dataSyncCentreBackdrop: documentObj.getElementById('data-sync-centre-backdrop'),
     dataSyncCentreDialog: documentObj.getElementById('data-sync-centre-dialog'),
     toastRegion: documentObj.getElementById('toast-region'),
-    savedPagesPageHeader: documentObj.getElementById('saved-pages-page-header'),
-    savedPagesPageShell: documentObj.getElementById('saved-pages-page-shell'),
+    datelineEl: documentObj.getElementById('desk-dateline'),
+    launchStrip: documentObj.getElementById('desk-launch-strip'),
+    projectPills: documentObj.getElementById('project-pills'),
+    deskIndexTitle: documentObj.getElementById('desk-index-title'),
+    deskSort: documentObj.getElementById('desk-sort'),
     projectSidebar: documentObj.getElementById('project-sidebar'),
     sidebarToggleBtn: documentObj.getElementById('saved-pages-sidebar-toggle-btn'),
     sidebarBackdrop: documentObj.getElementById('saved-pages-sidebar-backdrop'),
