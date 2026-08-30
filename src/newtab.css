@@ -653,6 +653,96 @@ body {
   margin-left: auto;
 }
 
+/* Org feed: scope kicker rides the desk-index header beside the title. */
+.feed-scope-kicker {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+}
+
+/* Vote control: always visible, never hover-revealed. */
+.feed-vote {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 24px;
+  padding: 2px 8px 2px 4px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-ink-soft);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  cursor: pointer;
+}
+
+.feed-vote svg {
+  width: 16px;
+  height: 16px;
+}
+
+.feed-vote:hover:not(:disabled) {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
+}
+
+.feed-vote.is-active {
+  color: var(--color-accent-ink);
+}
+
+.feed-vote:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.feed-vote-count {
+  min-width: 1ch;
+}
+
+.feed-only-you {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+/* One-time public-feed disclosure: hairline-separated note, not a box. */
+.feed-disclosure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 0;
+  border-top: 1px solid var(--color-line);
+  border-bottom: 1px solid var(--color-line);
+  margin-bottom: 8px;
+}
+
+.feed-disclosure p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-ink-soft);
+}
+
+.feed-disclosure-dismiss {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
+  color: var(--color-accent-ink);
+  font-family: var(--font-sans);
+  font-size: var(--font-size-sm);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.feed-disclosure-dismiss:hover {
+  color: var(--color-accent);
+}
+
 /* Modal kicker (DESIGN.md "modal standard"): mono uppercase. */
 .project-sidebar-eyebrow,
 .project-editor-eyebrow {
