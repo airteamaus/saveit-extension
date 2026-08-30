@@ -47,14 +47,15 @@ One amber accent, rust for destructive, nothing else. Solid colors only — no g
 ## Type
 
 - **Newsreader Variable** (serif): masthead, index row titles, search input, modal/empty-state headings.
-- **Source Sans 3 Variable** (sans): controls, summaries, chips, buttons, body (15px/1.6).
-- **JetBrains Mono Variable**: domains, dates, counts, kickers (11px, uppercase, `letter-spacing: .14em`).
+- **Source Sans 3 Variable** (sans): controls, summaries, chips, buttons, body (18px/1.6).
+- **JetBrains Mono Variable**: domains, dates, counts, kickers (~13px, uppercase, `letter-spacing: .14em`).
+- The type scale is **+20% over studio parity** (Rich, 2026-08-30) — the Reading Room runs a wide 1200px column and reads best larger. Tokens live in `shared-ui.css` (`--font-size-2xs` … `--font-size-7xl`); scale everything through them, never raw px.
 - Bundled latin-subset woff2 in `src/fonts/` (`npm run sync-fonts`); MV3 CSP forbids remote fetches. `font-display: swap`; the UI sans is preloaded on the newtab. Never Inter, never system-ui as identity.
 - Never use `ink-faint` for readable text; mono metadata is `ink-soft`.
 
 ## Surfaces & rhythm
 
-- One centered column (760px page, 640px search) — "The Reading Room": utility row, masthead + dateline + double rule, search hero, launch strip, project pills, the index.
+- One centered column (1200px page, 800px search hero) — "The Reading Room": utility row, masthead + dateline + double rule, search hero, launch strip, project pills, the index. Index-row summaries measure to 90ch.
 - 8px spacing rhythm. Radii: 8px cards/chips/buttons/inputs, 12px dialogs, full for pills.
 - **One shadow** (`--shadow-dialog`) for interrupting surfaces only — modals, toasts, floating menus. Everything else separates by hairline (`--color-line`, `--color-line-strong` on hover). No boxes-within-boxes.
 

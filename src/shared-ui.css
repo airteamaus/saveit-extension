@@ -81,19 +81,21 @@
     0 24px 60px -18px rgb(0 0 0 / 0.6)
   );
 
-  /* Type scale — t-shirt sizing, one step ≈ 1–2px. */
-  --font-size-2xs: 0.625rem; /* 10px */
-  --font-size-xs: 0.6875rem; /* 11px */
-  --font-size-sm: 0.75rem; /* 12px */
-  --font-size-md: 0.8125rem; /* 13px */
-  --font-size-lg: 0.875rem; /* 14px */
-  --font-size-xl: 0.9375rem; /* 15px */
-  --font-size-2xl: 1rem; /* 16px */
-  --font-size-3xl: 1.125rem; /* 18px */
-  --font-size-4xl: 1.1875rem; /* 19px */
-  --font-size-5xl: 1.25rem; /* 20px */
-  --font-size-6xl: 1.5rem; /* 24px */
-  --font-size-7xl: 1.75rem; /* 28px */
+  /* Type scale — t-shirt sizing. Raised 20% over studio parity (Rich,
+     2026-08-30): the Reading Room runs a wide 1200px column and reads best
+     at a larger size. */
+  --font-size-2xs: 0.75rem; /* 12px */
+  --font-size-xs: 0.825rem; /* 13.2px */
+  --font-size-sm: 0.9rem; /* 14.4px */
+  --font-size-md: 0.975rem; /* 15.6px */
+  --font-size-lg: 1.05rem; /* 16.8px */
+  --font-size-xl: 1.125rem; /* 18px */
+  --font-size-2xl: 1.2rem; /* 19.2px */
+  --font-size-3xl: 1.35rem; /* 21.6px */
+  --font-size-4xl: 1.425rem; /* 22.8px */
+  --font-size-5xl: 1.5rem; /* 24px */
+  --font-size-6xl: 1.8rem; /* 28.8px */
+  --font-size-7xl: 2.1rem; /* 33.6px */
 
   --search-focus-shadow: 0 0 0 3px light-dark(rgb(180 83 9 / 0.18), rgb(217 119 6 / 0.25));
 }
