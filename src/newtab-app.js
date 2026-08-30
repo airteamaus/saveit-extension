@@ -14,20 +14,12 @@ import {
   createSavedPagesDrawerController,
   createSavedPagesStore
 } from './newtab-drawer.js';
-import {
-  bindNewtabEventHandlers,
-  getNewtabElements,
-  startNewtabPage
-} from './newtab-page.js';
+import { bindNewtabEventHandlers, getNewtabElements, startNewtabPage } from './newtab-page.js';
 import {
   createNewtabAuthLifecycle,
   createSavedPagesFooterUpdater
 } from './newtab-app-coordination.js';
-import {
-  escapeHtml,
-  updateStatsDisplay,
-  updateVersionIndicator
-} from './newtab-shared.js';
+import { escapeHtml, updateStatsDisplay, updateVersionIndicator } from './newtab-shared.js';
 
 // Trailing debounce for realtime-triggered feed refreshes. A burst of org
 // events (e.g. a bulk import's enrichments landing one by one) must coalesce
@@ -166,7 +158,11 @@ export function createNewtabApp({
   // drawer controller, project manager, and mirror toggle can share it.
   const toast = createToastRegion({ container: elements.toastRegion, documentObj });
 
-  const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn }, { notify: toast.show });
+  const projectManager = new ProjectManager(
+    API,
+    { escapeHtml: escapeHtmlFn },
+    { notify: toast.show }
+  );
 
   // When the store reconciles an optimistic tile (the real doc arrived),
   // clear the corresponding pending-save record so the stale tile doesn't
@@ -226,12 +222,17 @@ export function createNewtabApp({
     // subscriber wraps its body in an async IIFE with its own try/catch.
     void (async () => {
       try {
-        // Gating rule: only user: events can change the personal list (they
-        // are the owner's own saves/updates). A gmail client also receives
-        // org-mates' org: events, which are irrelevant to the personal list —
-        // for those, only the feed refresh runs. Project-key checking isn't
-        // practical here (the app doesn't hold the event's project ids).
-        if ((event.scopeKeys || []).some((key) => key.startsWith('user:'))) {
+        // Gating rule: the personal list changes only on the caller's OWN
+        // saves/updates. The backend always stamps the owner's user:<uid> key
+        // and forwards the full key list to org-mates, so matching on any
+        // user: prefix would refresh on an org-mate's save too — compare
+        // against our own uid instead. A null uid (signed-out race) fails
+        // open: refresh rather than silently drop the owner's own events.
+        // Project-key checking isn't practical here (the app doesn't hold the
+        // event's project ids).
+        const myUid = await getCurrentUserId();
+        const isMySave = !myUid || (event.scopeKeys || []).includes(`user:${myUid}`);
+        if (isMySave) {
           await savedPagesStore.refreshInitial();
         }
         // The SSE server only forwards an event to clients whose scope keys

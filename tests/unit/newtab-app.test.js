@@ -6,6 +6,18 @@ import {
   getDrawerControllerElements
 } from '../../src/newtab-app.js';
 
+// The page_updated gate compares event scope keys against the caller's own
+// uid, so the tests pin a stable identity ('uid-me') instead of depending on
+// whatever browser storage happens to expose in the test environment.
+const { getCurrentUserIdMock } = vi.hoisted(() => ({
+  getCurrentUserIdMock: vi.fn(async () => 'uid-me')
+}));
+
+vi.mock('../../src/session-store.js', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, getCurrentUserId: getCurrentUserIdMock };
+});
+
 describe('newtab app factory', () => {
   it('maps drawer and auth element groups', () => {
     const elements = {
@@ -64,11 +76,8 @@ describe('newtab app factory', () => {
       onSignedIn: () => dc.handleSignedIn(),
       onSignedOut: () => dc.handleSignedOut()
     }));
-    const createSavedPagesFooterUpdaterFn = vi.fn(({ versionIndicator }) => total => {
-      updateStatsDisplayFn(
-        versionIndicator,
-        typeof total === 'number' ? { total } : null
-      );
+    const createSavedPagesFooterUpdaterFn = vi.fn(({ versionIndicator }) => (total) => {
+      updateStatsDisplayFn(versionIndicator, typeof total === 'number' ? { total } : null);
     });
     const startNewtabPageFn = vi.fn().mockResolvedValue(undefined);
     const updateStatsDisplayFn = vi.fn();
@@ -98,7 +107,7 @@ describe('newtab app factory', () => {
         createSavedPagesFooterUpdaterFn,
         createSavedPagesDrawerControllerFn,
         createSavedPagesStoreFn: vi.fn(() => savedPagesStore),
-        escapeHtmlFn: vi.fn(value => value),
+        escapeHtmlFn: vi.fn((value) => value),
         getNewtabElementsFn: vi.fn(() => elements),
         startNewtabPageFn,
         updateStatsDisplayFn,
@@ -220,19 +229,43 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     return { bus, api, savedPagesStore };
   }
 
-  it('refreshes the personal list only for user-scoped events', async () => {
+  it("refreshes the personal list only for the caller's own saves", async () => {
     vi.useFakeTimers();
-    const { bus, savedPagesStore } = await buildRealtimeHarness();
+    const { bus, api, savedPagesStore } = await buildRealtimeHarness();
 
-    bus.dispatch({ type: 'page_updated', scopeKeys: ['user:u1'], pageId: 'p1' });
+    // An org-mate's save carries THEIR user: key plus the shared org: key
+    // (the backend's buildScopeKeys always stamps the owner and the SSE
+    // server forwards the full list) — irrelevant to the personal list, so
+    // only the feed refresh may run.
+    bus.dispatch({
+      type: 'page_updated',
+      scopeKeys: ['user:uid-other', 'org:gmail.com'],
+      pageId: 'p1'
+    });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(savedPagesStore.refreshInitial).not.toHaveBeenCalled();
+    await vi.advanceTimersByTimeAsync(750);
+    expect(api.getFeed).toHaveBeenCalledTimes(1);
+
+    // Own save: our uid is in the scope keys — the personal list re-pulls.
+    bus.dispatch({
+      type: 'page_updated',
+      scopeKeys: ['user:uid-me', 'org:gmail.com'],
+      pageId: 'p2'
+    });
     await vi.advanceTimersByTimeAsync(0);
     expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
 
-    // An org-mate's event is irrelevant to the personal list: the personal
-    // store must NOT re-pull (only the feed refresh is scheduled).
-    bus.dispatch({ type: 'page_updated', scopeKeys: ['org:gmail.com'], pageId: 'p2' });
+    // Signed-out race (uid resolves null): the gate fails open so the
+    // owner's own events are never silently dropped.
+    getCurrentUserIdMock.mockResolvedValueOnce(null);
+    bus.dispatch({
+      type: 'page_updated',
+      scopeKeys: ['user:uid-other', 'org:gmail.com'],
+      pageId: 'p3'
+    });
     await vi.advanceTimersByTimeAsync(0);
-    expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
+    expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(2);
   });
 
   it('coalesces a burst of org events into one cache-bypassing feed refresh', async () => {
