@@ -1,4 +1,5 @@
 import { createNewtabAuthController } from './newtab-auth.js';
+import { createFeedController } from './newtab-feed.js';
 import { createSharingCentre } from './sharing-centre.js';
 import { createDataSyncCentre } from './data-sync-centre.js';
 import { createToastRegion } from './toast.js';
@@ -13,20 +14,30 @@ import {
   createSavedPagesDrawerController,
   createSavedPagesStore
 } from './newtab-drawer.js';
-import {
-  bindNewtabEventHandlers,
-  getNewtabElements,
-  startNewtabPage
-} from './newtab-page.js';
+import { bindNewtabEventHandlers, getNewtabElements, startNewtabPage } from './newtab-page.js';
 import {
   createNewtabAuthLifecycle,
   createSavedPagesFooterUpdater
 } from './newtab-app-coordination.js';
-import {
-  escapeHtml,
-  updateStatsDisplay,
-  updateVersionIndicator
-} from './newtab-shared.js';
+import { escapeHtml, updateStatsDisplay, updateVersionIndicator } from './newtab-shared.js';
+
+// Trailing debounce for realtime-triggered feed refreshes. A burst of org
+// events (e.g. a bulk import's enrichments landing one by one) must coalesce
+// into a single refetch; re-arming clears the pending timer so intervals
+// never stack. One newtab page = one app instance and the page is one-shot,
+// so a module-scope timer needs no teardown.
+const FEED_REFRESH_DEBOUNCE_MS = 750;
+let feedRefreshTimer = null;
+
+function scheduleFeedRefresh(feedController) {
+  if (feedRefreshTimer) {
+    clearTimeout(feedRefreshTimer);
+  }
+  feedRefreshTimer = setTimeout(() => {
+    feedRefreshTimer = null;
+    void feedController.refresh();
+  }, FEED_REFRESH_DEBOUNCE_MS);
+}
 
 export function getDrawerControllerElements(elements) {
   return {
@@ -147,7 +158,11 @@ export function createNewtabApp({
   // drawer controller, project manager, and mirror toggle can share it.
   const toast = createToastRegion({ container: elements.toastRegion, documentObj });
 
-  const projectManager = new ProjectManager(API, { escapeHtml: escapeHtmlFn }, { notify: toast.show });
+  const projectManager = new ProjectManager(
+    API,
+    { escapeHtml: escapeHtmlFn },
+    { notify: toast.show }
+  );
 
   // When the store reconciles an optimistic tile (the real doc arrived),
   // clear the corresponding pending-save record so the stale tile doesn't
@@ -170,6 +185,19 @@ export function createNewtabApp({
     versionIndicator: elements.versionIndicator,
     updateStatsDisplay: updateStatsDisplayFn
   });
+  // Org feed: the idle desk index is the organisation feed; the drawer
+  // (search/manage) stays personal. Falls back to the personal list while
+  // the backend lacks /feed (deploy-order bridge). Created before the
+  // drawer controller so it can be threaded through as a dependency.
+  const feedController = createFeedController({
+    api: API,
+    documentObj,
+    resultsContainer: elements.savedPagesDrawerResults,
+    kickerSlotEl: elements.feedScopeKickerSlot,
+    disclosureSlotEl: elements.feedDisclosureSlot,
+    notify: toast.show
+  });
+
   const drawerController = createSavedPagesDrawerControllerFn({
     api: API,
     savedPagesStore,
@@ -178,7 +206,8 @@ export function createNewtabApp({
     elements: getDrawerControllerElements(elements),
     onSavedPagesTotalChange: updateSavedPagesFooter,
     refreshFavorites: undefined,
-    notify: toast.show
+    notify: toast.show,
+    feedController
   });
 
   // --- realtime push -------------------------------------------------------
@@ -187,14 +216,31 @@ export function createNewtabApp({
   // (connect() is called from newtab-page.js after auth resolves).
   const realtimeBus = new RealtimeEventBus();
 
-  // The dashboard saved-pages store refreshes on user-scoped page events. The
-  // server already filtered by scope; if we received it, it's relevant.
+  // The dashboard saved-pages store refreshes on user-scoped page events.
   realtimeBus.subscribe('page_updated', (event) => {
     // The bus dispatches synchronously and can't await async subscribers, so each
     // subscriber wraps its body in an async IIFE with its own try/catch.
     void (async () => {
       try {
-        await savedPagesStore.refreshInitial();
+        // Gating rule: the personal list changes only on the caller's OWN
+        // saves/updates. The backend always stamps the owner's user:<uid> key
+        // and forwards the full key list to org-mates, so matching on any
+        // user: prefix would refresh on an org-mate's save too — compare
+        // against our own uid instead. A null uid (signed-out race) fails
+        // open: refresh rather than silently drop the owner's own events.
+        // Project-key checking isn't practical here (the app doesn't hold the
+        // event's project ids).
+        const myUid = await getCurrentUserId();
+        const isMySave = !myUid || (event.scopeKeys || []).includes(`user:${myUid}`);
+        if (isMySave) {
+          await savedPagesStore.refreshInitial();
+        }
+        // The SSE server only forwards an event to clients whose scope keys
+        // intersect, so any org: key on a received event means *my* org —
+        // refresh the feed without client-side domain knowledge.
+        if ((event.scopeKeys || []).some((key) => key.startsWith('org:'))) {
+          scheduleFeedRefresh(feedController);
+        }
         if (event.change === 'enriched' || event.change === 'added') {
           // Clear the optimistic pending-save tile — replaces the enrichment poll.
           // The background SW owns pending-saves; relay via a runtime message.
@@ -246,11 +292,14 @@ export function createNewtabApp({
     url: `${CONFIG.realtimeFunctionUrl}/events/stream`,
     // SSE has no replay buffer: events that fire while the stream is down are
     // gone. On each (re)connect, run a catch-up refresh across every open
-    // surface (saved pages, the open project scope if any, and the projects
-    // list) so the standard update-check reconciles anything missed. Without
-    // this, a stream drop between a save/project event and reconnect leaves the
-    // change invisible until the user manually reloads.
-    onConnect: () => { void drawerController.refreshOpenScopes(); }
+    // surface (saved pages, the open project scope if any, the projects list,
+    // and the org feed) so the standard update-check reconciles anything
+    // missed. Without this, a stream drop between a save/project event and
+    // reconnect leaves the change invisible until the user manually reloads.
+    onConnect: () => {
+      void drawerController.refreshOpenScopes();
+      void feedController.refresh();
+    }
   });
 
   const authLifecycle = createNewtabAuthLifecycleFn({
@@ -371,6 +420,7 @@ export function createNewtabApp({
         versionNumberEl: elements.versionNumberEl,
         updateVersionIndicator: updateVersionIndicatorFn,
         drawerController,
+        feedController,
         authController,
         realtimeClient
       });

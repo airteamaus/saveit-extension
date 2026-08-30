@@ -18,6 +18,8 @@ export function getNewtabElements(documentObj = document) {
     launchStrip: documentObj.getElementById('desk-launch-strip'),
     projectPills: documentObj.getElementById('project-pills'),
     deskIndexTitle: documentObj.getElementById('desk-index-title'),
+    feedScopeKickerSlot: documentObj.getElementById('feed-scope-kicker-slot'),
+    feedDisclosureSlot: documentObj.getElementById('feed-disclosure-slot'),
     deskSort: documentObj.getElementById('desk-sort'),
     projectSidebar: documentObj.getElementById('project-sidebar'),
     sidebarToggleBtn: documentObj.getElementById('saved-pages-sidebar-toggle-btn'),
@@ -63,6 +65,7 @@ export async function startNewtabPage({
   versionNumberEl,
   updateVersionIndicator,
   drawerController,
+  feedController,
   authController,
   realtimeClient
 }) {
@@ -90,6 +93,10 @@ export async function startNewtabPage({
   // used to bypass that gate and race auth on cold starts.
   await authController.init();
   void drawerController.load?.();
+  // Warm the org feed in parallel with the drawer — placed after auth for the
+  // same token reason as load() above; a failed feed load just falls back to
+  // the personal list (renderIdle returns false).
+  void feedController?.load?.();
 
   // Open the realtime SSE stream now that auth has resolved (the stream needs
   // a session token). Fire-and-forget — the client toasts on disconnect and

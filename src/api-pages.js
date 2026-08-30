@@ -1,6 +1,7 @@
 // api-pages.js - Saved-page API facade composed from smaller page/project modules
 
 import { applyApiDomains } from './api-pages-domains.js';
+import { applyApiFeed } from './api-feed.js';
 import { applyApiImport } from './api-pages-import.js';
 import { applyApiPageActions } from './api-pages-page-actions.js';
 import { applyApiPagesLists } from './api-pages-lists.js';
@@ -12,5 +13,6 @@ export function applyApiPages(API) {
   applyApiPageActions(API);
   applyApiImport(API);
   applyApiDomains(API);
+  applyApiFeed(API);
   return API;
 }

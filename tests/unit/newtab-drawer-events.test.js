@@ -29,7 +29,8 @@ function buildHarness() {
     handleDrawerEditCancel: vi.fn(),
     handleDrawerUpdate: vi.fn(),
     handleDrawerTogglePrivacy: vi.fn(),
-    navigateDrawerCard: vi.fn()
+    navigateDrawerCard: vi.fn(),
+    handleDrawerScrollNearEnd: vi.fn()
   };
 
   const noop = () => {};
@@ -52,7 +53,7 @@ function buildHarness() {
     handleDrawerTogglePrivacy: handlers.handleDrawerTogglePrivacy,
     handleDrawerUpdate: handlers.handleDrawerUpdate,
     handleDrawerDelete: noop,
-    handleDrawerScrollNearEnd: noop,
+    handleDrawerScrollNearEnd: handlers.handleDrawerScrollNearEnd,
     setDrawerSearchValue: noop,
     setDrawerToggleState: noop,
     windowObj: window,
@@ -283,5 +284,39 @@ describe('launch chip navigation and rename', () => {
     expect(handleDrawerUpdate).not.toHaveBeenCalled();
     expect(document.querySelector('.launch-chip-label')).not.toBeNull();
     expect(document.querySelector('.launch-chip-rename-input')).toBeNull();
+  });
+});
+
+describe('scroll near-end lazy load', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // happy-dom does no layout, so the results container's scrollTop/
+  // clientHeight/scrollHeight are all 0 and isNearScrollEnd is trivially
+  // true — every dispatched scroll event reaches the rAF gate.
+  function dispatchResultsScroll() {
+    document.getElementById('results').dispatchEvent(new Event('scroll'));
+  }
+
+  async function flushAnimationFrame() {
+    await new Promise((resolve) => setTimeout(resolve, 32));
+  }
+
+  it('does not grow the personal list while the feed owns the results pane', async () => {
+    const { handleDrawerScrollNearEnd } = buildHarness();
+    // The feed renders a fixed window with no infinite scroll; scrolling it
+    // must not fetch personal pages whose rows never display.
+    document.getElementById('results').innerHTML = '<div data-section="feed"></div>';
+    dispatchResultsScroll();
+    await flushAnimationFrame();
+    expect(handleDrawerScrollNearEnd).not.toHaveBeenCalled();
+  });
+
+  it('still routes scroll to the personal lazy-load when the feed section is absent', async () => {
+    const { handleDrawerScrollNearEnd } = buildHarness();
+    dispatchResultsScroll();
+    await flushAnimationFrame();
+    expect(handleDrawerScrollNearEnd).toHaveBeenCalledTimes(1);
   });
 });

@@ -23,6 +23,9 @@ export function createSavedPagesDrawerController({
   refreshFavorites,
   // Optional toast callback for transient failure feedback within the drawer.
   notify,
+  // Org feed controller (idle desk index). Optional so the drawer works
+  // unchanged in tests and standalone contexts without a feed.
+  feedController = null,
   windowObj = window,
   documentObj = document,
   dependencies = {}
@@ -96,7 +99,8 @@ export function createSavedPagesDrawerController({
     launchStripContainer: launchStrip,
     datelineEl,
     getSavedPagesView: () => savedPagesView,
-    documentObj
+    documentObj,
+    feedController
   });
 
   // Index sort control: a display-order toggle. Sets the mode on state,
@@ -199,6 +203,7 @@ export function createSavedPagesDrawerController({
       handleDrawerEditCancel: dataController.handleDrawerEditCancel,
       handleDrawerEditStart: dataController.handleDrawerEditStart,
       handleDrawerPin: dataController.handleDrawerPin,
+      handleDrawerVote: (id) => feedController?.handleVote(id),
       handleDrawerTogglePrivacy: dataController.handleDrawerTogglePrivacy,
       handleDrawerUpdate: dataController.handleDrawerUpdate,
       handleDrawerDelete: dataController.handleDrawerDelete,

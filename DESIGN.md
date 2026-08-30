@@ -62,6 +62,7 @@ One amber accent, rust for destructive, nothing else. Solid colors only — no g
 ## Component language
 
 - **Index row**: hairline-separated table-of-contents row — serif title, mono date flush right (fades out on hover as action icons fade in over the same slot), soft sans summary, mono domain + tag pills. Not a card. **Hover reveals never shift layout** — date and actions share one slot; chips overlay in place.
+- **Feed row**: the idle index row in org mode — same table-of-contents anatomy as the index row, minus personal management actions. An always-visible vote control (chevron + mono points) leads the meta line; `aria-pressed` marks the voted state; the voter's own row disables the chevron. Attribution ("saved by X") and an "Only you" mono tag ride the same meta line. The header gains a mono scope kicker ("Everyone at acme.com" / "Everyone using Gmail — public" / "Your saves only"), and public scopes get a one-time hairline disclosure above the index.
 - **Launch chip**: pinned pages are utilities (Gmail, Calendar, Jira) — favicon + full user-retitled label, never truncated; hover overlays rename · unpin on the chip's right end without resizing it. The row wraps.
 - **Buttons**: primary = filled accent + on-accent text; secondary = quiet outline (line-strong + ink-soft); text links = accent-ink. No hover hops.
 - **Modal standard**: raised paper, 12px radius, the shadow, mono uppercase kicker + serif 22px title. Honest scope on destructive copy; cancel is the safe default.

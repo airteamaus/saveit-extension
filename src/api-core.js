@@ -7,10 +7,7 @@ import {
   getBrowserRuntime as defaultGetBrowserRuntime,
   getStorageAPI as defaultGetStorageAPI
 } from './config.js';
-import {
-  PROJECTS_CACHE_PREFIX,
-  DOMAINS_CACHE_PREFIX
-} from './cache-keys.js';
+import { PROJECTS_CACHE_PREFIX, DOMAINS_CACHE_PREFIX, FEED_CACHE_PREFIX } from './cache-keys.js';
 import {
   getSessionToken,
   getCurrentUserId as getSessionUserId,
@@ -78,6 +75,7 @@ export function applyApiCore(API, dependencies = {}) {
   API._cacheManager = null;
   API._projectsCacheManager = null;
   API._domainsCacheManager = null;
+  API._feedCacheManager = null;
   API._lastKnownUserId = undefined;
   API.LAST_KNOWN_USER_KEY = 'saveit_lastKnownUser';
 
@@ -137,6 +135,24 @@ export function applyApiCore(API, dependencies = {}) {
         );
       }
       return this._domainsCacheManager;
+    }
+  });
+
+  Object.defineProperty(API, 'feedCacheManager', {
+    configurable: true,
+    enumerable: true,
+    get() {
+      if (!this._feedCacheManager && this.isExtension) {
+        this._feedCacheManager = new cacheManagerClass(
+          () => this.getCurrentUserId(),
+          () => this.getStorage(),
+          {
+            getBootstrapUserId: () => this.getLastKnownUserId(),
+            keyPrefix: FEED_CACHE_PREFIX
+          }
+        );
+      }
+      return this._feedCacheManager;
     }
   });
 
@@ -430,6 +446,22 @@ export function applyApiCore(API, dependencies = {}) {
       return await this.domainsCacheManager.invalidateCache(scope);
     },
 
+    // --- feed surface cache (own prefix: FEED_CACHE_PREFIX) ---
+    async getFeedCachedPages(scope = {}, options = {}) {
+      if (!this.isExtension) return null;
+      return await this.feedCacheManager.getCachedPages(scope, options);
+    },
+
+    async setFeedCachedPages(response, scope = {}) {
+      if (!this.isExtension) return;
+      return await this.feedCacheManager.setCachedPages(response, scope);
+    },
+
+    async invalidateFeedCache(scope = null) {
+      if (!this.isExtension) return;
+      return await this.feedCacheManager.invalidateCache(scope);
+    },
+
     // Invalidate every surface cache. Used by the user-facing "reload from
     // server" affordance, where the intent is to bust everything and re-fetch.
     async invalidateAllCaches() {
@@ -437,7 +469,8 @@ export function applyApiCore(API, dependencies = {}) {
       await Promise.all([
         this.invalidateCache(),
         this.invalidateProjectsCache(),
-        this.invalidateDomainsCache()
+        this.invalidateDomainsCache(),
+        this.invalidateFeedCache()
       ]);
     },
 
