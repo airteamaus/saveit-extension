@@ -39,10 +39,15 @@ export function createFeedController({
   }
 
   function disclosureDismissed() {
+    const storage = localStorageSafe();
+    if (!storage) {
+      // Unreachable storage (e.g. cookies blocked): treat as dismissed rather
+      // than nagging on every render with no way to dismiss.
+      return true;
+    }
     try {
-      return localStorageSafe()?.getItem(DISCLOSURE_DISMISSED_KEY) === '1';
+      return storage.getItem(DISCLOSURE_DISMISSED_KEY) === '1';
     } catch {
-      // Unreachable storage: treat as dismissed rather than nagging.
       return true;
     }
   }

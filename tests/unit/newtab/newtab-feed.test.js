@@ -49,6 +49,30 @@ function buildDom() {
   };
 }
 
+// Chrome with all cookies blocked throws SecurityError on the
+// window.localStorage access itself — before any method call. Mirror that
+// shape: everything else on the document forwards to the real one (bound, so
+// renderer DOM calls keep working); only defaultView.localStorage throws.
+function buildBlockedStorageDocument() {
+  const view = new Proxy(globalThis, {
+    get(target, prop) {
+      if (prop === 'localStorage') {
+        throw new DOMException('Storage access denied', 'SecurityError');
+      }
+      return Reflect.get(target, prop);
+    }
+  });
+  return new Proxy(document, {
+    get(target, prop) {
+      if (prop === 'defaultView') {
+        return view;
+      }
+      const value = Reflect.get(target, prop);
+      return typeof value === 'function' ? value.bind(target) : value;
+    }
+  });
+}
+
 // Failure injection happens through these api mocks (a rejecting getFeed /
 // votePage), not through test-only hooks on the controller, so the tests
 // exercise the real error paths. Entries in overrides.api replace defaults.
@@ -64,7 +88,7 @@ function buildController(overrides = {}) {
   const notify = overrides.notify ?? vi.fn();
   const controller = createFeedController({
     api,
-    documentObj: document,
+    documentObj: overrides.documentObj ?? document,
     notify,
     ...dom
   });
@@ -226,6 +250,25 @@ describe('createFeedController', () => {
     expect(document.getElementById('disclosure').textContent).toBe('');
     // Safe to call with nothing rendered.
     controller.dismissDisclosure();
+    expect(document.getElementById('disclosure').textContent).toBe('');
+  });
+
+  it('treats unreachable storage as dismissed so a public feed renders without the disclosure', async () => {
+    // localStorageSafe() catches the SecurityError and returns null; the
+    // controller must honor that as "dismissed" or the disclosure would
+    // render on every public-scope render with a no-op dismiss button.
+    const { controller } = buildController({
+      documentObj: buildBlockedStorageDocument(),
+      api: {
+        getFeed: vi.fn(async () => ({
+          ...FEED,
+          scope: { type: 'org', domain: 'gmail.com', public: true }
+        }))
+      }
+    });
+    await controller.load();
+    expect(controller.renderIdle()).toBe(true);
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(2);
     expect(document.getElementById('disclosure').textContent).toBe('');
   });
 
