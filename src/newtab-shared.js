@@ -63,10 +63,11 @@ export function escapeHtml(text = '') {
   return div.innerHTML;
 }
 
-// Cap the card summary text. There is no CSS line-clamp on the card summary
+// Cap the index-row summary text. There is no CSS line-clamp on the summary
 // (it wraps freely), so this cap is the single truncation authority: show up
-// to 290 chars, then "...". Tuned for a concise multi-line preview.
-export function truncateText(text = '', maxLength = 290) {
+// to 340 chars, then "...". Tuned for the 90ch-wide measure — a concise
+// multi-line preview at the +20% type scale.
+export function truncateText(text = '', maxLength = 340) {
   if (!text || text.length <= maxLength) return text;
   return `${text.slice(0, maxLength).trim()}...`;
 }
