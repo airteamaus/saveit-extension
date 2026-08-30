@@ -413,28 +413,34 @@ body {
   outline-offset: 2px;
 }
 
+/* Title column + one right-aligned slot shared by the date and the action
+   icons (stacked in the same grid cell). At rest the date sits flush right;
+   on hover the icons fade in over the same slot — nothing shifts, and the
+   date is never pushed left by reserved action space. */
 .index-row-main {
-  display: flex;
-  align-items: baseline;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   gap: 12px;
   min-width: 0;
 }
 
 .index-row-title {
   margin: 0;
+  grid-column: 1;
   font-family: var(--font-display);
   font-size: var(--font-size-2xl);
   font-weight: 500;
   line-height: 1.4;
   color: var(--color-ink);
-  flex: 1;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-/* The mono date yields its slot to the action icons on hover/focus. */
 .index-row-date {
-  flex: none;
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-ink-soft);
@@ -442,17 +448,21 @@ body {
 }
 
 .index-row-actions {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  flex: none;
   opacity: 0;
+  pointer-events: none;
   transition: opacity 0.15s ease;
 }
 
 .index-row:hover .index-row-actions,
 .index-row:focus-within .index-row-actions {
   opacity: 1;
+  pointer-events: auto;
 }
 
 .index-row:hover .index-row-date,
@@ -1263,6 +1273,7 @@ body {
    (DESIGN.md "launch chip"). Labels come from the page title and are never
    truncated: the user retitles, chips grow, the row wraps. */
 .launch-chip {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -1302,8 +1313,32 @@ body {
   text-overflow: clip;
 }
 
+/* Actions overlay in place (opacity, never display) so the chip — and the
+   wrapping strip — never changes size on hover. The raised-paper background
+   masks the label tail cleanly when they appear. */
+.launch-chip-actions {
+  position: absolute;
+  right: 3px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-paper-raised);
+  border-radius: var(--radius-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+
+.launch-chip:hover .launch-chip-actions,
+.launch-chip:focus-within .launch-chip-actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
 .launch-chip-action {
-  display: none;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 20px;
@@ -1320,11 +1355,6 @@ body {
 .launch-chip-action svg {
   width: 12px;
   height: 12px;
-}
-
-.launch-chip:hover .launch-chip-action,
-.launch-chip:focus-within .launch-chip-action {
-  display: inline-flex;
 }
 
 .launch-chip-action:hover {

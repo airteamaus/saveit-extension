@@ -258,32 +258,34 @@ export function renderLaunchChipMarkup(page) {
     <article class="launch-chip" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
       ${faviconHtml}
       <span class="launch-chip-label">${escapeHtml(label)}</span>
-      <button
-        class="launch-chip-action"
-        type="button"
-        data-action="chip-rename"
-        data-id="${escapeHtml(page.id)}"
-        title="Rename"
-        aria-label="Rename ${escapeHtml(label)}"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path d="M12 20h9"></path>
-          <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
-        </svg>
-      </button>
-      <button
-        class="launch-chip-action"
-        type="button"
-        data-action="pin"
-        data-id="${escapeHtml(page.id)}"
-        title="Unpin"
-        aria-label="Unpin ${escapeHtml(label)}"
-      >
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <line x1="18" y1="6" x2="6" y2="18"></line>
-          <line x1="6" y1="6" x2="18" y2="18"></line>
-        </svg>
-      </button>
+      <span class="launch-chip-actions">
+        <button
+          class="launch-chip-action"
+          type="button"
+          data-action="chip-rename"
+          data-id="${escapeHtml(page.id)}"
+          title="Rename"
+          aria-label="Rename ${escapeHtml(label)}"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.12 2.12 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+          </svg>
+        </button>
+        <button
+          class="launch-chip-action"
+          type="button"
+          data-action="pin"
+          data-id="${escapeHtml(page.id)}"
+          title="Unpin"
+          aria-label="Unpin ${escapeHtml(label)}"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </span>
     </article>
   `;
 }

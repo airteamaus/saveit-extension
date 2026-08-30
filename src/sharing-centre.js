@@ -140,7 +140,7 @@ export function createSharingCentre({
 
     const header = el('div', { className: 'sharing-centre-header', children: [
       el('div', { children: [
-        el('p', { className: 'project-editor-eyebrow', text: 'SaveIt' }),
+        el('p', { className: 'project-editor-eyebrow', text: 'Newtab' }),
         el('h2', { className: 'project-editor-title', text: 'Sharing', attrs: { id: 'sharing-centre-title' } })
       ] }),
       el('button', { className: 'project-editor-close', text: '✕', attrs: { 'aria-label': 'Close' }, onClick: close })
