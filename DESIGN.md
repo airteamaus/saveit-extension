@@ -1,8 +1,8 @@
-# DESIGN.md — SaveIt ("Research Desk" direction)
+# DESIGN.md — Newtab ("Research Desk" direction)
 
 > Approved by Rich 2026-08-30 (redesign spec: `docs/superpowers/specs/2026-08-30-research-desk-redesign-design.md`). Warm editorial: saved pages are documents, the new tab is a good desk — cream paper, warm ink, amber for actions, rust for deny. The page loads fast; the interface stays composed.
 
-Mode: **Return** — people come back to find something they saved. Scanability, calm, and speed outrank expression. Adopted literally from Axil Studio's direction (`/Users/rich/Code/agent/DESIGN.md`); the espresso dark companion is SaveIt-specific.
+Mode: **Return** — people come back to find something they saved. Scanability, calm, and speed outrank expression. Adopted literally from Axil Studio's direction (`/Users/rich/Code/agent/DESIGN.md`); the espresso dark companion is Newtab-specific. ("SaveIt" is the product's pre-rebrand name — never use it in the UI.)
 
 ## Palette
 
@@ -61,8 +61,8 @@ One amber accent, rust for destructive, nothing else. Solid colors only — no g
 
 ## Component language
 
-- **Index row**: hairline-separated table-of-contents row — serif title, mono date (right, fades out on hover as action icons fade in), soft sans summary, mono domain + tag pills. Not a card.
-- **Launch chip**: pinned pages are utilities (Gmail, Calendar, Jira) — favicon + full user-retitled label, never truncated; hover reveals rename · unpin. The row wraps.
+- **Index row**: hairline-separated table-of-contents row — serif title, mono date flush right (fades out on hover as action icons fade in over the same slot), soft sans summary, mono domain + tag pills. Not a card. **Hover reveals never shift layout** — date and actions share one slot; chips overlay in place.
+- **Launch chip**: pinned pages are utilities (Gmail, Calendar, Jira) — favicon + full user-retitled label, never truncated; hover overlays rename · unpin on the chip's right end without resizing it. The row wraps.
 - **Buttons**: primary = filled accent + on-accent text; secondary = quiet outline (line-strong + ink-soft); text links = accent-ink. No hover hops.
 - **Modal standard**: raised paper, 12px radius, the shadow, mono uppercase kicker + serif 22px title. Honest scope on destructive copy; cancel is the safe default.
 - **Toasts**: pill, raised, hairline + shadow, accent/rust keyed by type.

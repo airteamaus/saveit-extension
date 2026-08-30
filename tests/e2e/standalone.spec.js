@@ -176,7 +176,10 @@ test.describe('Standalone Mode', () => {
   test('should create and assign a project from the page editor', async ({ page }) => {
     await showAllPages(page);
 
+    // Row actions are pointer-transparent at rest; hovering the row reveals
+    // them (that's the real user path — see the index-row overlay design).
     const firstCard = page.locator('.index-row').first();
+    await firstCard.hover();
     await firstCard.locator('.btn-projects').click();
     await expect(page.locator('#project-editor-dialog')).not.toHaveClass(/hidden/);
 
@@ -206,6 +209,8 @@ test.describe('Standalone Mode', () => {
     // behind the semantic pane).
     const card = page.locator('.index-row').first();
     const originalTitle = await card.locator('.index-row-title').textContent();
+    // Actions are pointer-transparent at rest; hover the row to reveal them.
+    await card.hover();
     await card.locator('.index-row-edit-btn').click();
 
     await card.locator('input[name="title"]').fill('Edited Himalayan Journey');
@@ -291,8 +296,12 @@ test.describe('Standalone Mode', () => {
     const card = page.locator('.index-row').first();
     const pinBtn = card.locator('.index-row-pin-btn');
 
+    // Measure the button at rest, then reveal the actions by hovering the
+    // ROW (the real pointer path — the buttons are pointer-transparent
+    // until the row is hovered) and measure again.
     const before = await pinBtn.boundingBox();
-    await pinBtn.hover();
+    await card.hover();
+    await expect(pinBtn).toBeVisible();
     const after = await pinBtn.boundingBox();
 
     // The button must not translate or resize on hover. Before the fix the
