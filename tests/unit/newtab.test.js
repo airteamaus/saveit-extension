@@ -663,7 +663,7 @@ describe('newtab modules', () => {
       // saved-page cards and no pages/semantic sections, just the illustration.
       const pagesSection = resultsContainer.querySelector('[data-section="pages"]');
       expect(pagesSection).toBeNull();
-      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      const cards = resultsContainer.querySelectorAll('.index-row');
       expect(cards.length).toBe(0);
 
       const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
@@ -706,7 +706,7 @@ describe('newtab modules', () => {
       // no empty-state branch replaces it.
       const svg = resultsContainer.querySelector('svg.saved-pages-semantic-loading-image');
       expect(svg).not.toBeNull();
-      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      const cards = resultsContainer.querySelectorAll('.index-row');
       expect(cards.length).toBe(0);
     });
   });
@@ -776,11 +776,11 @@ describe('newtab modules', () => {
         projectsUnavailable: false
       });
 
-      expect(markup).toContain('saved-pages-drawer-card');
+      expect(markup).toContain('index-row');
       expect(markup).toContain('data-page-id="page-1"');
       expect(markup).toContain('Important');
       expect(markup).toContain('data-action="pin"');
-      expect(markup).toContain('saved-pages-drawer-projects-btn');
+      expect(markup).toContain('index-row-projects-btn');
       expect(markup).toContain('data-action="projects"');
       expect(markup).toContain('tag-search-link');
       expect(markup).toContain('data-semantic-search-tag="machine learning"');
@@ -807,7 +807,7 @@ describe('newtab modules', () => {
     });
 
     it('prefers ai_summary_brief and falls back to the page description', () => {
-      const summaryClass = 'saved-pages-drawer-card-summary';
+      const summaryClass = 'index-row-summary';
 
       // AI summary wins when both are present
       const bothMarkup = renderDrawerCardMarkup({
@@ -1546,28 +1546,28 @@ describe('newtab modules', () => {
       const { container, renderer } = makeRenderer({ renderLimit: 10 });
       renderer.renderResults(makePages(150));
 
-      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(10);
+      expect(container.querySelectorAll('.index-row')).toHaveLength(10);
     });
 
     it('grows the rendered window when renderLimit increases, reusing existing nodes', () => {
       let renderLimit = 10;
       const { container, renderer, setRenderLimit } = makeRenderer({ renderLimit });
       renderer.renderResults(makePages(150));
-      const firstCardBefore = container.querySelector('.saved-pages-drawer-card');
+      const firstCardBefore = container.querySelector('.index-row');
 
       setRenderLimit(110);
       renderer.renderResults(makePages(150));
 
-      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(110);
+      expect(container.querySelectorAll('.index-row')).toHaveLength(110);
       // Keyed reconciliation reuses the first node rather than rebuilding it.
-      expect(container.querySelector('.saved-pages-drawer-card')).toBe(firstCardBefore);
+      expect(container.querySelector('.index-row')).toBe(firstCardBefore);
     });
 
     it('renders all pages when renderLimit is at or beyond the count', () => {
       const { container, renderer } = makeRenderer({ renderLimit: 1000 });
       renderer.renderResults(makePages(25));
 
-      expect(container.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(25);
+      expect(container.querySelectorAll('.index-row')).toHaveLength(25);
     });
   });
 
@@ -1893,12 +1893,12 @@ describe('newtab modules', () => {
 
       // Initial render
       uiController.renderResults();
-      expect(resultsContainer.querySelectorAll('.saved-pages-drawer-card')).toHaveLength(2);
+      expect(resultsContainer.querySelectorAll('.index-row')).toHaveLength(2);
 
       // Delete one page
       await controller.handleDrawerDelete('page-1');
 
-      const cards = resultsContainer.querySelectorAll('.saved-pages-drawer-card');
+      const cards = resultsContainer.querySelectorAll('.index-row');
       expect(cards).toHaveLength(1);
       expect(cards[0].dataset.pageId).toBe('page-2');
       // No orphaned state divs; only the pages section should remain.

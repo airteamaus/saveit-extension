@@ -5,6 +5,7 @@ import {
 import { reconcileKeyedChildren } from './keyed-dom-list.js';
 import {
   escapeHtml,
+  formatSavedDate,
   getFaviconUrlForDomain,
   getPageDomain,
   renderPageTags,
@@ -58,7 +59,7 @@ export function renderDrawerCardMarkup(page, {
     : '';
   const projectPillsHtml = projectPills.length
     ? `
-      <div class="saved-pages-drawer-card-projects">
+      <div class="index-row-projects">
         ${projectPills.map(project => `
           <span class="project-pill" title="${escapeHtml(project.name)}">
             <span class="project-pill-label">${escapeHtml(project.name)}</span>
@@ -79,7 +80,7 @@ export function renderDrawerCardMarkup(page, {
     : '';
   const editButtonHtml = `
     <button
-      class="saved-pages-drawer-action-btn saved-pages-drawer-edit-btn"
+      class="index-row-action index-row-edit-btn"
       type="button"
       data-action="edit"
       data-id="${escapeHtml(page.id)}"
@@ -101,7 +102,7 @@ export function renderDrawerCardMarkup(page, {
   const privacyButtonLabel = isPrivate ? 'Show in organisation' : 'Hide from organisation';
   const privacyButtonHtml = `
     <button
-      class="saved-pages-drawer-action-btn saved-pages-drawer-privacy-btn ${isPrivate ? 'is-active' : ''}"
+      class="index-row-action index-row-privacy-btn ${isPrivate ? 'is-active' : ''}"
       type="button"
       data-action="toggle-privacy"
       data-id="${escapeHtml(page.id)}"
@@ -122,7 +123,7 @@ export function renderDrawerCardMarkup(page, {
     : (actionBusyTitle || 'Manage projects');
   const projectsButtonHtml = `
     <button
-      class="saved-pages-drawer-action-btn saved-pages-drawer-projects-btn btn-projects"
+      class="index-row-action index-row-projects-btn btn-projects"
       type="button"
       data-action="projects"
       data-id="${escapeHtml(page.id)}"
@@ -177,17 +178,17 @@ export function renderDrawerCardMarkup(page, {
     </form>
   `;
 
+  // Index row: a table-of-contents entry, not a box — serif title, mono date
+  // that yields to the action icons on hover (DESIGN.md "index row").
   return `
-    <article class="saved-pages-drawer-card" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
-      <div class="saved-pages-drawer-card-header">
-        <div class="saved-pages-drawer-card-heading">
-          ${domain ? `<img class="saved-pages-drawer-card-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="18" height="18">` : ''}
-          <h3 class="saved-pages-drawer-card-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
-        </div>
-        <div class="saved-pages-drawer-card-actions">
+    <article class="index-row" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
+      <div class="index-row-main">
+        <h3 class="index-row-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
+        <span class="index-row-date">${escapeHtml(formatSavedDate(page.saved_at, { day: 'numeric', month: 'short' }))}</span>
+        <div class="index-row-actions">
           ${isEditing ? '' : editButtonHtml}
           <button
-            class="saved-pages-drawer-action-btn saved-pages-drawer-pin-btn ${page.pinned ? 'is-active' : ''}"
+            class="index-row-action index-row-pin-btn ${page.pinned ? 'is-active' : ''}"
             type="button"
             data-action="pin"
             data-id="${escapeHtml(page.id)}"
@@ -195,7 +196,7 @@ export function renderDrawerCardMarkup(page, {
             aria-label="${actionBusyTitle || (page.pinned ? 'Unpin page' : 'Pin page')}"
             ${actionDisabledAttr}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <path d="M12 17v5"></path>
               <path d="M8 3h8l-1 5 3 3v2H6v-2l3-3-1-5z"></path>
             </svg>
@@ -203,7 +204,7 @@ export function renderDrawerCardMarkup(page, {
           ${isEditing ? '' : privacyButtonHtml}
           ${projectsButtonHtml}
           <button
-            class="saved-pages-drawer-action-btn saved-pages-drawer-delete-btn"
+            class="index-row-action index-row-delete-btn"
             type="button"
             data-action="delete"
             data-id="${escapeHtml(page.id)}"
@@ -211,7 +212,7 @@ export function renderDrawerCardMarkup(page, {
             aria-label="Delete page"
             ${isEditing ? 'disabled' : ''}
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
               <path d="M3 6h18"></path>
               <path d="M8 6V4h8v2"></path>
               <path d="M19 6l-1 14H6L5 6"></path>
@@ -223,11 +224,14 @@ export function renderDrawerCardMarkup(page, {
       </div>
       ${isEditing
         ? editFormHtml
-        : (summary ? `<p class="saved-pages-drawer-card-summary">${escapeHtml(truncateText(summary))}</p>` : '')}
+        : (summary ? `<p class="index-row-summary">${escapeHtml(truncateText(summary))}</p>` : '')}
       ${projectPillsHtml}
-      <div class="saved-pages-drawer-card-footer">
-        ${meta.length ? `<div class="saved-pages-drawer-card-meta">${meta.join('<span class="saved-pages-drawer-meta-separator">•</span>')}</div>` : '<span></span>'}
-        ${tagsHtml ? `<div class="saved-pages-drawer-card-tags">${tagsHtml}</div>` : ''}
+      <div class="index-row-footer">
+        <div class="index-row-meta">
+          ${domain ? `<img class="index-row-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="14" height="14">` : ''}
+          ${meta.length ? meta.join('<span class="index-row-meta-sep">·</span>') : ''}
+        </div>
+        ${tagsHtml ? `<div class="index-row-tags">${tagsHtml}</div>` : ''}
       </div>
     </article>
   `;
@@ -304,7 +308,7 @@ export function createDrawerRenderer({
     // Scope to the pages section only so card lookups never match a card in
     // the semantic-results section (which is reconciled separately).
     const scope = resultsContainer.querySelector('[data-section="pages"]') || resultsContainer;
-    return Array.from(scope.querySelectorAll('.saved-pages-drawer-card'))
+    return Array.from(scope.querySelectorAll('.index-row'))
       .find(card => card.dataset.pageId === pageId) || null;
   }
 

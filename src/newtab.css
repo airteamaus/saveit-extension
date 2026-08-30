@@ -356,130 +356,110 @@ body {
   min-height: 100%;
 }
 
-.saved-pages-drawer-card {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin: var(--spacing-sm) 0;
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  /* Cards read as discrete objects at rest via a faint surface fill and a
-     visible soft border, rather than only resolving on hover. Hover then
-     elevates an already-legible object. */
-  background: color-mix(in srgb, var(--color-paper-raised) 60%, transparent);
-  border: 1px solid color-mix(in srgb, var(--color-line) 55%, transparent);
+/* Index rows — table-of-contents entries separated by hairlines, not boxes
+   (DESIGN.md "index row"). */
+.index-row {
+  padding: 13px 2px;
+  border-bottom: 1px solid var(--color-line);
   text-decoration: none;
   color: inherit;
   cursor: pointer;
-  transition:
-    background-color 0.18s ease,
-    border-color 0.18s ease,
-    box-shadow 0.18s ease;
 }
 
-.saved-pages-drawer-card:hover {
-  background: color-mix(in srgb, var(--color-paper-raised) 80%, transparent);
-  border-color: var(--saved-pages-panel-border-active);
-}
-
-.saved-pages-drawer-card:focus-visible {
+.index-row:focus-visible {
   outline: 2px solid color-mix(in srgb, var(--color-accent) 58%, transparent);
   outline-offset: 2px;
 }
 
-.saved-pages-drawer-card-header {
+.index-row-main {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  align-items: baseline;
+  gap: 12px;
   min-width: 0;
 }
 
-.saved-pages-drawer-card-heading {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-  flex: 1;
-}
-
-.saved-pages-drawer-card-favicon {
-  flex-shrink: 0;
-  width: 16px;
-  height: 16px;
-  border-radius: var(--radius-sm);
-}
-
-.saved-pages-drawer-card-title {
+.index-row-title {
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  line-height: 1.25;
+  font-family: var(--font-display);
+  font-size: var(--font-size-2xl);
+  font-weight: 500;
+  line-height: 1.4;
   color: var(--color-ink);
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.saved-pages-drawer-card-actions {
+/* The mono date yields its slot to the action icons on hover/focus. */
+.index-row-date {
+  flex: none;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-ink-soft);
+  transition: opacity 0.15s ease;
+}
+
+.index-row-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-shrink: 0;
+  gap: 2px;
+  flex: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
-.saved-pages-drawer-action-btn {
+.index-row:hover .index-row-actions,
+.index-row:focus-within .index-row-actions {
+  opacity: 1;
+}
+
+.index-row:hover .index-row-date,
+.index-row:focus-within .index-row-date {
+  opacity: 0;
+}
+
+.index-row-action {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: var(--radius-full);
-  border: 1px solid var(--saved-pages-panel-border);
-  background: var(--saved-pages-control-bg);
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--color-ink-soft);
   cursor: pointer;
   transition:
     background-color 0.18s ease,
-    border-color 0.18s ease,
     color 0.18s ease;
 }
 
-.saved-pages-drawer-action-btn:hover {
-  color: var(--color-ink);
-  border-color: var(--saved-pages-panel-border-active);
-  background: var(--saved-pages-control-bg-hover);
+.index-row-action svg {
+  width: 15px;
+  height: 15px;
 }
 
-.saved-pages-drawer-action-btn svg {
-  width: 13px;
-  height: 13px;
+.index-row-action:hover {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
 }
 
-.saved-pages-drawer-pin-btn.is-active {
-  color: var(--color-accent);
-  border-color: var(--saved-pages-panel-border-active);
+.index-row-pin-btn.is-active,
+.index-row-privacy-btn.is-active {
+  color: var(--color-accent-ink);
 }
 
-.saved-pages-drawer-privacy-btn.is-active {
-  color: var(--color-accent);
-  border-color: var(--saved-pages-panel-border-active);
+.index-row-delete-btn:hover {
+  background: color-mix(in srgb, var(--color-rust) 10%, transparent);
+  color: var(--color-rust);
 }
 
-.saved-pages-drawer-delete-btn:hover {
-  color: var(--color-rust, #dc2626);
-  border-color: color-mix(in srgb, #dc2626 32%, var(--color-line));
-  background: color-mix(in srgb, #dc2626 5%, transparent);
-}
-
-.saved-pages-drawer-card-summary {
-  /* Indent to line up with the title text, past the 16px favicon + 6px gap.
-     The padding-left keeps the text aligned; the paper backing makes a card
-     with a summary read as a richer content zone than a bare card. */
-  margin: 0 0 0 22px;
-  padding: 6px 10px;
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--color-paper) 70%, transparent);
+.index-row-summary {
+  margin: 4px 0 0;
   font-size: var(--font-size-md);
-  line-height: 1.35;
+  line-height: 1.55;
   color: var(--color-ink-soft);
+  max-width: 68ch;
 }
 
 .saved-pages-drawer-edit-form {
@@ -575,41 +555,49 @@ body {
   cursor: default;
 }
 
-.saved-pages-drawer-card-projects {
+.index-row-projects {
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
-  /* Push project pills to the right edge of the card. */
+  margin-top: 7px;
+  /* Push project pills to the right edge of the row. */
   justify-content: flex-end;
 }
 
-.saved-pages-drawer-card-footer {
+.index-row-footer {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: flex-start;
   gap: 6px 10px;
+  margin-top: 7px;
 }
 
-.saved-pages-drawer-card-meta {
-  /* Indent to line up with the title text, past the 16px favicon + 6px gap. */
-  margin-left: 22px;
+.index-row-meta {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 7px;
   align-items: center;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
   color: var(--color-ink-soft);
-  font-size: var(--font-size-sm);
 }
 
-.saved-pages-drawer-meta-separator {
+.index-row-favicon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+}
+
+.index-row-meta-sep {
   opacity: 0.6;
 }
 
-.saved-pages-drawer-card-tags {
+.index-row-tags {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   margin-left: auto;
 }
 
@@ -689,7 +677,7 @@ body {
     color 0.2s ease;
 }
 
-.saved-pages-drawer-card .btn-projects {
+.index-row .btn-projects {
   padding: 0;
 }
 
@@ -711,7 +699,7 @@ body {
   color: var(--color-accent);
 }
 
-.saved-pages-drawer-projects-btn svg {
+.index-row-projects-btn svg {
   width: 13px;
   height: 13px;
 }
@@ -1053,12 +1041,15 @@ body {
   color: var(--color-ink);
 }
 
-.saved-pages-drawer-card-tags .tag {
-  font-size: var(--font-size-sm);
-  line-height: 1.2;
-  text-decoration: underline;
-  text-underline-offset: 0.2em;
-  text-decoration-thickness: 1px;
+/* Tag pills on index rows: mono lowercase on the accent wash (DESIGN.md). */
+.index-row-tags .tag {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs);
+  line-height: 1.4;
+  color: var(--color-accent-ink);
+  background: var(--color-accent-wash);
+  border-radius: var(--radius-full);
+  padding: 1px 8px;
 }
 
 .tag-search-link {

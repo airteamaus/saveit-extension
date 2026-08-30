@@ -174,7 +174,7 @@ describe('privacy toggle click delegation', () => {
 describe('pinned shelf card navigation', () => {
   // Regression: the pinned shelf renders cards with class
   // .saved-pages-home-pinned-card, but the click delegation only matched
-  // .saved-pages-drawer-card, so clicking a pinned card did nothing.
+  // .index-row, so clicking a pinned card did nothing.
   function buildMinimalHarness() {
     document.body.innerHTML = `
       <div id="results">

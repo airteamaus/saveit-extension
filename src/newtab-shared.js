@@ -28,14 +28,15 @@ export function getPageDomain(page = {}) {
   }
 }
 
-export function formatSavedDate(savedAt) {
+export function formatSavedDate(savedAt, options = {}) {
   if (!savedAt) return '';
 
   try {
     return new Date(savedAt).toLocaleDateString(undefined, {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      ...options
     });
   } catch {
     return '';
