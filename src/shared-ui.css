@@ -1,5 +1,51 @@
+/* Research Desk type — bundled latin-subset variable fonts (scripts/sync-fonts.sh).
+   MV3 CSP forbids remote font fetches, so the woff2 files are extension-local. */
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("fonts/newsreader-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Newsreader Variable";
+  src: url("fonts/newsreader-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3 Variable";
+  src: url("fonts/source-sans-3-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Source Sans 3 Variable";
+  src: url("fonts/source-sans-3-latin-wght-italic.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono Variable";
+  src: url("fonts/jetbrains-mono-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: light dark;
+
+  --font-display: "Newsreader Variable", Georgia, "Times New Roman", serif;
+  --font-sans: "Source Sans 3 Variable", -apple-system, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, "SF Mono", Menlo, monospace;
 
   --color-primary: #5b8c7a;
   --color-primary-hover: #4a7567;
@@ -34,9 +80,6 @@
   --shadow-sm: light-dark(0 1px 2px 0 rgb(9 9 11 / 0.05), 0 1px 2px 0 rgb(9 9 11 / 0.2));
   --shadow-md: light-dark(0 4px 6px -1px rgb(9 9 11 / 0.1), 0 4px 6px -1px rgb(9 9 11 / 0.25));
   --shadow-lg: light-dark(0 10px 15px -3px rgb(9 9 11 / 0.1), 0 10px 15px -3px rgb(9 9 11 / 0.3));
-
-  --font-sans: system-ui, sans-serif;
-  --font-mono: "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, monospace;
 
   /* Type scale — t-shirt sizing, one step ≈ 1–2px. */
   --font-size-2xs: 0.625rem; /* 10px */
