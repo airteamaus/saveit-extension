@@ -453,6 +453,13 @@ export function initSavedPagesDrawerEvents({
   // window as a fallback for the narrow-width layout where the window scrolls.
   let scrollRafQueued = false;
   function onScrollNearEnd() {
+    // While the feed owns the results pane it renders a fixed window with no
+    // infinite scroll (see FEED_REFRESH_MAX in newtab-feed.js), so growing
+    // the personal render window here would fetch pages whose rows never
+    // display.
+    if (savedPagesDrawerResults?.querySelector('[data-section="feed"]')) {
+      return;
+    }
     if (scrollRafQueued) {
       return;
     }

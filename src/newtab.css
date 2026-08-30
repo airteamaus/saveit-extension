@@ -732,6 +732,8 @@ body {
   border: 0;
   background: transparent;
   padding: 4px 0;
+  /* Pointer-target constraint (same 24px floor as the vote control). */
+  min-height: 24px;
   color: var(--color-accent-ink);
   font-family: var(--font-sans);
   font-size: var(--font-size-sm);

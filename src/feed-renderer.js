@@ -98,7 +98,7 @@ export function renderFeedRowMarkup(row) {
     meta.push(`<span>saved by ${escapeHtml(row.saved_by)}</span>`);
   }
   if (row.reading_time_minutes) {
-    meta.push(`<span>${row.reading_time_minutes} min read</span>`);
+    meta.push(`<span>${escapeHtml(String(row.reading_time_minutes))} min read</span>`);
   }
   const tagsHtml = renderPageTags(row);
 

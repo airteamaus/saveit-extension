@@ -29,6 +29,24 @@ import {
   updateVersionIndicator
 } from './newtab-shared.js';
 
+// Trailing debounce for realtime-triggered feed refreshes. A burst of org
+// events (e.g. a bulk import's enrichments landing one by one) must coalesce
+// into a single refetch; re-arming clears the pending timer so intervals
+// never stack. One newtab page = one app instance and the page is one-shot,
+// so a module-scope timer needs no teardown.
+const FEED_REFRESH_DEBOUNCE_MS = 750;
+let feedRefreshTimer = null;
+
+function scheduleFeedRefresh(feedController) {
+  if (feedRefreshTimer) {
+    clearTimeout(feedRefreshTimer);
+  }
+  feedRefreshTimer = setTimeout(() => {
+    feedRefreshTimer = null;
+    void feedController.refresh();
+  }, FEED_REFRESH_DEBOUNCE_MS);
+}
+
 export function getDrawerControllerElements(elements) {
   return {
     projectEditorBackdrop: elements.projectEditorBackdrop,
@@ -202,19 +220,25 @@ export function createNewtabApp({
   // (connect() is called from newtab-page.js after auth resolves).
   const realtimeBus = new RealtimeEventBus();
 
-  // The dashboard saved-pages store refreshes on user-scoped page events. The
-  // server already filtered by scope; if we received it, it's relevant.
+  // The dashboard saved-pages store refreshes on user-scoped page events.
   realtimeBus.subscribe('page_updated', (event) => {
     // The bus dispatches synchronously and can't await async subscribers, so each
     // subscriber wraps its body in an async IIFE with its own try/catch.
     void (async () => {
       try {
-        await savedPagesStore.refreshInitial();
+        // Gating rule: only user: events can change the personal list (they
+        // are the owner's own saves/updates). A gmail client also receives
+        // org-mates' org: events, which are irrelevant to the personal list —
+        // for those, only the feed refresh runs. Project-key checking isn't
+        // practical here (the app doesn't hold the event's project ids).
+        if ((event.scopeKeys || []).some((key) => key.startsWith('user:'))) {
+          await savedPagesStore.refreshInitial();
+        }
         // The SSE server only forwards an event to clients whose scope keys
         // intersect, so any org: key on a received event means *my* org —
         // refresh the feed without client-side domain knowledge.
         if ((event.scopeKeys || []).some((key) => key.startsWith('org:'))) {
-          void feedController.refresh();
+          scheduleFeedRefresh(feedController);
         }
         if (event.change === 'enriched' || event.change === 'added') {
           // Clear the optimistic pending-save tile — replaces the enrichment poll.

@@ -301,7 +301,7 @@ describe('createFeedController', () => {
     expect(api.setFeedCachedPages).toHaveBeenCalled();
   });
 
-  it('refresh re-pulls from offset 0 with a limit that keeps the loaded rows', async () => {
+  it('refresh re-pulls from offset 0 with a limit that keeps the loaded rows, bypassing the cache', async () => {
     const many = Array.from({ length: 60 }, (_, i) => ({
       id: `p${i}`,
       title: `Page ${i}`,
@@ -313,7 +313,23 @@ describe('createFeedController', () => {
       api: { getFeedCachedPages: vi.fn(async () => ({ ...FEED, pages: many })) }
     });
     await controller.load();
-    expect(api.getFeed).toHaveBeenCalledWith({ limit: 60 });
+    // skipCache: a realtime-triggered refresh must reorder against the
+    // server even when the feed cache is still fresh.
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 60, skipCache: true });
+    // load()'s initial fetch still uses the cached path: the warm paint
+    // reads getFeedCachedPages before the fresh fetch lands.
+    expect(api.getFeedCachedPages).toHaveBeenCalledWith(
+      { surface: 'feed' },
+      { allowExpired: true }
+    );
+  });
+
+  it('refresh() alone skips the cache so realtime events reorder the feed', async () => {
+    const { controller, api } = buildController();
+    await controller.refresh();
+    expect(api.getFeed).toHaveBeenCalledTimes(1);
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true });
+    expect(api.getFeedCachedPages).not.toHaveBeenCalled();
   });
 
   it('hide() clears the feed section, kicker, and disclosure', async () => {

@@ -8,8 +8,10 @@ import { replaceElementHtml } from './dom-render.js';
 
 const DISCLOSURE_DISMISSED_KEY = 'feed-public-disclosure-dismissed';
 const FEED_PAGE_LIMIT = 50;
-// Refreshes re-pull from offset 0 but keep everything the user has scrolled
-// to load, capped at the server's window cap.
+// The feed renders a fixed window (no infinite scroll: the drawer's
+// near-end fetch is short-circuited while the feed owns the results pane),
+// so refreshes just re-pull from offset 0, keeping everything already in
+// state up to the server's window cap.
 const FEED_REFRESH_MAX = 500;
 
 export function createFeedController({
@@ -102,7 +104,10 @@ export function createFeedController({
   async function refresh() {
     try {
       const limit = Math.max(FEED_PAGE_LIMIT, Math.min(state.rows.length, FEED_REFRESH_MAX));
-      const response = await api.getFeed({ limit });
+      // skipCache: a realtime-triggered refresh must reorder against the
+      // server even when the cache is still fresh — reading the cache here
+      // would swallow the event.
+      const response = await api.getFeed({ limit, skipCache: true });
       applyResponse(response);
       persistToCache();
     } catch (error) {
@@ -182,7 +187,7 @@ export function createFeedController({
         renderer.renderFeed(state.rows);
       }
       console.error('[feed] vote failed:', error);
-      notify("Couldn't save your vote — try again", { type: 'error' });
+      notify?.("Couldn't save your vote — try again", { type: 'error' });
     }
   }
 
