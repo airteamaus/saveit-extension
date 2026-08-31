@@ -828,6 +828,23 @@ describe('newtab modules', () => {
       expect(markup).toContain('data-action="edit"');
     });
 
+    it('labels the privacy state explicitly on every drawer card', () => {
+      const base = {
+        id: 'page-1',
+        title: 'A page',
+        url: 'https://example.com/article',
+        getProjectPills: () => [],
+        projectsUnavailable: false
+      };
+      const shared = renderDrawerCardMarkup({ ...base }, base);
+      expect(shared).toContain('index-row-scope-tag-shared');
+      expect(shared).toContain('>Shared<');
+
+      const priv = renderDrawerCardMarkup({ ...base, private: true }, base);
+      expect(priv).toContain('index-row-scope-tag-private');
+      expect(priv).toContain('Only you');
+    });
+
     it('renders an inline edit form for the active editing card', () => {
       const markup = renderDrawerCardMarkup({
         id: 'page-1',

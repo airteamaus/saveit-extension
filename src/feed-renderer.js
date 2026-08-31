@@ -62,7 +62,9 @@ function voteControlHtml(row) {
     ? "You can't vote on your own save"
     : optimistic
       ? 'Saving…'
-      : (row.voted ? 'Remove vote' : 'Upvote');
+      : row.voted
+        ? 'Remove vote'
+        : 'Upvote';
   return `
     <button
       class="feed-vote ${row.voted ? 'is-active' : ''}"
@@ -87,9 +89,7 @@ export function renderFeedRowMarkup(row) {
   const domain = getPageDomain(row);
   const summary = (row.ai_summary_brief || row.description || '').trim();
   const url = row.url || '';
-  const navigationAttrs = url
-    ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
-    : '';
+  const navigationAttrs = url ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"` : '';
   const meta = [];
   if (domain) {
     meta.push(`<span>${escapeHtml(domain)}</span>`);
@@ -116,9 +116,13 @@ export function renderFeedRowMarkup(row) {
       <div class="index-row-footer">
         <div class="index-row-meta">
           ${voteControlHtml(row)}
+          ${
+            row.private
+              ? '<span class="index-row-scope-tag index-row-scope-tag-private">Only you</span>'
+              : '<span class="index-row-scope-tag index-row-scope-tag-shared">Shared</span>'
+          }
           ${domain ? `<img class="index-row-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="14" height="14">` : ''}
           ${meta.length ? meta.join('<span class="index-row-meta-sep">·</span>') : ''}
-          ${row.private ? '<span class="feed-only-you">Only you</span>' : ''}
         </div>
         ${tagsHtml ? `<div class="index-row-tags">${tagsHtml}</div>` : ''}
       </div>
@@ -151,22 +155,23 @@ export function createFeedRenderer({ documentObj = document, resultsContainer })
       return;
     }
     if (!Array.isArray(rows) || !rows.length) {
-      replaceElementHtml(section, `
+      replaceElementHtml(
+        section,
+        `
         <div class="empty-state saved-pages-drawer-state">
           <p>No saves in this feed yet.</p>
         </div>
-      `);
+      `
+      );
       return;
     }
     reconcileKeyedChildren(section, rows, {
-      getKey: row => row.id || null,
-      getNodeKey: node => node?.dataset?.pageId || null,
+      getKey: (row) => row.id || null,
+      getNodeKey: (node) => node?.dataset?.pageId || null,
       pruneUnkeyed: true,
       renderItem: (row, existingNode) => {
         const next = createElementFromHtml(renderFeedRowMarkup(row), documentObj);
-        return existingNode && existingNode.outerHTML === next?.outerHTML
-          ? existingNode
-          : next;
+        return existingNode && existingNode.outerHTML === next?.outerHTML ? existingNode : next;
       }
     });
   }

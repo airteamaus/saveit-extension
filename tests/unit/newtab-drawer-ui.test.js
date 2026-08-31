@@ -70,3 +70,72 @@ describe('drawer ui controller idle-desk feed branch', () => {
     expect(feedController.hide).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('drawer ui controller personal-list pinned dedupe', () => {
+  // The renderResults path the feed falls through to (feedController null =
+  // feed unavailable) goes through drawerRenderer.renderResults — asserted
+  // via the DOM it produces rather than a renderer mock.
+  function buildPersonalHarness({ selectedProjectId = null } = {}) {
+    document.body.innerHTML = `
+      <div id="results"></div>
+      <div id="strip"></div>
+      <div id="dateline"></div>
+    `;
+    const state = {
+      query: '',
+      selectedProjectId,
+      selectedDomainId: null,
+      semanticLoading: false,
+      semanticResults: null,
+      warmUpInProgress: false,
+      indexSort: 'newest',
+      renderLimit: 10,
+      pages: [
+        { id: 'plain', title: 'Plain', url: 'https://a.com/1', saved_at: '2026-08-29T00:00:00Z', pinned: false },
+        { id: 'pinned', title: 'Pinned', url: 'https://a.com/2', saved_at: '2026-08-28T00:00:00Z', pinned: true }
+      ],
+      allPages: [
+        { id: 'plain', title: 'Plain', url: 'https://a.com/1', saved_at: '2026-08-29T00:00:00Z', pinned: false },
+        { id: 'pinned', title: 'Pinned', url: 'https://a.com/2', saved_at: '2026-08-28T00:00:00Z', pinned: true }
+      ]
+    };
+    const projectManager = {
+      getProjectPills: () => '',
+      getSelectedProject: () => (selectedProjectId ? { name: 'Proj' } : null),
+      renderSidebar: vi.fn(),
+      renderEditor: vi.fn()
+    };
+    const ui = createDrawerUiController({
+      state,
+      projectManager,
+      resultsContainer: document.getElementById('results'),
+      launchStripContainer: document.getElementById('strip'),
+      datelineEl: document.getElementById('dateline'),
+      getSavedPagesView: () => state,
+      documentObj: document,
+      feedController: null
+    });
+    return { ui, state };
+  }
+
+  it('idle list omits pinned rows (the launch strip shows them above)', () => {
+    const { ui } = buildPersonalHarness();
+
+    ui.renderResults();
+
+    const rowIds = [...document.querySelectorAll('.index-row')].map(el => el.dataset.pageId);
+    expect(rowIds).toEqual(['plain']);
+    // The strip above still carries the pinned page.
+    expect(document.querySelector('#strip .launch-chip')?.dataset.pageId).toBe('pinned');
+  });
+
+  it('scoped lists keep pinned rows (the strip is hidden there)', () => {
+    const { ui } = buildPersonalHarness({ selectedProjectId: 'project-1' });
+
+    ui.renderResults();
+
+    const rowIds = [...document.querySelectorAll('.index-row')].map(el => el.dataset.pageId);
+    expect(rowIds).toContain('pinned');
+    expect(document.querySelector('#strip .launch-chip')).toBeNull();
+  });
+});

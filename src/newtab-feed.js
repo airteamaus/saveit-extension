@@ -98,7 +98,11 @@ export function createFeedController({
         .querySelector('[data-action="dismiss-disclosure"]')
         ?.addEventListener('click', dismissDisclosure);
     }
-    renderer.renderFeed(state.rows);
+    // The launch strip already shows my pinned pages above the desk, so my
+    // pinned rows are skipped here — they'd otherwise appear twice. Org-mates'
+    // pinned saves stay: their pinning is invisible to me, and the strip
+    // doesn't show them.
+    renderer.renderFeed(state.rows.filter((row) => !(row.mine && row.pinned)));
   }
 
   async function refresh() {

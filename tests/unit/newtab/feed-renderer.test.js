@@ -53,6 +53,15 @@ describe('renderFeedRowMarkup', () => {
     const html = renderFeedRowMarkup({ ...ROW, private: true });
     expect(html).toContain('saved by Ann');
     expect(html).toContain('Only you');
+    expect(html).toContain('index-row-scope-tag-private');
+    expect(html).not.toContain('>Shared<');
+  });
+
+  it('labels shared rows explicitly — privacy state is never implied by absence', () => {
+    const html = renderFeedRowMarkup(ROW);
+    expect(html).toContain('index-row-scope-tag-shared');
+    expect(html).toContain('>Shared<');
+    expect(html).not.toContain('Only you');
   });
 
   it('hides the saved-by label when the backend sent none', () => {
