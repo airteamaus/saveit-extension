@@ -1347,6 +1347,12 @@ body {
     background: var(--color-accent);
     opacity: 0.5;
   }
+
+  .launch-chip,
+  .launch-chip-favicon,
+  .launch-chip-label {
+    transition: none;
+  }
 }
 
 @keyframes saved-pages-warming-shimmer {
@@ -1387,7 +1393,9 @@ body {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  /* No flex gap: the favicon→label spacing lives on the label's margin so
+     the collapse transition can animate it away with the label. */
+  gap: 0;
   max-width: 320px;
   padding: 5px 8px 5px 11px;
   background: var(--color-paper-raised);
@@ -1396,6 +1404,7 @@ body {
   text-decoration: none;
   color: inherit;
   cursor: pointer;
+  transition: padding 0.18s ease;
 }
 
 .launch-chip:hover {
@@ -1412,9 +1421,15 @@ body {
   width: 14px;
   height: 14px;
   border-radius: 3px;
+  transition:
+    width 0.18s ease,
+    height 0.18s ease;
 }
 
 .launch-chip-label {
+  margin-left: 7px;
+  max-width: 280px;
+  opacity: 1;
   font-size: var(--font-size-sm);
   font-weight: 600;
   color: var(--color-ink);
@@ -1422,6 +1437,10 @@ body {
   overflow: hidden;
   /* No ellipsis: the fix for a long label is retitling, not truncation. */
   text-overflow: clip;
+  transition:
+    max-width 0.18s ease,
+    margin-left 0.18s ease,
+    opacity 0.15s ease;
 }
 
 /* Actions overlay in place (opacity, never display) so the chip — and the
@@ -1448,17 +1467,22 @@ body {
   pointer-events: auto;
 }
 
-/* Scrolled state: the strip collapses to favicon-only launchers. Labels and
-   the rename/unpin overlay are gone (management returns at the top of the
-   index); each chip keeps its pointer target and identifies itself through
-   the chip's native title tooltip. */
+/* Scrolled state: the strip collapses to favicon-only launchers. The label
+   animates to zero width/margin/opacity (display:none can't transition);
+   the rename/unpin overlay is display:none because it must never appear in
+   the collapsed state — including on hover. Each chip keeps its pointer
+   target and identifies itself through the chip's native title tooltip. */
 .launch-strip.is-collapsed .launch-chip {
-  gap: 0;
-  max-width: none;
   padding: 4px;
 }
 
-.launch-strip.is-collapsed .launch-chip-label,
+.launch-strip.is-collapsed .launch-chip-label {
+  max-width: 0;
+  margin-left: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .launch-strip.is-collapsed .launch-chip-actions {
   display: none;
 }
