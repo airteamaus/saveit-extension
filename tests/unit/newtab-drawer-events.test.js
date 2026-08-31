@@ -9,19 +9,21 @@ import { initSavedPagesDrawerEvents } from '../../src/newtab-drawer-events.js';
 
 function buildHarness() {
   document.body.innerHTML = `
-    <form id="search-form"><input id="search-input"></form>
-    <div id="results">
-      <div class="saved-pages-drawer-card" data-url="https://example.com">
-        <form class="saved-pages-drawer-edit-form" data-page-id="page-1">
-          <input class="saved-pages-drawer-edit-input" name="title" type="text" value="My page">
-          <textarea class="saved-pages-drawer-edit-textarea" name="ai_summary_brief">summary</textarea>
-          <button class="saved-pages-drawer-edit-save" type="submit">Save</button>
-          <button class="saved-pages-drawer-edit-cancel" type="button" data-action="cancel-edit">Cancel</button>
-        </form>
+    <main class="desk-page">
+      <form id="search-form"><input id="search-input"></form>
+      <div id="results">
+        <div class="saved-pages-drawer-card" data-url="https://example.com">
+          <form class="saved-pages-drawer-edit-form" data-page-id="page-1">
+            <input class="saved-pages-drawer-edit-input" name="title" type="text" value="My page">
+            <textarea class="saved-pages-drawer-edit-textarea" name="ai_summary_brief">summary</textarea>
+            <button class="saved-pages-drawer-edit-save" type="submit">Save</button>
+            <button class="saved-pages-drawer-edit-cancel" type="button" data-action="cancel-edit">Cancel</button>
+          </form>
+        </div>
       </div>
-    </div>
-    <aside id="sidebar"></aside>
-    <div id="strip"></div>
+      <aside id="sidebar"></aside>
+      <div id="strip"></div>
+    </main>
     <div id="editor-backdrop" class="hidden"></div>
     <div id="editor-dialog" class="hidden"></div>
   `;
@@ -377,5 +379,69 @@ describe('launch strip scroll collapse', () => {
     setResultsScrollTop(48);
     document.getElementById('results').dispatchEvent(new Event('scroll'));
     expect(strip.classList.contains('is-collapsed')).toBe(false);
+  });
+});
+
+describe('header scroll mode', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // Same happy-dom workaround as the strip suite: drive scrollTop directly.
+  function scrollResultsTo(value) {
+    const results = document.getElementById('results');
+    Object.defineProperty(results, 'scrollTop', { value, configurable: true });
+    results.dispatchEvent(new Event('scroll'));
+  }
+
+  function pageEl() {
+    return document.querySelector('.desk-page');
+  }
+
+  it('enters scroll mode at 96px but not at 95px', () => {
+    buildHarness();
+    scrollResultsTo(95);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(false);
+
+    scrollResultsTo(96);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(true);
+  });
+
+  it('holds scroll mode through the hysteresis band and exits at 32px', () => {
+    buildHarness();
+    scrollResultsTo(120);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(true);
+
+    scrollResultsTo(33);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(true);
+
+    scrollResultsTo(32);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(false);
+  });
+
+  it('stays resting for small scrolls even though the strip collapses', () => {
+    buildHarness();
+    scrollResultsTo(60);
+    expect(document.getElementById('strip').classList.contains('is-collapsed')).toBe(true);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(false);
+  });
+
+  it('reveals in stages on the way up: strip first, then the header', () => {
+    buildHarness();
+    scrollResultsTo(120);
+    scrollResultsTo(40);
+    expect(document.getElementById('strip').classList.contains('is-collapsed')).toBe(false);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(true);
+
+    scrollResultsTo(32);
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(false);
+  });
+
+  it('also works when the window is the scroller (narrow layout fallback)', () => {
+    buildHarness();
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    Object.defineProperty(scrollingElement, 'scrollTop', { value: 200, configurable: true });
+    window.dispatchEvent(new Event('scroll'));
+    expect(pageEl().classList.contains('is-scroll-mode')).toBe(true);
   });
 });
