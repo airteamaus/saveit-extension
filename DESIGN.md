@@ -57,6 +57,7 @@ One amber accent, rust for destructive, nothing else. Solid colors only — no g
 
 - One centered column (1200px page, 800px search hero) — "The Reading Room": utility row, masthead + dateline + double rule, search hero, launch strip, project pills, the index. Index-row summaries measure to 90ch.
 - 8px spacing rhythm. Radii: 8px cards/chips/buttons/inputs, 12px dialogs, full for pills.
+- **Scroll mode**: once the index is scrolled ~96px, the header retires mid-browse dead weight — masthead and utility row collapse to zero, the search hero slims to its 40px pill with an icon-only Find; back within 32px of the top the full header returns (spec: `docs/superpowers/specs/2026-08-31-scroll-mode-header-design.md`).
 - **One shadow** (`--shadow-dialog`) for interrupting surfaces only — modals, toasts, floating menus. Everything else separates by hairline (`--color-line`, `--color-line-strong` on hover). No boxes-within-boxes.
 
 ## Component language
