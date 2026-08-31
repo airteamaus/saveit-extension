@@ -451,6 +451,13 @@ body {
   grid-column: 2;
   grid-row: 1;
   justify-self: end;
+  /* The date and actions share this grid cell. DOM order alone leaves the
+     paint order implicit — under some builds/sessions the (hover-faded, but
+     still hit-testable) date ends up ABOVE the buttons, so clicks on every
+     button but the leftmost fall through to the date and navigate the row.
+     Explicit stacking makes the buttons deterministic winners. */
+  position: relative;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   gap: 2px;

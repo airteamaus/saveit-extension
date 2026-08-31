@@ -157,6 +157,56 @@ test.describe('Org Feed Voting', () => {
     await expect(row.locator('[data-action="pin"]')).toBeVisible();
   });
 
+  // Stacking regression (Rich's Brave session): the date and actions share a
+  // grid cell, and the hover-faded date is STILL hit-testable. If paint order
+  // ever puts the date above the buttons, every button except the leftmost
+  // (edit) falls through to the date and navigates the row. Assert hit-testing
+  // at every button's center resolves into that button, on both surfaces.
+  async function assertButtonsWinHitTesting(page, rowSelector, actions) {
+    const row = page.locator(rowSelector).first();
+    await row.waitFor();
+    await row.hover();
+    for (const action of actions) {
+      const hitInside = await row
+        .locator(`[data-action="${action}"]`)
+        .evaluate((el, act) => {
+          const box = el.getBoundingClientRect();
+          const at = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+          return Boolean(at?.closest(`[data-action="${act}"]`));
+        }, action);
+      expect(hitInside, `${action} must be hit-test-topmost at its center`).toBe(true);
+    }
+  }
+
+  test('every personal-list action button wins hit-testing over the shared date slot', async ({
+    page
+  }) => {
+    await page.addInitScript(() => {
+      globalThis.MOCK_FEED_UNAVAILABLE = true;
+    });
+    await page.goto(`file://${newtabPath}`);
+    await assertButtonsWinHitTesting(page, '#saved-pages-results .index-row.has-actions', [
+      'edit',
+      'pin',
+      'toggle-privacy',
+      'projects',
+      'delete'
+    ]);
+  });
+
+  test('every own-feed-row action button wins hit-testing over the shared date slot', async ({
+    page
+  }) => {
+    await page.goto(`file://${newtabPath}`);
+    await assertButtonsWinHitTesting(page, '.feed-row', [
+      'feed-edit',
+      'feed-pin',
+      'feed-privacy',
+      'feed-projects',
+      'feed-delete'
+    ]);
+  });
+
   test('typing a search query hides the feed section until the desk is idle again', async ({
     page
   }) => {
