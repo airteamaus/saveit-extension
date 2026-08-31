@@ -39,6 +39,24 @@ describe('API.getFeed (extension mode)', () => {
     expect(API._feedCacheManager.setCachedPages).toHaveBeenCalled();
   });
 
+  it('rejects a pages-list 200 from the pre-feed backend (deploy bridge)', async () => {
+    // The old backend does not 404 unknown GETs — /feed falls through to the
+    // pages-list handler. That response has no scope, and must be treated as
+    // "feed unavailable" (error.status 404) so the desk falls back to the
+    // personal list instead of rendering anonymous, button-less rows.
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        pages: [{ id: 'p1', title: 'A personal page' }],
+        pagination: { total: 1, nextCursor: null, hasNextPage: false }
+      })
+    }));
+    const error = await API.getFeed().catch((e) => e);
+    expect(error).toBeInstanceOf(Error);
+    expect(error.status).toBe(404);
+    expect(API._feedCacheManager.setCachedPages).not.toHaveBeenCalled();
+  });
+
   it('serves a fresh cache hit without fetching', async () => {
     API._feedCacheManager.getCachedPages = vi.fn(async () => FEED_RESPONSE);
     global.fetch = vi.fn();
