@@ -21,6 +21,7 @@ function buildHarness() {
       </div>
     </div>
     <aside id="sidebar"></aside>
+    <div id="strip"></div>
     <div id="editor-backdrop" class="hidden"></div>
     <div id="editor-dialog" class="hidden"></div>
   `;
@@ -42,6 +43,7 @@ function buildHarness() {
     projectSidebar: document.getElementById('sidebar'),
     projectEditorBackdrop: document.getElementById('editor-backdrop'),
     projectEditorDialog: document.getElementById('editor-dialog'),
+    launchStrip: document.getElementById('strip'),
     projectManager: { closeEditor: vi.fn() },
     savedPagesView: {},
     loadDrawerResults: noop,
@@ -98,9 +100,14 @@ describe('edit form keydown', () => {
     const textarea = document.querySelector('textarea[name="ai_summary_brief"]');
 
     textarea.focus();
-    textarea.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true }));
+    textarea.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true })
+    );
 
-    expect(handleDrawerUpdate).toHaveBeenCalledWith('page-1', expect.objectContaining({ title: 'My page' }));
+    expect(handleDrawerUpdate).toHaveBeenCalledWith(
+      'page-1',
+      expect.objectContaining({ title: 'My page' })
+    );
   });
 
   it('Escape cancels the edit without submitting', () => {
@@ -252,14 +259,18 @@ describe('launch chip navigation and rename', () => {
 
   it('unpin routes through the shared pin handler', () => {
     const { handleDrawerPin } = buildMinimalHarness();
-    document.querySelector('[data-action="pin"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document
+      .querySelector('[data-action="pin"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(handleDrawerPin).toHaveBeenCalledWith('pin-1');
   });
 
   it('rename swaps the label for an input and commits a title-only update on Enter', () => {
     const { handleDrawerUpdate } = buildMinimalHarness();
-    document.querySelector('[data-action="chip-rename"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document
+      .querySelector('[data-action="chip-rename"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     const input = document.querySelector('.launch-chip-rename-input');
     expect(input).not.toBeNull();
@@ -275,7 +286,9 @@ describe('launch chip navigation and rename', () => {
 
   it('Escape cancels the rename and restores the label', () => {
     const { handleDrawerUpdate } = buildMinimalHarness();
-    document.querySelector('[data-action="chip-rename"]').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    document
+      .querySelector('[data-action="chip-rename"]')
+      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     const input = document.querySelector('.launch-chip-rename-input');
     input.value = 'Changed';
@@ -318,5 +331,51 @@ describe('scroll near-end lazy load', () => {
     dispatchResultsScroll();
     await flushAnimationFrame();
     expect(handleDrawerScrollNearEnd).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('launch strip scroll collapse', () => {
+  beforeEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // happy-dom clamps scrollTop on non-scrollable content differently than
+  // real engines, so drive the handler with a defined scrollTop directly.
+  function setResultsScrollTop(value) {
+    const results = document.getElementById('results');
+    Object.defineProperty(results, 'scrollTop', { value, configurable: true });
+    return results;
+  }
+
+  it('collapses the strip once the user scrolls into the index', () => {
+    buildHarness();
+    const strip = document.getElementById('strip');
+    expect(strip.classList.contains('is-collapsed')).toBe(false);
+
+    setResultsScrollTop(120);
+    document.getElementById('results').dispatchEvent(new Event('scroll'));
+    expect(strip.classList.contains('is-collapsed')).toBe(true);
+  });
+
+  it('expands again when scrolled back to the top', () => {
+    buildHarness();
+    const strip = document.getElementById('strip');
+
+    setResultsScrollTop(120);
+    document.getElementById('results').dispatchEvent(new Event('scroll'));
+    expect(strip.classList.contains('is-collapsed')).toBe(true);
+
+    setResultsScrollTop(0);
+    document.getElementById('results').dispatchEvent(new Event('scroll'));
+    expect(strip.classList.contains('is-collapsed')).toBe(false);
+  });
+
+  it('stays expanded for small scrolls (threshold is 48px)', () => {
+    buildHarness();
+    const strip = document.getElementById('strip');
+
+    setResultsScrollTop(48);
+    document.getElementById('results').dispatchEvent(new Event('scroll'));
+    expect(strip.classList.contains('is-collapsed')).toBe(false);
   });
 });
