@@ -28,7 +28,9 @@ test.describe('Org Feed Voting', () => {
 
   test('idle desk renders the org feed with a public scope kicker', async ({ page }) => {
     await page.waitForSelector('.feed-row');
-    await expect(page.locator('#feed-scope-kicker-slot')).toContainText('Everyone using Gmail — public');
+    await expect(page.locator('#feed-scope-kicker-slot')).toContainText(
+      'Everyone using Gmail — public'
+    );
   });
 
   test('public-feed disclosure shows once and stays dismissed', async ({ page }) => {
@@ -65,7 +67,75 @@ test.describe('Org Feed Voting', () => {
     await expect(ownRow.locator('.feed-vote')).toBeDisabled();
   });
 
-  test('typing a search query hides the feed section until the desk is idle again', async ({ page }) => {
+  // Hover reveal regression: the date only yields its slot when the row has
+  // actions to show. Own feed rows have the privacy eye; org-mates' rows have
+  // no action slot at all, so their date must stay put.
+  test('own feed row reveals the privacy eye on hover; org-mate rows keep their date', async ({
+    page
+  }) => {
+    await page.waitForSelector('.feed-row');
+    const ownRow = page.locator('.feed-row').first();
+    await ownRow.hover();
+    await expect
+      .poll(async () =>
+        ownRow.locator('.index-row-actions').evaluate((el) => getComputedStyle(el).opacity)
+      )
+      .toBe('1');
+    await expect
+      .poll(async () =>
+        ownRow.locator('.index-row-date').evaluate((el) => getComputedStyle(el).opacity)
+      )
+      .toBe('0');
+
+    const mateRow = page.locator('.feed-row').nth(1);
+    await mateRow.hover();
+    await expect(mateRow.locator('.index-row-actions')).toHaveCount(0);
+    await expect
+      .poll(async () =>
+        mateRow.locator('.index-row-date').evaluate((el) => getComputedStyle(el).opacity)
+      )
+      .toBe('1');
+  });
+
+  test('the privacy eye on my feed row makes the save private, and back', async ({ page }) => {
+    await page.waitForSelector('.feed-row');
+    const ownRow = page.locator('.feed-row').first();
+    await expect(ownRow.locator('.index-row-scope-tag')).toContainText('Shared');
+
+    // Hover first: the actions slot is pointer-gated until the row is
+    // hovered (the date owns the slot otherwise).
+    await ownRow.hover();
+    await ownRow.locator('[data-action="feed-privacy"]').click();
+    await expect(ownRow.locator('.index-row-scope-tag')).toContainText('Only you');
+    await expect(ownRow.locator('.index-row-privacy-btn')).toHaveAttribute('aria-pressed', 'true');
+
+    // The row re-rendered on toggle — re-hover before the reverse click.
+    await ownRow.hover();
+    await ownRow.locator('[data-action="feed-privacy"]').click();
+    await expect(ownRow.locator('.index-row-scope-tag')).toContainText('Shared');
+    await expect(ownRow.locator('.index-row-privacy-btn')).toHaveAttribute('aria-pressed', 'false');
+  });
+
+  // Drawer regression lock: the personal list's full action set still reveals.
+  test('personal-list rows still reveal their action buttons on hover', async ({ page }) => {
+    await page.addInitScript(() => {
+      globalThis.MOCK_FEED_UNAVAILABLE = true;
+    });
+    await page.goto(`file://${newtabPath}`);
+    const row = page.locator('#saved-pages-results .index-row.has-actions').first();
+    await row.waitFor();
+    await row.hover();
+    await expect
+      .poll(async () =>
+        row.locator('.index-row-actions').evaluate((el) => getComputedStyle(el).opacity)
+      )
+      .toBe('1');
+    await expect(row.locator('[data-action="pin"]')).toBeVisible();
+  });
+
+  test('typing a search query hides the feed section until the desk is idle again', async ({
+    page
+  }) => {
     await page.waitForSelector('.feed-row');
     await page.fill('#saved-pages-search-input', 'something');
     await page.waitForTimeout(400); // 250ms search debounce

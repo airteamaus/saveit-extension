@@ -28,6 +28,7 @@ export function initSavedPagesDrawerEvents({
   handleDrawerEditStart,
   handleDrawerPin,
   handleDrawerVote,
+  handleFeedTogglePrivacy,
   handleDrawerTogglePrivacy,
   handleDrawerUpdate,
   handleDrawerDelete,
@@ -114,6 +115,13 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
+    // Feed rows' own-save privacy eye — distinct from the drawer's
+    // toggle-privacy so each handler updates its own surface's state.
+    if (action === 'feed-privacy') {
+      void handleFeedTogglePrivacy(id);
+      return;
+    }
+
     if (action === 'toggle-privacy') {
       void handleDrawerTogglePrivacy(id);
       return;
@@ -135,7 +143,12 @@ export function initSavedPagesDrawerEvents({
     }
 
     if (action === 'remove-project') {
-      void projectManager.togglePageProject(savedPagesView, id, actionButton.dataset.projectId, false);
+      void projectManager.togglePageProject(
+        savedPagesView,
+        id,
+        actionButton.dataset.projectId,
+        false
+      );
       return;
     }
 
@@ -163,9 +176,7 @@ export function initSavedPagesDrawerEvents({
   });
 
   savedPagesDrawerResults?.addEventListener('keydown', (event) => {
-    if (
-      event.target.closest('.saved-pages-drawer-edit-form')
-    ) {
+    if (event.target.closest('.saved-pages-drawer-edit-form')) {
       if (event.key === 'Escape') {
         event.preventDefault();
         handleDrawerEditCancel();
@@ -190,10 +201,7 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    if (
-      (event.key !== 'Enter' && event.key !== ' ') ||
-      event.target.closest('[data-action]')
-    ) {
+    if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
       return;
     }
 
@@ -349,7 +357,10 @@ export function initSavedPagesDrawerEvents({
 
     const visibilityButton = event.target.closest('.project-action-visibility');
     if (visibilityButton) {
-      void projectManager.toggleProjectVisibility(savedPagesView, visibilityButton.dataset.projectId);
+      void projectManager.toggleProjectVisibility(
+        savedPagesView,
+        visibilityButton.dataset.projectId
+      );
       return;
     }
 
@@ -476,19 +487,27 @@ export function initSavedPagesDrawerEvents({
     const threshold = el.clientHeight * 1.5;
     return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
   }
-  savedPagesDrawerResults?.addEventListener('scroll', () => {
-    if (isNearScrollEnd(savedPagesDrawerResults)) {
-      onScrollNearEnd();
-    }
-  }, { passive: true });
-  windowObj.addEventListener('scroll', () => {
-    // Only acts as a fallback when the results container itself isn't the
-    // scroller (narrow layout). handleDrawerScrollNearEnd is a no-op for
-    // project/domain scopes, so this stays safe.
-    if (isNearScrollEnd(windowObj.document.scrollingElement)) {
-      onScrollNearEnd();
-    }
-  }, { passive: true });
+  savedPagesDrawerResults?.addEventListener(
+    'scroll',
+    () => {
+      if (isNearScrollEnd(savedPagesDrawerResults)) {
+        onScrollNearEnd();
+      }
+    },
+    { passive: true }
+  );
+  windowObj.addEventListener(
+    'scroll',
+    () => {
+      // Only acts as a fallback when the results container itself isn't the
+      // scroller (narrow layout). handleDrawerScrollNearEnd is a no-op for
+      // project/domain scopes, so this stays safe.
+      if (isNearScrollEnd(windowObj.document.scrollingElement)) {
+        onScrollNearEnd();
+      }
+    },
+    { passive: true }
+  );
 
   setDrawerToggleState(true);
   setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);

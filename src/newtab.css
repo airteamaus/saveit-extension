@@ -459,14 +459,17 @@ body {
   transition: opacity 0.15s ease;
 }
 
-.index-row:hover .index-row-actions,
-.index-row:focus-within .index-row-actions {
+/* The date yields its slot to actions on hover — but only on rows that HAVE
+   actions (has-actions). Action-less rows (org-mates' feed saves) keep their
+   date visible: fading it with nothing to reveal reads as a broken hover. */
+.index-row.has-actions:hover .index-row-actions,
+.index-row.has-actions:focus-within .index-row-actions {
   opacity: 1;
   pointer-events: auto;
 }
 
-.index-row:hover .index-row-date,
-.index-row:focus-within .index-row-date {
+.index-row.has-actions:hover .index-row-date,
+.index-row.has-actions:focus-within .index-row-date {
   opacity: 0;
 }
 

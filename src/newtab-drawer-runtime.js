@@ -204,6 +204,7 @@ export function createSavedPagesDrawerController({
       handleDrawerEditStart: dataController.handleDrawerEditStart,
       handleDrawerPin: dataController.handleDrawerPin,
       handleDrawerVote: (id) => feedController?.handleVote(id),
+      handleFeedTogglePrivacy: (id) => feedController?.handleTogglePrivacy(id),
       handleDrawerTogglePrivacy: dataController.handleDrawerTogglePrivacy,
       handleDrawerUpdate: dataController.handleDrawerUpdate,
       handleDrawerDelete: dataController.handleDrawerDelete,

@@ -195,12 +195,40 @@ export function createFeedController({
     }
   }
 
+  // Make-private from the desk itself: same PATCH /updatePage contract the
+  // drawer's eye uses, mirrored here so the feed's own rows are manageable
+  // without opening the drawer. Optimistic flip renders the Only you / Shared
+  // tag immediately; the own-save realtime event re-pulls server truth.
+  async function handleTogglePrivacy(id) {
+    const row = state.rows.find((entry) => entry.id === id);
+    if (!row || !row.mine || isOptimisticPage(row)) {
+      return;
+    }
+    const previous = row.private === true;
+    row.private = !previous;
+    if (state.displaying) {
+      renderer.renderFeed(state.rows);
+    }
+    try {
+      await api.updatePage(id, { private: row.private });
+      persistToCache();
+    } catch (error) {
+      row.private = previous;
+      if (state.displaying) {
+        renderer.renderFeed(state.rows);
+      }
+      console.error('[feed] privacy toggle failed:', error);
+      notify?.("Couldn't change privacy — try again", { type: 'error' });
+    }
+  }
+
   return {
     load,
     refresh,
     renderIdle,
     hide,
     handleVote,
+    handleTogglePrivacy,
     dismissDisclosure,
     isAvailable: () => state.available === true
   };

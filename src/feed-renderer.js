@@ -85,6 +85,40 @@ function voteControlHtml(row) {
   `;
 }
 
+// Hover-revealed privacy eye for the voter's OWN feed rows — the same
+// affordance the drawer rows have, so making a save private never requires
+// leaving the desk. Org-mates' saves are not mine to manage, so their rows
+// keep no action slot (and their date therefore never fades — there is
+// nothing to reveal).
+function privacyControlHtml(row) {
+  if (!row.mine) {
+    return '';
+  }
+  const isPrivate = row.private === true;
+  const label = isPrivate ? 'Show in organisation' : 'Hide from organisation';
+  return `
+    <div class="index-row-actions">
+      <button
+        class="index-row-action index-row-privacy-btn ${isPrivate ? 'is-active' : ''}"
+        type="button"
+        data-action="feed-privacy"
+        data-id="${escapeHtml(row.id)}"
+        aria-pressed="${isPrivate ? 'true' : 'false'}"
+        title="${escapeHtml(label)}"
+        aria-label="${escapeHtml(label)}"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+          ${
+            isPrivate
+              ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1 -2.16 3.19"></path><path d="M1 1l22 22"></path>'
+              : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+          }
+        </svg>
+      </button>
+    </div>
+  `;
+}
+
 export function renderFeedRowMarkup(row) {
   const domain = getPageDomain(row);
   const summary = (row.ai_summary_brief || row.description || '').trim();
@@ -102,15 +136,17 @@ export function renderFeedRowMarkup(row) {
   }
   const tagsHtml = renderPageTags(row);
 
-  // Feed rows reuse the index-row anatomy but drop the personal management
-  // actions (edit/pin/privacy/projects/delete) — those belong to the drawer.
+  // Feed rows reuse the index-row anatomy; personal management beyond
+  // privacy lives in the drawer (edit/pin/projects need its machinery).
   // Voting sits first in the meta line, always visible (DESIGN.md: hover
   // reveals never shift layout; voting is a primary action).
+  const ownPrivacyActions = privacyControlHtml(row);
   return `
-    <article class="index-row feed-row" data-page-id="${escapeHtml(row.id || '')}"${navigationAttrs}>
+    <article class="index-row feed-row${ownPrivacyActions ? ' has-actions' : ''}" data-page-id="${escapeHtml(row.id || '')}"${navigationAttrs}>
       <div class="index-row-main">
         <h3 class="index-row-title">${escapeHtml(row.title || domain || 'Untitled')}</h3>
         <span class="index-row-date">${escapeHtml(formatSavedDate(row.saved_at, { day: 'numeric', month: 'short' }))}</span>
+        ${ownPrivacyActions}
       </div>
       ${summary ? `<p class="index-row-summary">${escapeHtml(truncateText(summary))}</p>` : ''}
       <div class="index-row-footer">

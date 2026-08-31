@@ -81,6 +81,7 @@ function buildController(overrides = {}) {
   const api = {
     getFeed: vi.fn(async () => FEED),
     votePage: vi.fn(async () => ({ id: 'theirs', votes: 3, voted: true })),
+    updatePage: vi.fn(async () => ({ success: true })),
     getFeedCachedPages: vi.fn(async () => null),
     setFeedCachedPages: vi.fn(),
     ...overrides.api
@@ -241,6 +242,34 @@ describe('createFeedController', () => {
 
     const rowIds = [...document.querySelectorAll('.feed-row')].map(el => el.dataset.pageId);
     expect(rowIds).toEqual(['theirs', 'plain-mine']);
+  });
+
+  it('toggles privacy on my rows optimistically, flipping the tag, and reverts on failure', async () => {
+    const { controller, api, notify } = buildController();
+    await controller.load();
+    controller.renderIdle();
+
+    // 'own' is mine + shared; the eye makes it private, tag flips to Only you.
+    let row = document.querySelector('[data-page-id="own"]');
+    expect(row.querySelector('.index-row-scope-tag')?.textContent).toContain('Shared');
+    await controller.handleTogglePrivacy('own');
+    row = document.querySelector('[data-page-id="own"]');
+    expect(row.querySelector('.index-row-scope-tag')?.textContent).toContain('Only you');
+    expect(api.updatePage).toHaveBeenCalledWith('own', { private: true });
+
+    // Failure path: revert and toast.
+    api.updatePage.mockRejectedValueOnce(new Error('offline'));
+    await controller.handleTogglePrivacy('own');
+    row = document.querySelector('[data-page-id="own"]');
+    expect(row.querySelector('.index-row-scope-tag')?.textContent).toContain('Only you');
+    expect(notify).toHaveBeenCalledWith("Couldn't change privacy — try again", { type: 'error' });
+  });
+
+  it('privacy toggle ignores org-mates\' rows', async () => {
+    const { controller, api } = buildController();
+    await controller.load();
+    await controller.handleTogglePrivacy('theirs');
+    expect(api.updatePage).not.toHaveBeenCalled();
   });
 
   it('shows the disclosure once for public scopes and never again after dismissal', async () => {
