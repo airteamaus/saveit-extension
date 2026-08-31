@@ -5,6 +5,68 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.0] - 2026-09-01
+
+### ✨ Features
+
+- **desk:** scroll-mode header collapse - masthead/utility to zero, slim search pill, icon-only Find (1995082)
+- **desk:** toggle is-scroll-mode on the page container with 96/32px hysteresis (f985066)
+- **desk:** pinned strip collapses to favicon launchers while the index is scrolled (16d90fe)
+- **desk:** full management set on own feed rows — edit, pin, privacy, projects, delete (6ce5cf7)
+- **desk:** pinned pages shown once; explicit Only you / Shared tags on every row (8bcf381)
+- **feed:** wire org feed into the idle desk index + realtime refresh (231e290)
+- **feed:** feed controller with warm paint, optimistic votes, disclosure (0f77a88)
+- **feed:** feed rows with vote control, scope kicker, disclosure (d2503ef)
+- **api:** getFeed cached read + votePage toggle (500dfb3)
+- **api:** standalone feed mock with toggletable votes (0b0eb43)
+- **api:** feed cache surface (feed_cache prefix, lazy manager) (176082a)
+- **desk:** toolbar popup and toasts on Research Desk tokens (f182547)
+- **desk:** modal standard — raised paper, one shadow, kicker + serif title (16388ec)
+- **desk:** projects dropdown with archived section, pills row, breadcrumb (6322720)
+- **desk:** dateline, index sort control, / and Esc search shortcuts (a8ad6b9)
+- **desk:** pinned shelf becomes the launch strip with chip rename (69f99ca)
+- **desk:** saved-page cards become table-of-contents index rows (9895e7f)
+- **desk:** Reading Room shell — masthead, search hero, dropdown nav container (8d42f5c)
+- **desk:** remap all surfaces to Research Desk tokens (96b6857)
+- **desk:** bundle Research Desk variable fonts locally (4734c46)
+
+### 🐛 Bug Fixes
+
+- **desk:** explicit z-index keeps action buttons hit-testable above the shared date slot (cf9b7b3)
+- **feed:** reject scope-less /feed responses — old backend falls through to the pages list (61b5353)
+- **desk:** own feed rows reveal a privacy eye on hover; date only yields when actions exist (807c529)
+- **feed:** gate personal-list refresh on the caller's own uid, not any user key (6a375fb)
+- **feed:** skip cache on refresh; gate personal refresh on user scope (35d912d)
+- **feed:** paint drawer chrome and clear stale sections when the feed owns the idle desk (a7b9ea8)
+- **feed:** unreachable storage treats disclosure as dismissed (b1d3f38)
+- **desk:** hover reveals never shift layout; product name is Newtab (cdb7608)
+
+### 📝 Other Improvements
+
+- **desk:** animate the pinned strip collapse (label width/opacity, chip padding, favicon size) (7662b70)
+- format feed shape guard (194bd58)
+- **desk:** raise type scale 20%, widen column to 1200px, roomier summaries (9b6ea07)
+- **newtab:** remove top spacing on saved-pages content and pinned shelf (8842ba2)
+
+### 📚 Documentation
+
+- **design:** note scroll mode in DESIGN.md (157403d)
+- **desk:** scroll-mode implementation plan (9b5ab7b)
+- **desk:** scroll-mode header collapse design spec (cba6109)
+- DESIGN.md feed-row language covers the full own-row action set (cf905b6)
+- login-gated documents are private by default when saved (a8887c5)
+- org feed voting implementation plan (f2729eb)
+- org feed spec — free email domains are public orgs with explicit scope labelling (ae7cd26)
+- org feed voting design spec (6224b50)
+- DESIGN.md — Research Desk direction; visual-system.md now a pointer (6dd3de2)
+- Research Desk redesign implementation plan (10ed9a1)
+- add Research Desk redesign design spec (2fc5f91)
+
+### ✅ Tests
+
+- **feed:** e2e vote toggle + docs for the org feed index (78644cf)
+- **e2e:** update specs for Reading Room shell, dropdown nav, launch strip (aa222d8)
+
 ## [1.28.2] - 2026-07-22
 
 ### 🐛 Bug Fixes
@@ -87,29 +149,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
 - **extension:** per-page Hide from organisation toggle (cea7268)
 - **extension:** accept private flag on page schema (bcd8357)
-
-### 🐛 Bug Fixes
-
-- **deps:** override esbuild 0.28.1 + adm-zip 0.6.0 (dev-only Dependabot alerts) (4bfd107)
-- **extension:** rollback cached project store on privacy-toggle failure (3e1f6a1)
-
-### 📚 Documentation
-
-- **agents:** bump version-drift debt count to 3 of 7 functions (4ff0192)
-- **agents:** add saveit-slack to backend overview (8cc4978)
-- **plan:** extract shared restricts helper (Task 5) (dcb14b5)
-- **plan:** Slack /links command implementation plan (d30fa97)
-- **spec:** drop day-one flip announcement from Slack /links design (1958f94)
-- **spec:** Slack /links command design (1947bc4)
-
-### ✅ Tests
-
-- **e2e:** update import test for the Data & sync centre (8883801)
-
-## [1.24.2] - 2026-07-17
-
-### ✨ Features
-
 - Data & sync overhaul — consolidated import/export/sync modal (e4ac091)
 - **realtime:** wire RealtimeClient into newtab lifecycle; remove enrichment poll (8cf2de5)
 - **realtime:** RealtimeClient fetch-based SSE reader with toast-on-close (76388ed)
@@ -193,6 +232,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **deps:** override esbuild 0.28.1 + adm-zip 0.6.0 (dev-only Dependabot alerts) (4bfd107)
+- **extension:** rollback cached project store on privacy-toggle failure (3e1f6a1)
 - **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
 - **release:** fall back to signing when AMO's signed file is not downloadable (cb1f1db)
 - **drawer:** suppress self-invalidation so refresh-cache prefetched set survives (6c4c9a5)
@@ -539,6 +580,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📚 Documentation
 
+- **agents:** bump version-drift debt count to 3 of 7 functions (4ff0192)
+- **agents:** add saveit-slack to backend overview (8cc4978)
+- **plan:** extract shared restricts helper (Task 5) (dcb14b5)
+- **plan:** Slack /links command implementation plan (d30fa97)
+- **spec:** drop day-one flip announcement from Slack /links design (1958f94)
+- **spec:** Slack /links command design (1947bc4)
 - **agents:** document per-surface cache architecture, shared transport, realtime lifecycle (18d8f89)
 - update AGENTS.md + README for v1.23.0 (Data & sync, backend overview, known debt) (9ed7ad6)
 - fix outdated/misleading info across user-facing docs (babbc4f)
@@ -561,6 +608,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✅ Tests
 
+- **e2e:** update import test for the Data & sync centre (8883801)
 - enforce every configured backend host is in manifest host_permissions (3f12688)
 - **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
 - **realtime:** assert failing subscriber does not break others (d4c4167)
