@@ -39,13 +39,11 @@ Constants live beside the existing `LAUNCH_STRIP_COLLAPSE_SCROLL_PX`. Both scrol
 
 ## 4. Motion
 
-~180ms ease (matches the strip) on: `max-height` + `opacity` + `visibility` (masthead, utility row), `font-size` + padding (search pill), `gap` (`.desk-page`). Collapse ceilings get ~30% headroom over resting heights (~120px masthead, ~40px utility) so text-scale changes never clip; `overflow: hidden` on the collapsing blocks. `visibility` flips discretely, timed with the collapse: content is unreachable (tab order, hit-testing) the moment it finishes hiding and immediately reachable on reveal.
+**Amended 2026-09-01 after v1.29.0 field evidence: scroll mode's layout changes snap — no transition.** The original plan animated `max-height`/`opacity`/`visibility` (masthead, utility row), `font-size`/padding (search pill), and `gap` over ~180ms. That animated reflow moves the scroller's content ~215px under the pointer mid-interaction: a hover aimed at one row lands on another (the e2e hit-testing suite in `feed-voting.spec.js` failed deterministically on it), and Firefox's scroll anchoring fights the animated collapse (observed `scrollTop` self-adjusting 300→401 during the transition). Snapping also gives `prefers-reduced-motion` parity for free. The shipped favicon-strip chip animation is unaffected — its layout impact is a couple of pixels.
 
-A zero-height element still carries its flex `gap` on both sides, so the collapsed masthead and utility row also animate their margins to negate the scroll-mode gap (`-8px` on each side that borders a sibling). Without this, ~24px of empty space lingers where the masthead was.
+Collapsed blocks still get `overflow: hidden` (only in scroll-mode rules — the resting utility row contains the account dropdown, which base overflow would clip) and each negates the 8px scroll-mode gap below it with a matching `-8px` margin, because flex `gap` still surrounds zero-height children; without that, ~16px of phantom space lingers where the masthead was.
 
-Scrolling back up reveals progressively rather than at once — the strip re-expands at its own 48px threshold, then the full header at 32px — which reads as intentional staging.
-
-`prefers-reduced-motion: reduce` (existing media blocks in both stylesheets): state swaps apply instantly, no transitions.
+Scrolling back up still reveals progressively rather than at once — the strip re-expands at its own 48px threshold, then the full header at 32px — which reads as intentional staging.
 
 ## 5. Correctness and accessibility
 
