@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.29.1] - 2026-09-01
+
+### 🐛 Bug Fixes
+
+- **desk:** scroll-mode layout snaps - animated collapse drifted content under the pointer (252db54)
+
 ## [1.29.0] - 2026-09-01
 
 ### ✨ Features
@@ -137,13 +143,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.25.1] - 2026-07-20
 
-### 🐛 Bug Fixes
-
-- **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
-- **warming:** bar jumped to 100% mid-warm; e2e now seeds session store (be9167f)
-
-## [1.25.0] - 2026-07-18
-
 ### ✨ Features
 
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
@@ -232,6 +231,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
+- **warming:** bar jumped to 100% mid-warm; e2e now seeds session store (be9167f)
 - **deps:** override esbuild 0.28.1 + adm-zip 0.6.0 (dev-only Dependabot alerts) (4bfd107)
 - **extension:** rollback cached project store on privacy-toggle failure (3e1f6a1)
 - **realtime:** reconnect after bfcache restore; idempotent connect() (2f54710)
