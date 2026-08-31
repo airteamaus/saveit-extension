@@ -78,10 +78,14 @@ function buildBlockedStorageDocument() {
 // exercise the real error paths. Entries in overrides.api replace defaults.
 function buildController(overrides = {}) {
   const dom = buildDom();
+  // structuredClone: controller mutations (optimistic pin/delete/edit) must
+  // never leak into the shared FEED fixture and poison later tests.
   const api = {
-    getFeed: vi.fn(async () => FEED),
+    getFeed: vi.fn(async () => structuredClone(FEED)),
     votePage: vi.fn(async () => ({ id: 'theirs', votes: 3, voted: true })),
     updatePage: vi.fn(async () => ({ success: true })),
+    pinPage: vi.fn(async () => ({ success: true })),
+    deletePage: vi.fn(async () => ({ success: true })),
     getFeedCachedPages: vi.fn(async () => null),
     setFeedCachedPages: vi.fn(),
     ...overrides.api
@@ -91,6 +95,7 @@ function buildController(overrides = {}) {
     api,
     documentObj: overrides.documentObj ?? document,
     notify,
+    openProjectsEditor: overrides.openProjectsEditor ?? null,
     ...dom
   });
   return { controller, api, notify, ...dom };
@@ -224,7 +229,7 @@ describe('createFeedController', () => {
     expect(api.votePage).not.toHaveBeenCalled();
   });
 
-  it('skips my pinned rows (the launch strip shows them above) but keeps org-mates\' pinned saves', async () => {
+  it("skips my pinned rows (the launch strip shows them above) but keeps org-mates' pinned saves", async () => {
     const { controller } = buildController({
       api: {
         getFeed: vi.fn(async () => ({
@@ -240,7 +245,7 @@ describe('createFeedController', () => {
     await controller.load();
     controller.renderIdle();
 
-    const rowIds = [...document.querySelectorAll('.feed-row')].map(el => el.dataset.pageId);
+    const rowIds = [...document.querySelectorAll('.feed-row')].map((el) => el.dataset.pageId);
     expect(rowIds).toEqual(['theirs', 'plain-mine']);
   });
 
@@ -265,11 +270,122 @@ describe('createFeedController', () => {
     expect(notify).toHaveBeenCalledWith("Couldn't change privacy — try again", { type: 'error' });
   });
 
-  it('privacy toggle ignores org-mates\' rows', async () => {
+  it("privacy toggle ignores org-mates' rows", async () => {
     const { controller, api } = buildController();
     await controller.load();
     await controller.handleTogglePrivacy('theirs');
     expect(api.updatePage).not.toHaveBeenCalled();
+  });
+
+  it('pinning my row hands it to the launch strip (row leaves the feed), reverting on failure', async () => {
+    const succeed = buildController();
+    await succeed.controller.load();
+    succeed.controller.renderIdle();
+    expect(document.querySelector('[data-page-id="own"]')).not.toBeNull();
+
+    await succeed.controller.handlePin('own');
+    expect(document.querySelector('[data-page-id="own"]')).toBeNull();
+    expect(succeed.api.pinPage).toHaveBeenCalledWith('own', true);
+
+    const fail = buildController({
+      api: {
+        pinPage: vi.fn(async () => {
+          throw new Error('offline');
+        })
+      }
+    });
+    await fail.controller.load();
+    fail.controller.renderIdle();
+    await fail.controller.handlePin('own');
+    expect(document.querySelector('[data-page-id="own"]')).not.toBeNull();
+    expect(fail.notify).toHaveBeenCalledWith("Couldn't pin the page — try again", {
+      type: 'error'
+    });
+  });
+
+  it('deleting my row removes it optimistically and restores on failure', async () => {
+    const succeed = buildController();
+    await succeed.controller.load();
+    succeed.controller.renderIdle();
+
+    await succeed.controller.handleDelete('own');
+    expect(document.querySelector('[data-page-id="own"]')).toBeNull();
+    expect(succeed.api.deletePage).toHaveBeenCalledWith('own');
+
+    const fail = buildController({
+      api: {
+        deletePage: vi.fn(async () => {
+          throw new Error('offline');
+        })
+      }
+    });
+    await fail.controller.load();
+    fail.controller.renderIdle();
+    await fail.controller.handleDelete('own');
+    expect(document.querySelector('[data-page-id="own"]')).not.toBeNull();
+    expect(fail.notify).toHaveBeenCalledWith("Couldn't delete the page — try again", {
+      type: 'error'
+    });
+  });
+
+  it('edit: start shows the inline form, submit saves and closes, failure keeps the form', async () => {
+    const { controller, api } = buildController();
+    await controller.load();
+    controller.renderIdle();
+
+    await controller.handleEditStart('own');
+    expect(document.querySelector('[data-page-id="own"] .feed-edit-form')).not.toBeNull();
+
+    await controller.handleEditSubmit('own', {
+      title: 'New title',
+      ai_summary_brief: 'New summary'
+    });
+    expect(api.updatePage).toHaveBeenCalledWith('own', {
+      title: 'New title',
+      ai_summary_brief: 'New summary'
+    });
+    expect(document.querySelector('[data-page-id="own"] .feed-edit-form')).toBeNull();
+    expect(document.querySelector('[data-page-id="own"] .index-row-title').textContent).toBe(
+      'New title'
+    );
+
+    const fail = buildController({
+      api: {
+        updatePage: vi.fn(async () => {
+          throw new Error('offline');
+        })
+      }
+    });
+    await fail.controller.load();
+    fail.controller.renderIdle();
+    await fail.controller.handleEditStart('own');
+    await fail.controller.handleEditSubmit('own', { title: 'Nope', ai_summary_brief: '' });
+    expect(fail.notify).toHaveBeenCalledWith("Couldn't save your changes — try again", {
+      type: 'error'
+    });
+    expect(document.querySelector('[data-page-id="own"] .feed-edit-form')).not.toBeNull();
+  });
+
+  it('edit cancel closes the form without touching the row', async () => {
+    const { controller, api } = buildController();
+    await controller.load();
+    controller.renderIdle();
+
+    await controller.handleEditStart('own');
+    controller.handleEditCancel();
+    expect(document.querySelector('[data-page-id="own"] .feed-edit-form')).toBeNull();
+    expect(api.updatePage).not.toHaveBeenCalled();
+  });
+
+  it('projects delegates to the injected editor opener, own rows only', async () => {
+    const openProjectsEditor = vi.fn();
+    const { controller } = buildController({ openProjectsEditor });
+    await controller.load();
+
+    await controller.handleProjects('own');
+    expect(openProjectsEditor).toHaveBeenCalledWith('own');
+    await controller.handleProjects('theirs');
+    expect(openProjectsEditor).toHaveBeenCalledTimes(1);
   });
 
   it('shows the disclosure once for public scopes and never again after dismissal', async () => {

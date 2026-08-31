@@ -20,7 +20,12 @@ export function createFeedController({
   resultsContainer,
   kickerSlotEl,
   disclosureSlotEl,
-  notify
+  notify,
+  // Optional management integrations threaded from the app: project pills for
+  // own rows, the projects modal, and its availability.
+  getProjectPills = null,
+  isProjectsUnavailable = () => false,
+  openProjectsEditor = null
 }) {
   const renderer = createFeedRenderer({ documentObj, resultsContainer });
   const state = {
@@ -29,7 +34,9 @@ export function createFeedController({
     // null = never loaded; true = feed shown; false = unavailable (404
     // bridge, auth error) → the desk index falls back to the personal list.
     available: null,
-    displaying: false
+    displaying: false,
+    editingId: null,
+    savingEditId: null
   };
 
   function localStorageSafe() {
@@ -102,7 +109,29 @@ export function createFeedController({
     // pinned rows are skipped here — they'd otherwise appear twice. Org-mates'
     // pinned saves stay: their pinning is invisible to me, and the strip
     // doesn't show them.
-    renderer.renderFeed(state.rows.filter((row) => !(row.mine && row.pinned)));
+    renderer.renderFeed(visibleRows(), renderContext());
+  }
+
+  function visibleRows() {
+    return state.rows.filter((row) => !(row.mine && row.pinned));
+  }
+
+  function renderContext() {
+    return {
+      editingId: state.editingId,
+      savingEditId: state.savingEditId,
+      getProjectPills,
+      projectsUnavailable: isProjectsUnavailable()
+    };
+  }
+
+  // Mutations re-render through the same filtered/context path as the surface
+  // render so optimistic states (pin removal, edit form, tag flips) paint
+  // consistently.
+  function rerenderRows() {
+    if (state.displaying) {
+      renderer.renderFeed(visibleRows(), renderContext());
+    }
   }
 
   async function refresh() {
@@ -179,17 +208,13 @@ export function createFeedController({
     // Order deliberately unchanged here: rank is server-computed and settles
     // via the realtime-triggered refresh (spec: optimistic toggle, no local
     // re-rank).
-    if (state.displaying) {
-      renderer.renderFeed(state.rows);
-    }
+    rerenderRows();
     try {
       await api.votePage(id);
       persistToCache();
     } catch (error) {
       Object.assign(row, previous);
-      if (state.displaying) {
-        renderer.renderFeed(state.rows);
-      }
+      rerenderRows();
       console.error('[feed] vote failed:', error);
       notify?.("Couldn't save your vote — try again", { type: 'error' });
     }
@@ -206,19 +231,101 @@ export function createFeedController({
     }
     const previous = row.private === true;
     row.private = !previous;
-    if (state.displaying) {
-      renderer.renderFeed(state.rows);
-    }
+    rerenderRows();
     try {
       await api.updatePage(id, { private: row.private });
       persistToCache();
     } catch (error) {
       row.private = previous;
-      if (state.displaying) {
-        renderer.renderFeed(state.rows);
-      }
+      rerenderRows();
       console.error('[feed] privacy toggle failed:', error);
       notify?.("Couldn't change privacy — try again", { type: 'error' });
+    }
+  }
+
+  // Pinning my feed row hands the page to the launch strip above: the
+  // mine+pinned render filter removes it from the index immediately, and the
+  // own-save realtime event adds the strip chip + refreshes the drawer.
+  async function handlePin(id) {
+    const row = state.rows.find((entry) => entry.id === id);
+    if (!row || !row.mine || isOptimisticPage(row) || row.pinned) {
+      return;
+    }
+    row.pinned = true;
+    rerenderRows();
+    try {
+      await api.pinPage(id, true);
+      persistToCache();
+    } catch (error) {
+      row.pinned = false;
+      rerenderRows();
+      console.error('[feed] pin failed:', error);
+      notify?.("Couldn't pin the page — try again", { type: 'error' });
+    }
+  }
+
+  async function handleDelete(id) {
+    const index = state.rows.findIndex((entry) => entry.id === id);
+    if (index === -1 || !state.rows[index].mine || isOptimisticPage(state.rows[index])) {
+      return;
+    }
+    const [removed] = state.rows.splice(index, 1);
+    rerenderRows();
+    try {
+      await api.deletePage(id);
+      persistToCache();
+    } catch (error) {
+      state.rows.splice(index, 0, removed);
+      rerenderRows();
+      console.error('[feed] delete failed:', error);
+      notify?.("Couldn't delete the page — try again", { type: 'error' });
+    }
+  }
+
+  function handleProjects(id) {
+    const row = state.rows.find((entry) => entry.id === id);
+    if (!row || !row.mine) {
+      return;
+    }
+    openProjectsEditor?.(id);
+  }
+
+  function handleEditStart(id) {
+    const row = state.rows.find((entry) => entry.id === id);
+    if (!row || !row.mine || isOptimisticPage(row)) {
+      return;
+    }
+    state.editingId = id;
+    rerenderRows();
+  }
+
+  function handleEditCancel() {
+    state.editingId = null;
+    state.savingEditId = null;
+    rerenderRows();
+  }
+
+  async function handleEditSubmit(id, fields) {
+    const row = state.rows.find((entry) => entry.id === id);
+    if (!row || state.savingEditId) {
+      return;
+    }
+    state.savingEditId = id;
+    rerenderRows();
+    try {
+      await api.updatePage(id, fields);
+      Object.assign(row, fields);
+      state.editingId = null;
+      state.savingEditId = null;
+      persistToCache();
+      rerenderRows();
+    } catch (error) {
+      // Keep the form open with the row's stored values; the failed attempt's
+      // edits are gone, which matches the drawer edit form's failure mode.
+      state.savingEditId = null;
+      rerenderRows();
+      console.error('[feed] edit save failed:', error);
+      notify?.("Couldn't save your changes — try again", { type: 'error' });
     }
   }
 
@@ -229,6 +336,12 @@ export function createFeedController({
     hide,
     handleVote,
     handleTogglePrivacy,
+    handlePin,
+    handleDelete,
+    handleProjects,
+    handleEditStart,
+    handleEditCancel,
+    handleEditSubmit,
     dismissDisclosure,
     isAvailable: () => state.available === true
   };

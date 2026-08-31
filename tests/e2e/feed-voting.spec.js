@@ -68,19 +68,23 @@ test.describe('Org Feed Voting', () => {
   });
 
   // Hover reveal regression: the date only yields its slot when the row has
-  // actions to show. Own feed rows have the privacy eye; org-mates' rows have
-  // no action slot at all, so their date must stay put.
-  test('own feed row reveals the privacy eye on hover; org-mate rows keep their date', async ({
+  // actions to show. Own feed rows have the full management set; org-mates'
+  // rows have no action slot at all, so their date must stay put.
+  test('own feed row reveals the full action set on hover; org-mate rows keep their date', async ({
     page
   }) => {
     await page.waitForSelector('.feed-row');
     const ownRow = page.locator('.feed-row').first();
     await ownRow.hover();
-    await expect
-      .poll(async () =>
-        ownRow.locator('.index-row-actions').evaluate((el) => getComputedStyle(el).opacity)
-      )
-      .toBe('1');
+    for (const action of [
+      'feed-edit',
+      'feed-pin',
+      'feed-privacy',
+      'feed-projects',
+      'feed-delete'
+    ]) {
+      await expect(ownRow.locator(`[data-action="${action}"]`)).toBeVisible();
+    }
     await expect
       .poll(async () =>
         ownRow.locator('.index-row-date').evaluate((el) => getComputedStyle(el).opacity)
@@ -95,6 +99,26 @@ test.describe('Org Feed Voting', () => {
         mateRow.locator('.index-row-date').evaluate((el) => getComputedStyle(el).opacity)
       )
       .toBe('1');
+  });
+
+  test('pin and edit from my feed row work in place', async ({ page }) => {
+    await page.waitForSelector('.feed-row');
+    const ownRow = page.locator('.feed-row').first();
+    const ownId = await ownRow.getAttribute('data-page-id');
+
+    // Edit first (mock row 0 is the only own row): inline form, retitled.
+    await ownRow.hover();
+    await ownRow.locator('[data-action="feed-edit"]').click();
+    const input = ownRow.locator('.feed-edit-form input[name="title"]');
+    await expect(input).toBeVisible();
+    await input.fill('Renamed from the desk');
+    await ownRow.locator('.saved-pages-drawer-edit-save').click();
+    await expect(ownRow.locator('.index-row-title')).toContainText('Renamed from the desk');
+
+    // Then pin: the row hands off to the launch strip above and leaves the feed.
+    await ownRow.hover();
+    await ownRow.locator('[data-action="feed-pin"]').click();
+    await expect(page.locator(`.feed-row[data-page-id="${ownId}"]`)).toHaveCount(0);
   });
 
   test('the privacy eye on my feed row makes the save private, and back', async ({ page }) => {
