@@ -701,13 +701,22 @@ body {
   min-width: 1ch;
 }
 
-.feed-only-you {
+/* Privacy status tag: always visible on every index row — confidentiality
+   must not hide behind the hover-revealed eye control (Rich, 2026-08-31).
+   Shared uses accent-ink text (AA on paper in both themes); private stays
+   quiet ink-soft. */
+.index-row-scope-tag {
   font-family: var(--font-mono);
   font-size: var(--font-size-xs);
   color: var(--color-ink-soft);
   border: 1px solid var(--color-line-strong);
   border-radius: 999px;
   padding: 1px 8px;
+  white-space: nowrap;
+}
+
+.index-row-scope-tag-shared {
+  color: var(--color-accent-ink);
 }
 
 /* One-time public-feed disclosure: hairline-separated note, not a box. */

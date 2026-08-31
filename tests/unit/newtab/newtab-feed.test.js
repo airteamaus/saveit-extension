@@ -223,6 +223,26 @@ describe('createFeedController', () => {
     expect(api.votePage).not.toHaveBeenCalled();
   });
 
+  it('skips my pinned rows (the launch strip shows them above) but keeps org-mates\' pinned saves', async () => {
+    const { controller } = buildController({
+      api: {
+        getFeed: vi.fn(async () => ({
+          ...FEED,
+          pages: [
+            { ...FEED.pages[0], pinned: true }, // mine + pinned -> skipped
+            { ...FEED.pages[1], pinned: true }, // org-mate + pinned -> kept
+            { id: 'plain-mine', title: 'Mine', votes: 0, voted: false, mine: true, pinned: false }
+          ]
+        }))
+      }
+    });
+    await controller.load();
+    controller.renderIdle();
+
+    const rowIds = [...document.querySelectorAll('.feed-row')].map(el => el.dataset.pageId);
+    expect(rowIds).toEqual(['theirs', 'plain-mine']);
+  });
+
   it('shows the disclosure once for public scopes and never again after dismissal', async () => {
     const { controller } = buildController({
       api: {

@@ -1,7 +1,4 @@
-import {
-  createElementFromHtml,
-  replaceElementHtml
-} from './dom-render.js';
+import { createElementFromHtml, replaceElementHtml } from './dom-render.js';
 import { reconcileKeyedChildren } from './keyed-dom-list.js';
 import {
   escapeHtml,
@@ -14,12 +11,10 @@ import {
 import { isOptimisticPage } from './pending-saves.js';
 import { LOADING_ILLUSTRATION_SVG } from './loading-illustration.js';
 
-export function renderDrawerCardMarkup(page, {
-  editingPageId = null,
-  savingEditPageId = null,
-  getProjectPills,
-  projectsUnavailable = false
-}) {
+export function renderDrawerCardMarkup(
+  page,
+  { editingPageId = null, savingEditPageId = null, getProjectPills, projectsUnavailable = false }
+) {
   const isEditing = page.id === editingPageId;
   const isSavingEdit = page.id === savingEditPageId;
   // Optimistic (not-yet-enriched) tiles carry a synthetic id that is not a
@@ -38,9 +33,12 @@ export function renderDrawerCardMarkup(page, {
   const normalizedSummary = rawSummary.trim().toLowerCase();
   const normalizedTitle = (page.title || '').trim().toLowerCase();
   const normalizedDomain = (domain || '').trim().toLowerCase();
-  const summary = normalizedSummary && normalizedSummary !== normalizedTitle && normalizedSummary !== normalizedDomain
-    ? rawSummary
-    : '';
+  const summary =
+    normalizedSummary &&
+    normalizedSummary !== normalizedTitle &&
+    normalizedSummary !== normalizedDomain
+      ? rawSummary
+      : '';
   const meta = [];
 
   if (domain) {
@@ -54,13 +52,13 @@ export function renderDrawerCardMarkup(page, {
   const tagsHtml = renderPageTags(page);
   const projectPills = getProjectPills(page);
   const url = page.url || '';
-  const navigationAttrs = url
-    ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
-    : '';
+  const navigationAttrs = url ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"` : '';
   const projectPillsHtml = projectPills.length
     ? `
       <div class="index-row-projects">
-        ${projectPills.map(project => `
+        ${projectPills
+          .map(
+            (project) => `
           <span class="project-pill" title="${escapeHtml(project.name)}">
             <span class="project-pill-label">${escapeHtml(project.name)}</span>
             <button
@@ -74,7 +72,9 @@ export function renderDrawerCardMarkup(page, {
               ${actionDisabledAttr}
             >×</button>
           </span>
-        `).join('')}
+        `
+          )
+          .join('')}
       </div>
     `
     : '';
@@ -112,15 +112,17 @@ export function renderDrawerCardMarkup(page, {
       ${actionDisabledAttr}
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-        ${isPrivate
-          ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1 -2.16 3.19"></path><path d="M1 1l22 22"></path>'
-          : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'}
+        ${
+          isPrivate
+            ? '<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-10-8-10-8a18.45 18.45 0 0 1 5.06-5.94"></path><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 10 8 10 8a18.5 18.5 0 0 1 -2.16 3.19"></path><path d="M1 1l22 22"></path>'
+            : '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle>'
+        }
       </svg>
     </button>
   `;
   const projectsButtonLabel = projectsUnavailable
     ? 'Projects unavailable'
-    : (actionBusyTitle || 'Manage projects');
+    : actionBusyTitle || 'Manage projects';
   const projectsButtonHtml = `
     <button
       class="index-row-action index-row-projects-btn btn-projects"
@@ -222,12 +224,21 @@ export function renderDrawerCardMarkup(page, {
           </button>
         </div>
       </div>
-      ${isEditing
-        ? editFormHtml
-        : (summary ? `<p class="index-row-summary">${escapeHtml(truncateText(summary))}</p>` : '')}
+      ${
+        isEditing
+          ? editFormHtml
+          : summary
+            ? `<p class="index-row-summary">${escapeHtml(truncateText(summary))}</p>`
+            : ''
+      }
       ${projectPillsHtml}
       <div class="index-row-footer">
         <div class="index-row-meta">
+          ${
+            page.private === true
+              ? '<span class="index-row-scope-tag index-row-scope-tag-private">Only you</span>'
+              : '<span class="index-row-scope-tag index-row-scope-tag-shared">Shared</span>'
+          }
           ${domain ? `<img class="index-row-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="14" height="14">` : ''}
           ${meta.length ? meta.join('<span class="index-row-meta-sep">·</span>') : ''}
         </div>
@@ -246,9 +257,7 @@ export function renderDrawerCardMarkup(page, {
 export function renderLaunchChipMarkup(page) {
   const domain = getPageDomain(page);
   const url = page.url || '';
-  const navigationAttrs = url
-    ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"`
-    : '';
+  const navigationAttrs = url ? ` data-url="${escapeHtml(url)}" role="link" tabindex="0"` : '';
   const faviconHtml = domain
     ? `<img class="launch-chip-favicon" src="${getFaviconUrlForDomain(domain)}" alt="" width="14" height="14">`
     : '';
@@ -292,7 +301,9 @@ export function renderLaunchChipMarkup(page) {
 
 export function getDrawerEmptyStateContent({ query = '', scopeLabel, hasSelectedProject = false }) {
   return {
-    title: query ? `No results for "${escapeHtml(query)}"` : `No pages in ${escapeHtml(scopeLabel)}`,
+    title: query
+      ? `No results for "${escapeHtml(query)}"`
+      : `No pages in ${escapeHtml(scopeLabel)}`,
     description: query
       ? `Try different words or clear the search in ${escapeHtml(scopeLabel)}.`
       : hasSelectedProject
@@ -314,12 +325,15 @@ export function createDrawerRenderer({
   getProjectScopeLabel
 }) {
   function createDrawerCardElement(page) {
-    return createElementFromHtml(renderDrawerCardMarkup(page, {
-      editingPageId: getEditingPageId?.() || null,
-      savingEditPageId: getSavingEditPageId?.() || null,
-      getProjectPills,
-      projectsUnavailable: isProjectsUnavailable()
-    }), documentObj);
+    return createElementFromHtml(
+      renderDrawerCardMarkup(page, {
+        editingPageId: getEditingPageId?.() || null,
+        savingEditPageId: getSavingEditPageId?.() || null,
+        getProjectPills,
+        projectsUnavailable: isProjectsUnavailable()
+      }),
+      documentObj
+    );
   }
 
   function getDrawerCardElement(pageId) {
@@ -330,8 +344,11 @@ export function createDrawerRenderer({
     // Scope to the pages section only so card lookups never match a card in
     // the semantic-results section (which is reconciled separately).
     const scope = resultsContainer.querySelector('[data-section="pages"]') || resultsContainer;
-    return Array.from(scope.querySelectorAll('.index-row'))
-      .find(card => card.dataset.pageId === pageId) || null;
+    return (
+      Array.from(scope.querySelectorAll('.index-row')).find(
+        (card) => card.dataset.pageId === pageId
+      ) || null
+    );
   }
 
   function renderDrawerState(html) {
@@ -367,7 +384,9 @@ export function createDrawerRenderer({
     const barClass = indeterminate
       ? 'saved-pages-warming-bar saved-pages-warming-bar-indeterminate'
       : 'saved-pages-warming-bar';
-    const percentLabel = indeterminate ? '' : `<span class="saved-pages-warming-percent">${clampedPercent}%</span>`;
+    const percentLabel = indeterminate
+      ? ''
+      : `<span class="saved-pages-warming-percent">${clampedPercent}%</span>`;
 
     renderDrawerState(`
       <div class="saved-pages-semantic-loading saved-pages-semantic-loading-pane saved-pages-warming-pane" aria-live="polite">
@@ -426,7 +445,7 @@ export function createDrawerRenderer({
 
     // Prune any non-section children (e.g. a leftover loading/empty state
     // div) before (re)building the sections.
-    Array.from(resultsContainer.children).forEach(child => {
+    Array.from(resultsContainer.children).forEach((child) => {
       if (!child.hasAttribute('data-section')) {
         child.remove();
       }
@@ -434,7 +453,10 @@ export function createDrawerRenderer({
 
     let section = resultsContainer.querySelector(`[data-section="${dataSection}"]`);
     if (!section) {
-      section = createElementFromHtml(`<div data-section="${dataSection}"${ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : ''}></div>`, documentObj);
+      section = createElementFromHtml(
+        `<div data-section="${dataSection}"${ariaLabel ? ` aria-label="${escapeHtml(ariaLabel)}"` : ''}></div>`,
+        documentObj
+      );
       resultsContainer.append(section);
     }
     return section;
@@ -454,11 +476,14 @@ export function createDrawerRenderer({
     if (!pages.length) {
       // No saved-page matches. The pages section is kept (rather than the
       // full-container empty state) so a semantic section can render below.
-      replaceElementHtml(pagesSection, `
+      replaceElementHtml(
+        pagesSection,
+        `
         <div class="empty-state saved-pages-drawer-state">
           <p>No saved pages match this search.</p>
         </div>
-      `);
+      `
+      );
       renderChrome();
       return;
     }
@@ -468,13 +493,14 @@ export function createDrawerRenderer({
     // become DOM nodes. reconcileKeyedChildren reuses existing nodes by key, so
     // growing the window only creates the newly-revealed cards.
     const renderLimit = typeof getRenderLimit === 'function' ? getRenderLimit() : pages.length;
-    const visiblePages = Number.isFinite(renderLimit) && renderLimit < pages.length
-      ? pages.slice(0, renderLimit)
-      : pages;
+    const visiblePages =
+      Number.isFinite(renderLimit) && renderLimit < pages.length
+        ? pages.slice(0, renderLimit)
+        : pages;
 
     reconcileKeyedChildren(pagesSection, visiblePages, {
-      getKey: page => page.id || null,
-      getNodeKey: node => node?.dataset?.pageId || null,
+      getKey: (page) => page.id || null,
+      getNodeKey: (node) => node?.dataset?.pageId || null,
       pruneUnkeyed: true,
       renderItem: (page, existingNode) => {
         const nextCard = createDrawerCardElement(page);
@@ -507,32 +533,44 @@ export function createDrawerRenderer({
     }
 
     if (loading) {
-      replaceElementHtml(section, `
+      replaceElementHtml(
+        section,
+        `
         <p class="saved-pages-semantic-heading">From across everything</p>
         <div class="saved-pages-semantic-loading" aria-live="polite">
           ${LOADING_ILLUSTRATION_SVG}
         </div>
-      `);
+      `
+      );
       return;
     }
 
     if (!hasResults) {
-      replaceElementHtml(section, `
+      replaceElementHtml(
+        section,
+        `
         <p class="saved-pages-semantic-heading">From across everything</p>
         <div class="saved-pages-drawer-state saved-pages-semantic-state">
           <p>No matches beyond your saved pages.</p>
         </div>
-      `);
+      `
+      );
       return;
     }
 
-    replaceElementHtml(section, '<p class="saved-pages-semantic-heading">From across everything</p>');
-    const list = createElementFromHtml('<div class="saved-pages-semantic-list"></div>', documentObj);
+    replaceElementHtml(
+      section,
+      '<p class="saved-pages-semantic-heading">From across everything</p>'
+    );
+    const list = createElementFromHtml(
+      '<div class="saved-pages-semantic-list"></div>',
+      documentObj
+    );
     section.append(list);
 
     reconcileKeyedChildren(list, results, {
-      getKey: page => page.id || null,
-      getNodeKey: node => node?.dataset?.pageId || null,
+      getKey: (page) => page.id || null,
+      getNodeKey: (node) => node?.dataset?.pageId || null,
       pruneUnkeyed: true,
       renderItem: (page, existingNode) => {
         const nextCard = createDrawerCardElement(page);
@@ -567,7 +605,7 @@ export function createDrawerRenderer({
     }
 
     const existingCard = getDrawerCardElement(pageId);
-    const page = pages.find(entry => entry.id === pageId) || null;
+    const page = pages.find((entry) => entry.id === pageId) || null;
 
     if (!page) {
       if (existingCard) {
@@ -601,7 +639,7 @@ export function createDrawerRenderer({
     }
 
     launchStripContainer.replaceChildren(
-      ...pinnedPages.map(page => createElementFromHtml(renderLaunchChipMarkup(page), documentObj))
+      ...pinnedPages.map((page) => createElementFromHtml(renderLaunchChipMarkup(page), documentObj))
     );
   }
 

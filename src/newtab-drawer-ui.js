@@ -21,7 +21,8 @@ export function sortPagesForIndex(pages, indexSort) {
   }
 
   return [...pages].sort((a, b) =>
-    String(a.saved_at || '').localeCompare(String(b.saved_at || '')));
+    String(a.saved_at || '').localeCompare(String(b.saved_at || ''))
+  );
 }
 
 export function createDrawerUiController({
@@ -168,9 +169,7 @@ export function createDrawerUiController({
     // header row above the list. Any query or scope hides the shelf.
     const hasScope = Boolean(state.selectedProjectId) || Boolean(state.selectedDomainId);
     const allPages = Array.isArray(state.allPages) ? state.allPages : [];
-    const pinnedPages = (!hasScope && allPages.length)
-      ? getPinnedPages(allPages)
-      : [];
+    const pinnedPages = !hasScope && allPages.length ? getPinnedPages(allPages) : [];
     if (pinnedPages.length) {
       drawerRenderer.renderLaunchStrip(pinnedPages);
     } else {
@@ -201,7 +200,13 @@ export function createDrawerUiController({
       return;
     }
 
-    drawerRenderer.renderResults(sortPagesForIndex(state.pages, state.indexSort));
+    // The launch strip already shows pinned pages above the desk; repeating
+    // them in the index doubles every pinned save. Scoped/searched lists keep
+    // them (the strip is hidden there, so the list is their only surface).
+    const indexPages = hasScope
+      ? sortPagesForIndex(state.pages, state.indexSort)
+      : sortPagesForIndex(state.pages, state.indexSort).filter((page) => !page.pinned);
+    drawerRenderer.renderResults(indexPages);
     drawerRenderer.renderSemanticResults(state.semanticResults, {
       loading: state.semanticLoading,
       query: state.semanticQuery
