@@ -66,8 +66,6 @@ body {
   --saved-pages-control-bg: transparent;
   --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-accent) 6%, transparent);
   --saved-pages-chip-bg: transparent;
-  /* Scroll mode tightens the rhythm gaps 14→8 (see the scroll mode block). */
-  transition: gap 0.18s ease;
 }
 
 /* ── Utility row ────────────────────────────────────────────────── */
@@ -78,18 +76,6 @@ body {
   align-items: center;
   gap: 12px;
   min-height: 32px;
-  /* Scroll-mode collapse scaffolding: the ceiling carries headroom over
-     the resting height so text-scale changes never clip (see the scroll
-     mode block below). overflow:hidden stays in the scroll-mode rules —
-     the account dropdown (position:absolute) lives inside this row. */
-  max-height: 48px;
-  transition:
-    max-height 0.18s ease,
-    min-height 0.18s ease,
-    padding-top 0.18s ease,
-    margin-bottom 0.18s ease,
-    opacity 0.18s ease,
-    visibility 0s linear 0s;
 }
 
 .desk-utility-left,
@@ -138,16 +124,6 @@ body {
 .desk-masthead {
   text-align: center;
   padding-top: 6px;
-  /* Scroll-mode collapse scaffolding — ceiling with headroom over the
-     resting ~90px (see the scroll mode block below). */
-  max-height: 120px;
-  transition:
-    max-height 0.18s ease,
-    min-height 0.18s ease,
-    padding-top 0.18s ease,
-    margin-bottom 0.18s ease,
-    opacity 0.18s ease,
-    visibility 0s linear 0s;
 }
 
 .desk-masthead-wordmark {
@@ -195,7 +171,6 @@ body {
   /* 40px is the DESIGN.md a11y floor for search-hero targets; resting
      height (~56px) clears it and scroll mode pins to it. */
   min-height: 40px;
-  transition: padding 0.18s ease;
 }
 
 .desk-search-hero .search-icon {
@@ -215,9 +190,6 @@ body {
   background: transparent;
   font-family: var(--font-display);
   font-size: var(--font-size-2xl);
-  transition:
-    font-size 0.18s ease,
-    padding 0.18s ease;
 }
 
 .desk-search-input:focus {
@@ -243,9 +215,6 @@ body {
   font-weight: 600;
   font-size: var(--font-size-md);
   cursor: pointer;
-  transition:
-    width 0.18s ease,
-    padding 0.18s ease;
 }
 
 .desk-search-find:hover {
@@ -258,7 +227,13 @@ body {
    identity work is done, the utility row's tools are one scroll flick
    away, and the search hero slims to a 40px pill (DESIGN.md a11y floor).
    Toggled as is-scroll-mode on .desk-page by updateHeaderScrollState
-   (newtab-drawer-events.js). Resting styles above stay untouched. */
+   (newtab-drawer-events.js). Resting styles above stay untouched.
+   Every layout change here SNAPS deliberately: animating the collapse
+   reflows the scroller under the pointer mid-interaction (~215px of
+   drift — a hover aimed at one row lands on another), and Firefox's
+   scroll anchoring fights the animated reflow. The strip's small chip
+   animation is unaffected (no meaningful layout impact). The e2e
+   hit-testing suite in feed-voting.spec.js guards this. */
 
 /* Each collapsed block negates the 8px scroll-mode gap below it with a
    matching negative margin — flex gap still surrounds zero-height
@@ -277,16 +252,8 @@ body {
   overflow: hidden;
   opacity: 0;
   /* Hidden content must leave the tab order and hit-testing, not just
-     clip. visibility flips at the END of the collapse (delayed transition
-     below) and instantly on the way back up (resting transition above). */
+     clip. */
   visibility: hidden;
-  transition:
-    max-height 0.18s ease,
-    min-height 0.18s ease,
-    padding-top 0.18s ease,
-    margin-bottom 0.18s ease,
-    opacity 0.18s ease,
-    visibility 0s linear 0.18s;
 }
 
 .desk-page.is-scroll-mode .desk-search-hero {
@@ -1453,15 +1420,6 @@ body {
   .launch-chip,
   .launch-chip-favicon,
   .launch-chip-label {
-    transition: none;
-  }
-
-  .desk-page,
-  .desk-masthead,
-  .desk-utility-row,
-  .desk-search-hero,
-  .desk-search-input,
-  .desk-search-find {
     transition: none;
   }
 }
