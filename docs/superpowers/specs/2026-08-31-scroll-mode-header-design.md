@@ -60,7 +60,7 @@ Scrolling back up reveals progressively rather than at once — the strip re-exp
 - `src/newtab-drawer-events.js` — generalize the update function; enter/exit constants.
 - `tests/unit/newtab-drawer-events.test.js` — extend the existing `launch strip scroll collapse` suite (happy-dom `scrollTop` override pattern already established there).
 
-No HTML changes, no new dependencies, no extension/backend contract involvement.
+`src/newtab.html` — the Find button gains a return-arrow icon and a label span (the icon-only scroll-mode state needs real markup, not a CSS font glyph). No new dependencies, no extension/backend contract involvement.
 
 ## 7. Testing and verification
 

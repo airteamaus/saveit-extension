@@ -66,6 +66,8 @@ body {
   --saved-pages-control-bg: transparent;
   --saved-pages-control-bg-hover: color-mix(in srgb, var(--color-accent) 6%, transparent);
   --saved-pages-chip-bg: transparent;
+  /* Scroll mode tightens the rhythm gaps 14→8 (see the scroll mode block). */
+  transition: gap 0.18s ease;
 }
 
 /* ── Utility row ────────────────────────────────────────────────── */
@@ -76,6 +78,18 @@ body {
   align-items: center;
   gap: 12px;
   min-height: 32px;
+  /* Scroll-mode collapse scaffolding: the ceiling carries headroom over
+     the resting height so text-scale changes never clip (see the scroll
+     mode block below). overflow:hidden stays in the scroll-mode rules —
+     the account dropdown (position:absolute) lives inside this row. */
+  max-height: 48px;
+  transition:
+    max-height 0.18s ease,
+    min-height 0.18s ease,
+    padding-top 0.18s ease,
+    margin-bottom 0.18s ease,
+    opacity 0.18s ease,
+    visibility 0s linear 0s;
 }
 
 .desk-utility-left,
@@ -124,6 +138,16 @@ body {
 .desk-masthead {
   text-align: center;
   padding-top: 6px;
+  /* Scroll-mode collapse scaffolding — ceiling with headroom over the
+     resting ~90px (see the scroll mode block below). */
+  max-height: 120px;
+  transition:
+    max-height 0.18s ease,
+    min-height 0.18s ease,
+    padding-top 0.18s ease,
+    margin-bottom 0.18s ease,
+    opacity 0.18s ease,
+    visibility 0s linear 0s;
 }
 
 .desk-masthead-wordmark {
@@ -168,6 +192,10 @@ body {
   border: 1px solid var(--color-line-strong);
   border-radius: var(--radius-md);
   padding: 6px 6px 6px 14px;
+  /* 40px is the DESIGN.md a11y floor for search-hero targets; resting
+     height (~56px) clears it and scroll mode pins to it. */
+  min-height: 40px;
+  transition: padding 0.18s ease;
 }
 
 .desk-search-hero .search-icon {
@@ -187,6 +215,9 @@ body {
   background: transparent;
   font-family: var(--font-display);
   font-size: var(--font-size-2xl);
+  transition:
+    font-size 0.18s ease,
+    padding 0.18s ease;
 }
 
 .desk-search-input:focus {
@@ -199,6 +230,11 @@ body {
 }
 
 .desk-search-find {
+  /* Flex centers the icon/label pair; scroll mode drops the label. */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 8px 16px;
   background: var(--color-accent);
   color: var(--color-on-accent);
@@ -207,10 +243,76 @@ body {
   font-weight: 600;
   font-size: var(--font-size-md);
   cursor: pointer;
+  transition:
+    width 0.18s ease,
+    padding 0.18s ease;
 }
 
 .desk-search-find:hover {
   background: var(--color-accent-ink);
+}
+
+/* ── Scroll mode ────────────────────────────────────────────────── */
+/* While the index is scrolled the header retires what mid-browse never
+   needs (spec: 2026-08-31-scroll-mode-header-design.md): the masthead's
+   identity work is done, the utility row's tools are one scroll flick
+   away, and the search hero slims to a 40px pill (DESIGN.md a11y floor).
+   Toggled as is-scroll-mode on .desk-page by updateHeaderScrollState
+   (newtab-drawer-events.js). Resting styles above stay untouched. */
+
+/* Each collapsed block negates the 8px scroll-mode gap below it with a
+   matching negative margin — flex gap still surrounds zero-height
+   children, so without this ~16px of phantom space would linger where
+   the masthead was. */
+.desk-page.is-scroll-mode {
+  gap: 8px;
+}
+
+.desk-page.is-scroll-mode .desk-masthead,
+.desk-page.is-scroll-mode .desk-utility-row {
+  max-height: 0;
+  min-height: 0;
+  padding-top: 0;
+  margin-bottom: -8px;
+  overflow: hidden;
+  opacity: 0;
+  /* Hidden content must leave the tab order and hit-testing, not just
+     clip. visibility flips at the END of the collapse (delayed transition
+     below) and instantly on the way back up (resting transition above). */
+  visibility: hidden;
+  transition:
+    max-height 0.18s ease,
+    min-height 0.18s ease,
+    padding-top 0.18s ease,
+    margin-bottom 0.18s ease,
+    opacity 0.18s ease,
+    visibility 0s linear 0.18s;
+}
+
+.desk-page.is-scroll-mode .desk-search-hero {
+  padding: 3px 4px 3px 10px;
+}
+
+.desk-page.is-scroll-mode .desk-search-input {
+  padding: 6px 4px;
+  font-size: var(--font-size-sm);
+}
+
+.desk-page.is-scroll-mode .desk-search-find {
+  width: 40px;
+  padding: 8px 0;
+}
+
+.desk-search-find-icon {
+  display: none;
+}
+
+.desk-page.is-scroll-mode .desk-search-find-icon {
+  display: block;
+}
+
+.desk-page.is-scroll-mode .desk-search-find-label {
+  display: none;
 }
 
 /* ── Launch strip + project pills ───────────────────────────────── */
@@ -1351,6 +1453,15 @@ body {
   .launch-chip,
   .launch-chip-favicon,
   .launch-chip-label {
+    transition: none;
+  }
+
+  .desk-page,
+  .desk-masthead,
+  .desk-utility-row,
+  .desk-search-hero,
+  .desk-search-input,
+  .desk-search-find {
     transition: none;
   }
 }
