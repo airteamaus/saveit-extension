@@ -29,6 +29,12 @@ export function initSavedPagesDrawerEvents({
   handleDrawerPin,
   handleDrawerVote,
   handleFeedTogglePrivacy,
+  handleFeedEditStart,
+  handleFeedEditCancel,
+  handleFeedEditSubmit,
+  handleFeedPin,
+  handleFeedProjects,
+  handleFeedDelete,
   handleDrawerTogglePrivacy,
   handleDrawerUpdate,
   handleDrawerDelete,
@@ -115,10 +121,36 @@ export function initSavedPagesDrawerEvents({
       return;
     }
 
-    // Feed rows' own-save privacy eye — distinct from the drawer's
-    // toggle-privacy so each handler updates its own surface's state.
+    // Feed rows' own-save management — distinct feed-* actions so each
+    // handler updates its own surface's state (the drawer twins keep their
+    // drawer-state optimistic paths).
     if (action === 'feed-privacy') {
       void handleFeedTogglePrivacy(id);
+      return;
+    }
+
+    if (action === 'feed-edit') {
+      handleFeedEditStart(id);
+      return;
+    }
+
+    if (action === 'feed-edit-cancel') {
+      handleFeedEditCancel();
+      return;
+    }
+
+    if (action === 'feed-pin') {
+      void handleFeedPin(id);
+      return;
+    }
+
+    if (action === 'feed-projects') {
+      handleFeedProjects(id);
+      return;
+    }
+
+    if (action === 'feed-delete') {
+      void handleFeedDelete(id);
       return;
     }
 
@@ -227,6 +259,18 @@ export function initSavedPagesDrawerEvents({
 
     event.preventDefault();
     const formData = new FormData(form);
+
+    // The feed's own-row edit form carries a feed-edit-form marker on the
+    // shared class; branch before the drawer path so one listener serves both
+    // surfaces.
+    if (form.classList.contains('feed-edit-form')) {
+      void handleFeedEditSubmit(form.dataset.pageId, {
+        title: formData.get('title') || '',
+        ai_summary_brief: formData.get('ai_summary_brief') || ''
+      });
+      return;
+    }
+
     void handleDrawerUpdate(form.dataset.pageId, {
       title: formData.get('title') || '',
       ai_summary_brief: formData.get('ai_summary_brief') || ''

@@ -189,13 +189,27 @@ export function createNewtabApp({
   // (search/manage) stays personal. Falls back to the personal list while
   // the backend lacks /feed (deploy-order bridge). Created before the
   // drawer controller so it can be threaded through as a dependency.
+  // The project integrations resolve the drawer's view lazily — the view
+  // lives inside the drawer controller, which does not exist yet here.
   const feedController = createFeedController({
     api: API,
     documentObj,
     resultsContainer: elements.savedPagesDrawerResults,
     kickerSlotEl: elements.feedScopeKickerSlot,
     disclosureSlotEl: elements.feedDisclosureSlot,
-    notify: toast.show
+    notify: toast.show,
+    getProjectPills: (page) => {
+      const view = drawerController?.getSavedPagesView?.();
+      return view ? projectManager.getProjectPills(page, view) : [];
+    },
+    isProjectsUnavailable: () =>
+      drawerController?.getSavedPagesView?.()?.projectsAvailable === false,
+    openProjectsEditor: (id) => {
+      const view = drawerController?.getSavedPagesView?.();
+      if (view) {
+        projectManager.openEditor(view, id);
+      }
+    }
   });
 
   const drawerController = createSavedPagesDrawerControllerFn({

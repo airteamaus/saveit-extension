@@ -38,7 +38,7 @@ describe('renderFeedRowMarkup', () => {
     expect(html).toContain('is-active');
   });
 
-  it('disables the chevron on the voter\'s own save with an explanatory title', () => {
+  it("disables the chevron on the voter's own save with an explanatory title", () => {
     const html = renderFeedRowMarkup({ ...ROW, mine: true });
     expect(html).toContain('disabled');
     expect(html).toContain("You can't vote on your own save");
@@ -87,6 +87,51 @@ describe('renderFeedRowMarkup', () => {
     expect(html).not.toContain('feed-privacy');
   });
 
+  it('own rows carry the full management set: edit, pin, privacy, projects, delete', () => {
+    const html = renderFeedRowMarkup({ ...ROW, mine: true });
+    expect(html).toContain('data-action="feed-edit"');
+    expect(html).toContain('data-action="feed-pin"');
+    expect(html).toContain('data-action="feed-privacy"');
+    expect(html).toContain('data-action="feed-projects"');
+    expect(html).toContain('data-action="feed-delete"');
+    expect(html).toContain('Pin page');
+  });
+
+  it('own rows render display-only project pills (no remove control)', () => {
+    const html = renderFeedRowMarkup(
+      { ...ROW, mine: true },
+      {
+        getProjectPills: () => [{ id: 'p1', name: 'Research' }]
+      }
+    );
+    expect(html).toContain('project-pill-label');
+    expect(html).toContain('Research');
+    expect(html).not.toContain('project-pill-remove');
+  });
+
+  it('projects button disabled when projects are unavailable', () => {
+    const html = renderFeedRowMarkup({ ...ROW, mine: true }, { projectsUnavailable: true });
+    expect(html).toContain('Projects unavailable');
+    expect(html).toMatch(/data-action="feed-projects"[^>]*disabled/s);
+  });
+
+  it('editing swaps the row body for the inline edit form and drops the actions', () => {
+    const html = renderFeedRowMarkup(
+      { ...ROW, mine: true, title: 'Old title', ai_summary_brief: 'Old summary' },
+      { editingId: ROW.id }
+    );
+    expect(html).toContain('feed-edit-form');
+    expect(html).toContain('value="Old title"');
+    expect(html).not.toContain('data-action="feed-edit"');
+    expect(html).not.toContain('data-action="feed-delete"');
+
+    const saving = renderFeedRowMarkup(
+      { ...ROW, mine: true },
+      { editingId: ROW.id, savingEditId: ROW.id }
+    );
+    expect(saving).toContain('Saving…');
+  });
+
   it('hides the saved-by label when the backend sent none', () => {
     const html = renderFeedRowMarkup({ ...ROW, saved_by: null });
     expect(html).not.toContain('saved by');
@@ -95,18 +140,21 @@ describe('renderFeedRowMarkup', () => {
 
 describe('scope kicker', () => {
   it('labels company orgs', () => {
-    expect(feedScopeKickerMarkup({ type: 'org', domain: 'acme.com', public: false }))
-      .toContain('Everyone at acme.com');
+    expect(feedScopeKickerMarkup({ type: 'org', domain: 'acme.com', public: false })).toContain(
+      'Everyone at acme.com'
+    );
   });
 
   it('labels public orgs with the provider name', () => {
-    expect(feedScopeKickerMarkup({ type: 'org', domain: 'gmail.com', public: true }))
-      .toContain('Everyone using Gmail — public');
+    expect(feedScopeKickerMarkup({ type: 'org', domain: 'gmail.com', public: true })).toContain(
+      'Everyone using Gmail — public'
+    );
   });
 
   it('labels personal scope', () => {
-    expect(feedScopeKickerMarkup({ type: 'personal', domain: null, public: false }))
-      .toContain('Your saves only');
+    expect(feedScopeKickerMarkup({ type: 'personal', domain: null, public: false })).toContain(
+      'Your saves only'
+    );
   });
 });
 
