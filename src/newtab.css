@@ -1448,6 +1448,26 @@ body {
   pointer-events: auto;
 }
 
+/* Scrolled state: the strip collapses to favicon-only launchers. Labels and
+   the rename/unpin overlay are gone (management returns at the top of the
+   index); each chip keeps its pointer target and identifies itself through
+   the chip's native title tooltip. */
+.launch-strip.is-collapsed .launch-chip {
+  gap: 0;
+  max-width: none;
+  padding: 4px;
+}
+
+.launch-strip.is-collapsed .launch-chip-label,
+.launch-strip.is-collapsed .launch-chip-actions {
+  display: none;
+}
+
+.launch-strip.is-collapsed .launch-chip-favicon {
+  width: 16px;
+  height: 16px;
+}
+
 .launch-chip-action {
   display: inline-flex;
   align-items: center;

@@ -531,9 +531,22 @@ export function initSavedPagesDrawerEvents({
     const threshold = el.clientHeight * 1.5;
     return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
   }
+
+  // The pinned strip collapses to favicon-only chips once the user scrolls
+  // into the index — wrapped label chips cost too much vertical space
+  // mid-browse — and expands again at the top. Collapsed chips are pure
+  // launchers (no hover buttons, native title tooltip): management returns
+  // when the user scrolls back.
+  const LAUNCH_STRIP_COLLAPSE_SCROLL_PX = 48;
+  function updateLaunchStripCollapse(scroller) {
+    const scrollTop = scroller?.scrollTop ?? 0;
+    launchStrip?.classList?.toggle('is-collapsed', scrollTop > LAUNCH_STRIP_COLLAPSE_SCROLL_PX);
+  }
+
   savedPagesDrawerResults?.addEventListener(
     'scroll',
     () => {
+      updateLaunchStripCollapse(savedPagesDrawerResults);
       if (isNearScrollEnd(savedPagesDrawerResults)) {
         onScrollNearEnd();
       }
@@ -546,12 +559,14 @@ export function initSavedPagesDrawerEvents({
       // Only acts as a fallback when the results container itself isn't the
       // scroller (narrow layout). handleDrawerScrollNearEnd is a no-op for
       // project/domain scopes, so this stays safe.
+      updateLaunchStripCollapse(windowObj.document.scrollingElement);
       if (isNearScrollEnd(windowObj.document.scrollingElement)) {
         onScrollNearEnd();
       }
     },
     { passive: true }
   );
+  updateLaunchStripCollapse(savedPagesDrawerResults);
 
   setDrawerToggleState(true);
   setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);

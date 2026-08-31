@@ -264,7 +264,12 @@ export function renderLaunchChipMarkup(page) {
   const label = page.title || domain || 'Untitled';
 
   return `
-    <article class="launch-chip" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
+    <article
+      class="launch-chip"
+      data-page-id="${escapeHtml(page.id || '')}"
+      title="${escapeHtml(label)}"
+      ${navigationAttrs}
+    >
       ${faviconHtml}
       <span class="launch-chip-label">${escapeHtml(label)}</span>
       <span class="launch-chip-actions">
