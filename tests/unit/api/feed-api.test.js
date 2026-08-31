@@ -81,7 +81,7 @@ describe('API.getFeed (extension mode)', () => {
       status: 404,
       json: async () => ({ error: 'Not Found', message: 'nope' })
     }));
-    const error = await API.getFeed().catch(e => e);
+    const error = await API.getFeed().catch((e) => e);
     expect(error).toBeInstanceOf(Error);
     expect(error.status).toBe(404);
   });

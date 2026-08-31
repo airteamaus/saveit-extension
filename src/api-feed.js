@@ -43,7 +43,10 @@ export function applyApiFeed(API) {
           // bad shape never lands in the feed cache.
           normalize: (response) => {
             const scopeType = response?.scope?.type;
-            if ((scopeType !== 'org' && scopeType !== 'personal') || !Array.isArray(response?.pages)) {
+            if (
+              (scopeType !== 'org' && scopeType !== 'personal') ||
+              !Array.isArray(response?.pages)
+            ) {
               const error = new Error('Feed response missing scope/pages — old backend?');
               error.status = 404;
               throw error;
@@ -68,11 +71,12 @@ export function applyApiFeed(API) {
       assertRealPageId(id);
       if (this.isExtension) {
         return this._executeWithErrorHandling(
-          async () => this._fetchWithAuth('/vote', null, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
-          }),
+          async () =>
+            this._fetchWithAuth('/vote', null, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id })
+            }),
           'votePage',
           { id }
         );
