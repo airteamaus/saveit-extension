@@ -43,6 +43,8 @@ Constants live beside the existing `LAUNCH_STRIP_COLLAPSE_SCROLL_PX`. Both scrol
 
 Collapsed blocks still get `overflow: hidden` (only in scroll-mode rules — the resting utility row contains the account dropdown, which base overflow would clip) and each negates the 8px scroll-mode gap below it with a matching `-8px` margin, because flex `gap` still surrounds zero-height children; without that, ~16px of phantom space lingers where the masthead was.
 
+**Second amendment (v1.29.1 CI follow-up): `.desk-index-results` sets `overflow-anchor: none`.** Even with the snap, Firefox's scroll anchoring compensated the collapsed viewport in a *separate* layout pass after the toggle — content shifted under pointer targets that had already been computed (deterministic in headless Firefox; the e2e hover/hit-tests failed only there). The scroll-mode reflow must be atomic with the class toggle; anchoring's async compensation breaks that.
+
 Scrolling back up still reveals progressively rather than at once — the strip re-expands at its own 48px threshold, then the full header at 32px — which reads as intentional staging.
 
 ## 5. Correctness and accessibility
