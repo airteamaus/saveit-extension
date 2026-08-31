@@ -18,6 +18,7 @@ The new tab's "Recently saved" index shows saves from everyone sharing your emai
 - Saves are upvotable and ranked by votes and age over a rolling 30-day window
 - Free email providers (Gmail, Outlook, …) form public feeds visible to all users of that provider
 - "Hide from organisation" on a save keeps it private to you
+- Login-gated documents (Google Docs/Sheets/Slides/Forms, Drive files, Notion pages, Gmail, and intranet/localhost addresses) are private by default when saved; use "Show in organisation" to share them
 
 ## Files
 
