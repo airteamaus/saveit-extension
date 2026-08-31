@@ -395,6 +395,12 @@ body {
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  /* Scroll mode's header collapse resizes this viewport mid-scroll; the
+     browser's scroll anchoring then compensates scrollTop in a SEPARATE
+     layout pass, shifting content under the pointer after hover targets
+     were computed (deterministic only in headless Firefox). The reflow
+     must be atomic with the is-scroll-mode toggle instead. */
+  overflow-anchor: none;
   padding: 0 2px 8px;
   display: flex;
   flex-direction: column;
