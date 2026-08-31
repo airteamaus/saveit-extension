@@ -532,21 +532,37 @@ export function initSavedPagesDrawerEvents({
     return el.scrollTop + el.clientHeight >= el.scrollHeight - threshold;
   }
 
-  // The pinned strip collapses to favicon-only chips once the user scrolls
-  // into the index — wrapped label chips cost too much vertical space
-  // mid-browse — and expands again at the top. Collapsed chips are pure
-  // launchers (no hover buttons, native title tooltip): management returns
-  // when the user scrolls back.
+  // Scroll-state header choreography, driven by whichever element scrolls
+  // (the results container in the wide layout, the page in narrow layouts):
+  // - The pinned strip collapses to favicon-only launchers — wrapped label
+  //   chips cost too much vertical space mid-browse. Collapsed chips keep
+  //   their pointer target and title tooltip; management returns at the top.
+  // - Scroll mode additionally retires the masthead and utility row and
+  //   slims the search hero (spec:
+  //   docs/superpowers/specs/2026-08-31-scroll-mode-header-design.md).
+  //   A header this large jittering at a single threshold would be visible,
+  //   so it enters deep (96px) and exits near the top (32px).
   const LAUNCH_STRIP_COLLAPSE_SCROLL_PX = 48;
-  function updateLaunchStripCollapse(scroller) {
+  const SCROLL_MODE_ENTER_PX = 96;
+  const SCROLL_MODE_EXIT_PX = 32;
+  const pageEl = launchStrip?.closest('.desk-page') || null;
+  let scrollModeActive = false;
+  function updateHeaderScrollState(scroller) {
     const scrollTop = scroller?.scrollTop ?? 0;
     launchStrip?.classList?.toggle('is-collapsed', scrollTop > LAUNCH_STRIP_COLLAPSE_SCROLL_PX);
+    const next = scrollModeActive
+      ? scrollTop > SCROLL_MODE_EXIT_PX
+      : scrollTop >= SCROLL_MODE_ENTER_PX;
+    if (next !== scrollModeActive) {
+      scrollModeActive = next;
+      pageEl?.classList?.toggle('is-scroll-mode', scrollModeActive);
+    }
   }
 
   savedPagesDrawerResults?.addEventListener(
     'scroll',
     () => {
-      updateLaunchStripCollapse(savedPagesDrawerResults);
+      updateHeaderScrollState(savedPagesDrawerResults);
       if (isNearScrollEnd(savedPagesDrawerResults)) {
         onScrollNearEnd();
       }
@@ -559,14 +575,14 @@ export function initSavedPagesDrawerEvents({
       // Only acts as a fallback when the results container itself isn't the
       // scroller (narrow layout). handleDrawerScrollNearEnd is a no-op for
       // project/domain scopes, so this stays safe.
-      updateLaunchStripCollapse(windowObj.document.scrollingElement);
+      updateHeaderScrollState(windowObj.document.scrollingElement);
       if (isNearScrollEnd(windowObj.document.scrollingElement)) {
         onScrollNearEnd();
       }
     },
     { passive: true }
   );
-  updateLaunchStripCollapse(savedPagesDrawerResults);
+  updateHeaderScrollState(savedPagesDrawerResults);
 
   setDrawerToggleState(true);
   setDrawerSearchValue(getInitialDrawerUrlState(windowObj.location.search).searchQuery);
