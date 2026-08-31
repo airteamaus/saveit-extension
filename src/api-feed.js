@@ -28,11 +28,28 @@ export function applyApiFeed(API) {
           cacheScope: buildFeedCacheScope(),
           readCache: (scope) => this.getFeedCachedPages(scope),
           writeCache: (value, scope) => this.setFeedCachedPages(value, scope),
-          fetcher: () => this._fetchWithAuth('/feed', {
-            limit: options.limit,
-            offset: options.offset
-          }),
-          normalize: (response) => response,
+          fetcher: () =>
+            this._fetchWithAuth('/feed', {
+              limit: options.limit,
+              offset: options.offset
+            }),
+          // The pre-feed backend does NOT 404 unknown paths: GET /feed falls
+          // through its method switch to the pages-list handler and answers
+          // 200 with { pages, pagination } — no scope, no feed row fields.
+          // Rendering that shows the user's own saves as anonymous,
+          // button-less rows. Reject anything without the feed contract's
+          // scope so the controller's unavailable path falls back to the
+          // personal list. The throw also precedes the cache write, so the
+          // bad shape never lands in the feed cache.
+          normalize: (response) => {
+            const scopeType = response?.scope?.type;
+            if ((scopeType !== 'org' && scopeType !== 'personal') || !Array.isArray(response?.pages)) {
+              const error = new Error('Feed response missing scope/pages — old backend?');
+              error.status = 404;
+              throw error;
+            }
+            return response;
+          },
           mockFetcher: getMockFeed,
           context: 'getFeed',
           options
