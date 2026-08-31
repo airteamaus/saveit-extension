@@ -183,7 +183,7 @@ export function renderDrawerCardMarkup(
   // Index row: a table-of-contents entry, not a box — serif title, mono date
   // that yields to the action icons on hover (DESIGN.md "index row").
   return `
-    <article class="index-row" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
+    <article class="index-row has-actions" data-page-id="${escapeHtml(page.id || '')}"${navigationAttrs}>
       <div class="index-row-main">
         <h3 class="index-row-title">${escapeHtml(page.title || domain || 'Untitled')}</h3>
         <span class="index-row-date">${escapeHtml(formatSavedDate(page.saved_at, { day: 'numeric', month: 'short' }))}</span>

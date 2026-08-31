@@ -818,6 +818,7 @@ describe('newtab modules', () => {
 
       expect(markup).toContain('index-row');
       expect(markup).toContain('data-page-id="page-1"');
+      expect(markup).toContain('has-actions');
       expect(markup).toContain('Important');
       expect(markup).toContain('data-action="pin"');
       expect(markup).toContain('index-row-projects-btn');

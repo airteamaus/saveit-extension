@@ -64,6 +64,29 @@ describe('renderFeedRowMarkup', () => {
     expect(html).not.toContain('Only you');
   });
 
+  it('own rows get a hover-revealed privacy eye and the has-actions hook', () => {
+    const html = renderFeedRowMarkup({ ...ROW, mine: true });
+    expect(html).toContain('has-actions');
+    expect(html).toContain('data-action="feed-privacy"');
+    expect(html).toContain('Hide from organisation');
+    expect(html).toContain('aria-pressed="false"');
+    expect(html).not.toContain('index-row-privacy-btn is-active');
+  });
+
+  it('own private rows show the eye active', () => {
+    const html = renderFeedRowMarkup({ ...ROW, mine: true, private: true });
+    expect(html).toContain('index-row-privacy-btn is-active');
+    expect(html).toContain('Show in organisation');
+    expect(html).toContain('aria-pressed="true"');
+  });
+
+  it("org-mates' rows carry no action slot, so their date never yields", () => {
+    const html = renderFeedRowMarkup(ROW);
+    expect(html).not.toContain('has-actions');
+    expect(html).not.toContain('index-row-actions');
+    expect(html).not.toContain('feed-privacy');
+  });
+
   it('hides the saved-by label when the backend sent none', () => {
     const html = renderFeedRowMarkup({ ...ROW, saved_by: null });
     expect(html).not.toContain('saved by');

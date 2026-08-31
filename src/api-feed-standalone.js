@@ -23,7 +23,9 @@ function buildMockFeedRows() {
     voted: votedOverrides.has(page.id),
     mine: index === 0,
     saved_by: index === 0 ? 'You' : savedByLabel(page.user_email),
-    private: false
+    // Reflects updateStandalonePage mutations so the privacy eye round-trips
+    // in standalone dev (PATCH /updatePage's mock writes page.private).
+    private: page.private === true
   }));
 }
 
