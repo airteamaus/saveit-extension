@@ -310,8 +310,13 @@ jobs:
           # The checkout is at the tag (detached HEAD). Switch to main and pull
           # so the commit lands on the branch tip and pushes cleanly — a plain
           # git push from detached HEAD fails with "not currently on a branch".
+          # -f is required: the append step dirtied updates.json on the tag
+          # checkout, and carrying that into `git checkout main` aborts with
+          # "local changes would be overwritten" (exactly how the v1.29.1 run
+          # failed). Discard it — the append is re-applied on freshly-pulled
+          # main below, so nothing is lost.
           git fetch origin main
-          git checkout main
+          git checkout -f main
           git pull origin main --ff-only
 
           # Re-apply the append on the freshly-pulled main (in case a parallel
