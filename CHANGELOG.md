@@ -5,11 +5,26 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.0] - 2026-09-01
+
+### ✨ Features
+
+- **desk:** switch between Your saves and the org feed, default own (e2175d5)
+
+### 🐛 Bug Fixes
+
+- **desk:** scroll loads the full archive; dateline counts the collection total (345dc45)
+- **desk:** overflow-anchor none - scroll-mode reflow must be atomic, not anchor-compensated (24306cf)
+
+### 📚 Documentation
+
+- **desk:** spec note - scroll-mode reflow is atomic (overflow-anchor none) (5a99392)
+
 ## [1.29.1] - 2026-09-01
 
 ### 🐛 Bug Fixes
 
-- **desk:** scroll-mode layout snaps - animated collapse drifted content under the pointer (252db54)
+- **desk:** scroll-mode layout snaps - animated collapse drifted content under the pointer (a14b56e)
 
 ## [1.29.0] - 2026-09-01
 
@@ -135,16 +150,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **ui:** Pinned shelf above the saved-pages browse list (aea71af)
-
-### ♻️ Refactoring
-
-- **cache:** replace refreshBuffer with refreshSession accumulator (664c235)
-- **cache:** remove dead code and collapse duplicate helpers (e408031)
-
-## [1.25.1] - 2026-07-20
-
-### ✨ Features
-
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
 - **extension:** per-page Hide from organisation toggle (cea7268)
 - **extension:** accept private flag on page schema (bcd8357)
@@ -338,6 +343,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ♻️ Refactoring
 
+- **cache:** replace refreshBuffer with refreshSession accumulator (664c235)
+- **cache:** remove dead code and collapse duplicate helpers (e408031)
 - dedup cross-surface helpers (el, queryId, session rotation, sendRuntime) (389d525)
 - **drawer:** merge three drifted load paths; delete dead re-export; slim DI seam (754e01c)
 - **drawer:** make newtab-drawer-state.js the single mutation owner (a8b010d)
