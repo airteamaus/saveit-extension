@@ -1,6 +1,8 @@
 import {
   createFeedRenderer,
   feedScopeKickerMarkup,
+  feedViewSwitcherMarkup,
+  feedOrgSegmentLabel,
   feedDisclosureMarkup
 } from './feed-renderer.js';
 import { isOptimisticPage } from './pending-saves.js';
@@ -31,6 +33,14 @@ export function createFeedController({
   const state = {
     rows: [],
     scope: null,
+    // The desk's two views: 'personal' (caller's own saves) is the default —
+    // every new tab opens there — and 'org' is the merged org feed. Not
+    // persisted on purpose: "default to own" is per-open, not sticky.
+    view: 'personal',
+    // Org identity from the last feed response, retained across view
+    // switches so the org segment label survives a personal-scope response
+    // (personal scope keeps domain/public flags for exactly this purpose).
+    orgDomain: null,
     // null = never loaded; true = feed shown; false = unavailable (404
     // bridge, auth error) → the desk index falls back to the personal list.
     available: null,
@@ -70,6 +80,12 @@ export function createFeedController({
     }
   }
 
+  function currentCacheScope() {
+    // Must match api-feed.js's buildFeedCacheScope for the active view, or
+    // warm paints and writes cross views.
+    return { surface: 'feed', feedScope: state.view === 'personal' ? 'personal' : 'org' };
+  }
+
   function persistToCache() {
     if (!state.scope) {
       return;
@@ -80,26 +96,48 @@ export function createFeedController({
         pages: state.rows,
         pagination: { total_in_window: state.rows.length, next_offset: null, has_more: false }
       },
-      { surface: 'feed' }
+      currentCacheScope()
     );
   }
 
   function applyResponse(response) {
     state.rows = Array.isArray(response?.pages) ? response.pages : [];
     state.scope = response?.scope || null;
+    if (response?.scope?.domain) {
+      state.orgDomain = response.scope.domain;
+    }
     state.available = true;
     if (state.displaying) {
       renderFeedSurface();
     }
   }
 
+  function paintSwitcher(withKicker) {
+    if (!kickerSlotEl) {
+      return;
+    }
+    // The switcher and the scope kicker share the slot. The kicker's
+    // persistent scope label is a decided requirement for public orgs
+    // ("Everyone using Gmail — public"), so it renders in org view; in
+    // personal view the selected segment is the label.
+    const orgLabel = feedOrgSegmentLabel(state.orgDomain ?? state.scope?.domain);
+    replaceElementHtml(
+      kickerSlotEl,
+      feedViewSwitcherMarkup({ view: state.view, orgLabel }) +
+        (withKicker && state.view === 'org' ? feedScopeKickerMarkup(state.scope) : '')
+    );
+    kickerSlotEl.querySelectorAll('[data-feed-view]').forEach((button) => {
+      button.addEventListener('click', () => {
+        void switchView(button.dataset.feedView);
+      });
+    });
+  }
+
   function renderFeedSurface() {
     state.displaying = true;
-    if (kickerSlotEl) {
-      replaceElementHtml(kickerSlotEl, feedScopeKickerMarkup(state.scope));
-    }
+    paintSwitcher(true);
     if (disclosureSlotEl) {
-      const showDisclosure = state.scope?.public && !disclosureDismissed();
+      const showDisclosure = state.view === 'org' && state.scope?.public && !disclosureDismissed();
       replaceElementHtml(disclosureSlotEl, showDisclosure ? feedDisclosureMarkup(state.scope) : '');
       disclosureSlotEl
         .querySelector('[data-action="dismiss-disclosure"]')
@@ -140,7 +178,24 @@ export function createFeedController({
       // skipCache: a realtime-triggered refresh must reorder against the
       // server even when the cache is still fresh — reading the cache here
       // would swallow the event.
-      const response = await api.getFeed({ limit, skipCache: true });
+      const requestPersonal = state.view === 'personal';
+      const response = await api.getFeed({
+        limit,
+        skipCache: true,
+        ...(requestPersonal ? { scope: 'personal' } : {})
+      });
+      // Deploy-order bridge: a backend without ?scope=personal answers with
+      // the merged org feed. Rendering org rows under the "Your saves"
+      // selection would mislabel them — treat the view as unavailable so the
+      // desk falls back to the personal list (same content, older renderer)
+      // until the backend catches up.
+      if (requestPersonal && response?.scope?.type !== 'personal') {
+        state.available = false;
+        if (state.displaying) {
+          hide();
+        }
+        return;
+      }
       applyResponse(response);
       persistToCache();
     } catch (error) {
@@ -155,12 +210,12 @@ export function createFeedController({
     }
   }
 
-  async function load() {
-    // Warm paint from cache, then reconcile with the server. The warm paint
-    // marks the surface as displaying so the fresh response re-renders it
-    // in place instead of waiting for the caller's renderIdle().
+  // Warm paint from the current view's cache, then reconcile with the
+  // server. Shared by the initial load and view switches so both get the
+  // same instant-paint-then-refresh behaviour.
+  async function hydrate() {
     try {
-      const cached = await api.getFeedCachedPages({ surface: 'feed' }, { allowExpired: true });
+      const cached = await api.getFeedCachedPages(currentCacheScope(), { allowExpired: true });
       if (cached?.pages?.length && state.available !== false) {
         applyResponse(cached);
         renderFeedSurface();
@@ -169,6 +224,43 @@ export function createFeedController({
       // Cache read failure is non-fatal.
     }
     await refresh();
+  }
+
+  async function load() {
+    await hydrate();
+  }
+
+  async function switchView(nextView) {
+    if ((nextView !== 'personal' && nextView !== 'org') || nextView === state.view) {
+      return;
+    }
+    state.view = nextView;
+    // Drop the previous view's rows and scope so one view's content can't
+    // sit under the other's selection while the fetch is in flight. The
+    // surface STAYS displaying — the switcher lives in the desk header, so
+    // the switch is only reachable while the feed owns the desk — and the
+    // fetched response repaints in place via applyResponse.
+    state.rows = [];
+    state.scope = null;
+    state.available = null;
+    renderer.clear();
+    if (disclosureSlotEl) {
+      replaceElementHtml(disclosureSlotEl, '');
+    }
+    paintSwitcher(false);
+    await hydrate();
+  }
+
+  // Realtime gate: org: events only matter to the org view, the caller's own
+  // save events only to the personal view (own saves also live in the merged
+  // org window, but those events carry org: keys too and refresh org there).
+  // Displaying is deliberately NOT required: a refresh while the drawer
+  // covers the desk still updates the cache, and applyResponse re-renders
+  // only when the surface is showing.
+  function refreshIfView(view) {
+    if (state.view === view) {
+      void refresh();
+    }
   }
 
   function renderIdle() {
@@ -332,6 +424,9 @@ export function createFeedController({
   return {
     load,
     refresh,
+    refreshIfView,
+    switchView,
+    getView: () => state.view,
     renderIdle,
     hide,
     handleVote,

@@ -28,6 +28,39 @@ export function feedProviderLabel(domain) {
   return PROVIDER_LABELS[domain] || domain || 'your email provider';
 }
 
+// Short label for the desk switcher's org segment: known providers keep
+// their plain-English label ("Gmail"); company domains render their leftmost
+// label capitalized ("airteam.com.au" -> "Airteam").
+export function feedOrgSegmentLabel(domain) {
+  if (!domain) {
+    return null;
+  }
+  if (PROVIDER_LABELS[domain]) {
+    return PROVIDER_LABELS[domain];
+  }
+  const leftmost = domain.split('.')[0];
+  return leftmost.charAt(0).toUpperCase() + leftmost.slice(1);
+}
+
+// Desk view switcher: quiet segmented control beside the scope kicker.
+// "Your saves" | <org label>. Hidden when there is no org (null-domain
+// users) — nothing to switch to. State rides on aria-pressed so the button
+// semantics and styling share one source of truth.
+export function feedViewSwitcherMarkup({ view, orgLabel }) {
+  if (!orgLabel) {
+    return '';
+  }
+  const segment = (feedView, label) => `
+    <button type="button" class="feed-view-switch" data-feed-view="${feedView}" aria-pressed="${view === feedView}">
+      ${escapeHtml(label)}
+    </button>`;
+  return `
+    <div class="feed-view-switcher" role="group" aria-label="Desk view">
+      ${segment('personal', 'Your saves')}
+      ${segment('org', orgLabel)}
+    </div>`;
+}
+
 export function feedScopeKickerMarkup(scope) {
   if (!scope) {
     return '';

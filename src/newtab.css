@@ -747,6 +747,58 @@ body {
   color: var(--color-ink-soft);
 }
 
+/* Desk view switcher ("Your saves" | org): quiet segmented control, mono
+   like the kicker. Selected = accent wash per DESIGN.md "selected states";
+   hairline separation, no shadow, no layout motion — colour transitions
+   only (never animate anything above the scroller). */
+.feed-view-switcher {
+  display: inline-flex;
+  border: 1px solid var(--color-line);
+  border-radius: 8px;
+}
+
+.feed-view-switch {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 4px 10px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-ink-soft);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.feed-view-switch:first-child {
+  border-radius: 7px 0 0 7px;
+}
+
+.feed-view-switch:last-child {
+  border-radius: 0 7px 7px 0;
+}
+
+.feed-view-switch + .feed-view-switch {
+  border-left: 1px solid var(--color-line);
+}
+
+.feed-view-switch:hover {
+  color: var(--color-ink);
+}
+
+.feed-view-switch[aria-pressed="true"] {
+  background: var(--color-accent-wash);
+  color: var(--color-accent-ink);
+}
+
+.feed-view-switch:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* Vote control: always visible, never hover-revealed. */
 .feed-vote {
   display: inline-flex;

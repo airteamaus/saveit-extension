@@ -36,6 +36,14 @@ describe('getMockFeed', () => {
     expect(page2.pagination.has_more).toBe(false);
   });
 
+  it('scope=personal returns only the caller’s own rows, keeping org identity in scope', () => {
+    const feed = getMockFeed({ scope: 'personal' });
+    expect(feed.scope).toEqual({ type: 'personal', domain: 'gmail.com', public: true });
+    expect(feed.pages).toHaveLength(1);
+    expect(feed.pages[0].mine).toBe(true);
+    expect(feed.pagination.total_in_window).toBe(1);
+  });
+
   it('throws when the unavailable seam is set, standing in for a backend without /feed', () => {
     globalThis.MOCK_FEED_UNAVAILABLE = true;
     try {

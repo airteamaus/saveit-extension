@@ -188,7 +188,14 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     };
     const api = {
       id: 'api',
-      getFeed: vi.fn(async () => ({ pages: [] })),
+      getFeed: vi.fn(async (options = {}) => ({
+        scope:
+          options.scope === 'personal'
+            ? { type: 'personal', domain: 'gmail.com', public: false }
+            : { type: 'org', domain: 'gmail.com', public: false },
+        pages: [],
+        pagination: { total_in_window: 0, next_offset: null, has_more: false }
+      })),
       setFeedCachedPages: vi.fn()
     };
     const drawerController = {
@@ -225,18 +232,19 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     });
 
     await app.start();
-    const bus = startNewtabPageFn.mock.calls[0][0].realtimeClient.bus;
-    return { bus, api, savedPagesStore };
+    const startArgs = startNewtabPageFn.mock.calls[0][0];
+    const bus = startArgs.realtimeClient.bus;
+    return { bus, api, savedPagesStore, feedController: startArgs.feedController };
   }
 
-  it("refreshes the personal list only for the caller's own saves", async () => {
+  it("refreshes the personal list and personal desk view only for the caller's own saves", async () => {
     vi.useFakeTimers();
     const { bus, api, savedPagesStore } = await buildRealtimeHarness();
 
     // An org-mate's save carries THEIR user: key plus the shared org: key
     // (the backend's buildScopeKeys always stamps the owner and the SSE
-    // server forwards the full list) — irrelevant to the personal list, so
-    // only the feed refresh may run.
+    // server forwards the full list) — irrelevant to the personal list and
+    // to the desk's default personal view.
     bus.dispatch({
       type: 'page_updated',
       scopeKeys: ['user:uid-other', 'org:gmail.com'],
@@ -245,9 +253,10 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(savedPagesStore.refreshInitial).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(750);
-    expect(api.getFeed).toHaveBeenCalledTimes(1);
+    expect(api.getFeed).not.toHaveBeenCalled();
 
-    // Own save: our uid is in the scope keys — the personal list re-pulls.
+    // Own save: our uid is in the scope keys — the personal list re-pulls
+    // and the personal desk view refreshes with its scope.
     bus.dispatch({
       type: 'page_updated',
       scopeKeys: ['user:uid-me', 'org:gmail.com'],
@@ -255,6 +264,9 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     });
     await vi.advanceTimersByTimeAsync(0);
     expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(750);
+    expect(api.getFeed).toHaveBeenCalledTimes(1);
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true, scope: 'personal' });
 
     // Signed-out race (uid resolves null): the gate fails open so the
     // owner's own events are never silently dropped.
@@ -268,9 +280,11 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     expect(savedPagesStore.refreshInitial).toHaveBeenCalledTimes(2);
   });
 
-  it('coalesces a burst of org events into one cache-bypassing feed refresh', async () => {
+  it('coalesces a burst of org events into one cache-bypassing feed refresh in the org view', async () => {
     vi.useFakeTimers();
-    const { bus, api } = await buildRealtimeHarness();
+    const { bus, api, feedController } = await buildRealtimeHarness();
+    await feedController.switchView('org');
+    api.getFeed.mockClear();
 
     for (let i = 0; i < 5; i += 1) {
       bus.dispatch({ type: 'page_updated', scopeKeys: ['org:gmail.com'], pageId: `p${i}` });
@@ -279,6 +293,26 @@ describe('realtime page_updated gating and feed refresh debounce', () => {
     await vi.advanceTimersByTimeAsync(749);
     expect(api.getFeed).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
+    expect(api.getFeed).toHaveBeenCalledTimes(1);
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true });
+  });
+
+  it('an own save while the org view is active refreshes the org view once', async () => {
+    vi.useFakeTimers();
+    const { bus, api, feedController } = await buildRealtimeHarness();
+    await feedController.switchView('org');
+    api.getFeed.mockClear();
+
+    // Own save: user: + org: keys arm BOTH views, but only the active org
+    // view refreshes — the personal view re-fetches fresh on switch anyway,
+    // and the view set stops the org schedule from cancelling the (no-op)
+    // personal one's timer.
+    bus.dispatch({
+      type: 'page_updated',
+      scopeKeys: ['user:uid-me', 'org:gmail.com'],
+      pageId: 'p1'
+    });
+    await vi.advanceTimersByTimeAsync(750);
     expect(api.getFeed).toHaveBeenCalledTimes(1);
     expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true });
   });

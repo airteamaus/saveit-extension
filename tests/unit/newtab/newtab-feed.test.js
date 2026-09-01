@@ -10,6 +10,14 @@ const FEED = {
   pagination: { total_in_window: 2, next_offset: null, has_more: false }
 };
 
+// The default view's response shape: own saves only, org identity retained
+// (the switcher labels its org segment from scope.domain).
+const FEED_PERSONAL = {
+  scope: { type: 'personal', domain: 'acme.com', public: false },
+  pages: [{ id: 'own', title: 'Mine', votes: 0, voted: false, mine: true }],
+  pagination: { total_in_window: 1, next_offset: null, has_more: false }
+};
+
 // happy-dom as wired up by this repo's vitest config exposes `localStorage`
 // on globalThis but it evaluates to undefined, so the controller's
 // document.defaultView.localStorage access would hit its "storage
@@ -75,13 +83,17 @@ function buildBlockedStorageDocument() {
 
 // Failure injection happens through these api mocks (a rejecting getFeed /
 // votePage), not through test-only hooks on the controller, so the tests
-// exercise the real error paths. Entries in overrides.api replace defaults.
+// exercise the real error paths. The default getFeed honours the scope
+// param the controller sends, like the real backend. Entries in
+// overrides.api replace defaults.
 function buildController(overrides = {}) {
   const dom = buildDom();
   // structuredClone: controller mutations (optimistic pin/delete/edit) must
-  // never leak into the shared FEED fixture and poison later tests.
+  // never leak into the shared fixtures and poison later tests.
   const api = {
-    getFeed: vi.fn(async () => structuredClone(FEED)),
+    getFeed: vi.fn(async (options = {}) =>
+      structuredClone(options.scope === 'personal' ? FEED_PERSONAL : FEED)
+    ),
     votePage: vi.fn(async () => ({ id: 'theirs', votes: 3, voted: true })),
     updatePage: vi.fn(async () => ({ success: true })),
     pinPage: vi.fn(async () => ({ success: true })),
@@ -101,6 +113,10 @@ function buildController(overrides = {}) {
   return { controller, api, notify, ...dom };
 }
 
+function switcherButtons() {
+  return [...document.querySelectorAll('[data-feed-view]')];
+}
+
 describe('createFeedController', () => {
   beforeEach(() => {
     // The disclosure "dismissed" flag persists in localStorage; reset it so
@@ -114,13 +130,95 @@ describe('createFeedController', () => {
     vi.restoreAllMocks();
   });
 
-  it('loads the feed, renders rows, and reports available', async () => {
-    const { controller } = buildController();
+  it('defaults to the personal view: own saves only, scope=personal requested', async () => {
+    const { controller, api } = buildController();
     await controller.load();
+    expect(controller.getView()).toBe('personal');
     expect(controller.isAvailable()).toBe(true);
     expect(controller.renderIdle()).toBe(true);
-    expect(document.querySelectorAll('.feed-row')).toHaveLength(2);
+    expect(api.getFeed).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: 'personal', skipCache: true })
+    );
+    // Own row renders; the org-mate row does not.
+    expect(document.querySelector('[data-page-id="own"]')).not.toBeNull();
+    expect(document.querySelector('[data-page-id="theirs"]')).toBeNull();
+    // The switcher labels both segments and marks personal pressed; the
+    // org kicker text stays hidden in the personal view.
+    const buttons = switcherButtons();
+    expect(buttons.map((b) => b.textContent.trim())).toEqual(['Your saves', 'Acme']);
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('true');
+    expect(buttons[1].getAttribute('aria-pressed')).toBe('false');
+    expect(document.getElementById('kicker').textContent).not.toContain('Everyone at');
+  });
+
+  it('switching to the org view fetches without scope and renders org rows + kicker', async () => {
+    const { controller, api } = buildController();
+    await controller.load();
+    controller.renderIdle();
+    await controller.switchView('org');
+    expect(controller.getView()).toBe('org');
+    expect(api.getFeed).toHaveBeenLastCalledWith(
+      expect.not.objectContaining({ scope: 'personal' })
+    );
+    expect(document.querySelector('[data-page-id="theirs"]')).not.toBeNull();
     expect(document.getElementById('kicker').textContent).toContain('Everyone at acme.com');
+    const buttons = switcherButtons();
+    expect(buttons[0].getAttribute('aria-pressed')).toBe('false');
+    expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
+    // Switching back re-scopes the fetch and drops the org-mate row.
+    await controller.switchView('personal');
+    expect(api.getFeed).toHaveBeenLastCalledWith(
+      expect.objectContaining({ scope: 'personal' })
+    );
+    expect(document.querySelector('[data-page-id="theirs"]')).toBeNull();
+  });
+
+  it('switching views reads the target view’s cache key, and writes never cross views', async () => {
+    const { controller, api } = buildController({
+      api: {
+        getFeedCachedPages: vi.fn(async (scope) =>
+          scope.feedScope === 'org' ? { ...FEED, pages: [FEED.pages[1]] } : null
+        )
+      }
+    });
+    await controller.load();
+    expect(api.getFeedCachedPages).toHaveBeenCalledWith(
+      { surface: 'feed', feedScope: 'personal' },
+      { allowExpired: true }
+    );
+    await controller.switchView('org');
+    // The org cache warm-painted the org-mate row before the fresh fetch.
+    expect(api.getFeedCachedPages).toHaveBeenCalledWith(
+      { surface: 'feed', feedScope: 'org' },
+      { allowExpired: true }
+    );
+    expect(controller.isAvailable()).toBe(true);
+  });
+
+  it('treats an org response to a personal request as unavailable (deploy-order bridge)', async () => {
+    // A backend without ?scope=personal answers the org feed: rendering org
+    // rows under "Your saves" would mislabel them — the desk must fall back
+    // to the personal list instead.
+    const { controller } = buildController({
+      api: { getFeed: vi.fn(async () => structuredClone(FEED)) }
+    });
+    await controller.load();
+    expect(controller.isAvailable()).toBe(false);
+    expect(controller.renderIdle()).toBe(false);
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(0);
+  });
+
+  it('refreshIfView gates realtime refreshes to the active view', async () => {
+    const { controller, api } = buildController();
+    await controller.load();
+    controller.renderIdle();
+    api.getFeed.mockClear();
+    // An org: event while the personal view is displayed must not re-pull.
+    controller.refreshIfView('org');
+    expect(api.getFeed).not.toHaveBeenCalled();
+    // A user-scoped event does.
+    controller.refreshIfView('personal');
+    await vi.waitFor(() => expect(api.getFeed).toHaveBeenCalled());
   });
 
   it('marks itself unavailable on error (personal-list bridge handled by caller)', async () => {
@@ -143,7 +241,7 @@ describe('createFeedController', () => {
         getFeed: vi.fn(async () => {
           calls += 1;
           if (calls === 1) {
-            return FEED;
+            return structuredClone(FEED_PERSONAL);
           }
           throw new Error('boom');
         })
@@ -151,7 +249,7 @@ describe('createFeedController', () => {
     });
     await controller.load();
     controller.renderIdle();
-    expect(document.querySelectorAll('.feed-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(1);
     await controller.refresh();
     expect(controller.isAvailable()).toBe(false);
     expect(document.querySelectorAll('.feed-row')).toHaveLength(0);
@@ -175,18 +273,20 @@ describe('createFeedController', () => {
     });
     await controller.load();
     controller.renderIdle();
+    await controller.switchView('org');
     await controller.handleVote('theirs');
     let row = document.querySelector('[data-page-id="theirs"] .feed-vote');
     expect(row.getAttribute('aria-pressed')).toBe('true');
     expect(row.textContent).toContain('3');
-    // A successful vote persists the toggled state back to the feed cache.
+    // A successful vote persists the toggled state back to the org view's
+    // feed cache.
     expect(api.setFeedCachedPages).toHaveBeenCalledWith(
       expect.objectContaining({
         pages: expect.arrayContaining([
           expect.objectContaining({ id: 'theirs', votes: 3, voted: true })
         ])
       }),
-      { surface: 'feed' }
+      { surface: 'feed', feedScope: 'org' }
     );
 
     // Second toggle fails: the optimistic un-vote paints first, then the
@@ -206,10 +306,10 @@ describe('createFeedController', () => {
   it('ignores votes on own rows, pending saves, and unknown ids', async () => {
     const { controller, api } = buildController({
       api: {
-        getFeed: vi.fn(async () => ({
-          ...FEED,
+        getFeed: vi.fn(async (options = {}) => ({
+          ...(options.scope === 'personal' ? FEED_PERSONAL : FEED),
           pages: [
-            ...FEED.pages,
+            ...(options.scope === 'personal' ? FEED_PERSONAL.pages : FEED.pages),
             {
               id: 'optimistic:https://pending.example/x',
               title: 'Pending',
@@ -243,6 +343,7 @@ describe('createFeedController', () => {
       }
     });
     await controller.load();
+    await controller.switchView('org');
     controller.renderIdle();
 
     const rowIds = [...document.querySelectorAll('.feed-row')].map((el) => el.dataset.pageId);
@@ -388,17 +489,27 @@ describe('createFeedController', () => {
     expect(openProjectsEditor).toHaveBeenCalledTimes(1);
   });
 
-  it('shows the disclosure once for public scopes and never again after dismissal', async () => {
+  it('shows the disclosure in the org view for public scopes, once, after org switch', async () => {
+    const publicPersonal = {
+      ...FEED_PERSONAL,
+      scope: { type: 'personal', domain: 'gmail.com', public: true }
+    };
+    const publicOrg = {
+      ...FEED,
+      scope: { type: 'org', domain: 'gmail.com', public: true }
+    };
     const { controller } = buildController({
       api: {
-        getFeed: vi.fn(async () => ({
-          ...FEED,
-          scope: { type: 'org', domain: 'gmail.com', public: true }
-        }))
+        getFeed: vi.fn(async (options = {}) =>
+          structuredClone(options.scope === 'personal' ? publicPersonal : publicOrg)
+        )
       }
     });
     await controller.load();
     controller.renderIdle();
+    // Personal view never carries the disclosure, even for public orgs.
+    expect(document.getElementById('disclosure').textContent).toBe('');
+    await controller.switchView('org');
     expect(document.getElementById('disclosure').textContent).toContain(
       'visible to everyone using Gmail'
     );
@@ -426,14 +537,14 @@ describe('createFeedController', () => {
       documentObj: buildBlockedStorageDocument(),
       api: {
         getFeed: vi.fn(async () => ({
-          ...FEED,
-          scope: { type: 'org', domain: 'gmail.com', public: true }
+          ...FEED_PERSONAL,
+          scope: { type: 'personal', domain: 'gmail.com', public: true }
         }))
       }
     });
     await controller.load();
     expect(controller.renderIdle()).toBe(true);
-    expect(document.querySelectorAll('.feed-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(1);
     expect(document.getElementById('disclosure').textContent).toBe('');
   });
 
@@ -447,21 +558,21 @@ describe('createFeedController', () => {
               resolveFeed = resolve;
             })
         ),
-        getFeedCachedPages: vi.fn(async () => ({ ...FEED, pages: [FEED.pages[1]] }))
+        getFeedCachedPages: vi.fn(async () => ({ ...FEED_PERSONAL, pages: [FEED_PERSONAL.pages[0]] }))
       }
     });
     const pending = controller.load();
     expect(api.getFeedCachedPages).toHaveBeenCalledWith(
-      { surface: 'feed' },
+      { surface: 'feed', feedScope: 'personal' },
       { allowExpired: true }
     );
     await vi.waitFor(() => {
       // Warm paint lands before the network response resolves.
       expect(document.querySelectorAll('.feed-row')).toHaveLength(1);
     });
-    resolveFeed(FEED);
+    resolveFeed(FEED_PERSONAL);
     await pending;
-    expect(document.querySelectorAll('.feed-row')).toHaveLength(2);
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(1);
     expect(controller.isAvailable()).toBe(true);
     expect(api.setFeedCachedPages).toHaveBeenCalled();
   });
@@ -472,19 +583,19 @@ describe('createFeedController', () => {
       title: `Page ${i}`,
       votes: 0,
       voted: false,
-      mine: false
+      mine: true
     }));
     const { controller, api } = buildController({
-      api: { getFeedCachedPages: vi.fn(async () => ({ ...FEED, pages: many })) }
+      api: { getFeedCachedPages: vi.fn(async () => ({ ...FEED_PERSONAL, pages: many })) }
     });
     await controller.load();
     // skipCache: a realtime-triggered refresh must reorder against the
     // server even when the feed cache is still fresh.
-    expect(api.getFeed).toHaveBeenCalledWith({ limit: 60, skipCache: true });
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 60, skipCache: true, scope: 'personal' });
     // load()'s initial fetch still uses the cached path: the warm paint
     // reads getFeedCachedPages before the fresh fetch lands.
     expect(api.getFeedCachedPages).toHaveBeenCalledWith(
-      { surface: 'feed' },
+      { surface: 'feed', feedScope: 'personal' },
       { allowExpired: true }
     );
   });
@@ -493,7 +604,7 @@ describe('createFeedController', () => {
     const { controller, api } = buildController();
     await controller.refresh();
     expect(api.getFeed).toHaveBeenCalledTimes(1);
-    expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true });
+    expect(api.getFeed).toHaveBeenCalledWith({ limit: 50, skipCache: true, scope: 'personal' });
     expect(api.getFeedCachedPages).not.toHaveBeenCalled();
   });
 

@@ -65,6 +65,44 @@ describe('API.getFeed (extension mode)', () => {
     expect(result.meta.fromCache).toBe(true);
   });
 
+  it('passes scope=personal through to the request and its cache key', async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({ ...FEED_RESPONSE, scope: { type: 'personal', domain: 'acme.com', public: false } })
+    }));
+    await API.getFeed({ scope: 'personal' });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/feed\?.*scope=personal/),
+      expect.objectContaining({ method: 'GET' })
+    );
+    // The cache read is keyed per view so an org response can never
+    // warm-paint under the personal key.
+    expect(API._feedCacheManager.getCachedPages).toHaveBeenCalledWith(
+      { surface: 'feed', feedScope: 'personal' },
+      expect.anything()
+    );
+    expect(API._feedCacheManager.setCachedPages).toHaveBeenCalledWith(
+      expect.anything(),
+      { surface: 'feed', feedScope: 'personal' }
+    );
+  });
+
+  it('omits the scope param and keys the cache as org when no scope is requested', async () => {
+    global.fetch = vi.fn(async () => ({
+      ok: true,
+      json: async () => FEED_RESPONSE
+    }));
+    await API.getFeed();
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.not.stringContaining('scope='),
+      expect.anything()
+    );
+    expect(API._feedCacheManager.getCachedPages).toHaveBeenCalledWith(
+      { surface: 'feed', feedScope: 'org' },
+      expect.anything()
+    );
+  });
+
   it('load-more offsets skip the cache but still fetch', async () => {
     global.fetch = vi.fn(async () => ({
       ok: true,
