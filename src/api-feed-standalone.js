@@ -42,14 +42,21 @@ export function getMockFeed(options = {}) {
   if (globalThis.MOCK_FEED_UNAVAILABLE) {
     throw new Error('mock feed unavailable');
   }
-  const rows = buildMockFeedRows();
+  // The personal view mirrors ?scope=personal: only the caller's own rows.
+  // The scope keeps the org's domain/public flags so the view switcher can
+  // label the org segment in either view.
+  const personalView = options.scope === 'personal';
+  const allRows = buildMockFeedRows();
+  const rows = personalView ? allRows.filter((row) => row.mine) : allRows;
   const limit = options.limit || DEFAULT_FEED_LIMIT;
   const offset = options.offset || 0;
   const page = rows.slice(offset, offset + limit);
   const hasMore = offset + page.length < rows.length;
-  // Public gmail scope so the public-feed label + disclosure render in dev.
   return {
-    scope: { type: 'org', domain: 'gmail.com', public: true },
+    scope: personalView
+      ? { type: 'personal', domain: 'gmail.com', public: true }
+      : // Public gmail scope so the public-feed label + disclosure render in dev.
+        { type: 'org', domain: 'gmail.com', public: true },
     pages: page,
     pagination: {
       total_in_window: rows.length,

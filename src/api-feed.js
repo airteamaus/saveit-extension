@@ -7,31 +7,37 @@
 import { getMockFeed, voteStandaloneFeedPage } from './api-feed-standalone.js';
 import { assertRealPageId } from './pending-saves.js';
 
-function buildFeedCacheScope() {
-  return { surface: 'feed' };
+function buildFeedCacheScope(options = {}) {
+  // The cache key must distinguish the desk's two views: an org response
+  // warm-painted under the personal key (or vice versa) would flash the
+  // wrong list on switch.
+  return { surface: 'feed', feedScope: options.scope === 'personal' ? 'personal' : 'org' };
 }
 
 export function applyApiFeed(API) {
   Object.assign(API, {
     /**
-     * Fetch the caller's org feed (one window of pages + scope metadata).
+     * Fetch a feed window (one window of pages + scope metadata).
      * @param {object} [options]
      * @param {number} [options.limit] - Page size for the window.
      * @param {number} [options.offset] - Load-more cursor; callers must pair
-     *   this with skipCache so offsets bypass the first-page cache.
+     *   this with skipCache so offsets never replay page one.
+     * @param {string} [options.scope] - 'personal' selects the caller's own
+     *   saves (desk "Your saves" view); omit for the merged org feed.
      * @param {boolean} [options.skipCache] - Bypass the cache read.
      * @returns {Promise<object>} Feed response ({ scope, pages, pagination }).
      */
     async getFeed(options = {}) {
       if (this.isExtension) {
         return this._getCachedOrFreshList({
-          cacheScope: buildFeedCacheScope(),
+          cacheScope: buildFeedCacheScope(options),
           readCache: (scope) => this.getFeedCachedPages(scope),
           writeCache: (value, scope) => this.setFeedCachedPages(value, scope),
           fetcher: () =>
             this._fetchWithAuth('/feed', {
               limit: options.limit,
-              offset: options.offset
+              offset: options.offset,
+              scope: options.scope
             }),
           // The pre-feed backend does NOT 404 unknown paths: GET /feed falls
           // through its method switch to the pages-list handler and answers

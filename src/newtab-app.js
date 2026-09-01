@@ -28,14 +28,22 @@ import { escapeHtml, updateStatsDisplay, updateVersionIndicator } from './newtab
 // so a module-scope timer needs no teardown.
 const FEED_REFRESH_DEBOUNCE_MS = 750;
 let feedRefreshTimer = null;
+// Views touched during the debounce window. An own save carries BOTH user:
+// and org: keys and affects both desk views, so the burst must be able to
+// arm a refresh for each — a single view variable would let the second
+// schedule call cancel the first (last-caller-wins) and drop one view.
+let pendingFeedViews = new Set();
 
-function scheduleFeedRefresh(feedController) {
+function scheduleFeedRefresh(feedController, view) {
+  pendingFeedViews.add(view);
   if (feedRefreshTimer) {
     clearTimeout(feedRefreshTimer);
   }
   feedRefreshTimer = setTimeout(() => {
     feedRefreshTimer = null;
-    void feedController.refresh();
+    const views = pendingFeedViews;
+    pendingFeedViews = new Set();
+    views.forEach((armedView) => feedController.refreshIfView(armedView));
   }, FEED_REFRESH_DEBOUNCE_MS);
 }
 
@@ -248,12 +256,15 @@ export function createNewtabApp({
         const isMySave = !myUid || (event.scopeKeys || []).includes(`user:${myUid}`);
         if (isMySave) {
           await savedPagesStore.refreshInitial();
+          // The desk's "Your saves" view is the caller's own saves — it needs
+          // the same catch-up as the drawer list.
+          scheduleFeedRefresh(feedController, 'personal');
         }
         // The SSE server only forwards an event to clients whose scope keys
         // intersect, so any org: key on a received event means *my* org —
         // refresh the feed without client-side domain knowledge.
         if ((event.scopeKeys || []).some((key) => key.startsWith('org:'))) {
-          scheduleFeedRefresh(feedController);
+          scheduleFeedRefresh(feedController, 'org');
         }
         if (event.change === 'enriched' || event.change === 'added') {
           // Clear the optimistic pending-save tile — replaces the enrichment poll.
