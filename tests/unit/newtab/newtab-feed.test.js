@@ -221,6 +221,113 @@ describe('createFeedController', () => {
     await vi.waitFor(() => expect(api.getFeed).toHaveBeenCalled());
   });
 
+  it('loadMore grows the personal archive on scroll, deduping overlaps', async () => {
+    const page1 = [{ id: 'p1', title: 'One', votes: 0, voted: false, mine: true }];
+    const page2 = [
+      { id: 'p1', title: 'One', votes: 0, voted: false, mine: true }, // overlap echo
+      { id: 'p2', title: 'Two', votes: 0, voted: false, mine: true }
+    ];
+    const { controller, api } = buildController({
+      api: {
+        getFeed: vi
+          .fn()
+          .mockResolvedValueOnce({
+            scope: { type: 'personal', domain: 'acme.com', public: false },
+            pages: page1,
+            pagination: { total_in_window: 864, next_offset: 1, has_more: true }
+          })
+          .mockResolvedValueOnce({
+            scope: { type: 'personal', domain: 'acme.com', public: false },
+            pages: page2,
+            pagination: { total_in_window: 864, next_offset: 2, has_more: false }
+          })
+      }
+    });
+    await controller.load();
+    controller.renderIdle();
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(1);
+
+    await controller.loadMore();
+    expect(api.getFeed).toHaveBeenLastCalledWith({
+      limit: 50,
+      offset: 1,
+      skipCache: true,
+      scope: 'personal'
+    });
+    const rowIds = [...document.querySelectorAll('.feed-row')].map((el) => el.dataset.pageId);
+    expect(rowIds).toEqual(['p1', 'p2']);
+    // Exhausted: a further call is a no-op.
+    api.getFeed.mockClear();
+    await controller.loadMore();
+    expect(api.getFeed).not.toHaveBeenCalled();
+  });
+
+  it('loadMore never grows the org view — it is a fixed ranked window by design', async () => {
+    const { controller, api } = buildController({
+      api: {
+        getFeed: vi.fn(async (options = {}) => ({
+          scope: { type: 'org', domain: 'acme.com', public: false },
+          pages: FEED.pages,
+          // Even with more available, the org view must not page.
+          pagination: { total_in_window: 2, next_offset: 2, has_more: true }
+        }))
+      }
+    });
+    await controller.load();
+    controller.renderIdle();
+    await controller.switchView('org');
+    api.getFeed.mockClear();
+    await controller.loadMore();
+    expect(api.getFeed).not.toHaveBeenCalled();
+  });
+
+  it('a refresh restores a deeply scrolled personal list instead of collapsing it', async () => {
+    const deep = Array.from({ length: 3 }, (_, i) => ({
+      id: `d${i}`,
+      title: `Deep ${i}`,
+      votes: 0,
+      voted: false,
+      mine: true
+    }));
+    let call = 0;
+    const { controller } = buildController({
+      api: {
+        getFeed: vi.fn(async () => {
+          call += 1;
+          // Call 1: initial load returns the full 3-row depth. Call 2: the
+          // realtime refresh only re-pulls page one (1 row, has_more). Calls
+          // 3+: depth restoration pages the archive back to 3 rows.
+          if (call === 1) {
+            return {
+              scope: { type: 'personal', domain: 'acme.com', public: false },
+              pages: deep,
+              pagination: { total_in_window: 864, next_offset: 3, has_more: true }
+            };
+          }
+          if (call === 2) {
+            return {
+              scope: { type: 'personal', domain: 'acme.com', public: false },
+              pages: deep.slice(0, 1),
+              pagination: { total_in_window: 864, next_offset: 1, has_more: true }
+            };
+          }
+          return {
+            scope: { type: 'personal', domain: 'acme.com', public: false },
+            pages: deep.slice(1),
+            pagination: { total_in_window: 864, next_offset: 3, has_more: false }
+          };
+        })
+      }
+    });
+    await controller.load();
+    controller.renderIdle();
+    expect(document.querySelectorAll('.feed-row')).toHaveLength(3);
+
+    await controller.refresh();
+    const rowIds = [...document.querySelectorAll('.feed-row')].map((el) => el.dataset.pageId);
+    expect(rowIds).toEqual(['d0', 'd1', 'd2']);
+  });
+
   it('marks itself unavailable on error (personal-list bridge handled by caller)', async () => {
     const { controller } = buildController({
       api: {

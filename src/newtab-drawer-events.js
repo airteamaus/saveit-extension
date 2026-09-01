@@ -39,6 +39,7 @@ export function initSavedPagesDrawerEvents({
   handleDrawerUpdate,
   handleDrawerDelete,
   handleDrawerScrollNearEnd,
+  handleFeedScrollNearEnd,
   setDrawerSearchValue,
   setDrawerToggleState,
   windowObj = window,
@@ -508,11 +509,11 @@ export function initSavedPagesDrawerEvents({
   // window as a fallback for the narrow-width layout where the window scrolls.
   let scrollRafQueued = false;
   function onScrollNearEnd() {
-    // While the feed owns the results pane it renders a fixed window with no
-    // infinite scroll (see FEED_REFRESH_MAX in newtab-feed.js), so growing
-    // the personal render window here would fetch pages whose rows never
-    // display.
+    // While the feed owns the results pane, its personal archive view grows
+    // on scroll (the org view stays a fixed ranked window by design); the
+    // drawer's list pagination only applies when the drawer owns the pane.
     if (savedPagesDrawerResults?.querySelector('[data-section="feed"]')) {
+      void handleFeedScrollNearEnd?.();
       return;
     }
     if (scrollRafQueued) {
