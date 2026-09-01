@@ -58,13 +58,17 @@ export function createDrawerUiController({
   }
 
   // The dateline rides the chrome render so it refreshes with the data it
-  // counts. Signed-out renders keep the date alone (count of zero).
+  // counts. Signed-out renders keep the date alone (count of zero). The count
+  // is the collection total (caching redux #4) — the server-reported count
+  // when present, the loaded slice only as a fallback.
   function updateDateline() {
     if (!datelineEl) {
       return;
     }
     const allPages = Array.isArray(state.allPages) ? state.allPages : [];
-    datelineEl.textContent = formatDeskDateline(new Date(), allPages.length);
+    const pageCount =
+      typeof state.total === 'number' && state.total > 0 ? state.total : allPages.length;
+    datelineEl.textContent = formatDeskDateline(new Date(), pageCount);
   }
 
   const drawerRenderer = createDrawerRenderer({

@@ -33,7 +33,8 @@ function buildHarness() {
     handleDrawerUpdate: vi.fn(),
     handleDrawerTogglePrivacy: vi.fn(),
     navigateDrawerCard: vi.fn(),
-    handleDrawerScrollNearEnd: vi.fn()
+    handleDrawerScrollNearEnd: vi.fn(),
+    handleFeedScrollNearEnd: vi.fn()
   };
 
   const noop = () => {};
@@ -58,6 +59,7 @@ function buildHarness() {
     handleDrawerUpdate: handlers.handleDrawerUpdate,
     handleDrawerDelete: noop,
     handleDrawerScrollNearEnd: handlers.handleDrawerScrollNearEnd,
+    handleFeedScrollNearEnd: handlers.handleFeedScrollNearEnd,
     setDrawerSearchValue: noop,
     setDrawerToggleState: noop,
     windowObj: window,
@@ -318,13 +320,14 @@ describe('scroll near-end lazy load', () => {
     await new Promise((resolve) => setTimeout(resolve, 32));
   }
 
-  it('does not grow the personal list while the feed owns the results pane', async () => {
-    const { handleDrawerScrollNearEnd } = buildHarness();
-    // The feed renders a fixed window with no infinite scroll; scrolling it
-    // must not fetch personal pages whose rows never display.
+  it('routes scroll to the feed load-more while the feed owns the results pane', async () => {
+    const { handleDrawerScrollNearEnd, handleFeedScrollNearEnd } = buildHarness();
+    // The feed's personal archive view grows on scroll; the drawer's list
+    // pagination must NOT run against the feed's pane.
     document.getElementById('results').innerHTML = '<div data-section="feed"></div>';
     dispatchResultsScroll();
     await flushAnimationFrame();
+    expect(handleFeedScrollNearEnd).toHaveBeenCalledTimes(1);
     expect(handleDrawerScrollNearEnd).not.toHaveBeenCalled();
   });
 

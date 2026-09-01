@@ -33,6 +33,10 @@ export function createFeedController({
   const state = {
     rows: [],
     scope: null,
+    // Server pagination for the loaded view (personal: full-archive offset
+    // paging; org: fixed window).
+    pagination: null,
+    isLoadingMore: false,
     // The desk's two views: 'personal' (caller's own saves) is the default —
     // every new tab opens there — and 'org' is the merged org feed. Not
     // persisted on purpose: "default to own" is per-open, not sticky.
@@ -94,7 +98,11 @@ export function createFeedController({
       {
         scope: state.scope,
         pages: state.rows,
-        pagination: { total_in_window: state.rows.length, next_offset: null, has_more: false }
+        pagination: {
+          total_in_window: state.pagination?.total_in_window ?? state.rows.length,
+          next_offset: state.pagination?.next_offset ?? null,
+          has_more: state.pagination?.has_more ?? false
+        }
       },
       currentCacheScope()
     );
@@ -103,6 +111,7 @@ export function createFeedController({
   function applyResponse(response) {
     state.rows = Array.isArray(response?.pages) ? response.pages : [];
     state.scope = response?.scope || null;
+    state.pagination = response?.pagination || null;
     if (response?.scope?.domain) {
       state.orgDomain = response.scope.domain;
     }
@@ -172,9 +181,78 @@ export function createFeedController({
     }
   }
 
-  async function refresh() {
+  // Append one personal-archive page, deduping by id (offsets are taken at
+  // the current length, so overlaps only occur if rows shifted mid-flight).
+  function appendPersonalPage(response) {
+    const seen = new Set(state.rows.map((row) => row.id));
+    state.rows = [...state.rows, ...(response?.pages || []).filter((row) => !seen.has(row.id))];
+    state.pagination = response?.pagination || null;
+  }
+
+  // Scroll growth for the personal archive view. The org view is a
+  // deliberately fixed ranked window (org feed spec) and never loads more.
+  async function loadMore() {
+    if (
+      state.view !== 'personal' ||
+      state.available !== true ||
+      state.isLoadingMore ||
+      !state.pagination?.has_more
+    ) {
+      return;
+    }
+    state.isLoadingMore = true;
     try {
-      const limit = Math.max(FEED_PAGE_LIMIT, Math.min(state.rows.length, FEED_REFRESH_MAX));
+      const response = await api.getFeed({
+        limit: FEED_PAGE_LIMIT,
+        offset: state.rows.length,
+        skipCache: true,
+        scope: 'personal'
+      });
+      // Deploy-order bridge: an org-shaped answer is nothing sane to append.
+      if (response?.scope?.type === 'personal') {
+        appendPersonalPage(response);
+        if (state.displaying) {
+          renderFeedSurface();
+        }
+        persistToCache();
+      }
+    } catch (error) {
+      console.error('[feed] load more failed:', error);
+    } finally {
+      state.isLoadingMore = false;
+    }
+  }
+
+  // A realtime refresh re-pulls from offset 0 with a limit capped at
+  // FEED_REFRESH_MAX — for a personal archive scrolled deeper than that cap,
+  // restore the previously loaded depth with chained offset pages so a
+  // background event never collapses the user's list.
+  async function restorePersonalDepth(previousDepth) {
+    while (
+      state.view === 'personal' &&
+      state.pagination?.has_more &&
+      state.rows.length < previousDepth
+    ) {
+      const response = await api.getFeed({
+        limit: FEED_PAGE_LIMIT,
+        offset: state.rows.length,
+        skipCache: true,
+        scope: 'personal'
+      });
+      if (response?.scope?.type !== 'personal') {
+        return;
+      }
+      appendPersonalPage(response);
+    }
+    if (state.displaying) {
+      renderFeedSurface();
+    }
+  }
+
+  async function refresh() {
+    const previousDepth = state.rows.length;
+    try {
+      const limit = Math.max(FEED_PAGE_LIMIT, Math.min(previousDepth, FEED_REFRESH_MAX));
       // skipCache: a realtime-triggered refresh must reorder against the
       // server even when the cache is still fresh — reading the cache here
       // would swallow the event.
@@ -197,6 +275,9 @@ export function createFeedController({
         return;
       }
       applyResponse(response);
+      if (requestPersonal && previousDepth > state.rows.length && state.pagination?.has_more) {
+        await restorePersonalDepth(previousDepth);
+      }
       persistToCache();
     } catch (error) {
       // 404 = old backend without /feed: stay down and let the caller's
@@ -426,6 +507,7 @@ export function createFeedController({
     refresh,
     refreshIfView,
     switchView,
+    loadMore,
     getView: () => state.view,
     renderIdle,
     hide,
