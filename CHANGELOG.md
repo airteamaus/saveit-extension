@@ -5,6 +5,20 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.1] - 2026-09-03
+
+### ✨ Features
+
+- **desk:** link to Axil studio beside Data & sync — same tab (9e8cbf8)
+
+### 🐛 Bug Fixes
+
+- **desk:** drop the company-org feed kicker — the pressed switcher segment is the label (3ffa80f)
+
+### 👷 CI/CD
+
+- **release:** force-switch to main in updates-json — dirty worktree aborted the checkout (d62c84e)
+
 ## [1.30.0] - 2026-09-01
 
 ### ✨ Features
@@ -132,21 +146,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.26.1] - 2026-07-20
 
-### 🐛 Bug Fixes
-
-- **ui:** clicking pinned shelf cards now opens the page (319de18)
-
-### 📝 Other Improvements
-
-- fix modal contrast, drop glass, widen, kill transparent buttons, remove 'null' (ae61062)
-- fix sidebar create icon cascade so it actually renders at 24px (f69bd17)
-- enlarge sidebar create icon to 24px (ee6ffbe)
-- keep create button at 28px, only enlarge the icon (cedc67e)
-- rename sidebar "My projects" to "Projects" and enlarge create icon (ee4beb0)
-- rename sidebar "Domains" section label to "By Category" (4ff92eb)
-
-## [1.26.0] - 2026-07-20
-
 ### ✨ Features
 
 - **ui:** Pinned shelf above the saved-pages browse list (aea71af)
@@ -236,6 +235,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **ui:** clicking pinned shelf cards now opens the page (319de18)
 - **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
 - **warming:** bar jumped to 100% mid-warm; e2e now seeds session store (be9167f)
 - **deps:** override esbuild 0.28.1 + adm-zip 0.6.0 (dev-only Dependabot alerts) (4bfd107)
@@ -392,6 +392,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 📝 Other Improvements
 
+- fix modal contrast, drop glass, widen, kill transparent buttons, remove 'null' (ae61062)
+- fix sidebar create icon cascade so it actually renders at 24px (f69bd17)
+- enlarge sidebar create icon to 24px (ee6ffbe)
+- keep create button at 28px, only enlarge the icon (cedc67e)
+- rename sidebar "My projects" to "Projects" and enlarge create icon (ee4beb0)
+- rename sidebar "Domains" section label to "By Category" (4ff92eb)
 - **api:** unify cache-metadata decorators and cached-read flow (7daa706)
 - **transport:** share one authenticated fetch between facade and background (37a0082)
 - **cache:** per-surface CacheManagers with scoped invalidation (aca0c05)
