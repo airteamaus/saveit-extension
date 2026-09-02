@@ -127,8 +127,8 @@ export function createFeedController({
     }
     // The switcher and the scope kicker share the slot. The kicker's
     // persistent scope label is a decided requirement for public orgs
-    // ("Everyone using Gmail — public"), so it renders in org view; in
-    // personal view the selected segment is the label.
+    // ("Everyone using Gmail — public"); company orgs and the personal
+    // view carry no kicker — the pressed segment is the label.
     const orgLabel = feedOrgSegmentLabel(state.orgDomain ?? state.scope?.domain);
     replaceElementHtml(
       kickerSlotEl,

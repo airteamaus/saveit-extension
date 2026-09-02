@@ -139,10 +139,8 @@ describe('renderFeedRowMarkup', () => {
 });
 
 describe('scope kicker', () => {
-  it('labels company orgs', () => {
-    expect(feedScopeKickerMarkup({ type: 'org', domain: 'acme.com', public: false })).toContain(
-      'Everyone at acme.com'
-    );
+  it('renders no kicker for company orgs — the pressed switcher segment is the label', () => {
+    expect(feedScopeKickerMarkup({ type: 'org', domain: 'acme.com', public: false })).toBe('');
   });
 
   it('labels public orgs with the provider name', () => {

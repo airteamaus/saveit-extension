@@ -71,7 +71,10 @@ export function feedScopeKickerMarkup(scope) {
   } else if (scope.public) {
     label = `Everyone using ${feedProviderLabel(scope.domain)} — public`;
   } else {
-    label = `Everyone at ${scope.domain}`;
+    // Company orgs carry no kicker — the switcher's pressed org segment
+    // ("Airteam") already names the feed, so "Everyone at <domain>" would
+    // only repeat it.
+    return '';
   }
   return `<span class="feed-scope-kicker">${escapeHtml(label)}</span>`;
 }

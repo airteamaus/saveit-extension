@@ -151,7 +151,7 @@ describe('createFeedController', () => {
     expect(document.getElementById('kicker').textContent).not.toContain('Everyone at');
   });
 
-  it('switching to the org view fetches without scope and renders org rows + kicker', async () => {
+  it('switching to the org view fetches without scope and renders org rows', async () => {
     const { controller, api } = buildController();
     await controller.load();
     controller.renderIdle();
@@ -161,7 +161,9 @@ describe('createFeedController', () => {
       expect.not.objectContaining({ scope: 'personal' })
     );
     expect(document.querySelector('[data-page-id="theirs"]')).not.toBeNull();
-    expect(document.getElementById('kicker').textContent).toContain('Everyone at acme.com');
+    // Company orgs carry no "Everyone at <domain>" kicker — the pressed
+    // switcher segment is the label.
+    expect(document.getElementById('kicker').textContent).not.toContain('Everyone at');
     const buttons = switcherButtons();
     expect(buttons[0].getAttribute('aria-pressed')).toBe('false');
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
