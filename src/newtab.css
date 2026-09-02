@@ -111,6 +111,8 @@ body {
   font-size: var(--font-size-xs);
   color: var(--color-ink-soft);
   cursor: pointer;
+  /* Anchors share this class; without this the UA underlines them at rest. */
+  text-decoration: none;
 }
 
 .desk-utility-link:hover {
