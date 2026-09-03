@@ -557,12 +557,11 @@ test.describe('Standalone Mode', () => {
     // Browse list rows render below the strip.
     await expect(results.locator('.index-row').first()).toBeVisible();
 
-    // Each chip carries the nav attrs so the strip's click delegation
-    // handles open-URL, plus rename and unpin actions.
+    // Each chip is a pure launcher: the nav attrs route open-URL, and there
+    // are no inline action buttons (managing a save lives on the rows).
     const firstChip = chips.first();
     await expect(firstChip).toHaveAttribute('role', 'link');
-    await expect(firstChip.locator('[data-action="pin"]')).toHaveCount(1);
-    await expect(firstChip.locator('[data-action="chip-rename"]')).toHaveCount(1);
+    await expect(firstChip.locator('[data-action]')).toHaveCount(0);
   });
 
   test('hides the Pinned shelf when a query is typed', async ({ page }) => {

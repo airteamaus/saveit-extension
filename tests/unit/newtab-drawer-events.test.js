@@ -183,17 +183,16 @@ describe('privacy toggle click delegation', () => {
   });
 });
 
-describe('launch chip navigation and rename', () => {
+describe('launch chip navigation', () => {
   // The launch strip renders chips in their own container outside the results
-  // pane, so the strip's delegation must route navigation, unpin, and rename.
+  // pane, so the strip's delegation must route navigation. Chips are pure
+  // launchers — no inline action buttons.
   function buildMinimalHarness() {
     document.body.innerHTML = `
       <div id="results"></div>
       <div id="strip">
         <article class="launch-chip" data-page-id="pin-1" data-url="https://example.com/pinned" role="link" tabindex="0">
           <span class="launch-chip-label">Pinned One</span>
-          <button class="launch-chip-action" type="button" data-action="chip-rename" data-id="pin-1">Rename</button>
-          <button class="launch-chip-action" type="button" data-action="pin" data-id="pin-1">Unpin</button>
         </article>
       </div>
     `;
@@ -259,48 +258,6 @@ describe('launch chip navigation and rename', () => {
 
     expect(navigateDrawerCard).toHaveBeenCalledTimes(1);
     expect(navigateDrawerCard.mock.calls[0][0]).toBe(chip);
-  });
-
-  it('unpin routes through the shared pin handler', () => {
-    const { handleDrawerPin } = buildMinimalHarness();
-    document
-      .querySelector('[data-action="pin"]')
-      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    expect(handleDrawerPin).toHaveBeenCalledWith('pin-1');
-  });
-
-  it('rename swaps the label for an input and commits a title-only update on Enter', () => {
-    const { handleDrawerUpdate } = buildMinimalHarness();
-    document
-      .querySelector('[data-action="chip-rename"]')
-      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    const input = document.querySelector('.launch-chip-rename-input');
-    expect(input).not.toBeNull();
-    expect(input.value).toBe('Pinned One');
-
-    input.value = 'Mail';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
-
-    // Title-only: undefined ai_summary_brief means "keep existing" in
-    // handleDrawerUpdate.
-    expect(handleDrawerUpdate).toHaveBeenCalledWith('pin-1', { title: 'Mail' });
-  });
-
-  it('Escape cancels the rename and restores the label', () => {
-    const { handleDrawerUpdate } = buildMinimalHarness();
-    document
-      .querySelector('[data-action="chip-rename"]')
-      .dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    const input = document.querySelector('.launch-chip-rename-input');
-    input.value = 'Changed';
-    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-
-    expect(handleDrawerUpdate).not.toHaveBeenCalled();
-    expect(document.querySelector('.launch-chip-label')).not.toBeNull();
-    expect(document.querySelector('.launch-chip-rename-input')).toBeNull();
   });
 });
 

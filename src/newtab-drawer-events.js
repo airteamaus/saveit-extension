@@ -279,86 +279,17 @@ export function initSavedPagesDrawerEvents({
   });
 
   // Launch strip: its own container outside the results pane, so it carries
-  // its own delegation. Chips navigate like rows; unpin reuses the pin
-  // handler; rename swaps the label for an inline input that commits through
-  // the same update path as the edit form.
+  // its own delegation. Chips are pure launchers — no inline actions; they
+  // navigate like rows (click, or Enter/Space when focused).
   launchStrip?.addEventListener('click', (event) => {
-    const actionButton = event.target.closest('[data-action]');
-    if (!actionButton) {
-      const chip = event.target.closest('.launch-chip[data-url]');
-      if (chip) {
-        navigateDrawerCard(chip, event);
-      }
-      return;
-    }
-
-    event.preventDefault();
-    event.stopPropagation();
-
-    const { action, id } = actionButton.dataset;
-    if (action === 'pin') {
-      void handleDrawerPin(id);
-      return;
-    }
-
-    if (action === 'chip-rename') {
-      const chip = actionButton.closest('.launch-chip');
-      const label = chip?.querySelector('.launch-chip-label');
-      if (!chip || !label || chip.querySelector('.launch-chip-rename-input')) {
-        return;
-      }
-
-      const original = label.textContent.trim();
-      const input = documentObj.createElement('input');
-      input.className = 'launch-chip-rename-input';
-      input.type = 'text';
-      input.value = original;
-      input.setAttribute('aria-label', 'Rename pinned page');
-      label.replaceWith(input);
-      input.focus();
-      input.select();
-
-      let settled = false;
-      const restore = () => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        input.replaceWith(label);
-      };
-      const commit = () => {
-        if (settled) {
-          return;
-        }
-        const next = input.value.trim();
-        if (!next || next === original) {
-          restore();
-          return;
-        }
-        settled = true;
-        // Title-only update: ai_summary_brief undefined means "keep existing"
-        // in handleDrawerUpdate (the edit form always sends both fields).
-        void handleDrawerUpdate(id, { title: next });
-      };
-      input.addEventListener('keydown', (keydownEvent) => {
-        if (keydownEvent.key === 'Enter') {
-          keydownEvent.preventDefault();
-          commit();
-        } else if (keydownEvent.key === 'Escape') {
-          keydownEvent.preventDefault();
-          restore();
-        }
-      });
-      input.addEventListener('blur', () => {
-        // Give Enter/Escape a tick to settle first; a blur caused by the
-        // strip re-rendering (commit succeeded) must not restore a stale node.
-        windowObj.setTimeout(() => restore(), 0);
-      });
+    const chip = event.target.closest('.launch-chip[data-url]');
+    if (chip) {
+      navigateDrawerCard(chip, event);
     }
   });
 
   launchStrip?.addEventListener('keydown', (event) => {
-    if ((event.key !== 'Enter' && event.key !== ' ') || event.target.closest('[data-action]')) {
+    if (event.key !== 'Enter' && event.key !== ' ') {
       return;
     }
 

@@ -1572,35 +1572,10 @@ body {
     opacity 0.15s ease;
 }
 
-/* Actions overlay in place (opacity, never display) so the chip — and the
-   wrapping strip — never changes size on hover. The raised-paper background
-   masks the label tail cleanly when they appear. */
-.launch-chip-actions {
-  position: absolute;
-  right: 3px;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  background: var(--color-paper-raised);
-  border-radius: var(--radius-sm);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-
-.launch-chip:hover .launch-chip-actions,
-.launch-chip:focus-within .launch-chip-actions {
-  opacity: 1;
-  pointer-events: auto;
-}
-
 /* Scrolled state: the strip collapses to favicon-only launchers. The label
-   animates to zero width/margin/opacity (display:none can't transition);
-   the rename/unpin overlay is display:none because it must never appear in
-   the collapsed state — including on hover. Each chip keeps its pointer
-   target and identifies itself through the chip's native title tooltip. */
+   animates to zero width/margin/opacity (display:none can't transition).
+   Each chip keeps its pointer target and identifies itself through the
+   chip's native title tooltip. */
 .launch-strip.is-collapsed .launch-chip {
   padding: 4px;
 }
@@ -1612,50 +1587,9 @@ body {
   pointer-events: none;
 }
 
-.launch-strip.is-collapsed .launch-chip-actions {
-  display: none;
-}
-
 .launch-strip.is-collapsed .launch-chip-favicon {
   width: 16px;
   height: 16px;
-}
-
-.launch-chip-action {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  flex: none;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  color: var(--color-ink-soft);
-  cursor: pointer;
-}
-
-.launch-chip-action svg {
-  width: 12px;
-  height: 12px;
-}
-
-.launch-chip-action:hover {
-  background: var(--color-accent-wash);
-  color: var(--color-accent-ink);
-}
-
-.launch-chip-rename-input {
-  width: 150px;
-  padding: 1px 4px;
-  border: none;
-  border-bottom: 1px solid var(--color-accent);
-  background: transparent;
-  font-family: var(--font-sans);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-ink);
 }
 
 @media (hover: hover) and (pointer: fine) {

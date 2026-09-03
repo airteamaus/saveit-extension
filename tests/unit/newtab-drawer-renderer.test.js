@@ -150,7 +150,7 @@ describe('newtab drawer renderer warming state', () => {
 });
 
 describe('newtab drawer renderer launch strip', () => {
-  it('renders a launch chip per pinned page with rename and unpin actions', () => {
+  it('renders a launch chip per pinned page with no inline actions', () => {
     const { launchStripContainer, renderer } = createRenderer();
 
     renderer.renderLaunchStrip([
@@ -161,13 +161,13 @@ describe('newtab drawer renderer launch strip', () => {
     const chips = launchStripContainer.querySelectorAll('.launch-chip');
     expect(chips).toHaveLength(2);
     // The chip carries the same nav attrs as the index row so the strip's
-    // click delegation handles open-URL unchanged; unpin reuses the shared
-    // pin contract; rename carries its own action.
+    // click delegation handles open-URL unchanged. It is a pure launcher —
+    // no action buttons (labels can be a few characters; managing the save
+    // lives on the drawer/feed rows).
     const firstChip = chips[0];
     expect(firstChip.getAttribute('data-url')).toBe('https://a.example');
     expect(firstChip.getAttribute('role')).toBe('link');
-    expect(firstChip.querySelector('[data-action="pin"]')).not.toBeNull();
-    expect(firstChip.querySelector('[data-action="chip-rename"]')).not.toBeNull();
+    expect(firstChip.querySelector('[data-action]')).toBeNull();
     // Favicon + full label render (labels are never truncated).
     expect(firstChip.querySelector('.launch-chip-favicon')).not.toBeNull();
     expect(firstChip.querySelector('.launch-chip-label').textContent).toBe('Pinned One');
