@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.2] - 2026-09-03
+
+### ✨ Features
+
+- **desk:** pinned chips are pure launchers — no inline action buttons (546d30b)
+
 ## [1.30.1] - 2026-09-03
 
 ### ✨ Features
@@ -134,20 +140,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **realtime:** auto-reconnect with backoff + projects catch-up (4e2f3b6)
-
-### 🐛 Bug Fixes
-
-- **realtime:** catch-up refreshInitial on SSE (re)connect (2a3df36)
-- **drawer:** disable backend-bound actions on optimistic pending-save tiles (29d63c4)
-
-### ✅ Tests
-
-- **e2e:** update sidebar label assertion from Domains to By Category (28aa809)
-
-## [1.26.1] - 2026-07-20
-
-### ✨ Features
-
 - **ui:** Pinned shelf above the saved-pages browse list (aea71af)
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
 - **extension:** per-page Hide from organisation toggle (cea7268)
@@ -235,6 +227,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 🐛 Bug Fixes
 
+- **realtime:** catch-up refreshInitial on SSE (re)connect (2a3df36)
+- **drawer:** disable backend-bound actions on optimistic pending-save tiles (29d63c4)
 - **ui:** clicking pinned shelf cards now opens the page (319de18)
 - **cache:** preserve warm cache across toolbar saves via mark-stale (a09a3a6)
 - **warming:** bar jumped to 100% mid-warm; e2e now seeds session store (be9167f)
@@ -622,6 +616,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### ✅ Tests
 
+- **e2e:** update sidebar label assertion from Domains to By Category (28aa809)
 - **e2e:** update import test for the Data & sync centre (8883801)
 - enforce every configured backend host is in manifest host_permissions (3f12688)
 - **realtime:** integration test for project_page_changed -> refreshInitial (5adc087)
