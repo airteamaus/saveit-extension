@@ -5,6 +5,12 @@ All notable changes to the SaveIt extension will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.30.3] - 2026-10-14
+
+### ✨ Features
+
+- **desk:** Airteam site link before Axil studio in header (b68269e)
+
 ## [1.30.2] - 2026-09-03
 
 ### ✨ Features
@@ -134,11 +140,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### ✨ Features
 
 - **ui:** sort Pinned shelf alphabetically by title (4bc9485)
-
-## [1.27.0] - 2026-07-20
-
-### ✨ Features
-
 - **realtime:** auto-reconnect with backoff + projects catch-up (4e2f3b6)
 - **ui:** Pinned shelf above the saved-pages browse list (aea71af)
 - rebrand Buckley's → Newtab Bookmarks (8131cf5)
